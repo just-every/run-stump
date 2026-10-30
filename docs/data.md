@@ -8,11 +8,11 @@ One archive holds everything the company keeps in Stump: venues and rules, peopl
 rer export --output exports/stump.rer
 ```
 
-Network tokens never leave the installation.
+Network tokens, app keys and the secrets for Orbit, Vane and alert webhooks never leave the installation.
 
 ## Restore
 
-Restoring an archive into an empty installation gives the same records. Connected accounts wait for their owners to reconnect them, and scheduled posts arrive paused.
+Restoring an archive into an empty installation gives the same records. Connected accounts wait for their owners to reconnect them, scheduled posts arrive paused, and agent credentials arrive revoked, so people issue new ones.
 
 ```sh
 rer import --input exports/stump.rer --yes

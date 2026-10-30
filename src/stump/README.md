@@ -18,6 +18,8 @@ and are never edited in place.
 | `links/` | The company's link rules and `tagOwnLinks`, the one function that puts UTM tags on its own links. |
 | `stack/` | Connections to Orbit and Vane (secrets sealed), offers, signed sends, and `annotateLedgerEntry` for the posting path. |
 | `net/` | `stumpFetch`, the one outbound fetch every network call uses. |
+| `imports/` | The one import door (`door.ts`) and its sources beyond the venue list: `buffer.ts` reads a Buffer export into accounts, queue slots, ledger entries and paused items (`buffer-targets.ts`). |
+| `data/` | Erasure of a person (`erase.ts`) and the draft check run again after an import or erasure (`recheck.ts`); `rer export` and `rer import` follow `scripts/stump/archive-policy.mjs`. |
 | `watches/` | Watches: source polling with per-source state, screening (with the company's one author block list, `blocks.ts`) and ranking reads of findings, immediate alerts to Slack and a signed webhook with replay (credentials sealed in `seal.ts`), and the scheduled event's `pollDueWatches`. |
 | `lib/<name>/` | Pure leaf libraries written by library lanes. A library imports nothing outside its folder. |
 | `ui/` | The signed-in app's shell, navigation, tokens and small shared components. |
