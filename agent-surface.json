@@ -58,7 +58,7 @@
     {
       "id": "venue-rules",
       "tool": "stump.venues.rules",
-      "args": { "action": "set", "venue_id": { "$from": "venue-create", "pointer": "/venue/id" }, "rules": {
+      "args": { "action": "set", "venue_id": { "$from": "venue-create", "pointer": "/id" }, "rules": {
         "posting": { "value": "members_only", "source_url": "https://example.com/rules", "read_at": "2026-10-30" },
         "gates": { "value": { "approval": true }, "source_url": "https://example.com/rules", "read_at": "2026-10-30" } } },
       "expect": [{ "class": "standard" }]
@@ -66,13 +66,13 @@
     {
       "id": "venue-limit",
       "tool": "stump.venues.fit",
-      "args": { "action": "set_limit", "venue_id": { "$from": "venue-create", "pointer": "/venue/id" }, "limit": { "posts": 1, "per": "week" } },
+      "args": { "action": "set_limit", "venue_id": { "$from": "venue-create", "pointer": "/id" }, "limit": { "posts": 1, "per": "week" } },
       "expect": [{ "class": "standard" }]
     },
     {
       "id": "venue-apply",
       "tool": "stump.venues.members",
-      "args": { "action": "apply", "venue_id": { "$from": "venue-create", "pointer": "/venue/id" }, "handle": { "$fixture": "venue_handle", "pointer": "" } },
+      "args": { "action": "apply", "venue_id": { "$from": "venue-create", "pointer": "/id" }, "handle": { "$fixture": "venue_handle", "pointer": "" } },
       "expect": [{ "class": "gated", "facts": { "step": "join application" } }]
     },
     {
