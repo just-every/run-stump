@@ -476,7 +476,7 @@
       "executable": false
     },
     "docs/handoffs.md": {
-      "sha256": "883003c75bb7143fbb3931184be51599c0ca9b663eb74bf702f44df6773e391c",
+      "sha256": "2d88a1b279fa2e27e79d4115f27cfc9ed97ca954438d77d84021439fe69a93f7",
       "executable": false
     },
     "docs/import-venues.md": {
@@ -3552,7 +3552,7 @@
       "executable": false
     },
     "src/stump/drafting/check.ts": {
-      "sha256": "806062f5948889ea41d3dd4779214699dcc46d6cca714fcfe6aa86b46cb7edba",
+      "sha256": "7b9ac88d99866a17901bb28ca2b6e060f7abaaee4e244dc8a80f0db9efd67220",
       "executable": false
     },
     "src/stump/drafting/diff.ts": {
@@ -3592,7 +3592,7 @@
       "executable": false
     },
     "src/stump/handoffs/holds.ts": {
-      "sha256": "1c246ea73cbd09b6277f86265c49eb7b64854187ac3127df05db765a97958f9f",
+      "sha256": "13e3ae304237c415366c52b5c5532398bdc71174d503109edfc74c0fa60cb1fa",
       "executable": false
     },
     "src/stump/handoffs/lapse.ts": {
@@ -3616,7 +3616,7 @@
       "executable": false
     },
     "src/stump/handoffs/model.ts": {
-      "sha256": "2cc201ab60ef5718841c4104179142e7408adbfe32522692929a8782c7b74394",
+      "sha256": "5098b4cfc3a7d4d7059c5229020104e8e801b4e51302bb9409ff7b41d1a510db",
       "executable": false
     },
     "src/stump/handoffs/posted.ts": {
@@ -4604,7 +4604,7 @@
       "executable": false
     },
     "tests/stump/handoffs.test.mjs": {
-      "sha256": "3813109d3e73a6bba9182eb021c2739b66af39bd0c7124ca603e1ca2a5ec4e0c",
+      "sha256": "8d9739ce26180d559697555bfb626228c5c22831ec51c3b657857372aeb555d9",
       "executable": false
     },
     "tests/stump/inbox.test.mjs": {
