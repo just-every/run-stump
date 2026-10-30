@@ -20,7 +20,7 @@ const page = <T,>(tool: string, args: Record<string, unknown>) => runAction<{ it
 async function loadWork() {
   const who = await me()
   const reader = READERS.includes(who.person.role as Role)
-  const [queue, held, drafts, scheduled, paused, accounts, venues] = await Promise.all([
+  const [queue, held, drafts, scheduled, paused, accounts, venues, products] = await Promise.all([
     page<Handoff>('stump.handoffs.manage', { action: 'queue' }),
     page<ItemRecord>('stump.drafts.revise', { action: 'list', state: 'held' }),
     page<ItemRecord>('stump.drafts.revise', { action: 'list', state: 'draft' }),
@@ -28,11 +28,13 @@ async function loadWork() {
     page<ItemRecord>('stump.drafts.revise', { action: 'list', state: 'paused' }),
     page<Account>('stump.accounts.connect', { action: 'list' }),
     reader ? page<{ id: string; name: string }>('stump.venues.manage', { action: 'list' }) : null,
+    page<{ id: string; name: string }>('stump.brand.manage', { action: 'product_list' }),
   ])
   return {
     who, queue: queue.items, items: [...held.items, ...drafts.items, ...scheduled.items, ...paused.items],
     accounts: new Map(accounts.items.map(account => [account.id, account])),
     venues: new Map((venues?.items ?? []).map(venue => [venue.id, venue.name])),
+    products: new Map(products.items.map(product => [product.id, product.name])),
   }
 }
 
@@ -99,7 +101,7 @@ export function TodayPage() {
 
   const personId = work.data?.who.person.id ?? ''
   const due = work.data && day ? dueToday(work.data.queue, personId, day) : null
-  const held = work.data ? heldRows(work.data.items, work.data.queue, personId, work.data.venues, work.data.accounts) : null
+  const held = work.data ? heldRows(work.data.items, work.data.queue, personId, work.data.venues, work.data.accounts, work.data.products) : null
   const out = work.data && day ? goingOut(work.data.items, work.data.accounts, day) : null
   // A poster reads only their own work; Listening's findings are for the rest of the team.
   const reader = !work.data || READERS.includes(work.data.who.person.role as Role)

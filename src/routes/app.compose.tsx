@@ -69,7 +69,8 @@ function ComposePage() {
   const variants = preview?.items ?? (alone ? [alone] : [])
   const open = !!(preview || alone)
   const held = variants.filter(variant => blocking(variant.flags).length)
-  const tightest = Math.min(...variants.map(variant => variant.count?.limit ?? Infinity), ...accounts.filter(account => chosen.includes(account.id)).map(account => ({ x: 280, bluesky: 300, mastodon: 500, linkedin: 3000 } as Record<string, number>)[account.network] ?? Infinity))
+  // The master is never posted itself: it counts quietly against the largest chosen network's limit; each variant card and Checks carry the over-limit signal.
+  const largest = Math.max(...variants.map(variant => variant.count?.limit ?? -Infinity), ...accounts.filter(account => chosen.includes(account.id)).map(account => ({ x: 280, bluesky: 300, mastodon: 500, linkedin: 3000 } as Record<string, number>)[account.network] ?? -Infinity))
 
   async function start() {
     const generate = !text.trim() && !!source.trim()
@@ -167,8 +168,8 @@ function ComposePage() {
           <div className="st-master">
             <textarea id="master-text" className="st-textarea large" value={text} rows={4} placeholder="Write the post once. Each account gets its own variant."
               onChange={event => setText(event.target.value)} onBlur={() => void saveMaster()} />
-            <div className={Number.isFinite(tightest) && graphemes(text) > tightest ? 'st-chars over' : 'st-chars'}>
-              {graphemes(text).toLocaleString()}{Number.isFinite(tightest) ? ` / ${tightest.toLocaleString()}` : ''}
+            <div className="st-chars">
+              {graphemes(text).toLocaleString()}{Number.isFinite(largest) ? ` / ${largest.toLocaleString()}` : ''}
             </div>
           </div>
           {preview ? source ? <div className="st-source-chip"><Disc icon="pencil" /><span><span className="st-meta">From a source</span><br />{source.replace(/^https?:\/\//, '')}</span></div> : null
@@ -199,7 +200,9 @@ function ComposePage() {
       </section> : null}
       {open && !(alone && !alone.account_id) ? <div className="st-bar">
         {held.length === variants.length
-          ? <span className="st-pill held st-bar-held">{variants.length === 1 ? `The ${networkName(held[0]!.network)} variant holds until fixed` : variants.length === 2 ? 'Both variants hold until fixed' : `All ${variants.length} variants hold until fixed`}</span>
+          ? <span className="st-pill held st-bar-held">{variants.length === 1
+            ? <><span className="st-held-long">The {networkName(held[0]!.network)} variant holds until fixed</span><span className="st-held-short" aria-hidden="true">{networkName(held[0]!.network)} held until fixed</span></>
+            : <><span className="st-held-long">{variants.length === 2 ? 'Both variants hold' : `All ${variants.length} variants hold`} until fixed</span><span className="st-held-short" aria-hidden="true">{variants.length === 2 ? 'Both' : `All ${variants.length}`} held until fixed</span></>}</span>
           : <button className="st-button ink" type="button" disabled={busy} onClick={() => void schedule('schedule_master')}>
             {alone ? 'Schedule' : held.length ? `Schedule ${variants.length - held.length} ${variants.length - held.length === 1 ? 'post' : 'posts'}` : 'Schedule all'} →
           </button>}
@@ -294,10 +297,12 @@ function WhenPicker({ value, onChange }: { value: string; onChange(value: string
   const label = Number.isNaN(at.getTime()) ? 'Pick a time' : `${new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(at)} · ${time.format(at)}${zone ? ` ${zone}` : ''}`
   // Under 600 px the bar shows the short form ("Oct 30 · 7:00 AM"), so the time always reads whole.
   const short = Number.isNaN(at.getTime()) ? label : `${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(at)} · ${time.format(at)}`
+  // At 480 and under, a time on the hour drops its minutes ("Oct 30 · 10 AM"), so the bar keeps one row beside the held note.
+  const tiny = Number.isNaN(at.getTime()) ? label : `${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(at)} · ${new Intl.DateTimeFormat('en-US', at.getMinutes() ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' }).format(at)}`
   const [dayPart, timePart] = value.split('T')
   return <div className="st-when" ref={box}>
     <button type="button" className="st-when-pill" aria-haspopup="dialog" aria-expanded={open} aria-label={label} onClick={() => setOpen(!open)}>
-      <Icon name="calendar" /><span className="st-when-long">{label}</span><span className="st-when-short" aria-hidden="true">{short}</span><Icon name="chevronDown" />
+      <Icon name="calendar" /><span className="st-when-long">{label}</span><span className="st-when-short" aria-hidden="true">{short}</span><span className="st-when-tiny" aria-hidden="true">{tiny}</span><Icon name="chevronDown" />
     </button>
     {open ? <div className="st-when-pop" role="dialog" aria-label="When it goes out">
       <label className="st-field">Day<input type="date" value={dayPart ?? ''} onChange={event => event.target.value && onChange(`${event.target.value}T${timePart ?? '09:00'}`)} /></label>

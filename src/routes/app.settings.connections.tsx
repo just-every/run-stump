@@ -46,7 +46,9 @@ function Seed({ seed, connection, admin, offers, line, onChange }: { seed: 'orbi
   const { busy, message, run } = useRun()
   const [editing, setEditing] = useState(false)
   const connected = connection?.state === 'connected'
-  const waiting = offers.filter(offer => offer.state === 'offered' || offer.state === 'failed')
+  // Newest first, as Inbox lists them: when the person engaged, else when the offer was made.
+  const at = (offer: OfferView) => Date.parse(String(offer.occurred_at ?? offer.created_at ?? '')) || 0
+  const waiting = offers.filter(offer => offer.state === 'offered' || offer.state === 'failed').sort((a, b) => at(b) - at(a))
   async function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)

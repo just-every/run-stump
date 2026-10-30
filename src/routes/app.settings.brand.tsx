@@ -48,17 +48,11 @@ function BrandPage() {
       <h1 id="brand-title" className="st-sr">Brand</h1>
       {error ? <p className="st-error">{error}</p> : null}
 
-      <section className="st-card" aria-labelledby="products-title">
+      <section className="st-card st-brand-products" aria-labelledby="products-title">
         <h2 className="st-card-head" id="products-title"><Disc icon="box" />Products</h2>
         <ul className="st-list">{data?.products.map(product => <li className="st-kv" key={product.id}>
           <div className="st-name">{product.name}{product.other_names.length ? <div className="st-meta">also {product.other_names.join(', ')}</div> : null}</div>
-          {editor ? <div className="st-profile">
-            <ProfileField label="tone" product={product.name} value={product.tone} onSave={tone => act({ action: 'product_update', product_id: product.id, tone })} />
-            <ProfileField label="use" product={product.name} value={product.words_use.join(', ')} add="Add words to use"
-              onSave={value => act({ action: 'product_update', product_id: product.id, words_use: list(value) })} allowEmpty />
-            <ProfileField label="avoid" product={product.name} value={product.words_avoid.join(', ')} add="Add words to avoid"
-              onSave={value => act({ action: 'product_update', product_id: product.id, words_avoid: list(value) })} allowEmpty />
-          </div> : <span className="st-meta">tone: {product.tone || 'not set'}{product.words_use.length ? ` · use: ${product.words_use.join(', ')}` : ''}{product.words_avoid.length ? ` · avoid: ${product.words_avoid.join(', ')}` : ''}</span>}
+          {editor ? <ProductProfile product={product} save={args => act({ action: 'product_update', product_id: product.id, ...args })} /> : <span className="st-meta">tone: {product.tone || 'not set'}{product.words_use.length ? ` · use: ${product.words_use.join(', ')}` : ''}{product.words_avoid.length ? ` · avoid: ${product.words_avoid.join(', ')}` : ''}</span>}
         </li>)}</ul>
         {editor ? <ProductForm open={data !== null && !data.products.length} busy={busy} onAdd={args => act({ action: 'product_create', ...args }, 'Product added')} /> : null}
       </section>
@@ -90,13 +84,30 @@ function BrandPage() {
   </HydrationUnit>
 }
 
+/**
+ * A product's voice in one line (H15): its tone, then a quiet "Add words" that opens the words to use and to avoid. The lists show
+ * under the tone once they hold words.
+ */
+function ProductProfile({ product, save }: { product: Product; save: (args: Record<string, unknown>) => unknown }) {
+  const [open, setOpen] = useState(false)
+  const words = open || product.words_use.length > 0 || product.words_avoid.length > 0
+  return <div className="st-profile">
+    <div className="st-profile-tone">
+      <ProfileField label="tone" product={product.name} value={product.tone} onSave={tone => save({ tone })} />
+      {words ? null : <button className="st-add-words st-add-words-inline" type="button" onClick={() => setOpen(true)}>Add words</button>}
+    </div>
+    {words ? <>
+      <ProfileField label="use" product={product.name} value={product.words_use.join(', ')} focus={open && !product.words_use.length} allowEmpty onSave={value => save({ words_use: list(value) })} />
+      <ProfileField label="avoid" product={product.name} value={product.words_avoid.join(', ')} allowEmpty onSave={value => save({ words_avoid: list(value) })} />
+    </> : null}
+  </div>
+}
+
 /** One profile field edited in place: it saves when the field loses focus, with no Save button. An empty one is an "Add words" action, never a hint that reads as a value. */
-function ProfileField({ label, product, value, add, allowEmpty = false, onSave }: { label: string; product: string; value: string; add?: string; allowEmpty?: boolean; onSave: (value: string) => unknown }) {
-  const [adding, setAdding] = useState(false)
-  if (!value && add && !adding) return <div className="st-inline st-inline-add"><button className="st-add-words" type="button" onClick={() => setAdding(true)}>{add}</button></div>
+function ProfileField({ label, product, value, focus = false, allowEmpty = false, onSave }: { label: string; product: string; value: string; focus?: boolean; allowEmpty?: boolean; onSave: (value: string) => unknown }) {
   return <label className="st-inline">{label}:
-    <input defaultValue={value} aria-label={`${product} ${label}`} autoFocus={adding}
-      onBlur={event => { const next = event.target.value.trim(); if (next !== value && (next || allowEmpty)) void onSave(next); if (!next) setAdding(false) }} />
+    <input defaultValue={value} aria-label={`${product} ${label}`} autoFocus={focus}
+      onBlur={event => { const next = event.target.value.trim(); if (next !== value && (next || allowEmpty)) void onSave(next) }} />
   </label>
 }
 

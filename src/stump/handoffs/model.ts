@@ -70,11 +70,11 @@ export function move(actor: Actor, row: Pick<HandoffRow, 'id' | 'state' | 'revis
 interface HistoryRow { action: string; from_state: string | null; to_state: string | null; person_id: string | null; agent_id: string | null; detail: string; at: number }
 
 /** The hand-off as both doors answer it: the venue's rules as they read now, the facts, the brief or draft, the hold and its history. */
-export function handoffRecord(row: HandoffRow, venue: VenueRow, extra: { person_name: string | null; history: HistoryRow[]; flags: unknown[]; draft_text: string | null }) {
+export function handoffRecord(row: HandoffRow, venue: VenueRow, extra: { person_name: string | null; product_name: string | null; history: HistoryRow[]; flags: unknown[]; draft_text: string | null }) {
   const howTo = json<Record<string, unknown>>(venue.how_to_post, {})
   return {
     id: row.id, venue_id: row.venue_id, venue: { id: venue.id, name: venue.name, url: venue.url, kind: venue.kind, platform: venue.platform, how_to_post: howTo },
-    person_id: row.person_id, person_name: extra.person_name, product_id: row.product_id, item_id: row.item_id, state: row.state, route: row.route,
+    person_id: row.person_id, person_name: extra.person_name, product_id: row.product_id, product_name: extra.product_name, item_id: row.item_id, state: row.state, route: row.route,
     due_at: iso(row.due_at), lapse: row.lapse, rules: rulesOf(venue), why: venue.why, thread_url: row.thread_url,
     facts: json<Fact[]>(row.facts, []), disclosure_line: row.disclosure_line, draft_text: extra.draft_text, talking_points: json<string[]>(row.talking_points, []),
     own_words: row.own_words, own_words_required: extra.draft_text === null, attestation_required: row.attestation_required === 1, recommends: row.recommends === 1,

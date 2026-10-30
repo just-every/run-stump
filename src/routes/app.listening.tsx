@@ -273,6 +273,9 @@ function Editor({ watch, role, blocked = [], onDone, onCancel }: { watch?: Watch
   const [draft, setDraft] = useState(() => draftOf(watch))
   const { busy, message, run } = useRun()
   const admin = role === 'owner' || role === 'admin'
+  // Alerts are optional (H15): folded until opened, and open when this watch already sends them.
+  const [alertsOpen, setAlertsOpen] = useState(() => !!(watch?.alerts?.slack || watch?.alerts?.webhook))
+  const alertsId = `alerts-${watch?.id ?? 'new'}`
   const set = <K extends keyof Draft>(field: K, value: Draft[K]) => setDraft(current => ({ ...current, [field]: value }))
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -305,9 +308,9 @@ function Editor({ watch, role, blocked = [], onDone, onCancel }: { watch?: Watch
     <label className="st-field">Name<input value={draft.name} onChange={event => set('name', event.target.value)} required maxLength={120} autoComplete="off" /></label>
     <fieldset>
       <legend>What to look for</legend>
-      <label className="st-field">Must include all of<input value={draft.all} onChange={event => set('all', event.target.value)} placeholder="orbit, crm" autoComplete="off" /></label>
+      <label className="st-field">Must include all of<input value={draft.all} onChange={event => set('all', event.target.value)} placeholder="clinic, scheduling" autoComplete="off" /></label>
       <label className="st-field">Include any of<input value={draft.any} onChange={event => set('any', event.target.value)} autoComplete="off" /></label>
-      <label className="st-field">Never include<input value={draft.none} onChange={event => set('none', event.target.value)} placeholder="orbital" autoComplete="off" /></label>
+      <label className="st-field">Never include<input value={draft.none} onChange={event => set('none', event.target.value)} placeholder="hiring" autoComplete="off" /></label>
       <span className="st-note">Separate terms with commas. A term with spaces is an exact phrase.</span>
     </fieldset>
     <fieldset>
@@ -328,14 +331,16 @@ function Editor({ watch, role, blocked = [], onDone, onCancel }: { watch?: Watch
         <strong>Mastodon hashtags</strong>
         {draft.mastodon.map((row, index) => <div className="st-form" key={index}>
           <label className="st-field">Instance<input value={row.instance} placeholder="mastodon.social" onChange={event => set('mastodon', draft.mastodon.map((item, at) => at === index ? { ...item, instance: event.target.value } : item))} autoComplete="off" /></label>
-          <label className="st-field">Hashtags<input value={row.hashtags} placeholder="crm, saas" onChange={event => set('mastodon', draft.mastodon.map((item, at) => at === index ? { ...item, hashtags: event.target.value } : item))} autoComplete="off" /></label>
+          <label className="st-field">Hashtags<input value={row.hashtags} placeholder="healthtech, clinics" onChange={event => set('mastodon', draft.mastodon.map((item, at) => at === index ? { ...item, hashtags: event.target.value } : item))} autoComplete="off" /></label>
           <button className="st-button" type="button" onClick={() => set('mastodon', draft.mastodon.filter((_, at) => at !== index))}>Remove instance</button>
         </div>)}
         <div><button className="st-button" type="button" onClick={() => set('mastodon', [...draft.mastodon, { instance: '', hashtags: '' }])}>Add an instance</button></div>
       </div>
     </fieldset>
-    <fieldset>
-      <legend>Alerts</legend>
+    <button className="st-editor-more" type="button" aria-expanded={alertsOpen} aria-controls={alertsId} onClick={() => setAlertsOpen(!alertsOpen)}>
+      <Icon name="chevronDown" />Alerts (optional)</button>
+    {alertsOpen ? <fieldset id={alertsId}>
+      <legend className="st-sr">Alerts</legend>
       <div className="st-form">
         <label className="st-field">Alert right away from relevance<input type="number" min={0} max={100} value={draft.minRelevance} onChange={event => set('minRelevance', Number(event.target.value))} /></label>
         <label className="st-field">Check every<select value={draft.interval} onChange={event => set('interval', Number(event.target.value))}>{[5, 15, 30, 60, 240].map(minutes => <option key={minutes} value={minutes}>{minutes < 60 ? `${minutes} minutes` : `${minutes / 60} ${minutes === 60 ? 'hour' : 'hours'}`}</option>)}</select></label>
@@ -350,7 +355,7 @@ function Editor({ watch, role, blocked = [], onDone, onCancel }: { watch?: Watch
         </div>
         <span className="st-note">Addresses and secrets are stored sealed and never shown again.</span>
       </> : <span className="st-note">Owners and admins set Slack and webhook alerts.</span>}
-    </fieldset>
+    </fieldset> : null}
     {watch && blocked.length ? <fieldset>
       <legend>Blocked authors</legend>
       <span className="st-note">Blocked on every watch.</span>

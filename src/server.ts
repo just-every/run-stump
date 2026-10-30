@@ -9,7 +9,7 @@ import { lobbyResponse } from './base/lobby'
 import { setupStateResponse } from './base/setup-state'
 import { authResponse, businessSettings, operatorAuth, runtimeBindings, type Bindings } from './auth.server'
 import { identity } from './identity'
-import { AGENT_PATHS, stumpAgentDoor } from './stump/agent-door/index.ts'
+import { AGENT_PATHS, agentsPageRedirect, stumpAgentDoor } from './stump/agent-door/index.ts'
 import { consentCallback } from './stump/accounts/callback.ts'
 import { appDocumentGate } from './stump/http/app-gate.ts'
 import { importDoorResponse } from './stump/imports/door.ts'
@@ -46,6 +46,8 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
     const path = new URL(request.url).pathname
     // The one MCP door and the Agents pages, before app sign-in redirects (Base modules/agent-door/ADOPTING.md).
     if (AGENT_PATHS(path)) {
+      const moved = agentsPageRedirect(request)
+      if (moved) return moved
       const agent = await stumpAgentDoor(env).handle(request)
       if (agent) return rejectedResponse(request, agent)
     }

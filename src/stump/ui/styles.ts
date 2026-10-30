@@ -53,6 +53,8 @@ export const appStyles = `
 body { margin: 0; padding: 0; background: var(--stump-column); color: var(--stump-text); font: var(--stump-size-body)/1.5 var(--stump-font); -webkit-font-smoothing: antialiased; }
 *, *::before, *::after { box-sizing: border-box; }
 a { color: var(--stump-emerald-text); }
+/* One accent (SPEC 3.1): every checkbox and radio in the app is emerald. */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--stump-emerald); }
 code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-sunk); border-radius: 6px; padding: 1px 6px; }
 
 /* Shell (SPEC §4.1): sidebar, top bar, white main column */
@@ -140,6 +142,16 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-table tr:last-child td { border-bottom: 0; }
 .st-cell-person { display: flex; align-items: center; gap: 14px; }
 
+/* A table framed in the app panel (SPEC §4.2 Venues, Ledger): 1 px hairline, radius 14, the head row on --sunk */
+.st-table-panel { border: 1px solid var(--stump-hairline); border-radius: var(--stump-radius); overflow: hidden; background: var(--stump-white); margin: 0 0 16px; }
+.st-table-panel .st-table th { background: var(--stump-sunk); padding: 14px 16px; border-bottom: 1px solid var(--stump-hairline); }
+.st-table-panel .st-table td { padding: 8px 16px; }
+.st-table-panel .st-table th:first-child, .st-table-panel .st-table td:first-child { padding-left: 20px; }
+/* A search field with its 18 px magnifier inside, as the plates and the docs search draw it */
+.st-search-field { position: relative; display: block; min-width: 0; }
+.st-search-field > svg { position: absolute; left: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--stump-muted); pointer-events: none; }
+.st-search-field input.st-search { padding-left: 42px; width: 100%; }
+
 /* Forms (SPEC §3.4: 44 px fields, one 1 px border, focus on that border) */
 .st-form { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: end; }
 .st-field { display: flex; flex-direction: column; gap: 6px; font-size: var(--stump-size-small); font-weight: 500; color: var(--stump-ink); }
@@ -189,6 +201,8 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-row.st-stack { display: block; }
 .st-chevron { font-size: var(--stump-size-section); color: var(--stump-muted); transition: transform .15s; }
 .st-row-toggle[aria-expanded="true"] .st-chevron { transform: rotate(90deg); }
+.st-chevron { display: inline-flex; flex: none; }
+.st-chevron svg { width: 20px; height: 20px; }
 .st-handle { display: block; font-size: var(--stump-size-section); font-weight: 600; }
 .st-spaced { margin-top: calc(var(--stump-space) * 1.5); }
 .st-field.st-check { flex-direction: row; align-items: center; gap: var(--stump-space); color: var(--stump-text); }
@@ -206,7 +220,7 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 /* Top bar controls: the Pause pill, the avatar and its menu */
 .st-pause { display: inline-flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 16px 0 6px; border: 0; border-radius: var(--stump-pill); background: var(--stump-emerald-tint); color: var(--stump-ink); font: 500 15px/20px var(--stump-font); cursor: pointer; white-space: nowrap; transition: background-color var(--stump-motion); }
 .st-pause .st-pause-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--stump-white); color: var(--stump-ink); }
-.st-pause .st-pause-icon svg { width: 14px; height: 14px; }
+.st-pause .st-pause-icon svg { width: 18px; height: 18px; }
 .st-pause:hover { background: #DCE9DE; }
 .st-pause.paused { background: var(--stump-ink); color: var(--stump-white); }
 .st-pause.paused .st-pause-icon { background: var(--stump-emerald); color: var(--stump-white); }
@@ -296,6 +310,8 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
   .st-table tr { padding: 12px 0; border-bottom: 1px solid var(--stump-hairline); }
   .st-table tr:last-child { border-bottom: 0; }
   .st-table td { height: auto; padding: 0; border: 0; }
+  .st-table-panel .st-table tr { padding: 12px 16px; }
+  .st-table-panel .st-table td, .st-table-panel .st-table td:first-child { padding: 0; }
   .st-table td:not(:first-child) { display: inline-flex; align-items: center; width: auto; margin: 8px 14px 0 0; vertical-align: middle; }
   .st-table tr:has(.st-cell-person) td:nth-child(2) { margin-left: 54px; }
   .st-button { min-height: 44px; }
@@ -337,7 +353,7 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-rule:first-of-type { border-top: 0; }
 .st-rule-label { font-weight: 600; }
 .st-rule-value { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
-.st-rule-thread { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; min-height: 32px; color: var(--stump-emerald-text); text-decoration: none; font-weight: 600; border-radius: 6px; }
+.st-rule-thread { color: var(--stump-emerald-text); text-underline-offset: 3px; border-radius: 4px; overflow-wrap: anywhere; }
 .st-rule-thread:focus-visible { outline: 2px solid var(--stump-focus); outline-offset: 2px; }
 .st-rule-source { font-size: var(--stump-size-small); color: var(--stump-muted); white-space: nowrap; }
 .st-rule-source a { color: var(--stump-accent-ink); }
@@ -345,6 +361,7 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-value:hover { text-decoration: underline; }
 .st-value:focus-visible { outline: 2px solid var(--stump-focus); outline-offset: 2px; }
 .st-empty .st-actions { justify-content: center; }
+button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-kv { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 6px calc(var(--stump-space) * 2); margin: 0; }
 .st-kv dt { color: var(--stump-muted); }
 .st-kv dd { margin: 0; overflow-wrap: anywhere; }
@@ -367,6 +384,14 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-kv { grid-template-columns: 1fr; }
   .st-toolbar .st-end { margin-left: 0; }
   .st-card { padding: calc(var(--stump-space) * 2); }
+}
+/* 480 and under: a rule is label | value on one row, its source under them in 14 px muted (SPEC §4.2 venue rules at 390) */
+@media (max-width: 480px) {
+  .st-rule { grid-template-columns: auto minmax(0, 1fr); gap: 2px 16px; align-items: baseline; padding: 12px 0; }
+  .st-rule-value { justify-content: flex-end; text-align: right; }
+  .st-rule-value .st-value { text-align: right; }
+  .st-rule-source { grid-column: 1 / -1; white-space: normal; }
+  .st-venues .st-toolbar .st-end { flex: 1 1 100%; }
 }
 
 /* Accounts and publishing at phone width: an expanding row's state under its name */
@@ -449,7 +474,6 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-drafting .st-saved { display: flex; justify-content: flex-end; align-items: center; gap: 12px; position: sticky; bottom: 16px; pointer-events: none; }
 .st-drafting .st-saved > * { pointer-events: auto; }
 .st-drafting .st-saved .st-saved-mark:not(:empty) { background: var(--stump-white); border-radius: var(--stump-pill); padding: 4px 12px; }
-.st-drafting .st-profile .st-inline.st-inline-add { display: block; }
 .st-drafting .st-add-words { font: inherit; font-size: var(--stump-size-body); color: var(--stump-emerald-text); font-weight: 500; background: none; border: 0; padding: 6px 0; min-height: 32px; cursor: pointer; text-align: left; }
 .st-drafting .st-add-words:hover { text-decoration: underline; text-underline-offset: 3px; }
 .st-drafting .st-add-words:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; border-radius: 6px; }
@@ -467,6 +491,16 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-drafting .st-check-list li.danger span.st-fix { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
 .st-drafting .st-quiet-link { color: var(--stump-muted); font-size: var(--stump-size-small); text-decoration: underline; text-underline-offset: 3px; }
 .st-drafting .st-when-short { display: none; }
+/* Settings · Brand products: the name top-aligned with the tone, and one quiet "Add words" after it (H15) */
+.st-drafting .st-brand-products .st-kv { align-items: start; }
+.st-drafting .st-brand-products .st-kv > .st-name { padding-top: 5px; }
+.st-drafting .st-profile-tone { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.st-drafting .st-profile-tone > .st-inline { flex: 0 1 auto; min-width: 0; }
+.st-drafting .st-profile-tone > .st-inline input { field-sizing: content; min-width: 12ch; max-width: 100%; }
+.st-drafting .st-add-words.st-add-words-inline { flex: none; font-size: var(--stump-size-small); padding: 4px 0; }
+/* The held note in the bar keeps one line; the short forms take over at 480 and under. */
+.st-drafting .st-bar-held { white-space: nowrap; }
+.st-drafting .st-held-short, .st-drafting .st-when-tiny { display: none; }
 @media (max-width: 760px) {
   .st-drafting .st-compose { grid-template-columns: 1fr; }
   .st-drafting .st-checks-toggle { display: flex; align-items: center; gap: 10px; font: inherit; width: 100%; background: none; border: 0; padding: 0; color: var(--stump-text); text-align: left; min-height: 44px; }
@@ -494,8 +528,29 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-drafting .st-when-pill svg:last-child { display: none; }
   /* Everything held: the held note and the time share one 72 px row, the note wrapping inside its pill. */
   .st-drafting .st-bar:has(> .st-bar-held) { flex-wrap: nowrap; min-height: 72px; }
-  .st-drafting .st-bar > .st-bar-held { flex: 1 1 auto; min-width: 0; white-space: normal; line-height: 18px; padding: 6px 14px; }
+  .st-drafting .st-bar > .st-bar-held { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .st-drafting .st-bar:has(> .st-bar-held) .st-when { flex: 0 0 auto; min-width: 0; }
+}
+
+@media (max-width: 480px) {
+  .st-drafting .st-held-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .st-drafting .st-held-short { display: inline; }
+  .st-drafting .st-when-pill .st-when-short { display: none; }
+  .st-drafting .st-when-pill .st-when-tiny { display: inline; }
+}
+
+/* Settings · Accounts: the list card keeps the panel's 24 px inset (16 at 390) */
+.st-accounts .st-box { padding: 0 24px; }
+@media (max-width: 900px) { .st-accounts .st-box { padding: 0 16px; } }
+
+/* Settings · Agents (src/stump/agent-door/ui/AgentsSettings.tsx): each kind of action with its answer at the right */
+.st-agents .st-agents-policy .st-select { flex: none; min-width: 200px; }
+.st-agents .st-agents-policy > .st-meta { margin: -8px 0 8px; }
+.st-agents .st-agents-foot { margin: 12px 0 0; }
+.st-agents .st-agents-answer { flex: none; font-size: var(--stump-size-small); color: var(--stump-body); }
+.st-agents .st-panel-head .st-saved-mark { margin-left: auto; }
+@media (max-width: 900px) {
+  .st-agents .st-agents-policy .st-select { width: 100%; }
 }
 
 /* First-run setup (src/routes/app.setup.tsx, SPEC §4.2): the paper page, the stump seated above one white card, four numbered steps. */
@@ -520,9 +575,7 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-setup-pills { display: flex; flex-wrap: wrap; gap: 12px; }
 .st-setup-pill { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: var(--stump-pill); background: var(--stump-emerald-tint); color: var(--stump-ink); font: 500 15px/20px var(--stump-font); text-decoration: none; white-space: nowrap; }
 .st-setup-pill:hover { background: #DCE9DE; }
-/* A pill with a quiet second line under its label ("Markdown or CSV") */
-.st-setup-pill.st-setup-pill-two { flex-direction: column; align-items: flex-start; justify-content: center; padding: 6px 18px; line-height: 18px; }
-.st-setup-pill-two span { font-size: 13px; font-weight: 400; color: var(--stump-muted); }
+.st-setup-pill-keep { white-space: nowrap; }
 .st-setup-done { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--stump-body); font-size: 15px; }
 .st-setup-foot { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 8px; }
 .st-setup-foot .st-button.large { min-width: 224px; }
@@ -540,7 +593,6 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-setup-steps h2 { font-size: 20px; margin-top: 7px; }
   .st-setup-foot .st-button.large { width: 100%; }
   .st-setup-pill { white-space: normal; padding: 10px 16px; }
-  .st-setup-pill.st-setup-pill-two { padding: 6px 16px; }
 }
 
 /* Venues with none yet (SPEC §4.2 "Empty state, Venues"): the plate and its block centred in the column */
@@ -591,7 +643,9 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-today .st-today-grid { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 24px; align-items: start; }
 .st-today .st-today-main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .st-today .st-panel { margin: 0; min-width: 0; }
-.st-today .st-today-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+.st-today .st-today-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
+/* A row's name is one line, cut by the row itself (the plate's one-line rows). */
+.st-today .st-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .st-today .st-today-pair.single { grid-template-columns: minmax(0, 1fr); }
 .st-today .st-today-focal { font-size: 21px; line-height: 28px; font-weight: 600; color: var(--stump-ink); margin: 0 0 6px; overflow-wrap: anywhere; }
 .st-today .st-today-who { font-size: var(--stump-size-body); line-height: 22px; color: var(--stump-body); margin: 0 0 20px; }

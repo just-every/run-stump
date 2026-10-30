@@ -1,5 +1,5 @@
 // Hand-offs as both doors answer them, read in a few queries for any number:
-// the venue, the person's name, the draft item's flags and the draft with the
+// the venue, the person's and product's names, the draft item's flags and the draft with the
 // company's own links tagged for the hand-off route (STUMP-LINK-001).
 import { shortContent } from './link-content.ts'
 import type { ActionContext } from '../actions/types.ts'
@@ -13,13 +13,15 @@ export async function records(ctx: Pick<ActionContext, 'db'>, rows: HandoffRow[]
   for (const row of rows) if (!venues.has(row.venue_id)) venues.set(row.venue_id, (await readVenue(ctx.db, row.venue_id))!)
   const people = new Map((await ctx.db.prepare('SELECT id,display_name FROM stump_people WHERE id IN (SELECT value FROM json_each(?))')
     .bind(JSON.stringify([...new Set(rows.map(row => row.person_id))])).all<{ id: string; display_name: string }>()).results.map(row => [row.id, row.display_name]))
+  const products = new Map((await ctx.db.prepare('SELECT id,name FROM stump_products WHERE id IN (SELECT value FROM json_each(?))')
+    .bind(JSON.stringify([...new Set(rows.map(row => row.product_id).filter(Boolean))])).all<{ id: string; name: string }>()).results.map(row => [row.id, row.name]))
   const items = new Map((await ctx.db.prepare('SELECT id,flags FROM stump_items WHERE id IN (SELECT value FROM json_each(?))')
     .bind(JSON.stringify(rows.map(row => row.item_id).filter(Boolean))).all<{ id: string; flags: string }>()).results.map(row => [row.id, JSON.parse(row.flags) as unknown[]]))
   const out: HandoffRecord[] = []
   for (const row of rows) {
     const venue = venues.get(row.venue_id)!
     const draft = row.draft_text === null ? null : await tagOwnLinks(ctx.db, { text: row.draft_text, route: 'handoff', source: venue.platform ?? venue.name, campaign: row.campaign, content: shortContent(row.id) })
-    out.push(handoffRecord(row, venue, { person_name: people.get(row.person_id) ?? null, history: history.get(row.id)!, flags: row.item_id ? items.get(row.item_id) ?? [] : [], draft_text: draft }))
+    out.push(handoffRecord(row, venue, { person_name: people.get(row.person_id) ?? null, product_name: row.product_id ? products.get(row.product_id) ?? null : null, history: history.get(row.id)!, flags: row.item_id ? items.get(row.item_id) ?? [] : [], draft_text: draft }))
   }
   return out
 }

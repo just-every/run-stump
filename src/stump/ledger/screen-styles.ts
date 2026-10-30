@@ -3,7 +3,7 @@
 // .st-ledger-screen, so the shared st-* classes keep their values everywhere else.
 export const screenStyles = `
 .st-ledger-screen .st-bar { display: flex; gap: var(--stump-space); align-items: center; flex-wrap: wrap; margin: 0 0 calc(var(--stump-space) * 2); }
-.st-ledger-screen .st-bar .st-search { flex: 1 1 260px; }
+.st-ledger-screen .st-bar .st-search-field { flex: 1 1 260px; }
 .st-ledger-screen .st-search { font: inherit; font-size: var(--stump-size-body); color: var(--stump-text); background: var(--stump-white); border: 1px solid var(--stump-field); border-radius: var(--stump-radius-field); padding: 8px 14px; min-height: 44px; box-sizing: border-box; min-width: 0; }
 .st-ledger-screen .st-search:focus { outline: 2px solid var(--stump-focus); outline-offset: 2px; }
 .st-ledger-screen .st-chips { margin: 0 0 calc(var(--stump-space) * 2); }
@@ -32,15 +32,15 @@ export const screenStyles = `
 .st-ledger-screen .st-panel .st-button:not(.primary):not(.danger), .st-ledger-screen .st-detail .st-button:not(.primary):not(.danger) { background: var(--stump-white); }
 .st-ledger-screen .st-panel .st-actions, .st-ledger-screen .st-detail .st-actions { margin-top: calc(var(--stump-space) * 1.5); }
 @media (max-width: 760px) {
-  .st-ledger-screen .st-bar .st-search { flex-basis: 100%; }
+  .st-ledger-screen .st-bar .st-search-field { flex-basis: 100%; }
   /* The phone list (SPEC §4.2 Ledger): "Where · Who" over "When · Route · State", the link at the right. */
-  .st-ledger-screen .st-table tr.entry { display: block; padding: 12px 0; }
+  .st-ledger-screen .st-table tr.entry { display: block; padding: 12px 16px; }
   .st-ledger-screen .st-table tr.entry > td { display: none; }
   .st-ledger-screen .st-table tr.entry > td.st-phone { display: flex; align-items: center; gap: 12px; margin: 0; width: 100%; }
   .st-ledger-screen .st-phone .st-row-button { flex: 1 1 auto; min-width: 0; min-height: 44px; display: grid; gap: 2px; }
   .st-ledger-screen .st-phone-main { font-weight: 600; color: var(--stump-ink); overflow-wrap: anywhere; }
   .st-ledger-screen .st-phone-meta { font-size: var(--stump-size-small); color: var(--stump-muted); }
   .st-ledger-screen .st-phone a { flex: none; min-height: 44px; display: inline-flex; align-items: center; }
-  .st-ledger-screen .st-table tr.detail-row > td { padding: 0 0 12px; }
+  .st-ledger-screen .st-table tr.detail-row > td { padding: 0 16px 12px; }
 }
 `

@@ -118,6 +118,11 @@
 
 @media (prefers-reduced-motion: reduce) { .lp-tile { transition: none; } .lp-tile:hover { transform: none; } }
 
+/* 900 and wider: section headings fill their lines as the plates set them ("Know where to / show up."), the first line the longer; 390 keeps balance. */
+@media (min-width: 900px) {
+  .lp-band h2, .lp-details h2 { text-wrap: wrap; }
+}
+
 /* 1100 and wider: the picked image's scale (SPEC preamble, style process step 3), which runs larger than §3.2's table */
 @media (min-width: 1101px) {
   .lp-band { padding-block: 56px; }
