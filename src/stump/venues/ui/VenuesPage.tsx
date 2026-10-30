@@ -2,7 +2,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
-import { useLoaded } from '../../ui/kit.tsx'
+import { Empty, useLoaded } from '../../ui/kit.tsx'
 import { KIND_FIELDS, STATUS_LABELS } from '../kinds.ts'
 import { ImportPanel } from './ImportPanel.tsx'
 import { kindLabel, nextOpen, primaryRoute, statusLabel, statusTone } from './labels.ts'
@@ -31,6 +31,8 @@ export function VenuesPage() {
     list: await runAction<VenueList>('stump.venues.manage', { action: 'list', ...filters, ...(search ? { q: search } : {}) }),
   }))
   useEffect(() => { const timer = setTimeout(() => setSearch(query.trim()), 250); return () => clearTimeout(timer) }, [query])
+  // ?import=1 (from first-run setup) opens the import panel.
+  useEffect(() => { if (new URLSearchParams(window.location.search).get('import')) setPanel('import') }, [])
   useEffect(() => { void refresh() }, [filters, search, refresh])
   const editor = data ? ['owner', 'admin', 'editor'].includes(data.me.person.role) : false
   const owner = data?.me.person.role === 'owner'
@@ -45,13 +47,11 @@ export function VenuesPage() {
       <h1 id="venues-title">Venues</h1>
       {empty ? null : <p className="st-sub">Find and manage the best places to tell your story.</p>}
       {error ? <p className="st-error" role="alert">{error}</p> : null}
-      {empty && panel === 'none' ? <div className="st-empty">
-        <h2>Add your first venue</h2>
-        <p>Communities, newsletters, podcasts and journalists worth showing up in.</p>
-        <div className="st-actions">
+      {empty && panel === 'none' ? <div className="st-venues-empty">
+        <Empty title="Add your first venue" actions={editor || owner ? <>
           {editor ? <button className="st-button primary pill" type="button" onClick={() => setPanel('add')}>Add your first venue</button> : null}
           {owner ? <button className="st-button pill outline" type="button" onClick={() => setPanel('import')}>Import a venue list</button> : null}
-        </div>
+        </> : undefined}>Communities, newsletters, podcasts and journalists worth showing up in.</Empty>
       </div> : <>
         <div className="st-toolbar" role="search">
           <div className="st-grow"><input className="st-search" type="search" aria-label="Search venues" placeholder="Search venues…" value={query} onChange={event => setQuery(event.target.value)} /></div>
