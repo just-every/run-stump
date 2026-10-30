@@ -1,25 +1,66 @@
-/* This edition's declared theme. The installer, sign-in, confirmation, /setup
-   read these --rer-* tokens; the app serves this file and its fonts.
-   Buttons keep the colour chosen at setup (src/branding.json primaryColor)
-   because no --rer-accent is declared here; declare --rer-accent and
-   --rer-accent-text together to fix them instead. */
-@font-face {
-  font-family: Outfit;
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('/fonts/outfit/outfit-latin-wght-normal.woff2') format('woff2');
-}
+/* Stump's declared theme. The installer, sign-in, confirmation, /setup and the
+   run site's Base pages read these --rer-* tokens; the app serves this file
+   and its fonts (public/fonts/fonts.css declares Gantari). The rules below the
+   tokens dress Base's no-JavaScript documents (sign-in and first-run setup) as
+   Stump: the paper ground with the pastel stump over one white card. They use
+   only the classes and elements Base renders, so Base's pages stay unedited. */
 :root {
-  --rer-font-body: Outfit, Arial, sans-serif;
-  --rer-font-heading: Outfit, Arial, sans-serif;
-  --rer-page: #f4f6f5;
-  --rer-surface: #ffffff;
-  --rer-text: #1b2724;
-  --rer-muted: #4a5a55;
-  --rer-border: #6b7c76;
-  --rer-focus: #1b2724;
-  --rer-link: #1f5f52;
-  --rer-radius: 12px;
-  --rer-logo: url('/brand/mark.svg');
+  --rer-font-body: Gantari, Arial, sans-serif;
+  --rer-font-heading: Gantari, Arial, sans-serif;
+  --rer-page: #F9F3E4;
+  --rer-surface: #FFFFFF;
+  --rer-text: #1C1B18;
+  --rer-muted: #66625A;
+  --rer-border: #D9DDE2;
+  --rer-focus: #0B8A60;
+  --rer-link: #08724F;
+  --rer-accent: #1C1B18;
+  --rer-accent-text: #FFFFFF;
+  --rer-radius: 18px;
+  --rer-wordmark-weight: 800;
+  --rer-wordmark-tracking: -0.02em;
+  --rer-logo: url('/brand/stump-mark.svg');
+}
+
+/* Sign-in (/signin) and first-run setup (/setup) */
+html.rer-themed { background: #F9F3E4 url('/art/grain.png') repeat; }
+html.rer-themed body { background: transparent; font-family: Gantari, Arial, sans-serif; color: #1C1B18; }
+html.rer-themed body::before {
+  content: ""; display: block; width: 200px; height: 126px; margin: 0 auto -6px;
+  background: url('/art/stump-small.webp') center bottom / contain no-repeat;
+}
+html.rer-themed body > main {
+  max-width: 420px; padding: 32px; border: 0; border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(28,27,24,.05), 0 14px 32px -14px rgba(92,70,30,.22);
+}
+html.rer-themed body > main:has(form[action="/setup"]) { max-width: 720px; }
+html.rer-themed main .brand, html.rer-themed main .rer-brand {
+  margin: 0 0 24px; gap: 10px; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #1C1B18;
+}
+html.rer-themed main .brand::before, html.rer-themed main .rer-brand::before { width: 40px; height: 40px; }
+html.rer-themed main h1 { font-size: 28px; line-height: 1.2; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 20px; color: #1C1B18; }
+html.rer-themed main h2 { font-size: 19px; font-weight: 600; }
+html.rer-themed main p, html.rer-themed main dt { color: #3B3933; font-size: 16px; }
+html.rer-themed main label { font-size: 14px; font-weight: 600; color: #1C1B18; }
+html.rer-themed main input:not([type=checkbox]):not([type=hidden]) {
+  min-height: 44px; border: 1px solid #D9DDE2; border-radius: 10px; background: #FFFFFF; color: #1C1B18; font: 16px/1.4 Gantari, Arial, sans-serif;
+}
+html.rer-themed main input:focus-visible { outline: 2px solid #0B8A60; outline-offset: 2px; }
+html.rer-themed main input[type=checkbox] { accent-color: #0B8A60; }
+html.rer-themed main label:has(input[type=checkbox]) { min-height: 44px; align-items: center; }
+html.rer-themed main button, html.rer-themed main .action {
+  min-height: 52px; border: 0; border-radius: 999px; background: #1C1B18; color: #FFFFFF;
+  font: 600 17px/20px Gantari, Arial, sans-serif; transition: background-color .16s ease-out, transform .16s ease-out;
+}
+html.rer-themed main button:hover, html.rer-themed main .action:hover { background: #2E2C28; box-shadow: none; transform: translateY(-1px); }
+html.rer-themed main button.secondary { background: #FFFFFF; color: #1C1B18; border: 1px solid #D9D5CB; }
+html.rer-themed main button:focus-visible, html.rer-themed main .action:focus-visible, html.rer-themed main a:focus-visible { outline: 2px solid #0B8A60; outline-offset: 2px; }
+html.rer-themed main .notice { border: 0; border-radius: 14px; background: #E7F0E8; color: #08724F; padding: 12px 16px; }
+html.rer-themed main .secondary-link a { color: #08724F; }
+@media (prefers-reduced-motion: reduce) { html.rer-themed main button, html.rer-themed main .action { transition: none; transform: none; } }
+@media (max-width: 480px) {
+  html.rer-themed body { padding: 24px 16px; }
+  html.rer-themed body::before { width: 160px; height: 101px; }
+  html.rer-themed body > main { padding: 24px 20px; }
+  html.rer-themed main h1 { font-size: 26px; }
 }

@@ -1190,7 +1190,7 @@ Core · target · **partial** · From new
 4. Pause and resume are recorded with the person and time.
 
 **Evidence.** `tests/stump/team.test.mjs` "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked"
-**Gap.** Point 4 is proven. The tick and resume code for points 1 to 3 is in `src/stump/publish/tick.ts` and `src/stump/tools/calendar.ts`; their proof waits for scheduled items, which the scheduling lane adds.
+**Gap.** Point 4 is proven. The tick and resume code for points 1 to 3 is in `src/stump/publish/tick.ts` and `src/stump/tools/calendar.ts`; their proof waits for scheduled items, which the scheduling lane adds. In the app, the top bar's Pause control and the Pause screen (`/app/pause`) run the same tool.
 
 ### More channels and formats
 

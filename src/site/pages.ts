@@ -1,33 +1,43 @@
-// The run site `rer build --site` writes: the homepage with its Run action,
-// /run, /docs/hosting, /contract when the seed has a CONTRACT.md, the not-found
-// page and the public files they use. Every Run page string and command is in
-// run.json; nothing here reads installation data.
+// The run site `rer build --site` writes (run-stump.com): the homepage, the
+// docs built from docs/site.json and docs/*.md, /run, /contract and Base's
+// hosting page from Base, and the not-found page. Nothing here reads
+// installation data.
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { contractPageHtml } from '../base/contract-page'
 import { hostingPageHtml } from '../base/hosting-page'
-import { runPageHtml, siteHomeHtml, siteNotFoundHtml, type RunData, type SiteBuild, type SiteContext } from '../base/run-site'
-import { identity } from '../identity'
+import { runPageHtml, siteNotFoundHtml, type RunData, type SiteBuild, type SiteContext } from '../base/run-site'
 import { runPricing } from '../base/run-pricing'
+import { identity } from '../identity'
+import { buildDocs } from '../../scripts/site/docs.mjs'
+import { DocsArticle, DocsIndex, docsLead } from './docs/Docs'
+import { Landing } from './landing/Landing'
+import { Header } from './shell/Header'
+import { siteDocument } from './shell/document'
 import run from './run.json'
 
-// Base's composed homepage carries a fixed sub line; Stump's names the incumbents it replaces.
-const ALTERNATIVE_LINE = 'Open-source alternative to Hootsuite, Buffer and Typefully.'
-function homeHtml(...args: Parameters<typeof siteHomeHtml>): string {
-  const html = siteHomeHtml(...args), sub = /<p class="sub">[^<]*<\/p>/
-  if (!sub.test(html)) throw new Error('The composed homepage no longer has a sub line to replace.')
-  return html.replace(sub, `<p class="sub">${ALTERNATIVE_LINE}</p>`)
-}
+const DESCRIPTION = 'Stump turns your changelog into posts for the communities worth showing up in, then shows which posts brought signups.'
 
-export function sitePages({ contract, hosting }: Partial<SiteContext> = {}): SiteBuild {
+export function sitePages({ contract, hosting, styles = [] }: Partial<SiteContext> = {}): SiteBuild {
   const data: RunData = { ...run, pricing: runPricing }
+  const docs = buildDocs()
+  const page = (path: string, title: string, description: string, element: ReturnType<typeof createElement>) =>
+    ({ path, html: siteDocument({ title, description, path, styles, body: renderToStaticMarkup(element) }) })
+  const pages = docs.pages
+  // Base's /run, /contract, /docs/hosting and 404 pages wear the homepage header too.
+  const homepage = { html: renderToStaticMarkup(createElement(Header)), styles }
   return {
     pages: [
-      { path: '/', html: homeHtml(identity, data, contract) },
-      { path: '/run', html: runPageHtml(identity, data, contract) },
+      page('/', 'Stump · Be heard in your own voice', DESCRIPTION, createElement(Landing)),
+      page('/docs', 'Docs · Stump', docsLead, createElement(DocsIndex, { sections: docs.sections })),
+      ...pages.map((entry, index) => page(`/docs/${entry.slug}`, `${entry.title} · Stump docs`, entry.summary,
+        createElement(DocsArticle, { page: entry, sections: docs.sections, previous: pages[index - 1], next: pages[index + 1] }))),
+      { path: '/run', html: runPageHtml(identity, data, contract, homepage) },
       // rer supplies hosting (null when the seed does not deploy to Workers); a caller without it gets no hosting page.
-      ...(hosting !== undefined ? [{ path: '/docs/hosting', html: hostingPageHtml(identity, data, hosting, contract) }] : []),
-      ...(contract ? [{ path: '/contract', html: contractPageHtml(identity, data, contract) }] : []),
-      { path: '/404', html: siteNotFoundHtml(identity, data, contract) },
+      ...(hosting !== undefined ? [{ path: '/docs/hosting', html: hostingPageHtml(identity, data, hosting, contract, homepage) }] : []),
+      ...(contract ? [{ path: '/contract', html: contractPageHtml(identity, data, contract, homepage) }] : []),
+      { path: '/404', html: siteNotFoundHtml(identity, data, contract, homepage) },
     ],
-    assets: ['rer-theme.css', 'fonts', 'brand'],
+    assets: ['rer-theme.css', 'fonts', 'brand', 'art', 'favicon.svg', 'favicon-32.png', 'apple-touch-icon.png'],
   }
 }

@@ -1,0 +1,73 @@
+/* The run site's tokens, frame, header, footer and pills (final design SPEC §2-3). */
+:root {
+  --paper: #F9F3E4;
+  --white: #FFFFFF;
+  --ink: #1C1B18;
+  --ink-hover: #2E2C28;
+  --body: #3B3933;
+  --muted: #66625A;
+  --line: #E8E3D6;
+  --hairline: #E6EAEE;
+  --sunk: #F5F7F8;
+  --emerald: #0B8A60;
+  --emerald-text: #08724F;
+  --emerald-tint: #E7F0E8;
+  --focus-tint: #F1F7F3;
+  --outline: #D9D5CB;
+  --card-shadow: 0 1px 2px rgba(28,27,24,.05), 0 14px 32px -14px rgba(92,70,30,.22);
+  --font: Gantari, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --gutter: max(24px, calc((100vw - 1268px) / 2));
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper) url('/art/grain.png') repeat; color: var(--body); font: 400 17px/1.6 var(--font); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+img { max-width: 100%; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; border-radius: 4px; }
+.site-page { min-height: 100vh; display: flex; flex-direction: column; }
+.site-page > main { flex: 1; }
+.site-wrap { width: 100%; padding-inline: var(--gutter); }
+
+/* Header: 96 px at 1440, 64 px on phones */
+.site-header { position: relative; z-index: 2; }
+.site-header-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 96px; }
+.site-lockup { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font: 800 28px/1 var(--font); letter-spacing: -0.02em; min-height: 44px; }
+.site-lockup img { width: 44px; height: auto; display: block; }
+.site-header-nav { display: flex; align-items: center; gap: 32px; }
+.site-header-nav a { color: var(--ink); text-decoration: none; font-size: 17px; font-weight: 500; display: inline-flex; align-items: center; min-height: 44px; }
+.site-header-nav a[aria-current="page"] { font-weight: 700; box-shadow: inset 0 -2px 0 var(--emerald); }
+.site-header-nav a:not(.site-pill):hover { color: var(--emerald-text); }
+
+/* Pills */
+.site-pill { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 0 20px; border-radius: 999px; background: var(--ink); color: var(--white) !important; font: 600 15px/20px var(--font); text-decoration: none; white-space: nowrap; transition: background-color .16s ease-out, transform .16s ease-out; }
+.site-pill:hover { background: var(--ink-hover); transform: translateY(-1px); }
+.site-pill--header { font-size: 16px; }
+.site-pill--large { min-height: 56px; padding: 0 28px; font-size: 17px; min-width: 192px; }
+
+/* Footer */
+.site-footer { border-top: 1px solid var(--line); margin-top: 0; }
+.site-footer-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 40px; padding-block: 40px 48px; }
+.site-footer-text { border-left: 1px solid var(--line); padding-left: 40px; }
+.site-footer-text p { margin: 0; }
+.site-footer-line { color: var(--body); font-size: 17px; }
+.site-footnote { color: var(--muted); font-size: 14px; margin-top: 12px !important; }
+.site-footer-nav { display: flex; gap: 40px; }
+.site-footer-nav a { color: var(--ink); text-decoration: none; font-size: 17px; display: inline-flex; align-items: center; min-height: 44px; }
+.site-footer-nav a:hover { color: var(--emerald-text); }
+
+@media (prefers-reduced-motion: reduce) { .site-pill { transition: none; } .site-pill:hover { transform: none; } }
+
+@media (max-width: 760px) {
+  .site-wrap { padding-inline: 24px; }
+  .site-header-row { height: 64px; }
+  .site-lockup { font-size: 20px; gap: 8px; }
+  .site-lockup img { width: 32px; }
+  .site-header-nav { gap: 20px; }
+  .site-header-nav a { font-size: 16px; }
+  .site-pill--header { display: none !important; }
+  .site-footer-row { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 16px; padding-block: 32px 40px; }
+  .site-footer-text { border: 0; padding: 0; }
+  .site-footer-nav { gap: 28px; }
+}

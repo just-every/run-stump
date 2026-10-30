@@ -120,11 +120,16 @@
         "foundation/runtime/theme-frame.ts"
       ],
       "adapted": {
-        "src/base/hydration/README.md": "2135c394939f4a737adabdc8003b0e667b31ac5a"
+        "src/base/hydration/README.md": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/base/font-head.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
       },
       "acknowledged": {
         "src/base/hydration/README.md": {
           "sha256": "599c0b024441c7caa9b6488fe2dc0e9027cae6a0e0b93add40dc753bbe30e315",
+          "mode": "100644"
+        },
+        "src/base/font-head.ts": {
+          "sha256": "0e58163a9ee6add5769e8c9609771de424ad51aadacc8101f6b3dde59dd6773f",
           "mode": "100644"
         }
       }
