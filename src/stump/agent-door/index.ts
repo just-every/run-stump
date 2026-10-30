@@ -8,6 +8,7 @@ import { readPerson, resolvePerson } from '../people/store.ts'
 import { stumpTools } from '../tools/index.ts'
 import { authenticateCredential, SPECIALIST } from './credentials.ts'
 import { baseInvite } from '../people/invite.ts'
+import { seal, unseal } from '../accounts/seal.ts'
 
 export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency'] as const
 export const toolScopes = () => [...new Set(stumpTools.map(tool => tool.scope))].sort()
@@ -61,6 +62,8 @@ export function stumpAgentDoor(original: StumpEnv) {
     tools: stumpTools.map(tool => doorTool(tool, toolContext => agentContext(env, toolContext))),
     people: stumpPeople(env),
     localCredentials: request => authenticateCredential(env.DB, request, toolScopes()),
+    // A key, password or webhook an agent's held call carries waits sealed under the installation key.
+    sealing: { seal: (purpose, value) => seal(env, purpose, value), open: (purpose, sealed) => unseal(env, purpose, sealed) },
     notTools: [
       { clauses: ['STUMP-VENUE-004', 'STUMP-IMPORT-001'], reason: 'import-door' },
       { clauses: ['STUMP-INBOX-005'], reason: 'screen' },

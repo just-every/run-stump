@@ -1,8 +1,8 @@
 import type { Evidence } from './audit.ts'
 import { recoverAudit } from './audit.ts'
-import type { ClassAndFacts, CallResult, Person, Principal, Runtime, ToolContext, ApprovalDisplaySummary } from './types.ts'
+import type { ClassAndFacts, CallResult, JsonSchema, Person, Principal, Runtime, ToolContext, ToolDefinition, ApprovalDisplaySummary } from './types.ts'
 import { appendEvents } from './events.ts'
-import { error, json } from './errors.ts'
+import { error, json, ToolRefusal } from './errors.ts'
 import { matchingRefs, preparedBy } from './people.ts'
 import { executeApproval } from './approval-execution.ts'
 
@@ -10,9 +10,47 @@ export interface SavedApproval {
   decision_id: string; revision: number | null; tool: string; args: Record<string, unknown>; digest: string; key: string | null; claimKey?: string | null
   classes: ClassAndFacts[]; principal: Principal; approvers: string[]; expires_at: string; door: ToolContext['door']; evidence: Evidence
   result: CallResult; expected_revision?: string | number; summary: ApprovalDisplaySummary; summary_sha256: string
+  /** The writeOnly arguments, sealed for this decision, until the approval reaches a final state. */
+  sealed?: string
 }
 interface ApprovalRecord { id: string; state: string; saved: string; approvals: string; result: string | null; version: number }
 export interface ApprovalMark { ref: string; person: string; name: string; at: string }
+
+type Node = Record<string, unknown>
+const isNode = (value: unknown): value is Node => !!value && typeof value === 'object' && !Array.isArray(value)
+/** Paths to the properties a schema marks writeOnly: secrets a tool takes and never answers. */
+function secretPaths(schema: JsonSchema, at: string[] = []): string[][] {
+  if (!isNode(schema) || !isNode(schema.properties)) return []
+  return Object.entries(schema.properties).flatMap(([key, child]) => isNode(child) && child.writeOnly === true ? [[...at, key]] : secretPaths(child as JsonSchema, [...at, key]))
+}
+/**
+ * A held call's arguments as its approval keeps them: every writeOnly value moves into
+ * one value sealed for this decision, and the arguments keep the rest.
+ */
+export async function sealArguments(rt: Runtime, tool: ToolDefinition, args: Record<string, unknown>, decisionId: string): Promise<{ args: Record<string, unknown>; sealed?: string }> {
+  const kept = structuredClone(args), secrets: Array<[string[], unknown]> = []
+  for (const path of secretPaths(tool.inputSchema)) {
+    const parent = path.slice(0, -1).reduce<unknown>((node, key) => isNode(node) ? node[key] : undefined, kept), key = path.at(-1)!
+    if (isNode(parent) && Object.hasOwn(parent, key)) { secrets.push([path, parent[key]]); delete parent[key] }
+  }
+  if (!secrets.length) return { args }
+  if (!rt.options.sealing) throw new ToolRefusal('sealing_unavailable')
+  return { args: kept, sealed: await rt.options.sealing.seal(`approval:${decisionId}`, secrets) }
+}
+/** The arguments a held call runs with: what the approval kept, with its sealed values opened. */
+export async function openArguments(rt: Runtime, saved: SavedApproval): Promise<Record<string, unknown>> {
+  if (saved.sealed === undefined) return saved.args
+  if (!rt.options.sealing) throw new Error('sealing_unavailable')
+  const args = structuredClone(saved.args), secrets = await rt.options.sealing.open(`approval:${saved.decision_id}`, saved.sealed) as Array<[string[], unknown]>
+  for (const [path, value] of secrets) {
+    let node: Node = args
+    for (const key of path.slice(0, -1)) { if (!isNode(node[key])) node[key] = {}; node = node[key] as Node }
+    node[path.at(-1)!] = value
+  }
+  return args
+}
+/** SQL that drops a decided approval's sealed arguments: nothing runs with them again. */
+export const DROP_SEALED = "saved=json_remove(saved,'$.sealed')"
 export async function openApproval(rt: Runtime, saved: SavedApproval) {
   const id = crypto.randomUUID(), requestState = crypto.randomUUID()
   const approval = { id, url: `${rt.options.origin}/agents/approvals/${id}`, expires_at: saved.expires_at }
@@ -60,7 +98,7 @@ export async function approvalDoor(rt: Runtime, request: Request, person: Person
   if (body.summary_sha256 !== saved.summary_sha256) return error('approval_summary_mismatch', 409)
   if (body.revision !== saved.revision) return error('revision_conflict', 409, { current_revision: saved.revision })
   if (row.state === 'expired' || rt.now() >= Date.parse(saved.expires_at) && row.state === 'pending') {
-    await rt.options.db.prepare("UPDATE agent_door_approvals SET state='expired' WHERE id=? AND state='pending'").bind(id).run()
+    await rt.options.db.prepare(`UPDATE agent_door_approvals SET state='expired',${DROP_SEALED} WHERE id=? AND state='pending'`).bind(id).run()
     return error('approval_expired', 409)
   }
   const approvals: ApprovalMark[] = JSON.parse(row.approvals)
@@ -72,7 +110,7 @@ export async function approvalDoor(rt: Runtime, request: Request, person: Person
   if (action === 'approve') approvals.push(...unsatisfied.map(ref => ({ ref, person: person.id, name: person.name, at: new Date(rt.now()).toISOString() })))
   const complete = action === 'approve' && saved.approvers.every(ref => approvals.some(mark => mark.ref === ref))
   const nextState = action === 'reject' ? 'rejected' : complete ? 'executing' : 'pending'
-  const changed = await rt.options.db.prepare('UPDATE agent_door_approvals SET state=?,approvals=?,version=version+1 WHERE id=? AND version=? AND state=?')
+  const changed = await rt.options.db.prepare(`UPDATE agent_door_approvals SET state=?,approvals=?,version=version+1${nextState === 'rejected' ? `,${DROP_SEALED}` : ''} WHERE id=? AND version=? AND state=?`)
     .bind(nextState, JSON.stringify(approvals), id, row.version, 'pending').run()
   if (!changed.meta.changes) return error('approval_conflict', 409)
   const final = complete ? await executeApproval(rt, id, saved, approvals) : { state: nextState, code: undefined }

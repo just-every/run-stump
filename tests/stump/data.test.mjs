@@ -76,6 +76,14 @@ test('switching from Buffer: a dry run, sent posts to the ledger, schedules to s
 
   const unconfirmed = await app.action('owner', 'stump.calendar.plan', { action: 'release_import', item_ids: [queued.id], confirm_source_cleared: false })
   assert.ok(unconfirmed.status >= 400)
+  // Only the person confirms the old tool's queue is cleared: an agent cannot release it under any policy, and a Pause and resume leaves it waiting.
+  const document = { schema: 'rer-agent-policy/1', catalogue: 'rer-agent-classes/1', spend: { none: true }, rules: [{ id: 'all', class: '*', do: 'autonomous' }] }
+  assert.equal((await app.json('owner', '/agents/api/policy', { document }, 'PUT')).status, 200)
+  const agent = (await app.json('owner', '/app/api/agent-credentials', { name: 'Synthetic importer' })).body
+  assert.equal((await app.mcp(agent.token, 'stump.calendar.plan', { action: 'release_import', item_ids: [queued.id], confirm_source_cleared: true })).error?.code, 'person_only')
+  await act('stump.calendar.pause', { action: 'pause', scope: 'all' })
+  await act('stump.calendar.pause', { action: 'resume', scope: 'all' })
+  assert.equal((await act('stump.drafts.revise', { action: 'get', item_id: queued.id })).state, 'paused')
   assert.deepEqual((await act('stump.calendar.plan', { action: 'release_import', item_ids: [queued.id], confirm_source_cleared: true })).released, [queued.id])
   assert.equal((await act('stump.drafts.revise', { action: 'get', item_id: queued.id })).state, 'scheduled')
 

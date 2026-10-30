@@ -19,6 +19,43 @@ import { accountView, openCredentials, readAccount, sealCredentials, type Accoun
 const CONSENT_MINUTES = 15
 const DEFAULT_BLUESKY_SERVICE = 'https://bsky.social'
 
+const loopback = (hostname: string) => {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase()
+  return host === 'localhost' || host.endsWith('.localhost') || host === '::1' || /^127(?:\.\d{1,3}){3}$/.test(host)
+}
+const originOf = (url: string) => { try { return new URL(url).origin } catch { return null } }
+
+/** A Bluesky server a person names: an https origin, or an http one on this machine in a local runtime. */
+function namedServer(ctx: ActionContext, value: string): string {
+  let url: URL | null = null
+  try { url = new URL(value.trim()) } catch { /* refused below */ }
+  const local = !!url && ctx.env.AUTH_LOCAL === 'true' && loopback(url.hostname)
+  if (!url || !(url.protocol === 'https:' || (local && url.protocol === 'http:')) || url.pathname.replace(/\/+$/, '') !== '' || url.search || url.hash || url.username || url.password) {
+    refuse('invalid_arguments', { field: 'service', reason: 'Name the Bluesky server by its https address, such as https://bsky.social.' })
+  }
+  return url.origin
+}
+
+/**
+ * Who a Bluesky handle or DID is, from the public record: the handle resolved and named
+ * back by its DID document, which comes from the PLC directory (did:plc) or its own
+ * domain (did:web). A named server is only checked against that record. Only a local
+ * runtime asks a server on this machine, a development PDS with its own PLC, to answer
+ * for its own accounts.
+ */
+async function blueskyIdentity(ctx: ActionContext, identifier: string, service: string | null, stored: string | null) {
+  const fetch = stumpFetch(ctx.env), hint = service ?? stored, hintOrigin = hint ? originOf(hint) : null
+  const local = !!hintOrigin && ctx.env.AUTH_LOCAL === 'true' && loopback(new URL(hintOrigin).hostname)
+  const identity = local
+    ? await resolveIdentityAtServer({ fetch }, hintOrigin!, identifier)
+    : await resolveIdentity({ fetch }, identifier, { handleResolverUrl: DEFAULT_BLUESKY_SERVICE })
+  if (!identity.ok) networkError('bluesky', identity.error)
+  if (service && originOf(identity.value.pdsUrl) !== service) {
+    networkError('bluesky', { kind: 'validation', code: 'pds_mismatch', message: `${identity.value.did} keeps its records on ${identity.value.pdsUrl}, not ${service}.` })
+  }
+  return { ...identity.value, local }
+}
+
 type Pending =
   | { network: 'mastodon'; origin: string; redirect_uri: string; verifier: string }
   | { network: 'bluesky'; method: 'oauth'; oauth: PendingOAuth }
@@ -81,24 +118,18 @@ export async function startConnection(ctx: ActionContext, input: StartInput) {
     pending = { network, origin: instance.origin, redirect_uri: redirectUri, verifier: pkce.verifier }
     consentUrl = buildAuthorizeUrl(instance.origin, { clientId: app.clientId, redirectUri, state, codeChallenge: pkce.challenge })
   } else if (network === 'bluesky') {
-    const identifier = (input.handle ?? input.account?.handle ?? '').trim().replace(/^@/, '')
+    // On reconnect, the account's handle and its server (a reconnect may follow a move to another server, so the server is only a hint).
+    const identifier = (input.account?.network_user_id ?? input.handle ?? input.account?.handle ?? '').trim().replace(/^@/, '')
     if (!identifier) refuse('invalid_arguments', { field: 'handle' })
-    // A server the person names (or the account's own PDS on reconnect) answers for its accounts:
-    // the handle resolves there and the DID document is the one it serves, checked both ways, so a
-    // PDS with its own PLC needs no public directory. With no server named, the public PLC applies.
-    const named = (input.service ?? input.account?.instance)?.replace(/\/+$/, '')
-    const identity = named
-      ? await resolveIdentityAtServer({ fetch }, named, identifier)
-      : await resolveIdentity({ fetch }, identifier, { handleResolverUrl: DEFAULT_BLUESKY_SERVICE })
-    if (!identity.ok) networkError('bluesky', identity.error)
+    const identity = await blueskyIdentity(ctx, identifier, input.service === undefined ? null : namedServer(ctx, input.service), input.account?.instance ?? null)
     // The handle already names its DID, so an account someone else owns is refused here, before any consent screen.
-    await refuseOwnedElsewhere(ctx, 'bluesky', identity.value.did, { kind: input.owner === 'company' ? 'company' : 'person', person_id: input.owner === 'company' ? null : ctx.person.id })
-    const offered = await discoverOAuth({ fetch }, identity.value.pdsUrl)
+    await refuseOwnedElsewhere(ctx, 'bluesky', identity.did, { kind: input.owner === 'company' ? 'company' : 'person', person_id: input.owner === 'company' ? null : ctx.person.id })
+    const offered = await discoverOAuth({ fetch }, identity.pdsUrl)
     if (!offered.ok) networkError('bluesky', offered.error)
     if (offered.value === null) {
-      pending = { network, method: 'app_password', did: identity.value.did, handle: identity.value.handle, pds_url: identity.value.pdsUrl }
+      pending = { network, method: 'app_password', did: identity.did, handle: identity.handle, pds_url: identity.pdsUrl }
     } else {
-      const started = await startOAuth({ fetch }, blueskyOAuthClient(ctx.env), { identifier: identity.value.did, handleResolverUrl: named ?? DEFAULT_BLUESKY_SERVICE, identity: identity.value })
+      const started = await startOAuth({ fetch }, blueskyOAuthClient(ctx.env), { identifier: identity.did, handleResolverUrl: identity.local ? identity.pdsUrl : DEFAULT_BLUESKY_SERVICE, identity })
       if (!started.ok) networkError('bluesky', started.error)
       // The library made its own state; Stump's binds the consent to this person.
       pending = { network, method: 'oauth', oauth: started.value.pending }
@@ -188,7 +219,8 @@ async function exchange(ctx: ActionContext, connection: ConnectionRow, pending: 
     if (!input.app_password) refuse('invalid_arguments', { field: 'app_password' })
     const session = await createSession({ fetch }, pending.pds_url, { identifier: pending.did, password: input.app_password })
     if (!session.ok) networkError('bluesky', session.error)
-    return bluesky(ctx, session.value.pdsUrl, session.value.auth)
+    // The account stays on the server its public record names, whatever the session says.
+    return bluesky(ctx, pending.pds_url, session.value.auth, { did: pending.did, handle: pending.handle })
   }
   if (!input.code) refuse('invalid_arguments', { field: 'code' })
   if (pending.network === 'mastodon') {
@@ -209,7 +241,7 @@ async function exchange(ctx: ActionContext, connection: ConnectionRow, pending: 
   if (pending.network === 'bluesky') {
     const auth = await completeOAuth({ fetch }, blueskyOAuthClient(ctx.env), pending.oauth, { code: input.code, state: input.state ?? pending.oauth.state, iss: input.iss ?? null })
     if (!auth.ok) networkError('bluesky', auth.error)
-    return bluesky(ctx, pending.oauth.pdsUrl, auth.value)
+    return bluesky(ctx, pending.oauth.pdsUrl, auth.value, { did: pending.oauth.did, handle: pending.oauth.handle })
   }
   if (pending.network === 'x') {
     const keys = await appKeys(ctx.db, ctx.env, 'x')
@@ -242,14 +274,22 @@ async function exchange(ctx: ActionContext, connection: ConnectionRow, pending: 
   }
 }
 
-async function bluesky(ctx: ActionContext, pdsUrl: string, auth: BlueskyAuth): Promise<Connected> {
+/**
+ * The connected Bluesky account: the identity resolved at start (its DID, handle and server),
+ * which the session must be for. A session for any other DID is ended and refused.
+ */
+async function bluesky(ctx: ActionContext, pdsUrl: string, auth: BlueskyAuth, expected: { did: string; handle: string | null }): Promise<Connected> {
   const fetch = stumpFetch(ctx.env)
   const client = createBlueskyClient({ fetch, pdsUrl, auth, oauthClient: blueskyOAuthClient(ctx.env), onAuthChange: next => { auth = next } })
-  const profile = await client.profile()
-  if (!profile.ok) networkError('bluesky', profile.error)
+  const profile = auth.did === expected.did ? await client.profile() : null
+  if (profile && !profile.ok) networkError('bluesky', profile.error)
+  if (!profile || profile.value.did !== expected.did) {
+    await client.disconnect()
+    networkError('bluesky', { kind: 'validation', code: 'did_mismatch', message: `The server signed in as another account, not ${expected.handle ?? expected.did}.` })
+  }
   const followers = await client.followers()
   return {
-    networkUserId: profile.value.did, handle: profile.value.handle, displayName: profile.value.displayName, instance: pdsUrl,
+    networkUserId: expected.did, handle: expected.handle ?? profile.value.handle, displayName: profile.value.displayName, instance: pdsUrl,
     get credentials() { return { network: 'bluesky' as const, pds_url: pdsUrl, auth } },
     expiresAt: auth.kind === 'password' ? auth.refreshExpiresAtMs : auth.expiresAtMs, postLimit: 300, followers: followers.ok ? followers.value : null,
     revoke: async () => { await client.disconnect() },
@@ -263,15 +303,19 @@ async function bluesky(ctx: ActionContext, pdsUrl: string, auth: BlueskyAuth): P
  */
 export async function disconnectAccount(ctx: ActionContext, row: AccountRow) {
   let revoked: 'revoked' | 'not_supported' | 'failed' | 'nothing_to_revoke' = 'nothing_to_revoke'
-  const creds = row.state === 'disconnected' ? null : await openCredentials(ctx.env, row).catch(() => null)
-  if (creds) revoked = await revokeAtNetwork(ctx, creds)
   const queued = (await ctx.db.prepare("SELECT id,state,scheduled_at FROM stump_items WHERE account_id=? AND state IN ('scheduled','paused','held') ORDER BY scheduled_at,id")
     .bind(row.id).all<{ id: string; state: ItemState; scheduled_at: number | null }>()).results
   const mover = { db: ctx.db, person: ctx.person, agent: ctx.agent, now: ctx.now }, now = ctx.now()
+  // First the account stops being connected, so no refresh in flight can keep new credentials on it;
+  // then whatever it holds at that moment is revoked at the network and dropped.
   await ctx.db.batch([
-    ctx.db.prepare("UPDATE stump_accounts SET state='disconnected',credentials=NULL,reconnect_url=NULL,disconnected_at=?,disconnected_by=?,updated_at=?,revision=revision+1 WHERE id=?").bind(now, ctx.person.id, now, row.id),
+    ctx.db.prepare("UPDATE stump_accounts SET state='disconnected',reconnect_url=NULL,disconnected_at=?,disconnected_by=?,updated_at=?,revision=revision+1 WHERE id=?").bind(now, ctx.person.id, now, row.id),
     ...queued.flatMap(item => moveItem(mover, item, 'draft', 'account disconnected', { scheduled_at: null, queued: 0, hold: null })),
   ])
+  const held = await readAccount(ctx.db, row.id)
+  const creds = held?.credentials ? await openCredentials(ctx.env, held).catch(() => null) : null
+  if (creds) revoked = await revokeAtNetwork(ctx, creds)
+  if (held?.credentials) await ctx.db.prepare("UPDATE stump_accounts SET credentials=NULL WHERE id=? AND state='disconnected' AND credentials=?").bind(row.id, held.credentials).run()
   ctx.emit('account.disconnected', `stump://accounts/${row.id}`, { network: row.network })
   return {
     account: accountView((await readAccount(ctx.db, row.id))!), revoked,
@@ -292,8 +336,10 @@ async function revokeAtNetwork(ctx: ActionContext, creds: Credentials): Promise<
   if (creds.network === 'x') {
     const keys = await appKeys(ctx.db, ctx.env, 'x')
     if (!keys) return 'failed'
-    const token = creds.tokens.refreshToken ?? creds.tokens.accessToken
-    return (await revokeXToken({ fetch, keys, token, tokenTypeHint: creds.tokens.refreshToken ? 'refresh_token' : 'access_token' })).ok ? 'revoked' : 'failed'
+    // Both tokens: revoking the refresh token alone can leave the current access token working until it expires.
+    const refresh = creds.tokens.refreshToken ? (await revokeXToken({ fetch, keys, token: creds.tokens.refreshToken, tokenTypeHint: 'refresh_token' })).ok : true
+    const access = (await revokeXToken({ fetch, keys, token: creds.tokens.accessToken, tokenTypeHint: 'access_token' })).ok
+    return refresh && access ? 'revoked' : 'failed'
   }
   return 'not_supported'
 }

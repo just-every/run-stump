@@ -55,8 +55,8 @@ export const schemas = {
     type: 'object', additionalProperties: false,
     properties: {
       immediate_min_relevance: { type: 'number', minimum: 0, maximum: 100 },
-      slack: { type: 'object', additionalProperties: false, properties: { webhook_url: { type: 'string', minLength: 1, maxLength: 2000 } } },
-      webhook: { type: 'object', additionalProperties: false, properties: { url: { type: 'string', minLength: 1, maxLength: 2000 }, secret: { type: 'string', minLength: 1, maxLength: 500 } } },
+      slack: { type: 'object', additionalProperties: false, properties: { webhook_url: { type: 'string', minLength: 1, maxLength: 2000, writeOnly: true } } },
+      webhook: { type: 'object', additionalProperties: false, properties: { url: { type: 'string', minLength: 1, maxLength: 2000 }, secret: { type: 'string', minLength: 1, maxLength: 500, writeOnly: true } } },
     },
   },
   interval_minutes: { type: 'integer', minimum: 5, maximum: 1440 },

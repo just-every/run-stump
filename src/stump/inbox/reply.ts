@@ -14,26 +14,18 @@ import { checkDraft, checkView, loadBrand } from '../drafting/check.ts'
 import { createItem, screen } from '../drafting/write.ts'
 import { readItem as readDraft, saveItem } from '../drafting/items.ts'
 import { moveItem, pauseFor, type ItemState } from '../items/state.ts'
-import { bannedAct } from '../lib/claims/index.ts'
 import { quoteXPost } from '../lib/x/index.ts'
 import { readPerson } from '../people/store.ts'
 import { readItem, type FullItemRow } from '../publish/items.ts'
-import { agentRuleBroken } from '../publish/rules.ts'
+import { agentRuleBroken, ONE_REPLY, UNENGAGED, X_AI_STEP } from '../publish/rules.ts'
 import { blockingFlags, commit, mover, prepare, sendNow } from '../publish/schedule.ts'
 import { ANSWERED, readInboxItem, type InboxRow } from './store.ts'
 
 export const REPLY_TOOL = 'stump.inbox.reply'
 
-const unengaged = bannedAct('x_unengaged_reply')
-/** D-4: an API reply on X only to an account that engaged with the replying account first. */
-export const UNENGAGED: RuleSource = { rule: 'D-4', source: unengaged.source_url, read_at: unengaged.read_at }
-/** X's developer guidelines: one reply per interaction. */
-export const ONE_REPLY: RuleSource = { rule: 'D-4', source: 'https://docs.x.com/developer-guidelines', read_at: unengaged.read_at }
+export { ONE_REPLY, UNENGAGED, X_AI_STEP }
 /** A direct message to someone who has not opened the conversation is the same unsolicited contact (D-4). */
 export const NO_DM: RuleSource = UNENGAGED
-
-/** The provider step an AI-drafted reply on X waits at until the company records X's approval (STUMP-SURFACE-005.4). */
-export const X_AI_STEP = 'x_ai_reply_approval'
 
 /** Draft states a new reply rewrites in place: nothing of it has gone out. */
 const PENDING: readonly ItemState[] = ['draft', 'ready', 'held', 'failed']

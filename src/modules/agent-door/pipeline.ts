@@ -7,7 +7,7 @@ import { decide } from './policy/decide.ts'
 import { durationSeconds } from './policy/document.ts'
 import { validateSchema } from './json-schema.ts'
 import { ToolRefusal } from './errors.ts'
-import { openApproval, approvalReplay } from './approvals.ts'
+import { openApproval, approvalReplay, sealArguments } from './approvals.ts'
 import { openReview } from './reviews.ts'
 import { appendEvents } from './events.ts'
 import { acquireDecision, releaseDecision, startExecution, startPending } from './counting.ts'
@@ -179,8 +179,10 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
     const claim = claimKey === null ? undefined : { key: claimKey, digest: requestDigest }
     if (principal.consent && (await policyState(rt)).revoked.consents.includes(principal.consent)) return refuse('consent_revoked')
     if (decision.result === 'approval') {
+      // A secret the call carries waits sealed, never in clear, until the approval is decided.
+      const held = await sealArguments(rt, tool, args, row.id)
       await startPending(rt, row, principal, evidence, claim); owned = key !== null
-      result = await openApproval(rt, { decision_id: row.id, revision: state.revision, tool: name, args, digest: requestDigest, key, claimKey,
+      result = await openApproval(rt, { decision_id: row.id, revision: state.revision, tool: name, args: held.args, ...(held.sealed === undefined ? {} : { sealed: held.sealed }), digest: requestDigest, key, claimKey,
         classes, principal, summary: savedSummary, summary_sha256, approvers: decision.approvers!, expires_at: new Date(rt.now() + durationSeconds(decision.wait)! * 1000).toISOString(), door, evidence,
         result, ...(expected === undefined ? {} : { expected_revision: expected as string | number }) })
       effected = true

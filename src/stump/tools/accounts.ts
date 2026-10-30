@@ -14,7 +14,8 @@ import { EVERYONE } from '../people/roles.ts'
 const CONNECTORS = ['owner', 'admin', 'editor', 'contributor', 'poster'] as const
 const id = { type: 'string', minLength: 1, maxLength: 64 }
 const network = { enum: [...NETWORKS] }
-const secret = { type: 'string', minLength: 1, maxLength: 2048 }
+/** A value the network gave or the person typed, which Stump keeps only sealed and never answers. */
+const secret = { type: 'string', minLength: 1, maxLength: 2048, writeOnly: true }
 
 const security = (setting: string, measure = 1) => ({ class: 'security' as const, facts: { measure, setting } })
 const accounts = (provider: string) => ({ class: 'accounts' as const, facts: { measure: 1, provider } })
@@ -64,12 +65,12 @@ export const accountTools: StumpTool[] = [{
     complete: {
       roles: CONNECTORS,
       properties: { state: secret, connection_id: id, code: secret, iss: { type: 'string', minLength: 1, maxLength: 300 }, error: { type: 'string', minLength: 1, maxLength: 200 }, app_password: secret },
+      // An app password is the account's own person's to type; an agent never carries one (D-1), and is refused before any policy decision.
+      async refuses(args, ctx) { if (args.app_password !== undefined && ctx.agent) refuse('person_only', { field: 'app_password' }) },
       async classify(args, ctx) { const provider = await connectionNetwork(ctx, args); return [security('network_connection'), accounts(provider)] },
       async summary(args, ctx) { return { target: { name: `Finish connecting a ${await connectionNetwork(ctx, args)} account` } } },
       async run(args, ctx) {
         if (typeof args.state !== 'string' && typeof args.connection_id !== 'string') refuse('invalid_arguments', { field: 'state' })
-        // An app password is the account's own person's to type; an agent never carries one (D-1).
-        if (typeof args.app_password === 'string' && ctx.agent) refuse('person_only', { field: 'app_password' })
         return completeConnection(ctx, args as Parameters<typeof completeConnection>[1])
       },
     },

@@ -72,7 +72,7 @@ test('the company connects its X account through its own app, owned by the compa
   assert.ok(listed.includes('synthetic_co') && ![...x.issued].some(token => listed.includes(token)) && !/token|secret|password/i.test(listed))
 
   const off = await app.action('owner', 'stump.accounts.connect', { action: 'disconnect', account_id: account.id })
-  assert.equal(off.body.result.account.state, 'disconnected'); assert.equal(off.body.result.revoked, 'revoked'); assert.equal(x.revoked.size, 1)
+  assert.equal(off.body.result.account.state, 'disconnected'); assert.equal(off.body.result.revoked, 'revoked'); assert.ok([...x.issued].every(token => x.revoked.has(token)), 'every token X issued for the account is revoked')
 })
 
 /** The company's X account, connected through the owner's consent at X. */
@@ -126,6 +126,55 @@ test('an agent posts to the company X account within the owner\'s dollar limit: 
   const thread = (await app.mcp(agent.token, 'stump.drafts.write', { action: 'create', format: 'thread', person_id: owner.id, account_id: account.id, network: 'x', parts })).result.structuredContent
   const blocked = await app.mcp(agent.token, 'stump.items.schedule', { action: 'publish', item_id: thread.id, account_id: account.id })
   assert.equal(blocked.error?.code, 'policy_blocked'); assert.equal(x.posts.size, 1)
+})
+
+/** The pending approval an agent's held call answers with, and the owner's decision on it. */
+const approvalOf = call => call.result?.structuredContent?.approval ?? call.result?._meta?.['com.runeditrun/approval']
+async function decide(id, verb) {
+  const { approval } = (await app.json('owner', `/agents/api/approvals/${id}`)).body
+  return (await app.json('owner', `/agents/api/approvals/${id}/${verb}`, { revision: approval.revision, summary_sha256: approval.summary_sha256 })).body.approval
+}
+const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+
+test('an agent\'s held post goes out only as its approver saw it: words changed while it waits ask again, and an image added after approval sends it back to draft', async () => {
+  const owner = await app.owner()
+  const account = await connectX()
+  assert.equal((await app.action('owner', 'stump.accounts.connect', { action: 'record_label', account_id: account.id, automated_label: true, operator_bio: true })).status, 200)
+  const rules = [{ id: 'all', class: '*', do: 'autonomous' }, { id: 'publish', class: 'external', do: 'approval', approver: ['role:owner'], wait: 'P1D' }]
+  assert.equal((await app.json('owner', '/agents/api/policy', { document: { schema: 'rer-agent-policy/1', catalogue: 'rer-agent-classes/1', spend: { none: true }, rules } }, 'PUT')).status, 200)
+  const agent = (await app.json('owner', '/app/api/agent-credentials', { name: 'Synthetic scheduler' })).body
+  const draft = (await app.mcp(agent.token, 'stump.drafts.write', { action: 'create', format: 'post', person_id: owner.id, account_id: account.id, network: 'x', text: 'Group bookings open on Monday.' })).result.structuredContent
+  const posts = x.posts.size
+
+  const asked = approvalOf(await app.mcp(agent.token, 'stump.items.schedule', { action: 'publish', item_id: draft.id, account_id: account.id }))
+  assert.ok(asked?.id, 'publishing waits for the owner')
+  assert.equal((await app.mcp(agent.token, 'stump.drafts.revise', { action: 'save', item_id: draft.id, text: 'Group bookings open on Monday, and every plan is half price.' })).result.structuredContent.revision, 2)
+  const stale = await decide(asked.id, 'approve')
+  assert.deepEqual([stale.state, stale.code], ['refused', 'approval_evidence_changed'])
+  assert.equal(x.posts.size, posts, 'nothing the owner did not see reaches X')
+
+  const at = new Date(Date.now() + 86_400_000).toISOString()
+  const held = approvalOf(await app.mcp(agent.token, 'stump.items.schedule', { action: 'schedule', item_id: draft.id, account_id: account.id, at }))
+  assert.equal((await decide(held.id, 'approve')).state, 'executed')
+  const scheduled = (await app.action('owner', 'stump.drafts.revise', { action: 'get', item_id: draft.id })).body.result
+  assert.deepEqual([scheduled.state, scheduled.revision], ['scheduled', 2])
+  const attached = (await app.mcp(agent.token, 'stump.items.media', { action: 'attach', item_id: draft.id, file: { name: 'groups.png', type: 'image/png', base64: png }, alt: 'The group booking form.' })).result.structuredContent
+  assert.deepEqual([attached.item.state, attached.item.revision, attached.item.scheduled_at], ['draft', 3, null])
+})
+
+test('a key an agent hands over through an approval rests sealed while it waits, and is gone once the owner decides', async () => {
+  const rules = [{ id: 'all', class: '*', do: 'autonomous' }, { id: 'keys', class: 'security', do: 'approval', approver: ['role:owner'], wait: 'P1D' }]
+  assert.equal((await app.json('owner', '/agents/api/policy', { document: { schema: 'rer-agent-policy/1', catalogue: 'rer-agent-classes/1', spend: { none: true }, rules } }, 'PUT')).status, 200)
+  const agent = (await app.json('owner', '/app/api/agent-credentials', { name: 'Synthetic connector' })).body
+  const secret = randomBytes(24).toString('hex')
+  const asked = approvalOf(await app.mcp(agent.token, 'stump.stack.connect', { action: 'connect', seed: 'vane', origin: VANE, site_id: 'synthetic-sealed-site', secret }))
+  assert.ok(asked?.id, 'the connection waits for the owner')
+  const stored = async () => (await app.db.prepare('SELECT saved FROM agent_door_approvals WHERE id=?').bind(asked.id).first()).saved
+  assert.ok(!(await stored()).includes(secret), 'the waiting call keeps no key in clear')
+  assert.equal((await decide(asked.id, 'approve')).state, 'executed')
+  assert.equal((await app.action('owner', 'stump.stack.connect', { action: 'list' })).body.result.items.find(item => item.seed === 'vane')?.state, 'connected')
+  const decided = JSON.parse(await stored())
+  assert.ok(!JSON.stringify(decided).includes(secret) && decided.sealed === undefined, 'nothing of the key stays with the decided approval')
 })
 
 test('X refusing the account\'s token marks it expired, holds its posts with the reconnect step, and only its owner\'s reconnect brings it back', async () => {

@@ -7,7 +7,9 @@
 //     state expired, the accounts module's state for an account that needs reconnecting;
 //   - scheduled items are paused until a person schedules them again;
 //   - Orbit and Vane connections and alert destinations wait to be entered again;
-//   - agent credentials are revoked, and a person issues new ones.
+//   - agent credentials are revoked, and a person issues new ones;
+//   - agent approvals keep what was asked and decided, without the call's
+//     arguments or any sealed value, and one still waiting reads expired.
 // Pure, synchronous and idempotent: the transfer runs it on every row.
 const reconnectPath = id => `/app/settings/accounts?reconnect=${encodeURIComponent(id)}`
 const RESTORED = 'Restored from an archive. Reconnect its account, then schedule it again.'
@@ -32,6 +34,10 @@ const rows = {
   },
   stump_agent_credentials(row) {
     return { ...row, token_hash: `revoked:${row.client_id}`, revoked_at: row.revoked_at ?? row.created_at }
+  },
+  agent_door_approvals(row) {
+    const { sealed: _sealed, ...saved } = JSON.parse(row.saved)
+    return { ...row, state: ['pending', 'executing'].includes(row.state) ? 'expired' : row.state, saved: JSON.stringify({ ...saved, args: {} }) }
   },
 }
 

@@ -1,7 +1,7 @@
 import { DEFAULT_SCOPE, createBlueskyClient, type BlueskyClient, type OAuthClientConfig } from '../lib/bluesky/index.ts'
 import { linkedInTokenStatus, refreshLinkedInToken, type LinkedInContext } from '../lib/linkedin/index.ts'
 import { createMastodonClient, type MastodonClient } from '../lib/mastodon/index.ts'
-import { ensureFreshXTokens, type XContext } from '../lib/x/index.ts'
+import { ensureFreshXTokens, revokeXToken, type XContext } from '../lib/x/index.ts'
 import type { StumpEnv } from '../env.ts'
 import { stumpFetch } from '../net/fetch.ts'
 import { appKeys, callbackUrl } from './apps.ts'
@@ -60,12 +60,19 @@ export async function blueskyFor(env: StumpEnv, db: D1Database, row: AccountRow,
   const creds = await credentials(env, row)
   if (notReady(creds)) return creds
   if (creds.network !== 'bluesky') throw new Error('Not a Bluesky account')
+  let held = row.credentials
   const client = createBlueskyClient({
     fetch: stumpFetch(env), pdsUrl: creds.pds_url, auth: creds.auth, oauthClient: blueskyOAuthClient(env),
-    // Refresh tokens are single use: keep each new session before the next call.
+    // Refresh tokens are single use: keep each new session before the next call. A session the account no
+    // longer holds (disconnected or reconnected meanwhile) is ended at its server, and nothing is sent with it.
     onAuthChange: async auth => {
       const expires = auth.kind === 'password' ? auth.refreshExpiresAtMs : auth.expiresAtMs
-      await saveCredentials(db, env, row.id, { ...creds, auth }, expires, now())
+      const kept = await saveCredentials(db, env, row.id, { ...creds, auth }, expires, now(), held)
+      if (!kept) {
+        await createBlueskyClient({ fetch: stumpFetch(env), pdsUrl: creds.pds_url, auth, oauthClient: blueskyOAuthClient(env) }).disconnect()
+        throw new Error(`${shownHandle(row)} was disconnected or reconnected while its session refreshed.`)
+      }
+      held = kept
     },
   })
   return { ok: true, credentials: creds, client }
@@ -85,7 +92,13 @@ export async function xFor(env: StumpEnv, db: D1Database, row: AccountRow, now: 
     return { ok: false, code: 'not_connected', message: fresh.error.message }
   }
   const current: Credentials = fresh.value.refreshed ? { ...creds, tokens: fresh.value.tokens } : creds
-  if (fresh.value.refreshed) await saveCredentials(db, env, row.id, current, Date.parse(fresh.value.tokens.expiresAt), now())
+  if (fresh.value.refreshed && !await saveCredentials(db, env, row.id, current, Date.parse(fresh.value.tokens.expiresAt), now(), row.credentials)) {
+    // The account was disconnected or reconnected during the refresh: the new grant goes back to X and nothing is sent.
+    const tokens = fresh.value.tokens
+    if (tokens.refreshToken) await revokeXToken({ fetch, keys, token: tokens.refreshToken, tokenTypeHint: 'refresh_token' })
+    await revokeXToken({ fetch, keys, token: tokens.accessToken, tokenTypeHint: 'access_token' })
+    return { ok: false, code: 'not_connected', message: `${shownHandle(row)} was disconnected or reconnected while its access refreshed.` }
+  }
   return { ok: true, credentials: current, client: { fetch, accessToken: fresh.value.tokens.accessToken, username: creds.username } }
 }
 
@@ -101,7 +114,10 @@ export async function linkedInFor(env: StumpEnv, db: D1Database, row: AccountRow
     const refreshed = await refreshLinkedInToken({ fetch, keys, refreshToken: creds.tokens.refreshToken, now })
     if (refreshed.ok) {
       const current: Credentials = { ...creds, tokens: refreshed.value }
-      await saveCredentials(db, env, row.id, current, Date.parse(refreshed.value.expiresAt), now())
+      // LinkedIn offers no revocation: a refresh that overlapped a disconnect or a reconnect is dropped, and nothing is sent.
+      if (!await saveCredentials(db, env, row.id, current, Date.parse(refreshed.value.expiresAt), now(), row.credentials)) {
+        return { ok: false, code: 'not_connected', message: `${shownHandle(row)} was disconnected or reconnected while its access refreshed.` }
+      }
       return { ok: true, credentials: current, client: { fetch, accessToken: refreshed.value.accessToken } }
     }
   }

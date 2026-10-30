@@ -22,17 +22,17 @@ export interface Mover { db: D1Database; person: { id: string } | null; agent: {
 
 /**
  * Move one item from the state it is in to another, recorded in its history.
- * Answers false when the item has moved meanwhile (the guard is the old state).
- * Extra columns set in the same write are named in `set`.
+ * Changes nothing when the item has moved meanwhile (the guard is the old state,
+ * and the revision when one is given). Extra columns set in the same write are named in `set`.
  */
-export function moveItem(mover: Mover, item: { id: string; state: ItemState }, to: ItemState, reason: string, set: Record<string, unknown> = {}): D1PreparedStatement[] {
+export function moveItem(mover: Mover, item: { id: string; state: ItemState }, to: ItemState, reason: string, set: Record<string, unknown> = {}, guard: { revision?: number } = {}): D1PreparedStatement[] {
   if (!TRANSITIONS[item.state].includes(to)) throw new Error(`An item cannot move from ${item.state} to ${to}`)
   const columns = Object.keys(set)
   if (columns.some(column => !/^[a-z_]+$/.test(column))) throw new Error('Invalid item column')
   const assignments = ['state=?', 'updated_at=?', ...columns.map(column => `${column}=?`)].join(',')
-  const now = mover.now()
+  const now = mover.now(), revision = guard.revision === undefined ? [] : [guard.revision]
   return [
-    mover.db.prepare(`UPDATE stump_items SET ${assignments} WHERE id=? AND state=?`).bind(to, now, ...columns.map(column => set[column]), item.id, item.state),
+    mover.db.prepare(`UPDATE stump_items SET ${assignments} WHERE id=? AND state=?${revision.length ? ' AND revision=?' : ''}`).bind(to, now, ...columns.map(column => set[column]), item.id, item.state, ...revision),
     mover.db.prepare(`INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at)
       SELECT ?,?,?,?,?,?,?,? WHERE changes()=1`).bind(crypto.randomUUID(), item.id, item.state, to, mover.person?.id ?? null, mover.agent?.id ?? null, reason, now),
   ]
