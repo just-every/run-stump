@@ -99,9 +99,10 @@
       ],
       "inputs": [
         "package.json",
-        "scripts/installer/local.mjs"
+        "scripts/installer/local.mjs",
+        "scripts/stump/archive-policy.mjs"
       ],
-      "effects": "See SEED-COMMAND-CONTRACT.md for export effects."
+      "effects": "Writes every Stump record (people, venues with rules and members, products, claims, voice guides, items with revisions, hand-offs, the ledger with versions, watches, findings, accounts and settings) to one new versioned archive with no token or key: connected accounts wait for their owners to reconnect and scheduled items are paused, as a restore leaves them. It runs while the app is stopped, since rer holds the checkout while rer dev runs. Policy in scripts/stump/archive-policy.mjs; see SEED-COMMAND-CONTRACT.md for the archive contract."
     },
     "import": {
       "argv": [
@@ -110,9 +111,10 @@
       ],
       "inputs": [
         "package.json",
-        "scripts/installer/local.mjs"
+        "scripts/installer/local.mjs",
+        "scripts/stump/archive-policy.mjs"
       ],
-      "effects": "See SEED-COMMAND-CONTRACT.md for import effects."
+      "effects": "Restores an archive from rer export into an empty installation and refuses one that holds records; restored accounts wait for their owners to reconnect and scheduled items stay paused. See SEED-COMMAND-CONTRACT.md for the archive contract."
     },
     "release": {
       "argv": [

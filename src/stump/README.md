@@ -19,6 +19,8 @@ and are never edited in place.
 | `inbox/` | The inbox: reading a connected X account's mentions and replies once each at the company's read price (`poll.ts`), the records both doors answer (`store.ts`), and replies to people who engaged first through drafting, the publisher and the ledger (`reply.ts`). |
 | `stack/` | Connections to Orbit and Vane (secrets sealed), offers, signed sends, and `annotateLedgerEntry` for the posting path. |
 | `net/` | `stumpFetch`, the one outbound fetch every network call uses. |
+| `imports/` | The one import door (`door.ts`) and its sources beyond the venue list: `buffer.ts` reads a Buffer export into accounts, queue slots, ledger entries and paused items (`buffer-targets.ts`; the imported entry's write, in `record.ts`'s shape, in `buffer-ledger.ts` until it moves there). |
+| `data/` | Erasure of a person (`erase.ts`; a post deleted at its network reads removed, `removal.ts`) and the draft check run again after an import or erasure (`recheck.ts`); `rer export` and `rer import` follow `scripts/stump/archive-policy.mjs`. |
 | `watches/` | Watches: source polling with per-source state, screening (with the company's one author block list, `blocks.ts`) and ranking reads of findings, immediate alerts to Slack and a signed webhook with replay (credentials sealed in `seal.ts`), and the scheduled event's `pollDueWatches`. |
 | `lib/<name>/` | Pure leaf libraries written by library lanes. A library imports nothing outside its folder. |
 | `ui/` | The signed-in app's shell, navigation, tokens and small shared components. |

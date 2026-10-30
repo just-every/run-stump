@@ -87,6 +87,8 @@ export interface LedgerEntry {
   revision: number | null
   posted_at: string | null
   charge_usd: number | null
+  /** Results the entry arrived with from the tool it was imported from (Buffer's statistics): {source, values, read_at}. */
+  results: { source: string; values: Record<string, number>; read_at: string | null } | null
   approved_by: unknown
   hold: unknown
   removal: { reason: string; person_id: string; agent_id: string | null; at: string; network_delete?: { outcome: 'deleted' | 'not_found'; at: string } } | null
@@ -96,9 +98,15 @@ export interface LedgerEntry {
   versions: LedgerVersion[]
 }
 
+function importedResults(value: unknown): LedgerEntry['results'] {
+  const results = json(value) as { source: string; values: Record<string, number>; read_at: number | null } | null
+  return results ? { source: results.source, values: results.values, read_at: iso(results.read_at) } : null
+}
+
 export function toEntry(row: LedgerRow, versions: LedgerVersion[]): LedgerEntry {
   return {
     id: row.id as string, url: row.url as string | null, network: row.network as string | null, network_id: row.network_id as string | null, venue_id: row.venue_id as string | null,
+    results: importedResults(row.results),
     venue_name: (row.venue_name as string | null | undefined) ?? null, account_id: row.account_id as string | null, person_id: row.person_id as string | null,
     agent: json(row.agent) as LedgerEntry['agent'], by: row.by_label as string, text: row.text as string | null, disclosure_line: row.disclosure_line as string | null,
     claims: json(row.claims) as unknown[], product_id: row.product_id as string | null, campaign: row.campaign as string | null, route: row.route as LedgerEntry['route'],

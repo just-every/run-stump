@@ -8,10 +8,10 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 1 | 40 | 103 | 144 |
+| Core | 1 | 42 | 101 | 144 |
 | Agent surface | 0 | 20 | 8 | 28 |
 | Later | 0 | 0 | 8 | 8 |
-| Full target | 1 | 60 | 119 | 180 |
+| Full target | 1 | 62 | 117 | 180 |
 
 Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c9a` (30 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
@@ -763,7 +763,7 @@ Core · published · **partial** · From new · Rules D-2, D-4 · Register R-1
 
 #### STUMP-IMPORT-001 — Buffer
 
-Core · published · **missing** · From new · Cites BASE-INPUT-001, BASE-DATA-001
+Core · published · **partial** · From new · Cites BASE-INPUT-001, BASE-DATA-001
 
 **Requirement.** Stump imports from Buffer through its API with the company's key or from its CSV exports: channels, queued and draft posts, sent posts with their results, and posting schedules. Every import is a dry run first, then an apply, and can be undone. Queued posts arrive paused until the person confirms Buffer no longer holds them, so nothing posts twice.
 
@@ -774,8 +774,8 @@ Core · published · **missing** · From new · Cites BASE-INPUT-001, BASE-DATA-
 4. Running the import again changes nothing.
 5. Undo removes what it created.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/data.test.mjs` "switching from Buffer: a dry run, sent posts to the ledger, schedules to slots, queued posts paused until released, a rerun that changes nothing, and Undo"
+**Gap.** Points 1 to 5 are asserted through the import door's `buffer` source, against a bundle of Buffer's v1 API objects: the dry run counts channels, sent and queued posts and names refused rows; profiles become accounts that wait for their owners to connect (state expired, with the reconnect link), each of Buffer's day-and-time posting slots becomes its own queue slot, sent posts become published ledger entries with Buffer's statistics as imported results, queued posts arrive paused until `stump.calendar.plan release_import` with `confirm_source_cleared`; a rerun plans nothing; Undo removes what the import created and keeps what was edited since. The Import screen at `/app/settings/import` is built; no browser test asserts it at 1440 and 390 yet. Buffer's CSV exports are not read.
 
 #### STUMP-IMPORT-002 — Typefully
 
@@ -2244,11 +2244,11 @@ Core · target · **missing** · From new · Cites BASE-DATA-001, BASE-BACKUP-00
 4. Scheduled items restore paused.
 
 **Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Gap.** Built, not yet asserted in a repo test or journey: `rer export` and `rer import` carry every Stump record under `scripts/stump/archive-policy.mjs`, with no token or key (account credentials and network app keys left out, Orbit and Vane secrets and alert destinations cleared, agent credentials revoked), accounts waiting for their owners to reconnect (state expired, with the reconnect link) and scheduled items paused, so exporting the restored installation gives the same records. Base's `rer` takes the checkout's exclusive local-operation lock for export, so `rer export` refuses while `rer dev` runs and works once the app is stopped. Media travel in D1; findings follow no per-source terms yet.
 
 #### STUMP-DATA-002 — Erasure of a person
 
-Core · target · **missing** · From new · Cites BASE-DATA-003, BASE-DATA-006
+Core · target · **partial** · From new · Cites BASE-DATA-003, BASE-DATA-006
 
 **Requirement.** An operator erases a person outside the company (an engager, a journalist, a finding's author) or a former team member. Their personal data leaves findings, the inbox, venue records and voice guides; ledger entries keep the post and an anonymised reference. Posts the company made on outside networks that name the person are listed for deletion at each network, each with its outcome, because a post already read or copied cannot be recalled.
 
@@ -2258,8 +2258,8 @@ Core · target · **missing** · From new · Cites BASE-DATA-003, BASE-DATA-006
 3. Posts that name the person are listed with a delete request and outcome for each.
 4. A ledger entry under legal hold keeps its data and shows the hold.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/data.test.mjs` "erasing a person: an engager leaves findings and offers, a journalist their record and route while pitches keep an anonymised reference, each company post naming them is asked to be deleted, and a legal hold keeps its entry"
+**Gap.** Points 1, 3 and 4 are asserted through the person door (`stump.data.erase`), and point 2 for findings. An engager is named by their handle on each network or source, and each handle matches only findings from that source, offers and ledger posts on that network. Each company post naming the person gets a delete request through its network publisher's `remove`, answered with its outcome, and a post the network deleted reads removed with the network's answer; until the publishers carry `remove`, the outcome reads failed with that reason. The inbox's records join the erasure when the inbox is built. A former team member's erasure is not built.
 
 ### Mobile apps
 
