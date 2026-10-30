@@ -3531,6 +3531,10 @@
       "sha256": "80f48d272d312a7c1c5b4de470aa360dfedc428f2891f99b0307370284e93b30",
       "executable": false
     },
+    "src/stump/agent-door/overview.ts": {
+      "sha256": "6abceef76c796a4c56c884a2238b60b74695e97bba028ad08248e96404d3598f",
+      "executable": false
+    },
     "src/stump/agent-door/ui/AgentsSettings.tsx": {
       "sha256": "d3c0ff18730fbab0789d9f39e2303a9abfdf2782250873f8a6b6e681138e060b",
       "executable": false
