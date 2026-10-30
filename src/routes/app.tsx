@@ -60,7 +60,7 @@ function Avatar({ name, email }: { name: string; email: string }) {
     window.location.assign('/signin')
   }
   return <div className="st-pop-anchor" ref={ref}>
-    <Tip label="Your account" side="below">
+    <Tip label="Your account" side="below" align="end">
       <button type="button" className="st-avatar" aria-haspopup="menu" aria-expanded={open} aria-label={`${name}, account menu`} onClick={() => setOpen(!open)}>{initialsOf(name)}</button>
     </Tip>
     {open ? <div className="st-menu" role="menu">

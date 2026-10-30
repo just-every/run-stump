@@ -70,8 +70,8 @@ function useDismiss(open: boolean, close: () => void) {
 
 /**
  * The top bar's Pause pill (SPEC §4.1): "Pause publishing" pauses everything
- * in one press; while paused it reads "Resume publishing" and opens the resume
- * popover, which shows what went out and what stayed held.
+ * in one press; while paused it reads "Resume publishing" ("Resume" on a phone)
+ * and opens the resume popover, which shows what went out and what stayed held.
  */
 export function PauseControl({ role }: { role: string | undefined }) {
   const { data, all } = usePause()
@@ -90,7 +90,7 @@ export function PauseControl({ role }: { role: string | undefined }) {
   }
   return <div className="st-pop-anchor" ref={ref}>
     <button type="button" className={all ? 'st-pause paused' : 'st-pause'} aria-expanded={open} aria-controls="st-resume" onClick={() => open ? close() : setOpen(true)}>
-      <span className="st-pause-icon"><Icon name={all ? 'play' : 'pause'} /></span><span className="st-pause-label">{all ? 'Resume publishing' : 'Pause publishing'}</span>
+      <span className="st-pause-icon"><Icon name={all ? 'play' : 'pause'} /></span><span className="st-pause-label">{all ? <>Resume<span className="st-pause-more"> publishing</span></> : 'Pause publishing'}</span>
     </button>
     {open ? <div className="st-popover" id="st-resume" role="dialog" aria-labelledby="st-resume-title">
       <p className="st-popover-title" id="st-resume-title">{resumed ? 'Publishing resumed' : 'Resume publishing'}</p>

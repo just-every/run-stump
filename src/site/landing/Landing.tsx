@@ -21,7 +21,7 @@ function Actions({ className = '' }: { className?: string }) {
 
 function Hero() {
   return <section className="lp-hero" aria-labelledby="lp-title">
-    <img className="lp-hero-plate" src="/art/stump-hero.webp" alt="" width="836" height="526" fetchPriority="high" />
+    <img className="lp-hero-plate" src="/art/stump-hero.webp" alt="" width="896" height="526" fetchPriority="high" />
     <div className="site-wrap lp-hero-copy">
       <h1 id="lp-title">Be heard in your own voice.</h1>
       <p className="lp-sub">Stump turns your changelog into posts for the communities worth showing up in, then shows which posts brought signups.</p>
@@ -52,6 +52,8 @@ function Hero() {
   </section>
 }
 
+const TUFT = { left: { width: 235, height: 201 }, right: { width: 175, height: 226 } }
+
 /** One band: a 5/12 text column beside a 7/12 card, the sides alternating. */
 function Band({ id, eyebrow, title, children, card, flip, tuft }: { id: string; eyebrow?: string; title: ReactNode; children: ReactNode; card: ReactNode; flip?: boolean; tuft: 'left' | 'right' }) {
   return <section className={flip ? 'lp-band lp-band--flip' : 'lp-band'} aria-labelledby={id}>
@@ -62,7 +64,7 @@ function Band({ id, eyebrow, title, children, card, flip, tuft }: { id: string; 
         <p className="lp-body">{children}</p>
       </div>
       <div className="lp-band-card">
-        <img className={`lp-tuft lp-tuft--${tuft}`} src={`/art/tuft-${tuft}.webp`} alt="" width="140" height="186" loading="lazy" />
+        <img className={`lp-tuft lp-tuft--${tuft}`} src={`/art/tuft-${tuft}.webp`} alt="" {...TUFT[tuft]} loading="lazy" />
         {card}
       </div>
     </div>
@@ -134,7 +136,7 @@ function Standards() {
 
 function Terminal() {
   return <div className="lp-terminal" data-copy-scope>
-    <code><span aria-hidden="true">&gt; </span>npx -y @runeditrun/rer cli install</code>
+    <p className="lp-command"><span className="lp-prompt" aria-hidden="true">&gt; </span><code>npx -y @runeditrun/rer cli install</code></p>
     <span className="lp-tip">
       <button type="button" className="lp-copy" data-copy aria-label="Copy command" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="11" height="11" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.75" /><path d="M5 15V6.5A1.5 1.5 0 0 1 6.5 5H15" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" /></svg>

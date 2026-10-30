@@ -692,7 +692,7 @@
       "executable": false
     },
     "public/art/band.webp": {
-      "sha256": "907611344196912a3aacff234826c516112542a3e8bad096fca32ab15515897f",
+      "sha256": "3d2bee291016ffffa3a6a676d39ee0e8e4c51a38884b182ae5efddb2442e300c",
       "executable": false
     },
     "public/art/grain.png": {
@@ -708,7 +708,7 @@
       "executable": false
     },
     "public/art/stump-hero.webp": {
-      "sha256": "7ec4d8905daeefa30fb0d54241171d72e1cd3e39acdd55c24b3ec368bcf658f8",
+      "sha256": "999e0ed1bda62ab2f210853450a97006aa706d17287c37cd5aa662116047c4f2",
       "executable": false
     },
     "public/art/stump-small.webp": {
@@ -716,11 +716,11 @@
       "executable": false
     },
     "public/art/tuft-left.webp": {
-      "sha256": "d1efb56182ea59df99035c452f378140438f5591b5a252b27b445d96d5fe369c",
+      "sha256": "9c1ff92be36fa43659a8160755905bce8587a675ae1765ae0832d83374fca03e",
       "executable": false
     },
     "public/art/tuft-right.webp": {
-      "sha256": "5b60440009ce2b5e7ca9438fb0767377c3aa13645858dcfb4cb89a7317881db6",
+      "sha256": "6cde9a946775c45754bd8c48b85c35c91c6bc2ac73465af38fdbc6d6351ae10d",
       "executable": false
     },
     "public/brand/band.svg": {
@@ -2372,7 +2372,7 @@
       "executable": false
     },
     "src/routes/app.tsx": {
-      "sha256": "c85e145294b976ea945d51caa9ef7ee5e2a92ea9f4eb29bb74a7e856a9b6f8ce",
+      "sha256": "295e3d5b14b5988bf71fa5984f48a6752993098c0867fa761e0bf725a23a708b",
       "executable": false
     },
     "src/routeTree.gen.ts": {
@@ -2392,7 +2392,7 @@
       "executable": false
     },
     "src/site/landing/Landing.tsx": {
-      "sha256": "821e2562d8c590b324f7bb8d495b830dc0a578a2623e0db3af3418f9fb61ff7f",
+      "sha256": "a96b49ddc59c1fe2f1b52d9bf08d9c191eb58e8e211f63304904c04d3eb54873",
       "executable": false
     },
     "src/site/pages.ts": {
@@ -2424,11 +2424,11 @@
       "executable": false
     },
     "src/site/styles/landing.css": {
-      "sha256": "be782849c58ac6d3dc60393507a9a065f66e861008f3c11a1aeacd0c4bd2cb1c",
+      "sha256": "45d87c4f64a405b9168c76a298d314e9ae9301a2c4bf3448622adf3ab189febd",
       "executable": false
     },
     "src/site/styles/site.css": {
-      "sha256": "b3c3a581fa608829686b7fe3fd7eba248ca0b18693dbf787f2882cfd06363345",
+      "sha256": "ca02931ae438825e415ebfd20a106ae976861f4c02b46258ec1ddc31b04ccc0b",
       "executable": false
     },
     "src/stump/actions/refusals.ts": {
@@ -2976,7 +2976,7 @@
       "executable": false
     },
     "src/stump/ui/kit.tsx": {
-      "sha256": "eda7d1f0b6fb0e116af383f3af6e7dc6f453a23882e732222badfd4a9ae0c1e6",
+      "sha256": "da026f46e280bb566bb0202309a7a1f266be4ed3f3a58906a306cd03a3d313d2",
       "executable": false
     },
     "src/stump/ui/nav.ts": {
@@ -2984,11 +2984,11 @@
       "executable": false
     },
     "src/stump/ui/pause.tsx": {
-      "sha256": "ef65597498d572c363c23a4630a21778376c3152c0a161a7b3e935f068404e2a",
+      "sha256": "4012fe4037dda9bdc4d3428d519c4cfef9cda04fadc210065d10131312c27088",
       "executable": false
     },
     "src/stump/ui/styles.ts": {
-      "sha256": "202e976b93ecca1cf0b91c01332fb6cbb3644dedfe1154bdd933809156bcd145",
+      "sha256": "0c4b8b653deebb660807ac7185a1d0e68e8cd950350966d3cc5d15ff1bac8b21",
       "executable": false
     },
     "src/stump/ui/types.ts": {

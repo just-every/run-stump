@@ -1,6 +1,7 @@
 /* The homepage (SPEC §2.2): measured on hero/HERO-1440.png, stacked at 390. */
-.lp-hero { position: relative; padding-bottom: 56px; }
-.lp-hero-plate { position: absolute; top: -6px; left: 49%; width: min(735px, 51vw); height: auto; z-index: 0; pointer-events: none; }
+.lp-hero { position: relative; padding-bottom: 56px; overflow-x: clip; }
+/* The plate is cut at 1536 scale from x 640 (the left grass's tips) and drawn at 0.9375, so the stump itself stays at x 49 %. */
+.lp-hero-plate { position: absolute; top: -6px; left: calc(49% - min(105px, 7.292vw)); width: min(840px, 58.333vw); height: auto; z-index: 0; pointer-events: none; }
 .lp-hero-copy { position: relative; z-index: 1; padding-top: 46px; }
 .lp-hero h1 { margin: 0; max-width: 700px; color: var(--ink); font: 800 clamp(40px, 5.9vw, 84px)/0.96 var(--font); letter-spacing: -0.03em; }
 .lp-sub { margin: 30px 0 0; max-width: 500px; font-size: clamp(17px, 1.4vw, 20px); line-height: 1.6; color: var(--ink); }
@@ -44,7 +45,7 @@
 .lp-body { margin: 24px 0 0; font-size: clamp(16.5px, 1.25vw, 18px); line-height: 1.6; color: var(--body); max-width: 30em; }
 .lp-band h2 { max-width: 9.6em; }
 .lp-band-card { position: relative; }
-.lp-tuft { position: absolute; width: 64px; height: auto; top: -46px; z-index: 0; pointer-events: none; }
+.lp-tuft { position: absolute; width: auto; height: 64px; top: -44px; z-index: 0; pointer-events: none; }
 .lp-tuft--right { right: 8px; }
 .lp-tuft--left { left: -6px; }
 .lp-band-card > .lp-card, .lp-band-card > .lp-terminal { position: relative; z-index: 1; }
@@ -87,8 +88,9 @@
 .lp-check-title { margin: 0 0 2px; font: 600 19px/1.3 var(--font); color: var(--ink); }
 .lp-checks .lp-row-meta { margin: 0; }
 .lp-terminal { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 40px 32px; border-radius: 16px; background: var(--ink); color: #F3EFE6; box-shadow: var(--card-shadow); }
-.lp-terminal code { font: 400 18px/1.5 var(--mono); overflow-wrap: anywhere; }
-.lp-terminal code span { color: #6FCFA6; }
+.lp-command { margin: 0; min-width: 0; font: 400 18px/1.5 var(--mono); overflow-wrap: anywhere; }
+.lp-terminal code { font: inherit; }
+.lp-prompt { color: #6FCFA6; }
 .lp-tip { position: relative; display: inline-flex; flex: none; }
 .lp-tip [role="tooltip"] { position: absolute; bottom: calc(100% + 8px); right: 0; white-space: nowrap; background: var(--white); color: var(--ink); font-size: 13px; padding: 4px 8px; border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity .1s; }
 .lp-tip:hover [role="tooltip"] { opacity: 1; transition-delay: .3s; }
@@ -113,6 +115,51 @@
 
 @media (prefers-reduced-motion: reduce) { .lp-tile { transition: none; } .lp-tile:hover { transform: none; } }
 
+/* 1100 and wider: the picked image's scale (SPEC preamble, style process step 3), which runs larger than §3.2's table */
+@media (min-width: 1101px) {
+  .lp-band { padding-block: 56px; }
+  .lp-band-grid { gap: 64px; }
+  .lp-eyebrow { margin-bottom: 12px; font-size: 17px; line-height: 22px; letter-spacing: 0.12em; }
+  .lp-band h2, .lp-details h2 { font-size: clamp(52px, 4.6vw, 66px); line-height: 1; }
+  .lp-band h2 { max-width: 8.6em; }
+  .lp-body { margin-top: 28px; font-size: clamp(19px, 1.5vw, 22px); line-height: 1.5; max-width: 28em; }
+  .lp-feature { padding: 32px 36px; }
+  .lp-card-title { margin-bottom: 10px; font: 700 26px/1.3 var(--font); letter-spacing: -0.005em; }
+  .lp-rows li { gap: 14px; min-height: 66px; }
+  .lp-row-name { font-size: 21px; font-weight: 700; }
+  .lp-row-meta { font-size: 17px; }
+  .lp-band .lp-chips li, .lp-band .lp-chip { height: 32px; padding: 0 14px; font-size: 17px; }
+  .lp-master { padding: 22px 24px; font-size: 24px; line-height: 1.3; text-wrap: balance; }
+  .lp-variants { margin: 16px 0 24px; gap: 14px; }
+  .lp-variants li { padding: 14px 16px; }
+  .lp-variant-name { font-size: 18px; }
+  .lp-variant-count { font-size: 17px; }
+  .lp-pill { min-height: 50px; padding: 0 28px; font-size: 18px; }
+  .lp-pills { gap: 14px; margin-top: 22px; }
+  .lp-label { font-size: 18px; color: var(--ink); }
+  .lp-rules li { gap: 14px; padding: 8px 0; font-size: 19px; }
+  .lp-rules .lp-row-meta { font-size: 16px; }
+  .lp-small { margin: 6px 0; font-size: 18px; }
+  .lp-reply-who { font-size: 19px; }
+  .lp-tick--sm { width: 26px; height: 26px; }
+  .lp-checks .lp-tick--md { width: 44px; height: 44px; }
+  .lp-ledger table { font-size: 19px; }
+  .lp-ledger th { font-size: 18px; padding-bottom: 16px; }
+  .lp-ledger th, .lp-ledger td { padding-right: 24px; }
+  .lp-ledger td { padding-block: 20px; }
+  .lp-signups { font-size: 24px; }
+  .lp-checks li { gap: 28px; padding: 26px 0; }
+  .lp-check-title { font-size: 23px; }
+  .lp-checks .lp-row-meta { font-size: 18px; }
+  .lp-terminal { padding: 56px 40px; }
+  .lp-command { font-size: 20px; }
+  .lp-details { padding-block: 64px 80px; }
+  .lp-tiles { margin-top: 36px; gap: 20px; }
+  .lp-tile { gap: 16px; padding: 22px 28px 28px; font: 800 28px/1.2 var(--font); letter-spacing: -0.01em; }
+  .lp-tile .lp-tick--md { width: 40px; height: 40px; }
+  .lp-tuft { height: 72px; top: -50px; }
+}
+
 @media (max-width: 1100px) {
   .lp-hero-plate { opacity: .35; }
   .lp-steps { grid-template-columns: 1fr; }
@@ -128,7 +175,8 @@
   .lp-actions { flex-direction: column; align-items: stretch; gap: 4px; margin-top: 20px; }
   .lp-actions .site-pill--large { min-height: 52px; width: 100%; }
   .lp-actions .lp-textlink { justify-content: center; }
-  .lp-hero-plate { position: static; order: 1; width: 300px; margin: 8px auto 0; opacity: 1; }
+  /* 300 px of stump (the plate's right 784 of 896 columns), centred on the stump rather than the left grass */
+  .lp-hero-plate { position: static; order: 1; width: min(343px, 88vw); margin: 8px auto 0; transform: translateX(-6.25%); opacity: 1; }
   .lp-hero > .site-wrap:last-child { order: 2; }
   .lp-steps { margin-top: 0; gap: 12px; }
   .lp-step { min-height: 0; padding: 18px 20px; }
@@ -146,7 +194,7 @@
   .lp-band h2, .lp-details h2 { font-size: 32px; line-height: 34px; }
   .lp-body { margin-top: 16px; font-size: 17px; }
   .lp-feature { padding: 20px; }
-  .lp-tuft { width: 48px; top: -34px; }
+  .lp-tuft { width: auto; height: 48px; top: -33px; }
   .lp-rows li { flex-wrap: wrap; row-gap: 4px; min-height: 56px; padding: 8px 0; }
   .lp-row-name { font-size: 16px; }
   .lp-variants { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -156,7 +204,7 @@
   .lp-ledger th:nth-child(4), .lp-ledger td:nth-child(4) { display: none; }
   .lp-ledger table { font-size: 14px; }
   .lp-terminal { padding: 24px 20px; }
-  .lp-terminal code { font-size: 15px; }
+  .lp-command { font-size: 15px; }
   .lp-tiles { grid-template-columns: 1fr; gap: 12px; margin-top: 24px; }
   .lp-tile { flex-direction: row; align-items: center; gap: 16px; padding: 18px 20px; font-size: 18px; }
   .lp-closing-grid { grid-template-columns: 1fr; min-height: 0; gap: 8px; padding-bottom: 32px; }

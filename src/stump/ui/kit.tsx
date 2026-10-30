@@ -3,8 +3,9 @@ import { explain } from './api.ts'
 import { Icon, type IconName } from './icons.tsx'
 
 /** The one tooltip every icon-only control uses: 2-4 words, after ~300 ms on hover, at once on focus. `below` for controls at the top of the page. */
-export function Tip({ label, children, side = 'above', className }: { label: string; children: ReactNode; side?: 'above' | 'below'; className?: string }) {
-  return <span className={['st-tip', side === 'below' ? 'below' : '', className ?? ''].filter(Boolean).join(' ')}>{children}<span role="tooltip">{label}</span></span>
+/** A 2-4 word tooltip; `align="end"` keeps it inside the screen for a control at the right edge. */
+export function Tip({ label, children, side = 'above', align = 'center', className }: { label: string; children: ReactNode; side?: 'above' | 'below'; align?: 'center' | 'end'; className?: string }) {
+  return <span className={['st-tip', side === 'below' ? 'below' : '', align === 'end' ? 'end' : '', className ?? ''].filter(Boolean).join(' ')}>{children}<span role="tooltip">{label}</span></span>
 }
 
 export type ChipTone = 'neutral' | 'success' | 'held' | 'danger'

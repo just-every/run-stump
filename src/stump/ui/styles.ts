@@ -83,7 +83,7 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-settings-head { margin: 0 0 32px; }
 .st-settings-title { font: 800 var(--stump-size-title)/38px var(--stump-font); letter-spacing: -0.02em; color: var(--stump-ink); margin: 0 0 20px; }
 .st-tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--stump-hairline); overflow-x: auto; scrollbar-width: none; }
-.st-tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px; color: var(--stump-muted); text-decoration: none; font-size: 16px; font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.st-tabs a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 2px; color: var(--stump-muted); text-decoration: none; font-size: 16px; font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .st-tabs a:hover { color: var(--stump-ink); }
 .st-tabs a[aria-current="page"] { color: var(--stump-ink); font-weight: 600; border-bottom-color: var(--stump-emerald); }
 .st-settings .st-page > h1:first-child, .st-settings .st-page h1 { font-size: 24px; line-height: 30px; }
@@ -206,10 +206,13 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 
 /* The one tooltip (H19): 2-4 words, ~300 ms on hover, at once on focus */
 .st-tip { position: relative; display: inline-flex; }
-.st-tip [role="tooltip"] { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--stump-ink); color: var(--stump-white); font-size: 13px; line-height: 18px; padding: 4px 8px; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .1s; z-index: 50; }
+/* A hidden tooltip is out of layout, so one near an edge never widens the page. */
+.st-tip [role="tooltip"] { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--stump-ink); color: var(--stump-white); font-size: 13px; line-height: 18px; padding: 4px 8px; border-radius: 6px; pointer-events: none; z-index: 50; }
 .st-tip.below [role="tooltip"] { bottom: auto; top: calc(100% + 6px); }
-.st-tip:hover [role="tooltip"] { opacity: 1; transition-delay: .3s; }
-.st-tip:focus-within [role="tooltip"] { opacity: 1; transition-delay: 0s; }
+.st-tip.end [role="tooltip"] { left: auto; right: 0; transform: none; }
+.st-tip:hover [role="tooltip"] { display: block; animation: st-tip-in .1s ease-out .3s both; }
+.st-tip:focus-within [role="tooltip"] { display: block; animation: st-tip-in .1s ease-out both; }
+@keyframes st-tip-in { from { opacity: 0; } to { opacity: 1; } }
 .st-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 @media (prefers-reduced-motion: reduce) { .st-button, .st-nav a, .st-pause { transition: none; } .st-button.primary:hover { transform: none; } }
@@ -233,6 +236,8 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
   .st-pause:not(.paused) .st-pause-icon { background: transparent; }
   .st-pause:not(.paused) .st-pause-icon svg { width: 18px; height: 18px; }
   .st-pause.paused { padding: 0 14px 0 6px; }
+  .st-pause.paused .st-pause-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .st-topbar .st-tip:not(.st-menu-tip) [role="tooltip"] { left: auto; right: 0; transform: none; }
   .st-avatar { width: 44px; height: 44px; padding: 4px; background-clip: content-box; font-size: 14px; }
   .st-main { padding: 24px 16px 48px; }
   .st-page h1, .st-settings-title { font-size: 26px; line-height: 32px; }
