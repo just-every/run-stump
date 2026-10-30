@@ -10,8 +10,8 @@ export interface InboxRow {
   occurred_at: number | null; received_at: number; reply_item_id: string | null; offer_id: string | null
 }
 
-/** Reply states that mean the interaction has its answer (or may have: an unconfirmed post is never sent twice, D-5). */
-export const ANSWERED = ['scheduled', 'posting', 'posted', 'partly_posted', 'uncertain'] as const
+/** Reply states that mean the interaction has its answer: out, on its way, waiting out a Pause, or maybe out (an unconfirmed post is never sent twice, D-5). */
+export const ANSWERED = ['scheduled', 'paused', 'posting', 'posted', 'partly_posted', 'uncertain'] as const
 
 const iso = (at: number | null) => at === null ? null : new Date(at).toISOString()
 const json = <T>(value: string | null): T | null => value ? JSON.parse(value) as T : null

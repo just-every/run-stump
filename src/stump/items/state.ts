@@ -46,3 +46,12 @@ export async function pauseFor(db: D1Database, accountId: string | null): Promis
 
 /** SQL that is true while nothing pauses the item's account; `item` is the stump_items alias. */
 export const NOT_PAUSED = (item: string) => `NOT EXISTS(SELECT 1 FROM stump_pause p WHERE p.scope_key='all' OR p.scope_key='account:'||${item}.account_id)`
+
+/**
+ * An imported post waits, paused, until the person confirms the tool it came from no longer
+ * queues it and releases it (stump.calendar.plan release_import). Nothing else schedules it or
+ * lifts that hold, so it never posts twice.
+ */
+export const IMPORT_HOLD_SQL = "COALESCE(json_extract(hold,'$.kind'),'')='import'"
+export const heldForImport = (row: { hold?: unknown }) =>
+  typeof row.hold === 'string' && (JSON.parse(row.hold) as { kind?: unknown } | null)?.kind === 'import'

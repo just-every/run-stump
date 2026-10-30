@@ -18,7 +18,7 @@ import { quoteXPost } from '../lib/x/index.ts'
 import { readPerson } from '../people/store.ts'
 import { readItem, type FullItemRow } from '../publish/items.ts'
 import { agentRuleBroken, ONE_REPLY, UNENGAGED, X_AI_STEP } from '../publish/rules.ts'
-import { blockingFlags, commit, mover, prepare, sendNow } from '../publish/schedule.ts'
+import { blockingFlags, commit, earlierReply, mover, prepare, sendNow } from '../publish/schedule.ts'
 import { ANSWERED, readInboxItem, type InboxRow } from './store.ts'
 
 export const REPLY_TOOL = 'stump.inbox.reply'
@@ -70,6 +70,9 @@ export async function planReply(ctx: ActionContext, args: Args, stage: 'classify
   if (earlier && (ANSWERED as readonly string[]).includes(earlier.state) && (stage === 'run' || !sameCall(ctx, earlier, text))) {
     await refuseAct(ctx, REPLY_TOOL, 'reply', ONE_REPLY, { act: 'x_one_reply_per_interaction', inbox_item_id: inbox.id, reply_item_id: earlier.id, reply_url: earlier.url })
   }
+  // A reply another door wrote to the same post answers it too.
+  const other = account.network === 'x' ? await earlierReply(ctx.db, account.id, inbox.network_id, [inbox.reply_item_id]) : null
+  if (other) await refuseAct(ctx, REPLY_TOOL, 'reply', ONE_REPLY, { act: 'x_one_reply_per_interaction', inbox_item_id: inbox.id, reply_item_id: other.id, reply_url: other.url })
   const broken = ctx.agent ? agentRuleBroken(account) : null
   if (broken) await refuseAct(ctx, REPLY_TOOL, 'reply', broken.source, { account_id: account.id, reason: broken.reason })
   const pending = earlier && PENDING.includes(earlier.state) ? earlier : null
@@ -177,7 +180,8 @@ export async function checkReply(ctx: ActionContext, args: Args) {
   const earlier = inbox.reply_item_id ? await readItem(ctx.db, inbox.reply_item_id) : null
   const result = await checkText(ctx, account, speaker, text, earlier && PENDING.includes(earlier.state) ? earlier.id : undefined)
   return {
-    ...checkView(result), may_reply: inbox.engaged_first === 1 && !(earlier && (ANSWERED as readonly string[]).includes(earlier.state)),
+    ...checkView(result), may_reply: inbox.engaged_first === 1 && !(earlier && (ANSWERED as readonly string[]).includes(earlier.state))
+      && !(account.network === 'x' && await earlierReply(ctx.db, account.id, inbox.network_id, [inbox.reply_item_id])),
     charge_usd: account.network === 'x' ? quoteXPost(text, await xPrices(ctx.db)).usd : 0,
   }
 }

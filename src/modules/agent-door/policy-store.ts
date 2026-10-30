@@ -1,3 +1,4 @@
+import { DROP_SEALED } from './approvals.ts'
 import { verifyJws } from './credentials.ts'
 import { offers } from './capabilities.mjs'
 import { answered, completeness, document_sha256, validateDocument, DocumentInvalid } from './policy/document.ts'
@@ -67,7 +68,7 @@ export async function adoptPolicy(rt: Runtime, request: Request): Promise<Respon
     const revoked = value.revoked as { agents: string[]; consents: string[] }
     const pending = (await db.prepare("SELECT id,saved FROM agent_door_approvals WHERE state='pending'").all<{ id: string; saved: string }>()).results
     const expired = pending.filter(row => { const { principal } = JSON.parse(row.saved); return revoked.agents.includes(principal.agent.id) || principal.consent && revoked.consents.includes(principal.consent) })
-    if (expired.length) await db.batch(expired.map(row => db.prepare("UPDATE agent_door_approvals SET state='expired' WHERE id=? AND state='pending'").bind(row.id)))
+    if (expired.length) await db.batch(expired.map(row => db.prepare(`UPDATE agent_door_approvals SET state='expired',${DROP_SEALED} WHERE id=? AND state='pending'`).bind(row.id)))
   }
   return json({ adopted: { seq: value.seq, revision: value.revision }, door: { classes: declaredClasses(rt).map(cls => ({ class: cls, tools: rt.tools.filter(tool => tool.classes.includes(cls)).map(tool => tool.name).sort().slice(0, 20) })) } })
 }

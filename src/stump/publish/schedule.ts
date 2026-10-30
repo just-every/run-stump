@@ -2,7 +2,8 @@ import { refuse, refuseAct } from '../actions/refusals.ts'
 import type { ActionContext } from '../actions/types.ts'
 import { xPrices } from '../accounts/apps.ts'
 import { readAccount, type AccountRow } from '../accounts/store.ts'
-import { moveItem, pauseFor, type ItemState, type Mover } from '../items/state.ts'
+import { heldForImport, moveItem, pauseFor, type ItemState, type Mover } from '../items/state.ts'
+import { ANSWERED } from '../inbox/store.ts'
 import { recordOutcome } from '../ledger/record.ts'
 import { EDITORS } from '../people/roles.ts'
 import { itemView, readItem, type FullItemRow } from './items.ts'
@@ -59,9 +60,18 @@ async function oneVoicePerThread(ctx: ActionContext, action: string, row: FullIt
   if (first) await refuseAct(ctx, TOOL, action, { rule: 'D-1', source: 'STUMP-TRUTH-001' }, { thread_url: thread, first_post: first.url ?? thread, account_id: account.id })
 }
 
-/** States in which an earlier reply already answers an interaction. */
-const ANSWERED: readonly ItemState[] = ['scheduled', 'posting', 'posted', 'partly_posted', 'uncertain']
 const xStatusId = (url: string) => /\/status(?:es)?\/(\d{1,19})/.exec(url)?.[1] ?? null
+
+/**
+ * Another reply from this account to the same X post that is out or on its way, whichever
+ * door wrote it: an interaction is answered once (D-4).
+ */
+export async function earlierReply(db: D1Database, accountId: string, statusId: string, except: ReadonlyArray<string | null>) {
+  const rows = (await db.prepare(`SELECT id,state,url,reply_to FROM stump_items WHERE account_id=? AND reply_to IS NOT NULL
+    AND state IN (SELECT value FROM json_each(?)) AND instr(json_extract(reply_to,'$.url'),?)>0 ORDER BY COALESCE(posted_at,scheduled_at),id`)
+    .bind(accountId, JSON.stringify(ANSWERED), statusId).all<{ id: string; state: ItemState; url: string | null; reply_to: string }>()).results
+  return rows.find(row => !except.includes(row.id) && xStatusId((JSON.parse(row.reply_to) as { url: string }).url) === statusId) ?? null
+}
 
 /**
  * D-4 on every publishing door: a reply on X goes only to the account's own post or to
@@ -75,11 +85,11 @@ async function engagedFirst(ctx: ActionContext, action: string, row: FullItemRow
   const own = await ctx.db.prepare('SELECT 1 FROM stump_item_parts WHERE account_id=? AND network_id=? UNION ALL SELECT 1 FROM stump_items WHERE account_id=? AND network_id=? LIMIT 1')
     .bind(account.id, id, account.id, id).first()
   if (own) return
-  const inbox = await ctx.db.prepare('SELECT id,engaged_first,reply_item_id FROM stump_inbox_items WHERE account_id=? AND network_id=?').bind(account.id, id)
-    .first<{ id: string; engaged_first: number; reply_item_id: string | null }>()
+  const inbox = await ctx.db.prepare('SELECT id,engaged_first FROM stump_inbox_items WHERE account_id=? AND network_id=?').bind(account.id, id)
+    .first<{ id: string; engaged_first: number }>()
   if (inbox?.engaged_first !== 1) await refuseAct(ctx, TOOL, action, UNENGAGED, { act: 'x_unengaged_reply', item_id: row.id, url, route: 'handoff' })
-  const earlier = inbox!.reply_item_id && inbox!.reply_item_id !== row.id ? await readItem(ctx.db, inbox!.reply_item_id) : null
-  if (earlier && ANSWERED.includes(earlier.state)) await refuseAct(ctx, TOOL, action, ONE_REPLY, { act: 'x_one_reply_per_interaction', item_id: row.id, inbox_item_id: inbox!.id, reply_item_id: earlier.id })
+  const earlier = await earlierReply(ctx.db, account.id, id, [row.id])
+  if (earlier) await refuseAct(ctx, TOOL, action, ONE_REPLY, { act: 'x_one_reply_per_interaction', item_id: row.id, inbox_item_id: inbox!.id, reply_item_id: earlier.id, reply_url: earlier.url })
 }
 
 /**
@@ -100,6 +110,11 @@ function providerStep(row: FullItemRow, account: AccountRow): { provider: string
 export async function prepare(ctx: ActionContext, action: string, input: { item_id?: unknown; account_id?: unknown; at?: unknown; time_zone?: unknown }, options: { now?: boolean; holdFlagged?: boolean; accountMayWait?: boolean } = {}): Promise<Plan> {
   const row = await item(ctx, input.item_id)
   if (!SCHEDULABLE.includes(row.state)) refuse('not_schedulable', { item_id: row.id, state: row.state })
+  // An imported post goes on the schedule only when the person releases it, confirming the tool it came from no longer queues it.
+  if (heldForImport(row) && action !== 'release_import') {
+    if (ctx.agent) refuse('person_only', { item_id: row.id, field: 'confirm_source_cleared', reason: 'The person confirms the old tool no longer holds this post, and releases it.' })
+    refuse('held', { item_id: row.id, reason: 'import', release: { tool: 'stump.calendar.plan', action: 'release_import' }, detail: (JSON.parse(row.hold!) as { reason?: string }).reason ?? null })
+  }
   const accountId = typeof input.account_id === 'string' ? input.account_id : row.account_id
   if (!accountId) refuse('invalid_arguments', { field: 'account_id' })
   const account = await readAccount(ctx.db, accountId)

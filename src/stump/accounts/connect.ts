@@ -5,7 +5,7 @@ import { buildXAuthorizeUrl, createPkcePair, exchangeXCode, getXMe, revokeXToken
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext } from '../actions/types.ts'
 import { stumpFetch } from '../net/fetch.ts'
-import { moveItem, type ItemState } from '../items/state.ts'
+import { IMPORT_HOLD_SQL, moveItem, type ItemState } from '../items/state.ts'
 import { appKeys, callbackUrl, NETWORK_NAMES, type Network } from './apps.ts'
 import { blueskyOAuthClient } from './clients.ts'
 import { digest, seal, unseal } from './seal.ts'
@@ -303,7 +303,8 @@ async function bluesky(ctx: ActionContext, pdsUrl: string, auth: BlueskyAuth, ex
  */
 export async function disconnectAccount(ctx: ActionContext, row: AccountRow) {
   let revoked: 'revoked' | 'not_supported' | 'failed' | 'nothing_to_revoke' = 'nothing_to_revoke'
-  const queued = (await ctx.db.prepare("SELECT id,state,scheduled_at FROM stump_items WHERE account_id=? AND state IN ('scheduled','paused','held') ORDER BY scheduled_at,id")
+  // An imported post waiting for the person's release keeps waiting; the release checks the account again.
+  const queued = (await ctx.db.prepare(`SELECT id,state,scheduled_at FROM stump_items WHERE account_id=? AND state IN ('scheduled','paused','held') AND NOT ${IMPORT_HOLD_SQL} ORDER BY scheduled_at,id`)
     .bind(row.id).all<{ id: string; state: ItemState; scheduled_at: number | null }>()).results
   const mover = { db: ctx.db, person: ctx.person, agent: ctx.agent, now: ctx.now }, now = ctx.now()
   // First the account stops being connected, so no refresh in flight can keep new credentials on it;

@@ -5,7 +5,7 @@
 // approval and the old one never posts (STUMP-SURFACE-009, D-2).
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext } from '../actions/types.ts'
-import { TRANSITIONS, type ItemState } from '../items/state.ts'
+import { heldForImport, TRANSITIONS, type ItemState } from '../items/state.ts'
 import { readPerson } from '../people/store.ts'
 import { readVenue } from '../venues/model.ts'
 import { routesFor } from '../venues/rules.ts'
@@ -116,7 +116,9 @@ export async function prepareSave(ctx: ActionContext, brand: Brand, row: Row, ne
   const draft: Draft = draftOf(row, next)
   const person = await readPerson(ctx.db, draft.person_id), now = ctx.now()
   const check = await checkDraft(ctx.db, brand, draft, person, now)
-  const state = nextState(current, check, true)
+  // An imported post keeps waiting for the person's release through a rewrite; its flags name what the release will meet.
+  const importing = heldForImport(row)
+  const state = importing ? current : nextState(current, check, true)
   if (state !== current && !TRANSITIONS[current].includes(state)) refuse('not_editable', { item_id: row.id, state: current })
   const revision = Number(row.revision) + 1
   const text = next.parts?.length ? null : next.text, parts = next.parts?.length ? JSON.stringify(next.parts) : null
@@ -124,7 +126,7 @@ export async function prepareSave(ctx: ActionContext, brand: Brand, row: Row, ne
   const statements = [
     ctx.db.prepare(`UPDATE stump_items SET text=?,parts=?,flags=?,claims_used=?,state=?,revision=?,hold=?,differs_from_master=?,
       scheduled_at=CASE WHEN ? THEN NULL ELSE scheduled_at END,approved_by=NULL,updated_at=? WHERE id=? AND revision=?`)
-      .bind(text, parts, JSON.stringify(check.flags), JSON.stringify(check.claims_used), state, revision, holdOf(check, draft.person_id),
+      .bind(text, parts, JSON.stringify(check.flags), JSON.stringify(check.claims_used), state, revision, importing ? row.hold : holdOf(check, draft.person_id),
         next.differs_from_master ?? Number(row.differs_from_master ?? 0), unscheduled ? 1 : 0, now, row.id, row.revision),
     ctx.db.prepare('INSERT INTO stump_item_revisions(item_id,revision,text,parts,saved_by,agent_id,at) SELECT ?,?,?,?,?,?,? WHERE changes()=1')
       .bind(row.id, revision, text, parts, ctx.person.id, ctx.agent?.id ?? null, now),

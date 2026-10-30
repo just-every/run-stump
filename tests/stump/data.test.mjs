@@ -81,6 +81,9 @@ test('switching from Buffer: a dry run, sent posts to the ledger, schedules to s
   assert.equal((await app.json('owner', '/agents/api/policy', { document }, 'PUT')).status, 200)
   const agent = (await app.json('owner', '/app/api/agent-credentials', { name: 'Synthetic importer' })).body
   assert.equal((await app.mcp(agent.token, 'stump.calendar.plan', { action: 'release_import', item_ids: [queued.id], confirm_source_cleared: true })).error?.code, 'person_only')
+  // Nor can an agent put it on the schedule another way, and a person's schedule points to the release.
+  assert.equal((await app.mcp(agent.token, 'stump.items.schedule', { action: 'schedule', item_id: queued.id, account_id: account.id, at: queued.scheduled_at })).error?.code, 'person_only')
+  assert.equal((await app.action('owner', 'stump.items.schedule', { action: 'schedule', item_id: queued.id, account_id: account.id, at: queued.scheduled_at })).body.code, 'held')
   await act('stump.calendar.pause', { action: 'pause', scope: 'all' })
   await act('stump.calendar.pause', { action: 'resume', scope: 'all' })
   assert.equal((await act('stump.drafts.revise', { action: 'get', item_id: queued.id })).state, 'paused')
