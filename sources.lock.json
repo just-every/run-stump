@@ -575,6 +575,10 @@
       "sha256": "f28219a4b3042174ade6d6860f51e9535a0ffd2b77f34a9a27c3c67de69c6ee3",
       "executable": false
     },
+    "migrations/core/0501_stump_ledger_version_kinds.sql": {
+      "sha256": "d619f0bfa7235ed31b1fec45f9bb0578eadfeff6bac4cb664777b0c88cc02fc5",
+      "executable": false
+    },
     "ONBOARDING.md": {
       "sha256": "50fec796269349e4ddc68851495e7a991b0ccd42bfccd015c7318a6df6ffeb60",
       "executable": false
