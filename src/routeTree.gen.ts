@@ -13,6 +13,7 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
 import { Route as AppListeningRouteImport } from './routes/app.listening'
+import { Route as AppPauseRouteImport } from './routes/app.pause'
 import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
 import { Route as AppSettingsConnectionsRouteImport } from './routes/app.settings.connections'
 import { Route as AppSettingsPublishingRouteImport } from './routes/app.settings.publishing'
@@ -38,6 +39,11 @@ const AppLedgerRoute = AppLedgerRouteImport.update({
 const AppListeningRoute = AppListeningRouteImport.update({
   id: '/listening',
   path: '/listening',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPauseRoute = AppPauseRouteImport.update({
+  id: '/pause',
+  path: '/pause',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsAgentsRoute = AppSettingsAgentsRouteImport.update({
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
+  '/app/pause': typeof AppPauseRoute
   '/app/': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/connections': typeof AppSettingsConnectionsRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
+  '/app/pause': typeof AppPauseRoute
   '/app': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/connections': typeof AppSettingsConnectionsRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
+  '/app/pause': typeof AppPauseRoute
   '/app/': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/connections': typeof AppSettingsConnectionsRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/ledger'
     | '/app/listening'
+    | '/app/pause'
     | '/app/'
     | '/app/settings/agents'
     | '/app/settings/connections'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
   to:
     | '/app/ledger'
     | '/app/listening'
+    | '/app/pause'
     | '/app'
     | '/app/settings/agents'
     | '/app/settings/connections'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/ledger'
     | '/app/listening'
+    | '/app/pause'
     | '/app/'
     | '/app/settings/agents'
     | '/app/settings/connections'
@@ -177,6 +189,13 @@ declare module '@tanstack/react-router' {
       path: '/listening'
       fullPath: '/app/listening'
       preLoaderRoute: typeof AppListeningRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/pause': {
+      id: '/app/pause'
+      path: '/pause'
+      fullPath: '/app/pause'
+      preLoaderRoute: typeof AppPauseRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/settings/agents': {
@@ -227,6 +246,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppLedgerRoute: typeof AppLedgerRoute
   AppListeningRoute: typeof AppListeningRoute
+  AppPauseRoute: typeof AppPauseRoute
   AppIndexRoute: typeof AppIndexRoute
   AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
   AppSettingsConnectionsRoute: typeof AppSettingsConnectionsRoute
@@ -239,6 +259,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppLedgerRoute: AppLedgerRoute,
   AppListeningRoute: AppListeningRoute,
+  AppPauseRoute: AppPauseRoute,
   AppIndexRoute: AppIndexRoute,
   AppSettingsAgentsRoute: AppSettingsAgentsRoute,
   AppSettingsConnectionsRoute: AppSettingsConnectionsRoute,

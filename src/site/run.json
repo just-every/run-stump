@@ -3,7 +3,7 @@
   "repository": "https://github.com/just-every/run-stump",
   "clone": "npx -y @runeditrun/rer dev just-every/run-stump",
   "licence": "MIT",
-  "docs": false,
+  "docs": true,
   "paths": {
     "product": null
   }

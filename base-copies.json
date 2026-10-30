@@ -232,11 +232,16 @@
         "foundation/runtime/theme-frame.ts"
       ],
       "adapted": {
-        "src/base/hydration/README.md": "2135c394939f4a737adabdc8003b0e667b31ac5a"
+        "src/base/hydration/README.md": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/base/font-head.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
       },
       "acknowledged": {
         "src/base/hydration/README.md": {
           "sha256": "599c0b024441c7caa9b6488fe2dc0e9027cae6a0e0b93add40dc753bbe30e315",
+          "mode": "100644"
+        },
+        "src/base/font-head.ts": {
+          "sha256": "0e58163a9ee6add5769e8c9609771de424ad51aadacc8101f6b3dde59dd6773f",
           "mode": "100644"
         }
       }
@@ -573,6 +578,32 @@
       "originFiles": [
         "modules/d1-transport/index.d.mts",
         "modules/d1-transport/index.mjs"
+      ]
+    },
+    {
+      "path": "src/modules/docs-search",
+      "originPath": "modules/site/docs-search",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "files": {
+        "src/modules/docs-search/client.ts": "9d1c3d573c5cab0ef24e1a629f58733126cdb56c90190ec7e21cfa33bf882519",
+        "src/modules/docs-search/search.css": "44ce24bd0708975375a8f46bda17dc6a4750019c338cdc18d9e591c1fdabb8e4",
+        "src/modules/docs-search/SearchField.tsx": "f9bbdac81b7072be60f2e8d3d4e184328d48f09524a61d1022a6c9768d3acb15"
+      },
+      "modes": {
+        "src/modules/docs-search/client.ts": "100644",
+        "src/modules/docs-search/search.css": "100644",
+        "src/modules/docs-search/SearchField.tsx": "100644"
+      },
+      "originFiles": [
+        "modules/site/docs-search/SearchField.tsx",
+        "modules/site/docs-search/artifacts.mjs",
+        "modules/site/docs-search/client.ts",
+        "modules/site/docs-search/index-build.mjs",
+        "modules/site/docs-search/retrieve.ts",
+        "modules/site/docs-search/search.css",
+        "modules/site/docs-search/sections.ts",
+        "modules/site/docs-search/types.ts",
+        "modules/site/docs-search/worker.ts"
       ]
     },
     {

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Stump"><title>Stump</title><style>@media (prefers-color-scheme: dark){.b{fill:#F6F1E4}}</style>
+<path d="M2 7 H14 V10.5 C14 12 14.6 12.6 16 13 V15 H0 V13 C1.4 12.6 2 12 2 10.5 Z" class="b" fill="#1C1B18"/>
+<ellipse cx="8" cy="7" rx="6" ry="2" fill="#B5652B"/>
+<path d="M8 6 V4.5 C8.5 2.2 10.6 0.8 14.5 0.5 C14.5 3.4 12.6 5.1 9.2 5.2 L9.1 6 Z" fill="#0B8A60"/>
+</svg>

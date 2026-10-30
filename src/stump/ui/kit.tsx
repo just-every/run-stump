@@ -1,9 +1,43 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { explain } from './api.ts'
+import { Icon, type IconName } from './icons.tsx'
 
-/** The one tooltip every icon-only control uses: 2-4 words, after ~300 ms on hover, at once on focus. */
-export function Tip({ label, children }: { label: string; children: ReactNode }) {
-  return <span className="st-tip">{children}<span role="tooltip">{label}</span></span>
+/** The one tooltip every icon-only control uses: 2-4 words, after ~300 ms on hover, at once on focus. `below` for controls at the top of the page. */
+/** A 2-4 word tooltip; `align="end"` keeps it inside the screen for a control at the right edge. */
+export function Tip({ label, children, side = 'above', align = 'center', className }: { label: string; children: ReactNode; side?: 'above' | 'below'; align?: 'center' | 'end'; className?: string }) {
+  return <span className={['st-tip', side === 'below' ? 'below' : '', align === 'end' ? 'end' : '', className ?? ''].filter(Boolean).join(' ')}>{children}<span role="tooltip">{label}</span></span>
+}
+
+export type ChipTone = 'neutral' | 'success' | 'held' | 'danger'
+/** A 26 px state or tag chip (SPEC §3.4). */
+export function Chip({ tone = 'neutral', tick, children }: { tone?: ChipTone; tick?: boolean; children: ReactNode }) {
+  return <span className={tone === 'neutral' ? 'st-chip' : `st-chip ${tone}`}>{tick ? <Icon name="check" /> : null}{children}</span>
+}
+
+/** The emerald tick disc (18 px in lists). */
+export function Tick() {
+  return <span className="st-tick" aria-hidden="true"><Icon name="check" /></span>
+}
+
+/** A 36 px emerald disc with a white line icon, once per section heading. */
+export function Disc({ icon }: { icon: IconName }) {
+  return <span className="st-disc" aria-hidden="true"><Icon name={icon} /></span>
+}
+
+/** A section heading with its disc, as Today and Pause draw them. */
+export function PanelTitle({ icon, children, id }: { icon?: IconName; children: ReactNode; id?: string }) {
+  return <h2 className="st-panel-title" id={id}>{icon ? <Disc icon={icon} /> : null}{children}</h2>
+}
+
+/** Two initials from a display name, for the initials disc. */
+export const initialsOf = (name: string) => name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]!.toUpperCase()).join('') || '?'
+export function Initials({ name }: { name: string }) {
+  return <span className="st-initials" aria-hidden="true">{initialsOf(name)}</span>
+}
+
+/** An empty list: the pastel stump, one heading, one line and the action that fills it (U5). */
+export function Empty({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
+  return <div className="st-empty"><img src="/art/stump-small.webp" alt="" width="240" height="151" /><h2>{title}</h2><p>{children}</p>{actions ? <div className="st-actions">{actions}</div> : null}</div>
 }
 
 /**

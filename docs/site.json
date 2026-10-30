@@ -1,0 +1,183 @@
+{
+  "sections": [
+    {
+      "title": "Start here",
+      "pages": [
+        {
+          "slug": "overview",
+          "title": "Overview",
+          "file": "overview.md",
+          "summary": "What Stump does, the daily job it runs and what it will not do."
+        },
+        {
+          "slug": "getting-started",
+          "title": "Install Stump",
+          "file": "getting-started.md",
+          "summary": "Run Stump on your own computer with one line, then sign in as the owner."
+        },
+        {
+          "slug": "deploy",
+          "title": "Deploy",
+          "file": "deploy.md",
+          "summary": "Put Stump on your own Cloudflare account so your team can sign in from anywhere."
+        }
+      ]
+    },
+    {
+      "title": "Daily work",
+      "pages": [
+        {
+          "slug": "venues",
+          "title": "Venues and rules",
+          "file": "venues.md",
+          "summary": "Every place worth showing up, with its rules, their sources and the routes they allow."
+        },
+        {
+          "slug": "compose",
+          "title": "Compose and schedule",
+          "file": "compose.md",
+          "summary": "Write a post once, get a variant for each network, and schedule them all with one press."
+        },
+        {
+          "slug": "handoffs",
+          "title": "Hand-offs",
+          "file": "handoffs.md",
+          "summary": "Hand members-only venues to the named member, with a brief, facts and a draft in their voice."
+        },
+        {
+          "slug": "listening",
+          "title": "Listening",
+          "file": "listening.md",
+          "summary": "Watch Hacker News, feeds, Bluesky and Mastodon for threads worth answering."
+        },
+        {
+          "slug": "inbox",
+          "title": "Inbox",
+          "file": "inbox.md",
+          "summary": "Answer the people who engaged with your accounts first."
+        },
+        {
+          "slug": "ledger",
+          "title": "Ledger",
+          "file": "ledger.md",
+          "summary": "Every post and hand-off on the record, with its link, author and state."
+        },
+        {
+          "slug": "links",
+          "title": "Tracked links",
+          "file": "links.md",
+          "summary": "UTM tags on your own links, and the signups each post brought."
+        }
+      ]
+    },
+    {
+      "title": "Set up",
+      "pages": [
+        {
+          "slug": "accounts",
+          "title": "Accounts and network apps",
+          "file": "accounts.md",
+          "summary": "Connect your own and the company's accounts with your own network apps and keys."
+        },
+        {
+          "slug": "brand",
+          "title": "Brand and claims",
+          "file": "brand.md",
+          "summary": "Your products, the claims you may make with their proof, and each person's voice."
+        },
+        {
+          "slug": "team",
+          "title": "Team and roles",
+          "file": "team.md",
+          "summary": "Invite people with a role and their connection to the company."
+        },
+        {
+          "slug": "switch-from-buffer",
+          "title": "Switch from Buffer",
+          "file": "switch-from-buffer.md",
+          "summary": "Bring channels, sent posts and schedules across, with queued posts paused until you confirm."
+        },
+        {
+          "slug": "import-venues",
+          "title": "Import a venue list",
+          "file": "import-venues.md",
+          "summary": "Import your venue list from Markdown or CSV, as a dry run first."
+        },
+        {
+          "slug": "ai-provider",
+          "title": "Your AI provider",
+          "file": "ai-provider.md",
+          "summary": "Draft with your own AI provider and model, with every request's cost recorded."
+        },
+        {
+          "slug": "stack",
+          "title": "Orbit and Vane",
+          "file": "stack.md",
+          "summary": "Send engaged people to Orbit and see each post's signups in Vane."
+        }
+      ]
+    },
+    {
+      "title": "Standards",
+      "pages": [
+        {
+          "slug": "refusals",
+          "title": "What Stump refuses",
+          "file": "refusals.md",
+          "summary": "The acts the platforms ban, which Stump has no feature for, with their sources."
+        },
+        {
+          "slug": "disclosure",
+          "title": "Disclosure",
+          "file": "disclosure.md",
+          "summary": "How and when a post says the poster's connection to the company."
+        }
+      ]
+    },
+    {
+      "title": "Agents",
+      "pages": [
+        {
+          "slug": "agents",
+          "title": "Agents and MCP",
+          "file": "agents.md",
+          "summary": "Connect an agent that acts for you, with your role, under the company's policy."
+        }
+      ]
+    },
+    {
+      "title": "Data",
+      "pages": [
+        {
+          "slug": "data",
+          "title": "Export and erase",
+          "file": "data.md",
+          "summary": "Take everything with you, restore it, and erase a person when they ask."
+        },
+        {
+          "slug": "pause",
+          "title": "Pause",
+          "file": "pause.md",
+          "summary": "Stop every scheduled post in one press, and resume knowing what goes out."
+        }
+      ]
+    },
+    {
+      "title": "Reference",
+      "pages": [
+        {
+          "slug": "contract",
+          "title": "Contract",
+          "file": "contract.md",
+          "summary": "The product Stump is built to be, its door rules and each clause's status."
+        },
+        {
+          "slug": "networks",
+          "title": "Networks",
+          "file": "networks.md",
+          "summary": "The prices, limits, gates and link checks Stump reads for each network."
+        }
+      ]
+    }
+  ]
+}
