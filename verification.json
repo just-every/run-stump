@@ -36,6 +36,7 @@
         "node --test tests/stump/venues.test.mjs tests/stump/handoffs.test.mjs",
         "node --test tests/stump/watches.test.mjs",
         "node --test tests/stump/ledger-stack.test.mjs",
+        "node --test tests/stump/inbox.test.mjs",
         "node --test tests/stump/accounts.test.mjs tests/stump/drafting.test.mjs",
         "node node_modules/@runeditrun/rer/cli/agent-door.mjs ."
       ]

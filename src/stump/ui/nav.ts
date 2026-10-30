@@ -10,6 +10,7 @@ export const navigation: readonly NavEntry[] = [
   { group: 'work', to: '/app/handoffs', label: 'Hand-offs' },
   { group: 'work', to: '/app/venues', label: 'Venues' },
   { group: 'work', to: '/app/listening', label: 'Listening' },
+  { group: 'work', to: '/app/inbox', label: 'Inbox' },
   { group: 'work', to: '/app/ledger', label: 'Ledger' },
   { group: 'settings', to: '/app/settings/brand', label: 'Brand' },
   { group: 'settings', to: '/app/settings/team', label: 'Team' },

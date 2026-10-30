@@ -3,7 +3,7 @@ import type { Seed } from './connections.ts'
 export interface OfferRow {
   id: string; seed: Seed; kind: 'engager' | 'annotation'; state: 'offered' | 'sent' | 'failed' | 'dismissed'; ledger_id: string | null
   network: string | null; handle: string | null; display_name: string | null; post_url: string | null; engagement: string | null; public_email: string | null
-  occurred_at: number; attempts: number; outcome: string | null; created_by: string | null; created_at: number; sent_by: string | null; sent_at: number | null
+  network_user_id: string | null; occurred_at: number; attempts: number; outcome: string | null; created_by: string | null; created_at: number; sent_by: string | null; sent_at: number | null
 }
 
 const iso = (at: number | null) => at === null ? null : new Date(at).toISOString()
@@ -50,6 +50,8 @@ export interface NewEngager {
   engagement?: string | null
   /** Only an email the person shows publicly on their own profile. */
   public_email?: string | null
+  /** The network's own id for the person, which outlives a handle change. */
+  network_user_id?: string | null
   occurred_at: number
 }
 
@@ -59,8 +61,8 @@ export interface NewEngager {
  */
 export async function offerEngager(db: D1Database, input: NewEngager, by: string | null, now: number): Promise<OfferRow> {
   const network = input.network.trim().toLowerCase(), handle = input.handle.trim()
-  await db.prepare(`INSERT OR IGNORE INTO stump_stack_offers(id,seed,kind,state,network,handle,display_name,post_url,engagement,public_email,occurred_at,created_by,created_at)
-    VALUES(?,'orbit','engager','offered',?,?,?,?,?,?,?,?,?)`)
-    .bind(crypto.randomUUID(), network, handle, input.display_name ?? null, input.post_url, input.engagement ?? null, input.public_email ?? null, input.occurred_at, by, now).run()
+  await db.prepare(`INSERT OR IGNORE INTO stump_stack_offers(id,seed,kind,state,network,handle,display_name,post_url,engagement,public_email,network_user_id,occurred_at,created_by,created_at)
+    VALUES(?,'orbit','engager','offered',?,?,?,?,?,?,?,?,?,?)`)
+    .bind(crypto.randomUUID(), network, handle, input.display_name ?? null, input.post_url, input.engagement ?? null, input.public_email ?? null, input.network_user_id ?? null, input.occurred_at, by, now).run()
   return (await db.prepare("SELECT * FROM stump_stack_offers WHERE kind='engager' AND network=? AND handle=? AND post_url=?").bind(network, handle, input.post_url).first<OfferRow>())!
 }

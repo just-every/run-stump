@@ -3,13 +3,21 @@
 // - the company's AI provider: OpenAI-compatible chat completions with a JSON
 //   draft and its usage and cost;
 // - X API v2: the OAuth 2.0 token exchange and the account read, so the
-//   journey connects the company's X account through its own app;
+//   journey connects the company's X account through its own app; the
+//   account's mentions timeline, where a member mentions it twice more on
+//   every read; and post creation and read-back, so a reply posts and reads back;
 // - Bluesky's public AppView: a handle resolved to its DID (a did:web naming the
 //   handle's host), and a post thread read by that DID's at-URI, so the journey
 //   records a hand-off's link checked with the network.
 const AI = 'https://ai.synthetic-stump.example'
 const X = 'https://api.x.com'
 const APPVIEW = 'https://public.api.bsky.app'
+const COMPANY = { id: '1500000000000000099', username: 'synthetic_company', name: 'Synthetic Company', public_metrics: { followers_count: 2400, following_count: 12, tweet_count: 40, listed_count: 1 } }
+const MEMBER = { id: '1600000000000000099', username: 'synthetic_member', name: 'Synthetic Member' }
+const posts = new Map()
+let sequence = 0
+/** A post id above every earlier one, as X's snowflake ids are. */
+const nextId = () => String(BigInt(Date.now()) * 4096n + BigInt(sequence++ % 4096))
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 
 async function ai(request, url) {
@@ -32,7 +40,19 @@ async function x(request, url) {
   if (url.pathname === '/2/oauth2/revoke' && request.method === 'POST') return json({ revoked: true })
   const token = request.headers.get('authorization')?.slice('Bearer '.length) ?? ''
   if (!token.startsWith('conformance-')) return json({ title: 'Unauthorized', status: 401 }, 401)
-  if (url.pathname === '/2/users/me') return json({ data: { id: '1500000000000000099', username: 'synthetic_company', name: 'Synthetic Company', public_metrics: { followers_count: 2400, following_count: 12, tweet_count: 40, listed_count: 1 } } })
+  if (url.pathname === '/2/users/me') return json({ data: COMPANY })
+  if (url.pathname === `/2/users/${COMPANY.id}/mentions`) {
+    const data = ['Does the weekly pattern skip holidays?', 'Can a booking repeat every other week?'].map(text => ({ id: nextId(), text: `@${COMPANY.username} ${text}`, author_id: MEMBER.id, created_at: new Date().toISOString() })).reverse()
+    for (const item of data) item.conversation_id = item.id
+    return json({ data, includes: { users: [MEMBER] }, meta: { result_count: data.length, newest_id: data[0].id, oldest_id: data.at(-1).id } })
+  }
+  if (url.pathname === '/2/tweets' && request.method === 'POST') {
+    const body = await request.json(), post = { id: nextId(), text: body.text, author_id: COMPANY.id, created_at: new Date().toISOString(), edit_history_tweet_ids: [] }
+    post.edit_history_tweet_ids.push(post.id); posts.set(post.id, post)
+    return json({ data: { id: post.id, text: post.text, edit_history_tweet_ids: post.edit_history_tweet_ids } }, 201)
+  }
+  const read = /^\/2\/tweets\/(\d+)$/.exec(url.pathname)
+  if (read && posts.has(read[1])) return json({ data: posts.get(read[1]), includes: { users: [COMPANY] } })
   return json({ title: 'Not Found', status: 404 }, 404)
 }
 

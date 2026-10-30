@@ -92,9 +92,9 @@ function Waiting({ offers, onChange }: { offers: OfferView[]; onChange(): Promis
     <ul className="st-list">{offers.map(offer => <li className="st-row" key={offer.id}>
       <div className="st-row-main">
         <div className="st-name">{offer.kind === 'engager' ? offer.handle : offer.post_url ?? 'A post'}</div>
-        <div className="st-meta">{offer.kind === 'engager' ? `${offer.network} · ${offer.engagement ?? 'engaged'}` : 'Annotation'}{offer.state === 'failed' ? ` · failed: ${(offer.outcome as { error?: string } | null)?.error ?? 'try again'}` : ''}</div>
+        <div className="st-meta">{offer.kind === 'engager' ? `${offer.network} · ${offer.engagement ?? 'engaged'}` : 'Annotation'}{(offer.outcome as { ok?: boolean } | null)?.ok === false ? ` · last send failed: ${(offer.outcome as { error?: string }).error ?? 'try again'}` : ''}</div>
       </div>
-      <button className="st-button" type="button" disabled={busy} onClick={() => void run(() => runAction('stump.stack.send', { action: 'send', idempotency_key: key(), offer_id: offer.id }), () => 'Sent.').then(onChange)}>Send</button>
+      <button className="st-button" type="button" disabled={busy} onClick={() => void run(() => runAction<{ sent: boolean; outcome: { error?: string } | null }>('stump.stack.send', { action: 'send', idempotency_key: key(), offer_id: offer.id }), done => done.sent ? 'Sent.' : `Not sent: ${done.outcome?.error ?? 'try again'}`).then(onChange)}>Send</button>
     </li>)}</ul>
     <Outcome message={message} />
   </>

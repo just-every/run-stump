@@ -15,10 +15,11 @@ export type SendResult =
   | { status: 'skipped'; offer: OfferRow | null; reason: string }
   | { status: 'dismissed'; offer: OfferRow }
 
+/** A failed send stays offered with its error, so it can be sent again. */
 async function record(env: StumpEnv, offer: OfferRow, outcome: SendOutcome, by: string | null, now: number): Promise<OfferRow> {
   await env.DB.batch([
     env.DB.prepare('UPDATE stump_stack_offers SET state=?,attempts=attempts+1,outcome=?,sent_by=?,sent_at=? WHERE id=?')
-      .bind(outcome.ok ? 'sent' : 'failed', JSON.stringify(outcome), by, outcome.ok ? now : offer.sent_at, offer.id),
+      .bind(outcome.ok ? 'sent' : 'offered', JSON.stringify(outcome), by, outcome.ok ? now : offer.sent_at, offer.id),
     env.DB.prepare('UPDATE stump_stack_connections SET last_sent_at=?,last_error=? WHERE seed=?').bind(now, outcome.ok ? null : outcome.error ?? 'failed', offer.seed),
   ])
   return (await readOffer(env.DB, offer.id))!
@@ -26,8 +27,8 @@ async function record(env: StumpEnv, offer: OfferRow, outcome: SendOutcome, by: 
 
 /**
  * Sends one offer to its seed and records what the seed answered on the offer. A
- * sent offer is never sent twice; a failed one can be sent again, which Orbit and Vane
- * both take as a repeat of the same event.
+ * sent offer is never sent twice; a failed one stays offered with its error and can be
+ * sent again, which Orbit and Vane both take as a repeat of the same event.
  */
 export async function sendOffer(env: StumpEnv, offerId: string, by: string | null, now: number): Promise<SendResult> {
   const offer = await readOffer(env.DB, offerId)
@@ -45,7 +46,7 @@ export async function sendOffer(env: StumpEnv, offerId: string, by: string | nul
   let outcome: SendOutcome
   if (offer.kind === 'engager') {
     outcome = await postSignal(fetcher, { origin: connection.origin, source_id: connection.external_id, secret }, engagerEvent(connection.external_id, {
-      id: offer.id, network: offer.network!, handle: offer.handle!, display_name: offer.display_name, post_url: offer.post_url!, engagement: offer.engagement, public_email: offer.public_email, occurred_at: offer.occurred_at,
+      id: offer.id, network: offer.network!, handle: offer.handle!, display_name: offer.display_name, post_url: offer.post_url!, engagement: offer.engagement, public_email: offer.public_email, network_user_id: offer.network_user_id, occurred_at: offer.occurred_at,
     }), now)
   } else {
     const entry = await env.DB.prepare('SELECT id,network,text,url,posted_at,state FROM stump_ledger WHERE id=?').bind(offer.ledger_id).first<LedgerRow>()
