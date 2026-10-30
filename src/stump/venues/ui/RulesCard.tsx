@@ -39,8 +39,9 @@ export function RulesCard({ venue, editor, onSaved }: { venue: Venue; editor: bo
       return <div key={name}>
         <div className="st-rule">
           <span className="st-rule-label">{LABELS[name]}</span>
-          {editor ? <button className="st-value" type="button" aria-expanded={editing === name} onClick={() => setEditing(editing === name ? null : name)}>{ruleWords(name, rule)}</button>
-            : <span>{ruleWords(name, rule)}</span>}
+          {/* A thread address is long: it wraps inside the card rather than widening the page. */}
+          {editor ? <button className="st-value" type="button" style={{ overflowWrap: 'anywhere', minWidth: 0, textAlign: 'left' }} aria-expanded={editing === name} onClick={() => setEditing(editing === name ? null : name)}>{ruleWords(name, rule)}</button>
+            : <span style={{ overflowWrap: 'anywhere', minWidth: 0 }}>{ruleWords(name, rule)}</span>}
           <span className="st-rule-source">{rule ? rule.sourced
             ? <><a href={rule.source_url!} target="_blank" rel="noreferrer noopener">source ↗</a> · read {readOn(rule.read_at)}</>
             : <span className="st-chip held">unsourced</span> : null}</span>
