@@ -759,6 +759,10 @@
       "sha256": "28e79a5eeedb779ce158c4403438a004ddf0ad5b388a8618f4c4deec413a4df4",
       "executable": false
     },
+    "migrations/core/0710_stump_agent_policy_answers.sql": {
+      "sha256": "1e5bc5ae7ac547d3dba532e092e13269a9c1b6d9ad477eb6d67fc02fb16fa563",
+      "executable": false
+    },
     "ONBOARDING.md": {
       "sha256": "50fec796269349e4ddc68851495e7a991b0ccd42bfccd015c7318a6df6ffeb60",
       "executable": false
@@ -3529,6 +3533,10 @@
     },
     "src/stump/agent-door/index.ts": {
       "sha256": "b899e2c32864507df2b9102dce567c9cdb91586263aa71a80a454381e320cc90",
+      "executable": false
+    },
+    "src/stump/agent-door/policy-answers.ts": {
+      "sha256": "f569bed130d18d401a4acc0fe3a72ee586acdb0e7c7e29b315d730d5daf35950",
       "executable": false
     },
     "src/stump/agent-door/ui/AgentsSettings.tsx": {
