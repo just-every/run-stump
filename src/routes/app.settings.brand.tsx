@@ -17,12 +17,11 @@ export const Route = createFileRoute('/app/settings/brand')({
 
 const key = () => crypto.randomUUID()
 const list = (value: string) => value.split(',').map(item => item.trim()).filter(Boolean)
-/** "Jan 15, 2027", its parts joined by no-break spaces so a date never breaks across lines; a date within the next 12 months drops its year ("Jan 15"). */
-const shortDate = (value: string | null, soon = false) => {
+/** "Jan 15, 2027", its parts joined by no-break spaces so a date never breaks across lines; a date in this calendar year drops its year ("Mar 3"). */
+const shortDate = (value: string | null) => {
   if (!value) return ''
-  const at = new Date(`${value}T00:00:00Z`), now = new Date(), inAYear = new Date(now); inAYear.setFullYear(now.getFullYear() + 1)
-  const year = !(soon && at >= new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z') && at < inAYear)
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', ...(year ? { year: 'numeric' } : {}), timeZone: 'UTC' }).format(at).replace(/ /g, '\u00a0')
+  const at = new Date(`${value}T00:00:00Z`), year = at.getUTCFullYear() !== new Date().getFullYear()
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', ...(year ? { year: 'numeric' } : {}), timeZone: 'UTC' }).format(at).replace(/ /g, '\u00a0')
 }
 const bare = (value: string) => value.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
 /**
@@ -95,8 +94,8 @@ function BrandPage() {
         <ul className="st-list">{data?.claims.map(claim => <li className="st-kv" key={claim.id}>
           <div className="st-name">{claim.kind === 'banned' ? <span className="st-pill danger">banned</span> : claim.stale ? <span className="st-pill danger">stale</span> : null}{claim.text}</div>
           <div className="st-meta">{claim.kind === 'banned' ? `reason: ${claim.reason ?? ''}`
-            : claim.kind === 'comparative' ? `vs ${claim.competitor ?? ''} · source ${shortDate(claim.source_date)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on, true)}`
-            : <>proof: <Proof proof={claim.proof} /> · owner {name(claim.owner_id)} · review {shortDate(claim.review_on, true)}</>}</div>
+            : claim.kind === 'comparative' ? `vs ${claim.competitor ?? ''} · source ${shortDate(claim.source_date)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on)}`
+            : <>proof: <Proof proof={claim.proof} /> · owner {name(claim.owner_id)} · review {shortDate(claim.review_on)}</>}</div>
         </li>)}</ul>
         {writer && data ? <ClaimForm key={sentence ?? ''} open={!data.claims.length || !!sentence} busy={busy} team={data.team.filter(person => person.status === 'active')} me={data.who.person.id} products={data.products}
           initial={sentence ? { text: sentence, product_id: data.draftProduct ?? '' } : null}
@@ -124,32 +123,44 @@ function BrandPage() {
 function ProductProfile({ product, save }: { product: Product; save: (args: Record<string, unknown>) => unknown }) {
   const [open, setOpen] = useState(false)
   const words = open || product.words_use.length > 0 || product.words_avoid.length > 0
-  // What the product is, who it is for, where it lives and what it is compared with: what each AI request and the claim check read (STUMP-BRAND-001).
-  const described = !!(product.description || product.audience || product.urls.length || product.competitors.length || product.other_names.length)
-  const [details, setDetails] = useState(false)
+  // What the product is, who it is for, where it lives and what it is compared with: what each AI request and the claim check read
+  // (STUMP-BRAND-001). Only the ones that hold a value show; one quiet button names the empty ones and opens just those (H15).
+  const details = [
+    { label: 'what it is', ask: 'what it is', value: product.description ?? '', hint: 'What it does, in a sentence', save: (value: string) => save({ description: value || null }) },
+    { label: 'for', ask: "who it's for", value: product.audience ?? '', hint: 'Who it is for', save: (value: string) => save({ audience: value || null }) },
+    { label: 'links', ask: 'links', value: product.urls.join(', '), hint: 'https://…', save: (value: string) => save({ urls: list(value) }) },
+    { label: 'compared with', ask: 'comparisons', value: product.competitors.join(', '), hint: 'Competitors', save: (value: string) => save({ competitors: list(value) }) },
+    { label: 'also called', ask: 'other names', value: product.other_names.join(', '), hint: 'Other names', save: (value: string) => save({ other_names: list(value) }) },
+  ]
+  const [revealed, setRevealed] = useState<string[]>([])
+  const shown = details.filter(field => field.value || revealed.includes(field.label))
+  const missing = details.filter(field => !shown.includes(field))
+  const described = details.some(field => field.value)
   return <div className="st-profile">
     <div className="st-profile-tone">
-      <ProfileField label="tone" product={product.name} value={product.tone} onSave={tone => save({ tone })} />
+      <ProfileField label="tone" product={product.name} value={product.tone} hint="How it sounds" onSave={tone => save({ tone })} />
       {words ? null : <button className="st-add-words st-add-words-inline" type="button" onClick={() => setOpen(true)}>Add words</button>}
     </div>
     {words ? <>
-      <ProfileField label="use" product={product.name} value={product.words_use.join(', ')} focus={open && !product.words_use.length} allowEmpty onSave={value => save({ words_use: list(value) })} />
-      <ProfileField label="avoid" product={product.name} value={product.words_avoid.join(', ')} allowEmpty onSave={value => save({ words_avoid: list(value) })} />
+      <ProfileField label="use" product={product.name} value={product.words_use.join(', ')} hint="Words to use" focus={open && !product.words_use.length} allowEmpty onSave={value => save({ words_use: list(value) })} />
+      <ProfileField label="avoid" product={product.name} value={product.words_avoid.join(', ')} hint="Words to avoid" allowEmpty onSave={value => save({ words_avoid: list(value) })} />
     </> : null}
-    {details || described ? <>
-      <ProfileField label="what it is" product={product.name} value={product.description ?? ''} focus={details && !described} allowEmpty onSave={value => save({ description: value || null })} />
-      <ProfileField label="for" product={product.name} value={product.audience ?? ''} allowEmpty onSave={value => save({ audience: value || null })} />
-      <ProfileField label="links" product={product.name} value={product.urls.join(', ')} allowEmpty onSave={value => save({ urls: list(value) })} />
-      <ProfileField label="compared with" product={product.name} value={product.competitors.join(', ')} allowEmpty onSave={value => save({ competitors: list(value) })} />
-      <ProfileField label="also called" product={product.name} value={product.other_names.join(', ')} allowEmpty onSave={value => save({ other_names: list(value) })} />
-    </> : <button className="st-add-words" type="button" onClick={() => setDetails(true)}>Add description, audience and links</button>}
+    {shown.map(field => <ProfileField key={field.label} label={field.label} product={product.name} value={field.value} hint={field.hint} focus={revealed[0] === field.label} allowEmpty onSave={field.save} />)}
+    {missing.length ? <button className="st-add-words" type="button" onClick={() => setRevealed(missing.map(field => field.label))}>
+      {described ? `Add ${joined(missing.map(field => field.ask))}` : 'Add description, audience and links'}</button> : null}
   </div>
 }
 
-/** One profile field edited in place: it saves when the field loses focus, with no Save button. An empty one is an "Add words" action, never a hint that reads as a value. */
-function ProfileField({ label, product, value, focus = false, allowEmpty = false, onSave }: { label: string; product: string; value: string; focus?: boolean; allowEmpty?: boolean; onSave: (value: string) => unknown }) {
+/** "a, b and c". */
+const joined = (items: string[]) => items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0] ?? ''
+
+/**
+ * One profile field edited in place: it saves when the field loses focus, with no Save button. A field holding a value reads as
+ * text; an empty one is drawn as a field (SPEC 3.4) with a hint, so it reads as a place to type, never as a value.
+ */
+function ProfileField({ label, product, value, hint, focus = false, allowEmpty = false, onSave }: { label: string; product: string; value: string; hint: string; focus?: boolean; allowEmpty?: boolean; onSave: (value: string) => unknown }) {
   return <label className="st-inline">{label}:
-    <input defaultValue={value} aria-label={`${product} ${label}`} autoFocus={focus}
+    <input className={value ? undefined : 'st-profile-empty'} defaultValue={value} placeholder={hint} aria-label={`${product} ${label}`} autoFocus={focus}
       onBlur={event => { const next = event.target.value.trim(); if (next !== value && (next || allowEmpty)) void onSave(next) }} />
   </label>
 }

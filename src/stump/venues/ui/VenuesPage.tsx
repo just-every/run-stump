@@ -6,7 +6,7 @@ import { Icon } from '../../ui/icons.tsx'
 import { Empty, useLoaded } from '../../ui/kit.tsx'
 import { KIND_FIELDS, STATUS_LABELS } from '../kinds.ts'
 import { ImportPanel } from './ImportPanel.tsx'
-import { kindLabel, nextOpen, primaryRoute, statusLabel, statusTone } from './labels.ts'
+import { kindLabel, nextOpenWords, primaryRoute, statusLabel, statusTone } from './labels.ts'
 import type { Venue, VenueList } from './types.ts'
 import { VenueForm } from './VenueForm.tsx'
 
@@ -27,10 +27,14 @@ export function VenuesPage() {
   const [query, setQuery] = useState(''), [search, setSearch] = useState('')
   const [filters, setFilters] = useState<Filters>({})
   const [panel, setPanel] = useState<'none' | 'filters' | 'add' | 'import'>('none')
-  const { data, error, refresh } = useLoaded(async () => ({
-    me: await me(),
-    list: await runAction<VenueList>('stump.venues.manage', { action: 'list', ...filters, ...(search ? { q: search } : {}) }),
-  }))
+  // Excluded venues stay out of the list until asked for; the count under the table says how many the same view leaves out.
+  const { data, error, refresh } = useLoaded(async () => {
+    const view = { ...filters, ...(search ? { q: search } : {}) }
+    const counted = !filters.include_excluded && !filters.status
+    const [who, list, excluded] = await Promise.all([me(), runAction<VenueList>('stump.venues.manage', { action: 'list', ...view }),
+      counted ? runAction<VenueList>('stump.venues.manage', { action: 'list', ...view, status: 'excluded' }).then(found => found.total) : Promise.resolve(0)])
+    return { me: who, list, excluded }
+  })
   useEffect(() => { const timer = setTimeout(() => setSearch(query.trim()), 250); return () => clearTimeout(timer) }, [query])
   // ?import=1 (from first-run setup) opens the import panel; ?add=1 (from an empty Today) opens the add form.
   useEffect(() => { const asked = new URLSearchParams(window.location.search); if (asked.get('import')) setPanel('import'); else if (asked.get('add')) setPanel('add') }, [])
@@ -39,7 +43,7 @@ export function VenuesPage() {
   const owner = data?.me.person.role === 'owner'
   const products = useMemo(() => new Map((data?.list.items ?? []).flatMap(venue => venue.products.map(item => [item.product_id, item.name ?? 'Product'] as const))), [data])
   const applied = Object.entries(filters).filter(([, value]) => value !== undefined && value !== false) as Array<[keyof Filters, string | boolean]>
-  const empty = data && data.list.total === 0 && !applied.length && !search
+  const empty = data && data.list.total === 0 && !data.excluded && !applied.length && !search
   const set = (name: keyof Filters, value: string | boolean | undefined) => setFilters(current => ({ ...current, [name]: value === '' ? undefined : value }))
   const changed = () => { void refresh() }
 
@@ -80,22 +84,24 @@ export function VenuesPage() {
         <thead><tr><th>Venue</th><th className="st-cell">Kind</th><th className="st-cell">Status</th><th className="st-cell">Route</th><th className="st-cell">Next open</th></tr></thead>
         <tbody>{data.list.items.map(venue => <Row key={venue.id} venue={venue} open={() => void navigate({ to: '/app/venues/$venueId', params: { venueId: venue.id } })} />)}</tbody>
       </table></div> : <p className="st-note">No venues match.</p> : null}
-      {data && !empty ? <p className="st-note">{data.list.total} {data.list.total === 1 ? 'venue' : 'venues'}{owner && panel !== 'import' ? <> · <button className="st-value" type="button" style={{ minHeight: 0, padding: 0, color: 'inherit' }} onClick={() => setPanel('import')}>Import a venue list</button></> : null}</p> : null}
+      {data && !empty ? <p className="st-note">{data.list.total} {data.list.total === 1 ? 'venue' : 'venues'}
+        {data.excluded ? <> · <button className="st-value" type="button" style={{ minHeight: 0, padding: 0, color: 'inherit' }} onClick={() => set('include_excluded', true)}>Show {data.excluded} excluded</button></> : null}
+        {owner && panel !== 'import' ? <> · <button className="st-value" type="button" style={{ minHeight: 0, padding: 0, color: 'inherit' }} onClick={() => setPanel('import')}>Import a venue list</button></> : null}</p> : null}
     </section>
   </HydrationUnit>
 }
 
 function Row({ venue, open }: { venue: Venue; open(): void }) {
-  const route = primaryRoute(venue), next = venue.shared_limit ? nextOpen(venue.next_open_at) : null
+  const route = primaryRoute(venue), kind = kindLabel(venue.kind, venue.platform, venue.name)
   return <tr onClick={open}>
     <td>
       <Link to="/app/venues/$venueId" params={{ venueId: venue.id }} onClick={event => event.stopPropagation()}>{venue.name}</Link>
       {venue.archived ? <span className="st-chip" style={{ marginLeft: 8 }}>Archived</span> : null}
-      <div className="st-rowline">{[kindLabel(venue.kind, venue.platform), statusLabel(venue.status), route].filter(Boolean).join(' · ')}</div>
+      <div className="st-rowline">{[kind, statusLabel(venue.status), route].filter(Boolean).join(' · ')}</div>
     </td>
-    <td className="st-cell">{kindLabel(venue.kind, venue.platform)}</td>
+    <td className="st-cell">{kind}</td>
     <td className="st-cell"><StatusChip status={venue.status} /></td>
     <td className="st-cell">{route ? <span className="st-chip ok">{route}</span> : '–'}</td>
-    <td className="st-cell">{next ?? '–'}</td>
+    <td className="st-cell">{nextOpenWords(venue)}</td>
   </tr>
 }

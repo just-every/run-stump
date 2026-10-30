@@ -13,7 +13,7 @@ const ICONS: Record<string, ReactNode> = {
 }
 export type DiscIcon = keyof typeof ICONS
 
-export function Disc({ icon, tone }: { icon: DiscIcon; tone?: 'danger' | undefined }) {
+export function Disc({ icon, tone }: { icon: DiscIcon; tone?: 'danger' | 'held' | undefined }) {
   return <span className={tone ? `st-disc ${tone}` : 'st-disc'} aria-hidden="true">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{ICONS[icon]}</svg>
   </span>

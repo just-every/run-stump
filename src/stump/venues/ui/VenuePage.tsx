@@ -5,7 +5,7 @@ import { me, runAction } from '../../ui/api.ts'
 import { Disc, Outcome, Tip, monthYear, useLoaded, useRun, when, words } from '../../ui/kit.tsx'
 import type { Team } from '../../ui/types.ts'
 import { DETAIL_LABELS } from '../kinds.ts'
-import { kindLabel, limitWords, nextOpen, routeLabel, statusLabel, statusTone } from './labels.ts'
+import { kindLabel, limitWords, nextOpenWords, routeLabel, statusLabel, statusTone } from './labels.ts'
 import { openingWords } from '../../today/sections.ts'
 import { STATE as HANDOFF_STATE } from '../../handoffs/ui/words.ts'
 import { HandoffStart } from '../../handoffs/ui/HandoffStart.tsx'
@@ -41,7 +41,7 @@ export function VenuePage({ venueId }: { venueId: string }) {
           <h1 id="venue-title" style={{ flex: '1 1 auto', overflowWrap: 'anywhere' }}>{venue.name}</h1>
           {editor ? <VenueMenu venue={venue} onEdit={() => setEditing(true)} onChanged={changed} /> : null}
         </div>
-        <p className="st-sub"><span className={`st-dot${statusTone(venue.status) === 'ok' ? '' : ' open'}`} aria-hidden="true" style={{ color: 'var(--stump-accent)' }} />{kindLabel(venue.kind, venue.platform)} · {statusLabel(venue.status)}{venue.priority ? ` · ${venue.priority.charAt(0).toUpperCase()}${venue.priority.slice(1)} priority` : ''}{venue.archived ? ' · Archived' : ''}
+        <p className="st-sub"><span className={`st-dot${statusTone(venue.status) === 'ok' ? '' : ' open'}`} aria-hidden="true" style={{ color: 'var(--stump-accent)' }} />{kindLabel(venue.kind, venue.platform, venue.name)} · {statusLabel(venue.status)}{venue.priority ? ` · ${venue.priority.charAt(0).toUpperCase()}${venue.priority.slice(1)} priority` : ''}{venue.archived ? ' · Archived' : ''}
           {venue.url ? <> · <a className="st-venue-link" href={venue.url} target="_blank" rel="noreferrer noopener">{bare(venue.url)} ↗</a></> : null}</p>
         {venue.excluded ? <div className="st-panel" role="note"><strong>Excluded.</strong> {venue.excluded.reason}{venue.excluded.alternative ? ` Instead: ${venue.excluded.alternative}` : ''}</div> : null}
         {editing ? <VenueForm venue={venue} onDone={() => { setEditing(false); changed() }} onCancel={() => setEditing(false)} /> : null}
@@ -109,7 +109,7 @@ function RoutesCard({ venue, routes, editor, onChanged, handoff }: { venue: Venu
     {handoff}
     <div style={{ borderTop: '1px solid var(--stump-line)', marginTop: 16, paddingTop: 16 }}>
       <div className="st-meta">Next open</div>
-      <div style={{ fontWeight: 560 }}>{venue.shared_limit ? nextOpen(venue.next_open_at) ?? 'Not within a year' : 'Any time'}</div>
+      <div style={{ fontWeight: 560 }}>{nextOpenWords(venue)}</div>
       <div className="st-meta">{venue.shared_limit ? `${limitWords(venue.shared_limit)}, for the whole company` : 'No shared limit'}</div>
       {editor && !limiting ? <button className="st-button pill outline" type="button" style={{ marginTop: 12 }} onClick={() => setLimiting(true)}>{venue.shared_limit ? 'Change limit' : 'Set a limit'}</button> : null}
       {limiting ? <form onSubmit={setLimit} style={{ marginTop: 12 }}>

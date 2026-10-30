@@ -51,7 +51,9 @@ function LedgerPage() {
       done => done.truncated ? `Exported the first ${done.rows} of ${done.total}. Narrow the filters for the rest.` : `Exported ${done.rows} ${done.rows === 1 ? 'entry' : 'entries'}.`)
     if (!result) return
     const url = URL.createObjectURL(new Blob([result.csv], { type: 'text/csv;charset=utf-8' })), link = document.createElement('a')
-    link.href = url; link.download = `stump-ledger-${new Date().toISOString().slice(0, 10)}.csv`; link.click()
+    // Named for the person's own day, the one the ledger's times are shown in, never the UTC date.
+    const today = new Date(), day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    link.href = url; link.download = `stump-ledger-${day}.csv`; link.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
@@ -94,13 +96,11 @@ function LedgerPage() {
         <tbody>{data.items.map(entry => {
           const open = openId === entry.id, at = entry.posted_at
           return <Fragment key={entry.id}>
-            <tr className={`entry${open ? ' open' : ''}`}>
+            {/* The whole row opens its entry; its links and buttons keep their own actions. */}
+            <tr className={`entry${open ? ' open' : ''}`} onClick={event => { if (!(event.target as HTMLElement).closest('a, button')) setOpenId(open ? null : entry.id) }}>
               <td className="when"><button className="st-row-button" type="button" aria-expanded={open} aria-controls={`entry-${entry.id}`} onClick={() => setOpenId(open ? null : entry.id)}>{at ? when(at) : 'Not posted'}</button></td>
-              <td className="where">{entry.venue_id && entry.venue_name
-                ? <button className="st-row-button" type="button" onClick={() => { setNames(current => ({ ...current, [entry.venue_id!]: entry.venue_name! })); set('venue_id', entry.venue_id!) }}>{entry.venue_name}</button>
-                : networkName(entry.network)}</td>
-              <td className="who">{entry.person_id
-                ? <button className="st-row-button" type="button" onClick={() => set('person_id', entry.person_id!)}>{who(entry)}</button> : who(entry)}
+              <td className="where">{entry.venue_name ?? networkName(entry.network)}</td>
+              <td className="who">{who(entry)}
                 {handedOff(entry) && entry.agent ? <span className="st-quiet">agent: {entry.agent.name}</span> : null}</td>
               <td className="route">{ROUTE_WORDS[entry.route as string] ?? String(entry.route)}</td>
               <td className="state"><StateChip state={String(entry.state)} />
@@ -114,7 +114,9 @@ function LedgerPage() {
                 {entry.url ? <a href={String(entry.url)} target="_blank" rel="noreferrer noopener" aria-label={`View post on ${networkName(entry.network) || 'the network'}`}>View ↗</a> : null}
               </td>
             </tr>
-            {open ? <tr className="detail-row" id={`entry-${entry.id}`}><td colSpan={7}><Detail entry={entry} mayCorrect={mayCorrect} admin={admin} person={person} onChange={() => void refresh()} /></td></tr> : null}
+            {open ? <tr className="detail-row" id={`entry-${entry.id}`}><td colSpan={7}><Detail entry={entry} mayCorrect={mayCorrect} admin={admin} person={person} onChange={() => void refresh()}
+              onVenue={entry.venue_id && entry.venue_name && !filters.venue_id ? () => { setNames(current => ({ ...current, [entry.venue_id!]: entry.venue_name! })); set('venue_id', entry.venue_id!) } : null}
+              onPerson={entry.person_id && !filters.person_id ? () => set('person_id', entry.person_id!) : null} /></td></tr> : null}
           </Fragment>
         })}</tbody>
       </table></div> : null}
@@ -131,7 +133,7 @@ function StateChip({ state }: { state: string }) {
   return <Chip tone={tone}>{tone === 'success' ? <span className="st-dot" aria-hidden="true" /> : null}{STATE_WORDS[state] ?? state}</Chip>
 }
 
-function Detail({ entry, mayCorrect, admin, person, onChange }: { entry: LedgerEntry; mayCorrect: boolean; admin: boolean; person(id: string | null): string | null; onChange(): void }) {
+function Detail({ entry, mayCorrect, admin, person, onChange, onVenue, onPerson }: { entry: LedgerEntry; mayCorrect: boolean; admin: boolean; person(id: string | null): string | null; onChange(): void; onVenue: (() => void) | null; onPerson: (() => void) | null }) {
   const [mode, setMode] = useState<'correct' | 'remove' | 'hold' | null>(null)
   const { busy, message, run } = useRun()
   const done = (text: string) => () => { setMode(null); onChange(); return text }
@@ -162,6 +164,8 @@ function Detail({ entry, mayCorrect, admin, person, onChange }: { entry: LedgerE
         {version.text && version.text !== entry.text ? <div style={{ whiteSpace: 'pre-wrap' }}>{version.text}</div> : null}
       </li>)}</ul>
     </div>
+    {onVenue || onPerson ? <p className="st-meta st-detail-filters">Show only {onVenue ? <button className="st-row-button" type="button" onClick={onVenue}>{entry.venue_name}</button> : null}
+      {onVenue && onPerson ? ' · ' : null}{onPerson ? <button className="st-row-button" type="button" onClick={onPerson}>{person(entry.person_id) ?? 'this person'}</button> : null}</p> : null}
     {mayCorrect && !mode ? <div className="st-actions">
       <button className="st-button" type="button" onClick={() => setMode('correct')}>Correct</button>
       {entry.state === 'posted' || entry.state === 'uncertain' ? <button className="st-button" type="button" onClick={() => setMode('remove')}>Mark removed</button> : null}
