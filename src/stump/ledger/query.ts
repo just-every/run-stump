@@ -1,6 +1,6 @@
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args } from '../actions/types.ts'
-import { toEntry, toVersion, type LedgerRow, type LedgerVersion } from './entry.ts'
+import { toEntry, toVersion, withCurrent, type LedgerRow, type LedgerVersion } from './entry.ts'
 
 export const FILTERS = ['venue_id', 'network', 'person_id', 'product_id', 'campaign', 'route', 'state'] as const
 export const WHEN = 'COALESCE(posted_at,created_at)'
@@ -73,14 +73,21 @@ export async function count(args: Args, ctx: ActionContext, extra: Partial<Recor
 /** Every matching row up to the export cap, for the CSV. */
 export async function everything(args: Args, ctx: ActionContext) {
   const selection = select(args, ctx)
-  const [rows, total, counts] = await Promise.all([
+  const [rows, total, lasts] = await Promise.all([
     ctx.db.prepare(`SELECT * FROM stump_ledger ${selection.where} ${ORDER} LIMIT ?`).bind(...selection.args, MAX_EXPORT).all<LedgerRow>(),
     ctx.db.prepare(`SELECT COUNT(*) AS n FROM stump_ledger ${selection.where}`).bind(...selection.args).first<{ n: number }>(),
-    ctx.db.prepare(`SELECT v.entry_id AS id, COUNT(*) AS n FROM stump_ledger_versions v WHERE v.entry_id IN (SELECT id FROM stump_ledger ${selection.where} ${ORDER} LIMIT ?) GROUP BY v.entry_id`)
-      .bind(...selection.args, MAX_EXPORT).all<{ id: string; n: number }>(),
+    // Per entry, the stored version count and the last stored version, to count the current state when no row holds it.
+    ctx.db.prepare(`SELECT * FROM (SELECT v.*, COUNT(*) OVER (PARTITION BY v.entry_id) AS stored,
+      ROW_NUMBER() OVER (PARTITION BY v.entry_id ORDER BY v.at DESC, v.rowid DESC) AS newest FROM stump_ledger_versions v
+      WHERE v.entry_id IN (SELECT id FROM stump_ledger ${selection.where} ${ORDER} LIMIT ?)) WHERE newest=1`)
+      .bind(...selection.args, MAX_EXPORT).all<LedgerRow>(),
   ])
-  const counted = new Map(counts.results.map(row => [row.id, row.n]))
-  return { rows: rows.results, total: total?.n ?? 0, versions: (id: string) => Math.max(counted.get(id) ?? 0, 1) }
+  const lastStored = new Map(lasts.results.map(row => [String(row.entry_id), { stored: Number(row.stored), last: toVersion(row, Number(row.stored)) }]))
+  const versions = (row: LedgerRow) => {
+    const known = lastStored.get(String(row.id))
+    return known ? withCurrent(row, [known.last]).length - 1 + known.stored : 1
+  }
+  return { rows: rows.results, total: total?.n ?? 0, versions }
 }
 
 export async function one(ctx: ActionContext, id: string) {

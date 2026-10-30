@@ -10,12 +10,12 @@ function cell(value: unknown): string {
 }
 
 /** The rows as CSV: one header line, then one line per entry with every field of the record. */
-export function toCsv(rows: LedgerRow[], versions: (id: string) => number): string {
+export function toCsv(rows: LedgerRow[], versions: (row: LedgerRow) => number): string {
   const lines = [COLUMNS.join(',')]
   for (const row of rows) {
     const entry = toEntry(row, [])
     const values: Record<typeof COLUMNS[number], unknown> = {
-      ...entry, agent_id: entry.agent && (entry.agent as { id?: string }).id, agent_name: entry.agent && (entry.agent as { name?: string }).name, versions: versions(String(entry.id)),
+      ...entry, agent_id: entry.agent && (entry.agent as { id?: string }).id, agent_name: entry.agent && (entry.agent as { name?: string }).name, versions: versions(row),
     }
     lines.push(COLUMNS.map(column => cell(values[column])).join(','))
   }

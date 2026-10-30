@@ -2244,19 +2244,19 @@
       "executable": false
     },
     "src/stump/ledger/correct.ts": {
-      "sha256": "91f1d7b04c5bbe84bb1bde0cb7d88777fc9bff7c63eb90ab4eb22e8e33e4e229",
+      "sha256": "5d3a0aa9013a88d95e1fa61e01a0f3d1abecfce6f1f594d55109983e64fb69d5",
       "executable": false
     },
     "src/stump/ledger/csv.ts": {
-      "sha256": "4176a985d7cad231be5ec5b085e8174f2808fb237c1e3fd65549502ee4b4f03a",
+      "sha256": "3275961a7ad9a675645423460bdab292de1c706bbe85116ed8c5a9f85965221d",
       "executable": false
     },
     "src/stump/ledger/entry.ts": {
-      "sha256": "eb62dc29eb78caede923d243465b391bcdda65fe36ba6a4797368da0969334f9",
+      "sha256": "225ad104eded5c99ca026cc498114056ede83b33c238939733e4529475ecd3eb",
       "executable": false
     },
     "src/stump/ledger/query.ts": {
-      "sha256": "7f86ef1d91f240afe9fd38c690d518c1fcba819c556ceb9a046b6e08382b1141",
+      "sha256": "faf02c269e9f1ba907eecb6c99f4ba5938384555cd41b57b010e43d7830c03d8",
       "executable": false
     },
     "src/stump/ledger/screen-styles.ts": {
