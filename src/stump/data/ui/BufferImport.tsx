@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { runAction } from '../../ui/api.ts'
-import { FilePick, Outcome, useLoaded, useRun, when } from '../../ui/kit.tsx'
+import { FilePick, Outcome, PanelTitle, useLoaded, useRun, when } from '../../ui/kit.tsx'
 import { applyPlan, ImportError, planFile, undoPlan, type ImportSourceId, type Kept, type Plan } from '../../venues/ui/importer.ts'
 
 // Switching from Buffer (STUMP-IMPORT-001): the file Buffer's API gives, its
@@ -27,6 +27,7 @@ export function BufferImport() {
   const [released, setReleased] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [file, setFile] = useState<string | null>(null)
   const run = async (work: () => Promise<void>) => { setBusy(true); setError(null); try { await work() } catch (cause) { setError(explain(cause)) } finally { setBusy(false) } }
   const { data, refresh } = useLoaded(async () => {
     const [items, accounts, status] = await Promise.all([
@@ -43,20 +44,20 @@ export function BufferImport() {
     event.preventDefault()
     const file = new FormData(event.currentTarget).get('file') as File | null
     if (!file || !file.size) { setError('Choose the Buffer export first.'); return }
-    await run(async () => { setPlan(await planFile(SOURCE, file) as Plan & { summary: Summary }); setKept(null) })
+    await run(async () => { setPlan(await planFile(SOURCE, file) as Plan & { summary: Summary }); setKept(null); setFile(null) })
   }
   const nothing = plan && (plan.applied || (plan.summary.created === 0 && plan.summary.updated === 0 && !plan.changes.some(change => change.conflict)))
 
   return <section className="st-card st-buffer" aria-labelledby="buffer-title">
-    <h2 id="buffer-title">Switch from Buffer</h2>
+    <PanelTitle icon="arrows" id="buffer-title">Switch from Buffer</PanelTitle>
     <p className="st-meta">Your channels, sent posts with their results, posting schedules and queued posts. Nothing is written until you apply, and Undo takes it back.</p>
     {!plan ? <form onSubmit={review} className="st-spaced" aria-label="Buffer export">
-      <FilePick name="file" label="Choose the Buffer export" accept=".json,application/json" />
-      <div className="st-actions st-spaced">
-        <button className="st-button primary" type="submit" disabled={busy}>{busy ? 'Reading…' : 'Review import'}</button>
-        {data?.applied ? <button className="st-button" type="button" disabled={busy}
-          onClick={() => void run(async () => { setKept((await undoPlan(SOURCE, data.applied!)).kept); await refresh() })}>Undo last import</button> : null}
+      <div className="st-actions st-buffer-pick">
+        <FilePick name="file" label="Choose the Buffer export" short="Choose the export" accept=".json,application/json" named onChosen={setFile} />
+        <button className="st-button primary" type="submit" disabled={busy || !file}>{busy ? 'Reading…' : 'Review import'}</button>
       </div>
+      {data?.applied ? <div className="st-actions st-spaced"><button className="st-button" type="button" disabled={busy}
+          onClick={() => void run(async () => { setKept((await undoPlan(SOURCE, data.applied!)).kept); await refresh() })}>Undo last import</button></div> : null}
     </form> : <div className="st-spaced">
       <p className="st-name">{nothing ? 'Nothing new in this file. It matches what Stump already holds.'
         : `${plural(plan.summary.channels ?? 0, 'channel')} · ${plural(plan.summary.sent ?? 0, 'sent post')} · ${plural(plan.summary.queued ?? 0, 'queued post')}`}</p>

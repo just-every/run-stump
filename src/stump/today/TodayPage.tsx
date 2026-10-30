@@ -119,7 +119,7 @@ export function TodayPage() {
             <PanelTitle icon="clock" id="today-due">Due today</PanelTitle>
             <Failed error={work.error} />
             {focal ? <>
-              <p className="st-today-focal">{focal.title} · {focal.due}</p>
+              <p className="st-today-focal">{focal.title} · <span className="st-today-when">{focal.due}</span></p>
               <p className="st-today-who">{focal.who}</p>
               <Go className="st-button primary" to={{ kind: 'handoff', id: focal.id }}>Open brief <Icon name="arrowRight" /></Go>
               {moreDue.length ? <ul className="st-list st-today-more">

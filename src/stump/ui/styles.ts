@@ -174,8 +174,8 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-button.danger { color: var(--stump-danger); background: transparent; border-color: transparent; }
 .st-button.danger:hover { background: var(--stump-danger-tint); }
 .st-button:disabled { opacity: .55; cursor: default; transform: none; }
-/* The one disabled ink pill (SPEC §3.4): a --line fill with --muted text, never a mid-grey ink. */
-.st-button.primary:disabled, .st-button.primary:disabled:hover, .st-button.ink:disabled, .st-drafting .st-button.ink:disabled, .st-drafting .st-button.ink:disabled:hover { opacity: 1; background: var(--stump-line); border-color: var(--stump-line); color: var(--stump-muted); transform: none; }
+/* The one disabled ink pill (C8): the ink fill and white text at 40 %, never a grey fill, on every screen. */
+.st-button.primary:disabled, .st-button.primary:disabled:hover, .st-button.ink:disabled, .st-drafting .st-button.ink:disabled, .st-drafting .st-button.ink:disabled:hover { opacity: .4; background: var(--stump-ink); border-color: var(--stump-ink); color: var(--stump-white); transform: none; }
 /* Save as you go (L15): a quiet "✓ Saved" beside what saved */
 .st-saved-mark { display: inline-flex; align-items: center; gap: 4px; min-height: 20px; font-size: var(--stump-size-small); color: var(--stump-emerald-text); font-weight: 500; }
 .st-saved-mark:empty { min-height: 0; }
@@ -186,6 +186,21 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-file:focus-within .st-button { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
 .st-file:hover .st-button { background: var(--stump-sunk); }
 .st-file-name { font-size: var(--stump-size-small); color: var(--stump-body); overflow-wrap: anywhere; min-width: 0; }
+.st-file.named { min-width: 0; max-width: 100%; }
+.st-file.named .st-button { max-width: 100%; }
+.st-file-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+/* Settings · Import: the file pill and Review import share one row. */
+.st-buffer > .st-panel-title { margin: 0 0 12px; }
+.st-buffer .st-buffer-pick { flex-wrap: nowrap; }
+.st-buffer .st-buffer-pick > .st-file { flex: 0 1 auto; }
+.st-buffer .st-buffer-pick > .st-button { flex: none; }
+.st-file-short { display: none; }
+@media (max-width: 480px) {
+  .st-file-long { display: none; }
+  .st-file-short { display: inline; }
+  .st-buffer .st-buffer-pick { gap: 8px; }
+  .st-buffer .st-buffer-pick .st-button { padding: 0 16px; }
+}
 /* A row's "⋯" More actions menu (kit MoreMenu) */
 .st-more-menu { position: relative; display: inline-flex; flex: none; }
 .st-more-menu .st-menu { top: calc(100% + 4px); min-width: 200px; }
@@ -369,6 +384,8 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-counts strong { display: block; font-size: var(--stump-size-section); }
 /* A venue's page (src/stump/venues/ui/VenuePage.tsx): section discs on every panel, its address in the subline, why it fits and its products in the right column */
 .st-venue .st-card > .st-panel-title { margin: 0 0 16px; }
+/* An item named by its opening words keeps one line, as on Today. */
+.st-venue .st-venue-items .st-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .st-venue .st-venue-link { color: var(--stump-emerald-text); }
 .st-venue .st-venue-why { margin: 0; color: var(--stump-body); }
 .st-venue .st-venue-facts { display: grid; gap: 10px; margin: 16px 0 0; }
@@ -483,18 +500,18 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-check-list li.st-check-detail { padding-left: 34px; color: var(--stump-muted); }
 .st-drafting .st-kv > :last-child { border-left: 1px solid var(--stump-hairline); padding-left: calc(var(--stump-space) * 3); min-height: 28px; }
 .st-drafting .st-profile { display: grid; gap: 2px; }
-.st-drafting .st-profile .st-inline { display: grid; grid-template-columns: 56px minmax(0, 1fr); }
-.st-drafting .st-profile .st-inline input { padding: 2px 8px; min-height: 32px; }
+/* "tone: plain, warm, exact" reads as one run: the label, one space, then the value, still edited in place. */
+.st-drafting .st-profile .st-inline { display: flex; align-items: baseline; gap: 1px; }
+.st-drafting .st-profile .st-inline input { padding: 2px 6px 2px 3px; min-height: 32px; }
 /* Fix claim selects the claim in its variant; Update the proof is the quiet way to Brand */
 .st-drafting button.st-pill { border: 0; font: inherit; font-size: var(--stump-size-small); line-height: 20px; cursor: pointer; }
 .st-drafting button.st-pill:focus-visible, .st-drafting .st-quiet-link:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
 .st-drafting .st-check-list li.danger span.st-fix { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
 .st-drafting .st-quiet-link { color: var(--stump-muted); font-size: var(--stump-size-small); text-decoration: underline; text-underline-offset: 3px; }
 .st-drafting .st-when-short { display: none; }
-/* Settings · Brand products: the name top-aligned with the tone, and one quiet "Add words" after it (H15) */
-.st-drafting .st-brand-products .st-kv { align-items: start; }
-.st-drafting .st-brand-products .st-kv > .st-name { padding-top: 5px; }
-.st-drafting .st-profile-tone { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* Settings · Brand: each row's name and detail share a first baseline, and one quiet "Add words" follows the tone (H15) */
+.st-drafting .st-kv { align-items: baseline; }
+.st-drafting .st-profile-tone { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
 .st-drafting .st-profile-tone > .st-inline { flex: 0 1 auto; min-width: 0; }
 .st-drafting .st-profile-tone > .st-inline input { field-sizing: content; min-width: 12ch; max-width: 100%; }
 .st-drafting .st-add-words.st-add-words-inline { flex: none; font-size: var(--stump-size-small); padding: 4px 0; }
@@ -573,7 +590,8 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-setup-fields .st-field input { font-size: 17px; }
 .st-setup-pill:focus-visible, .st-setup-brand:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
 .st-setup-pills { display: flex; flex-wrap: wrap; gap: 12px; }
-.st-setup-pill { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: var(--stump-pill); background: var(--stump-emerald-tint); color: var(--stump-ink); font: 500 15px/20px var(--stump-font); text-decoration: none; white-space: nowrap; }
+/* One run of text, so the label's own space holds and it wraps as one at phone width. */
+.st-setup-pill { display: inline-block; min-height: 40px; padding: 10px 16px; border-radius: var(--stump-pill); background: var(--stump-emerald-tint); color: var(--stump-ink); font: 500 15px/20px var(--stump-font); text-decoration: none; white-space: nowrap; }
 .st-setup-pill:hover { background: #DCE9DE; }
 .st-setup-pill-keep { white-space: nowrap; }
 .st-setup-done { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--stump-body); font-size: 15px; }
@@ -592,7 +610,7 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
   .st-setup-steps > li:nth-child(n+2) { background: linear-gradient(var(--stump-hairline), var(--stump-hairline)) top / 100% 1px no-repeat; }
   .st-setup-steps h2 { font-size: 20px; margin-top: 7px; }
   .st-setup-foot .st-button.large { width: 100%; }
-  .st-setup-pill { white-space: normal; padding: 10px 16px; }
+  .st-setup-pill { white-space: normal; }
 }
 
 /* Venues with none yet (SPEC §4.2 "Empty state, Venues"): the plate and its block centred in the column */
@@ -608,10 +626,15 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 
 /* Settings · Publishing and Connections (src/routes/app.settings.publishing.tsx, app.settings.connections.tsx): one hairline panel per
    section with its heading inside, an account row's toggle beside its Pause, and an opened row's settings on the sunk tone */
-.st-pub .st-pub-account { display: flex; align-items: center; gap: 16px; }
-.st-pub .st-pub-account > .st-row-toggle, .st-pub .st-pub-account > .st-row-main { flex: 1 1 auto; min-width: 0; }
-.st-pub .st-pub-account > .st-button { flex: none; }
-.st-pub .st-pub-account .st-handle { font-size: 17px; line-height: 24px; }
+/* An account row is a grid of the name, Pause and the chevron: the toggle spans the row as a subgrid, so Pause sits before the
+   chevron and every chevron in the tab, Network apps' too, keeps the panel's right-edge column. */
+.st-pub .st-pub-account { display: grid; grid-template-columns: minmax(0, 1fr) auto 20px; column-gap: 16px; align-items: center; }
+.st-pub .st-pub-account > .st-row-toggle { grid-column: 1 / -1; grid-row: 1; display: grid; grid-template-columns: subgrid; align-items: center; }
+.st-pub .st-pub-account > .st-row-toggle > .st-row-main { grid-column: 1; grid-row: 1; min-width: 0; }
+.st-pub .st-pub-account > .st-row-toggle > .st-chevron { grid-column: 3; grid-row: 1; }
+.st-pub .st-pub-account > .st-row-main { grid-column: 1; grid-row: 1; min-width: 0; }
+.st-pub .st-pub-account > .st-button { grid-column: 2; grid-row: 1; position: relative; z-index: 1; }
+.st-pub .st-handle { font-size: 17px; line-height: 24px; }
 .st-pub .st-pub-detail { background: var(--stump-sunk); border-radius: var(--stump-radius-row); padding: 16px; margin-top: 12px; }
 .st-pub .st-pub-detail ol { margin: 0 0 12px; padding-left: 20px; }
 .st-pub .st-pub-detail .st-secret { background: var(--stump-white); }
@@ -620,9 +643,19 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-conn .st-conn-line + .st-row { border-top: 0; padding-top: 0; }
 .st-conn .st-conn-form { display: grid; gap: 12px; margin-top: 12px; }
 .st-conn .st-conn-form .st-actions { margin-top: 0; }
+/* A waiting-to-send row keeps Send at its right beside the handle and date, at every width. */
+.st-conn .st-conn-offers .st-row { flex-wrap: nowrap; }
+.st-conn .st-conn-offers .st-row-main { flex: 1 1 0; }
+.st-conn .st-conn-offers .st-row > .st-button { flex: none; }
 @media (max-width: 760px) {
-  .st-pub .st-pub-account { align-items: flex-start; gap: 8px; }
-  .st-pub .st-pub-account .st-row-toggle { column-gap: 4px; }
+  .st-pub .st-pub-account .st-row-toggle { column-gap: 16px; }
+}
+/* At phone width Pause goes under the meta line and the handle keeps one line. */
+@media (max-width: 480px) {
+  .st-pub .st-pub-account { grid-template-columns: minmax(0, 1fr) 20px; row-gap: 8px; }
+  .st-pub .st-pub-account > .st-row-toggle > .st-chevron { grid-column: 2; }
+  .st-pub .st-pub-account > .st-button { grid-column: 1; grid-row: 2; justify-self: start; }
+  .st-pub .st-pub-account .st-handle { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 }
 
 /* Settings · Team (src/routes/app.settings.team.tsx): the role as text with a dot, the row's ⋯ menu, and its inline edits */
@@ -648,6 +681,8 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-today .st-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .st-today .st-today-pair.single { grid-template-columns: minmax(0, 1fr); }
 .st-today .st-today-focal { font-size: 21px; line-height: 28px; font-weight: 600; color: var(--stump-ink); margin: 0 0 6px; overflow-wrap: anywhere; }
+/* A due time stays whole: "Due 4:00 PM" moves to the next line as one. */
+.st-today .st-today-when { white-space: nowrap; }
 .st-today .st-today-who { font-size: var(--stump-size-body); line-height: 22px; color: var(--stump-body); margin: 0 0 20px; }
 .st-today .st-today-more { margin-top: 16px; }
 .st-today .st-today-more .st-row:first-child { border-top: 1px solid var(--stump-hairline); }

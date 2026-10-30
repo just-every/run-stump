@@ -8,7 +8,7 @@ and are never edited in place.
 | --- | --- |
 | `actions/` | The one action runner both doors use (`runner.ts`), the tool and context types (`types.ts`), and the refusal hook (`refusals.ts`). |
 | `tools/` | Tool definitions, one file per area (`stump.<area>.<verb>` lives in `tools/<area>.ts`), listed in `tools/index.ts`. |
-| `agent-door/` | The Base agent door adapter (`index.ts`) and the agent credentials a person issues (`credentials.ts`). |
+| `agent-door/` | The Base agent door adapter (`index.ts`), the agent credentials a person issues (`credentials.ts`), and the owner's agent-policy answers, kept as each is given until every kind has one and the whole policy goes to Base (`policy-answers.ts`). |
 | `http/` | The person door under `/app/api` and the `/app` document gate. |
 | `people/` | Roles, connections, invitations and the person behind a session. |
 | `items/` | The item state machine (`state.ts`) and the Pause fence. |

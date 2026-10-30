@@ -7,7 +7,7 @@ import type { InboxView } from '../stump/inbox/store.ts'
 import { inboxStyles } from '../stump/inbox/styles.ts'
 import { ActionError, explain, me, runAction } from '../stump/ui/api.ts'
 import { Icon } from '../stump/ui/icons.tsx'
-import { Chip, Empty, Initials, Outcome, useLoaded, useRun } from '../stump/ui/kit.tsx'
+import { Chip, Empty, Initials, Outcome, Tip, useLoaded, useRun } from '../stump/ui/kit.tsx'
 
 export const Route = createFileRoute('/app/inbox')({
   validateSearch: (search: Record<string, unknown>): { account?: string; item?: string } => ({
@@ -83,7 +83,9 @@ function InboxPage() {
               {accounts.map(item => <option key={item.id} value={item.id}>@{item.handle} · {networkName(item.network)}</option>)}</select>
             : <>@{account.handle} · {networkName(account.network)}</>}
             {last?.at ? ` · checked ${shortTime(last.at)}` : ''}{last?.error?.message ? ` · last check stopped: ${last.error.message}` : ''}</span>
-          {mayAct ? <button className="st-button quiet" type="button" disabled={busy} onClick={() => void poll()}>Check for new</button> : null}
+          {/* At phone width Check for new is a refresh icon at the meta line's right, with its words as the tooltip. */}
+          {mayAct ? <button className="st-button quiet st-inbox-check" type="button" disabled={busy} onClick={() => void poll()}>Check for new</button> : null}
+          {mayAct ? <Tip label="Check for new" align="end" className="st-inbox-check-icon"><button className="st-icon-button" type="button" aria-label="Check for new" disabled={busy} onClick={() => void poll()}><Icon name="refresh" /></button></Tip> : null}
         </div>
         <Outcome message={message} />
         {inbox.error ? <p className="st-error">{inbox.error}</p> : null}

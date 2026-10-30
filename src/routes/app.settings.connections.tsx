@@ -91,7 +91,7 @@ function Waiting({ offers, onChange }: { offers: OfferView[]; onChange(): Promis
   const { busy, message, run } = useRun()
   return <>
     <p className="st-meta">{offers.length} waiting to send</p>
-    <ul className="st-list">{offers.map(offer => <li className="st-row" key={offer.id}>
+    <ul className="st-list st-conn-offers">{offers.map(offer => <li className="st-row" key={offer.id}>
       <div className="st-row-main">
         <div className="st-name">{offer.kind === 'engager' ? [handleWord(String(offer.handle ?? ''), offer.network), networkWord(offer.network), offer.engagement ?? 'engaged'].filter(Boolean).join(' · ') : offer.post_url?.replace(/^https?:\/\/(www\.)?/, '') ?? 'A post'}</div>
         <div className="st-meta">{offer.kind === 'engager' ? when(offer.occurred_at ?? offer.created_at) : 'Annotation'}{(offer.outcome as { ok?: boolean } | null)?.ok === false ? ` · last send failed: ${(offer.outcome as { error?: string }).error ?? 'try again'}` : ''}</div>

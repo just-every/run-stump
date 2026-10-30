@@ -54,12 +54,14 @@ const notExcluded = (status: unknown) => { if (status === 'excluded') refuse('in
 
 /** The items aimed at a venue, by product, with their routes, hold and latest history (STUMP-VENUE-001.6, -002.4). */
 async function itemsAt(ctx: ActionContext, id: string) {
-  const items = (await ctx.db.prepare(`SELECT id,product_id,format,state,routes,hold,flags,scheduled_at FROM stump_items WHERE venue_id=? ORDER BY updated_at DESC,id LIMIT 200`).bind(id)
-    .all<{ id: string; product_id: string | null; format: string; state: string; routes: string; hold: string | null; flags: string; scheduled_at: number | null }>()).results
+  const items = (await ctx.db.prepare(`SELECT id,product_id,format,state,routes,hold,flags,scheduled_at,text,parts FROM stump_items WHERE venue_id=? ORDER BY updated_at DESC,id LIMIT 200`).bind(id)
+    .all<{ id: string; product_id: string | null; format: string; state: string; routes: string; hold: string | null; flags: string; scheduled_at: number | null; text: string | null; parts: string | null }>()).results
   const history = (await ctx.db.prepare(`SELECT item_id,from_state,to_state,reason,at FROM stump_item_history WHERE item_id IN (SELECT value FROM json_each(?)) ORDER BY at DESC,id`)
     .bind(JSON.stringify(items.map(item => item.id))).all<{ item_id: string; from_state: string | null; to_state: string; reason: string | null; at: number }>()).results
   return items.map(item => ({
     id: item.id, product_id: item.product_id, format: item.format, state: item.state, routes: JSON.parse(item.routes) as string[], hold: item.hold ? JSON.parse(item.hold) : null,
+    // Its words, so a screen can name an item with no product by its opening words, as Today does.
+    text: item.text ?? (item.parts ? (JSON.parse(item.parts) as string[])[0] ?? null : null),
     flags: (JSON.parse(item.flags) as Array<{ code: string }>).map(flag => flag.code), scheduled_at: item.scheduled_at === null ? null : new Date(item.scheduled_at).toISOString(),
     history: history.filter(row => row.item_id === item.id).slice(0, 5).map(row => ({ from_state: row.from_state, to_state: row.to_state, reason: row.reason, at: new Date(row.at).toISOString() })),
   }))

@@ -26,6 +26,10 @@ export const setPaused = (paused: boolean) => door<{ paused: { business: boolean
 export const approvals = () => door<{ approvals: ApprovalItem[] }>('/agents/api/approvals')
 export const reviews = () => door<{ reviews: ReviewItem[] }>('/agents/api/reviews')
 export const markReview = (id: string, action: 'reviewed' | 'flag') => door<unknown>(`/agents/api/reviews/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: '{}' })
+/** The owner's answers given so far, kept by Stump until every kind has one and the whole policy goes to Base (policy-answers.ts). */
+export const readAnswers = () => door<{ answers: Record<string, Disposition> }>('/app/api/agent-policy/answers')
+export const saveAnswer = (cls: string, answer: Disposition) => door<unknown>('/app/api/agent-policy/answers', { method: 'PUT', body: JSON.stringify({ class: cls, answer }) })
+export const clearAnswers = () => door<unknown>('/app/api/agent-policy/answers', { method: 'DELETE' })
 
 /** The latest agent calls, newest first: the audit door pages forward from the start, so read to its end. */
 export async function recentActivity(limit = 20): Promise<ActivityRow[]> {
@@ -53,8 +57,16 @@ const REASONS: Record<string, string> = {
 const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 const words = (key: string) => sentence(key.replace(/[._-]+/g, ' ').trim().toLowerCase())
 
+/** What each kind of action is in Stump, by example, so the line under a kind never only restates its name. */
+const CLASS_EXAMPLES: Partial<Record<ClassId, string>> = {
+  standard: 'Writing drafts, planning the calendar, keeping brand notes', external: 'Publishing a post, sending to Orbit',
+  money: 'Paid X calls when posting or reading replies', accounts: 'Connecting or refreshing a network account',
+  gated: 'A venue\'s join step, a network\'s own sign-in', access: 'Inviting a teammate, changing a role',
+  security: 'Network app keys, the Orbit and Vane connections', destructive: 'Erasing a person\'s records',
+  sensitive: 'Writing samples, press contacts, public handles', live: 'Pausing or resuming the publishing queue',
+}
 export const className = (cls: string) => cls === '*' ? 'Everything else' : isClass(cls) ? CLASS_LABELS[cls] : words(cls)
-export const classHelp = (cls: string) => isClass(cls) ? classDefinition(cls).when : 'Any kind of action no other answer covers.'
+export const classHelp = (cls: string) => isClass(cls) ? CLASS_EXAMPLES[cls] ?? classDefinition(cls).when : 'Any kind of action no other answer covers.'
 /** "stump.drafts.write" reads "Drafts write", as Base names an action it has no title for. */
 export const actionName = (tool: string) => words(tool.replace(/^[^./]+[./]/, ''))
 export const principal = (value: string | { name: string }) => typeof value === 'string' ? value : value.name

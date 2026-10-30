@@ -7,28 +7,29 @@ import { credentials, explain, issueCredential, me, revokeCredential } from '../
 import { Icon } from '../../ui/icons.tsx'
 import { Outcome, PanelTitle, Saved, useLoaded, useRun, useSaved, when } from '../../ui/kit.tsx'
 import {
-  ANSWERS, actionName, agentState, answerOf, approvals, classHelp, className, markReview, narrower, outcomeWords, policyClasses, principal,
-  readPolicy, recentActivity, reviews, savePolicy, setPaused, withAnswer, type Disposition,
+  ANSWERS, actionName, agentState, answerOf, approvals, classHelp, className, clearAnswers, markReview, narrower, outcomeWords, policyClasses, principal,
+  readAnswers, readPolicy, recentActivity, reviews, saveAnswer, savePolicy, setPaused, withAnswer, type Disposition,
 } from './policy.ts'
 
 export function AgentsSettings() {
   const { data, error, refresh } = useLoaded(async () => {
     const who = await me()
     const role = who.person.role, owner = role === 'owner', auditor = owner || role === 'admin' || role === 'editor'
-    const [creds, state, policy, waiting, toReview, activity] = await Promise.all([
+    const [creds, state, policy, answers, waiting, toReview, activity] = await Promise.all([
       credentials(), agentState(), owner ? readPolicy().catch(() => null) : Promise.resolve(null),
+      owner ? readAnswers().then(answer => answer.answers) : Promise.resolve({} as Record<string, Disposition>),
       approvals().then(answer => answer.approvals.filter(item => item.state === 'pending')),
       reviews().then(answer => answer.reviews.filter(item => item.state === 'open' || item.state === 'flagged')),
       auditor ? recentActivity() : Promise.resolve(null),
     ])
-    return { owner, creds, state, policy, waiting, toReview, activity }
+    return { owner, creds, state, policy, answers, waiting, toReview, activity }
   })
   return <HydrationUnit>
     <section className="st-page st-agents" aria-labelledby="agents-title">
       <h1 id="agents-title" className="st-sr">Agents</h1>
       {error ? <p className="st-error">{error}</p> : null}
       <Connect items={data?.creds.items ?? null} refresh={refresh} />
-      {data ? <Policy owner={data.owner} state={data.state} policy={data.policy} refresh={refresh} /> : null}
+      {data ? <Policy owner={data.owner} state={data.state} policy={data.policy} stored={data.answers} refresh={refresh} /> : null}
       {data ? <PausePanel owner={data.owner} paused={data.state.paused} refresh={refresh} /> : null}
       {data && (data.waiting.length || data.toReview.length) ? <Waiting approvals={data.waiting} reviews={data.toReview} refresh={refresh} /> : null}
       {data?.activity ? <section className="st-panel" aria-labelledby="activity-title">
@@ -84,24 +85,35 @@ function Connect({ items, refresh }: { items: Array<{ client_id: string; name: s
   </>
 }
 
-/** What agents may do, one answer per kind of action. Each answer saves as it changes; agents wait until every kind has one. */
-function Policy({ owner, state, policy, refresh }: { owner: boolean; state: Awaited<ReturnType<typeof agentState>>; policy: Awaited<ReturnType<typeof readPolicy>> | null; refresh(): Promise<void> }) {
+/**
+ * What agents may do, one answer per kind of action. Each answer saves as it changes (L15): Stump keeps the answers given so far,
+ * agents wait until every kind has one, and the last answer sends the whole policy to Base. A complete policy changes in Base directly.
+ */
+function Policy({ owner, state, policy, stored, refresh }: { owner: boolean; state: Awaited<ReturnType<typeof agentState>>; policy: Awaited<ReturnType<typeof readPolicy>> | null
+  stored: Record<string, Disposition>; refresh(): Promise<void> }) {
   const [pending, setPending] = useState<Record<string, Disposition>>({})
   const [failure, setFailure] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const { shown, saved } = useSaved()
   const document = policy?.document ?? null
-  const classes = policyClasses(document, state.policy.unanswered)
-  const answer = (cls: string) => pending[cls] ?? answerOf(document, cls)
+  const classes = policyClasses(document, [...state.policy.unanswered, ...Object.keys(stored)])
+  const answer = (cls: string) => pending[cls] ?? stored[cls] ?? answerOf(document, cls)
   const left = classes.filter(cls => !answer(cls)).length
   const business = state.policy.source === 'business'
+  const inBase = !!policy?.complete && !Object.keys(stored).length
   async function choose(cls: string, value: Disposition) {
     const next = { ...pending, [cls]: value }
-    setPending(next); setFailure(null)
-    if (classes.some(item => !(next[item] ?? answerOf(document, item)))) return
-    setBusy(true)
-    try { await savePolicy(withAnswer(document, next)); setPending({}); saved(); await refresh() }
-    catch (cause) { setFailure(explain(cause)) }
+    setPending(next); setFailure(null); setBusy(true)
+    try {
+      const answers = { ...stored, ...next }
+      // A complete policy changes in Base at once; until then each answer waits in Stump, and the last one sends them all.
+      if (!inBase) await saveAnswer(cls, value)
+      if (classes.every(item => answers[item] ?? answerOf(document, item))) {
+        await savePolicy(withAnswer(document, answers))
+        if (!inBase) await clearAnswers()
+      }
+      saved(); await refresh(); setPending({})
+    } catch (cause) { setFailure(explain(cause)) }
     finally { setBusy(false) }
   }
   return <section className="st-panel st-agents-policy" aria-labelledby="policy-title">
@@ -109,7 +121,7 @@ function Policy({ owner, state, policy, refresh }: { owner: boolean; state: Awai
       <PanelTitle icon="list" id="policy-title">What agents may do</PanelTitle>
       <Saved shown={shown && !busy} />
     </div>
-    <p className="st-meta">{business ? 'Managed in Business.' : left ? `Agents wait until every kind has an answer, and the answers save then: ${left} left.` : 'Every kind of action has an answer. Each change saves at once.'}</p>
+    <p className="st-meta">{business ? 'Managed in Business.' : left ? `${classes.length - left} of ${classes.length} answered · agents start once every kind has an answer` : `All ${classes.length} answered · each change applies at once`}</p>
     <ul className="st-list">{classes.map(cls => {
       const value = answer(cls)
       return <li className="st-row" key={cls}>

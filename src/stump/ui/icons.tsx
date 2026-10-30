@@ -21,6 +21,7 @@ const paths = {
   calendar: <><rect x="4" y="5.5" width="16" height="14.5" rx="2" /><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" /></>,
   chevronDown: <><path d="m7 10 5 5 5-5" /></>,
   chevronRight: <><path d="m10 7 5 5-5 5" /></>,
+  refresh: <><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" /><path d="M19.5 4.5v4h-4" /></>,
   search: <><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></>,
   key: <><circle cx="8" cy="15" r="3.5" /><path d="m10.5 12.5 8-8M15.5 7.5l2.5 2.5" /></>,
   speech: <><path d="M12 4.5c4.7 0 8.5 3 8.5 6.8s-3.8 6.7-8.5 6.7c-.9 0-1.8-.1-2.6-.3L5 19.5l.9-3.6C4.4 14.7 3.5 13.1 3.5 11.3c0-3.8 3.8-6.8 8.5-6.8z" /></>,
