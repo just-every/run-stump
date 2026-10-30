@@ -15,7 +15,7 @@ Someone outside the company, such as an investor or a friend, who recommends a p
 A hand-off waits, with the reason on it, while something stops the post:
 
 - A venue rule. A venue that keeps self-promotion to its weekly thread holds a hand-off aimed anywhere else. One aimed at that thread stays open.
-- A draft that nearly repeats something the company posted or queued. The hold links the earlier post, and rewriting the draft releases it.
+- A draft that nearly repeats something the company posted or queued. The hold links the earlier post and names the hand-off that posted it, and rewriting the draft releases it.
 - The venue's shared limit for the period. The hold names the date the venue has room again.
 
 ## Who sees a hand-off

@@ -8,8 +8,8 @@ import { rulesOf, type VenueRow } from '../venues/model.ts'
 import { holdFor, routesFor } from '../venues/rules.ts'
 import type { Hold } from './model.ts'
 
-/** A near-duplicate's match: the ledger entry (with its URL) or queued item the draft nearly repeats. */
-export interface DuplicateMatch { id: string; kind: 'item' | 'ledger'; score: number; url: string | null }
+/** A near-duplicate's match: the ledger entry (with its URL, and the hand-off that posted it) or queued item the draft nearly repeats. */
+export interface DuplicateMatch { id: string; kind: 'item' | 'ledger'; score: number; url: string | null; handoff_id?: string }
 export interface RuleHold { rule: string; reason: string; source_url: string | null; next_open_at?: string | null; matches?: DuplicateMatch[] }
 
 /** The rule a near-duplicate hold names: the drafting check's own (STUMP-TRUTH-004). */

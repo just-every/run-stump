@@ -129,9 +129,9 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
   assert.equal((await record('priya', { handoff_id: friend.id, url: `${thread}c3/`, own_words: 'Disclosure: I am a friend of the team. It saved our desk an hour a day.' })).body.code, 'attestation_required')
   assert.equal(ok(await record('priya', { handoff_id: friend.id, url: `${thread}c3/`, own_words: 'Disclosure: I am a friend of the team. It saved our desk an hour a day.', attest_own_words: true })).state, 'posted')
 
-  // A draft that nearly repeats the posted one is held, naming the ledger entry, until Maya rewrites it (STUMP-TRUTH-004).
+  // A draft that nearly repeats the posted one is held, naming the ledger entry and the hand-off that posted it, until Maya rewrites it (STUMP-TRUTH-004).
   const repeat = ok(await prepare('owner', { venue_id: bluesky.id, person_id: maya.id, due_at: new Date(week(1)).toISOString(), generate: true }))
-  assert.deepEqual([repeat.state, repeat.hold.rule, repeat.hold.matches.map(match => [match.id, match.url])], ['held', 'STUMP-TRUTH-004', [[posted.ledger_id, posted.url]]])
+  assert.deepEqual([repeat.state, repeat.hold.rule, repeat.hold.matches.map(match => [match.id, match.url, match.handoff_id])], ['held', 'STUMP-TRUTH-004', [[posted.ledger_id, posted.url, handoff.id]]])
   const sky = ok(await app.action('maya', 'stump.handoffs.manage', { action: 'edit', handoff_id: repeat.id, draft_text: `${repeat.disclosure_line} We moved our standing appointments over this week and nothing double-booked.` }))
   assert.deepEqual([sky.state, sky.hold], ['open', null])
 

@@ -99,15 +99,16 @@ async function earlierTexts(db: D1Database, draft: Draft, now: number, windowDay
     db.prepare(`SELECT i.id,i.text,i.parts,i.network,i.account_id,i.venue_id,i.master_id,COALESCE(i.posted_at,i.scheduled_at,i.updated_at) AS at,a.owner_kind
       FROM stump_items i LEFT JOIN stump_accounts a ON a.id=i.account_id
       WHERE i.state IN ${QUEUED} AND i.id<>? AND COALESCE(i.posted_at,i.scheduled_at,i.updated_at)>=?`).bind(draft.id ?? '', since),
-    db.prepare(`SELECT l.id,l.text,l.network,l.account_id,l.venue_id,l.url,l.posted_at AS at,a.owner_kind FROM stump_ledger l LEFT JOIN stump_accounts a ON a.id=l.account_id
+    db.prepare(`SELECT l.id,l.handoff_id,l.text,l.network,l.account_id,l.venue_id,l.url,l.posted_at AS at,a.owner_kind FROM stump_ledger l LEFT JOIN stump_accounts a ON a.id=l.account_id
       WHERE l.state IN ('posted','uncertain') AND l.text IS NOT NULL AND COALESCE(l.item_id,'')<>? AND COALESCE(l.posted_at,l.created_at)>=?`).bind(draft.id ?? '', since),
   ])
   const scope = (row: Row) => ({ network: (row.network as string | null) ?? undefined, account_id: (row.account_id as string | null) ?? undefined,
     venue_id: (row.venue_id as string | null) ?? undefined, own_account: row.owner_kind === 'company', group_id: (row.master_id as string | null) ?? undefined })
-  const kinds = new Map<string, { kind: 'item' | 'ledger'; url: string | null }>()
+  // A handed-off post's ledger entry also names its hand-off, so a hold names the earlier hand-off as well as the post.
+  const kinds = new Map<string, { kind: 'item' | 'ledger'; url: string | null; handoff_id: string | null }>()
   const texts = [
-    ...(items!.results as Row[]).map(row => { kinds.set(`item:${row.id}`, { kind: 'item', url: null }); return { id: `item:${row.id}`, text: itemText(row), at: new Date(Number(row.at)).toISOString(), scope: scope(row) } }),
-    ...(ledger!.results as Row[]).map(row => { kinds.set(`ledger:${row.id}`, { kind: 'ledger', url: (row.url as string | null) ?? null }); return { id: `ledger:${row.id}`, text: String(row.text), at: new Date(Number(row.at)).toISOString(), scope: scope(row) } }),
+    ...(items!.results as Row[]).map(row => { kinds.set(`item:${row.id}`, { kind: 'item', url: null, handoff_id: null }); return { id: `item:${row.id}`, text: itemText(row), at: new Date(Number(row.at)).toISOString(), scope: scope(row) } }),
+    ...(ledger!.results as Row[]).map(row => { kinds.set(`ledger:${row.id}`, { kind: 'ledger', url: (row.url as string | null) ?? null, handoff_id: (row.handoff_id as string | null) ?? null }); return { id: `ledger:${row.id}`, text: String(row.text), at: new Date(Number(row.at)).toISOString(), scope: scope(row) } }),
   ]
   return { texts, kinds }
 }
@@ -190,7 +191,7 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
     scope: { network: network ?? undefined, account_id: draft.account_id ?? undefined, venue_id: draft.venue_id ?? undefined, own_account: account?.owner_kind === 'company', group_id: draft.master_id ?? undefined } })
   const duplicates = repeat.held ? repeat.matches.map(match => {
     const [kind, id] = [earlier.kinds.get(match.id)!, match.id.slice(match.id.indexOf(':') + 1)]
-    return { id, kind: kind.kind, score: Math.round(match.score * 1000) / 1000, url: kind.url }
+    return { id, kind: kind.kind, score: Math.round(match.score * 1000) / 1000, url: kind.url, ...(kind.handoff_id ? { handoff_id: kind.handoff_id } : {}) }
   }) : []
   if (duplicates.length) flags.push({ code: 'near_duplicate', blocking: true, rule: 'STUMP-TRUTH-004', window_days: brand.window_days, matches: duplicates })
 
