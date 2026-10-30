@@ -83,7 +83,7 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-settings-head { margin: 0 0 32px; }
 .st-settings-title { font: 800 var(--stump-size-title)/38px var(--stump-font); letter-spacing: -0.02em; color: var(--stump-ink); margin: 0 0 20px; }
 .st-tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--stump-hairline); overflow-x: auto; scrollbar-width: none; }
-.st-tabs a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 2px; color: var(--stump-muted); text-decoration: none; font-size: 16px; font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.st-tabs a { flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 2px; color: var(--stump-muted); text-decoration: none; font-size: 16px; font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .st-tabs a:hover { color: var(--stump-ink); }
 .st-tabs a[aria-current="page"] { color: var(--stump-ink); font-weight: 600; border-bottom-color: var(--stump-emerald); }
 .st-settings .st-page > h1:first-child, .st-settings .st-page h1 { font-size: 24px; line-height: 30px; }
