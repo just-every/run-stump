@@ -12,7 +12,8 @@ import { baseInvite } from '../people/invite.ts'
 export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency'] as const
 export const toolScopes = () => [...new Set(stumpTools.map(tool => tool.scope))].sort()
 
-function trust(env: StumpEnv): Trust | null {
+/** The Business trust this installation is paired with, or null when its agent policy is local. */
+export function agentDoorTrust(env: StumpEnv): Trust | null {
   const issuer = env.RER_OWNER_CLAIM_ISSUER, installationId = env.RER_OWNER_CLAIM_INSTALLATION_ID, keys = env.RER_OWNER_CLAIM_PUBLIC_KEYS
   if (![issuer, installationId, env.RER_OWNER_CLAIM_APP_ORIGIN, keys].some(Boolean)) return null
   if (!issuer || !installationId || !keys) throw new Error('Incomplete agent door trust configuration')
@@ -55,7 +56,7 @@ async function agentContext(env: StumpEnv, toolContext: ToolContext): Promise<Ac
 export function stumpAgentDoor(original: StumpEnv) {
   const env = runtimeBindings(original)
   return createAgentDoor({
-    seed: 'stump', name: 'Stump', specialist: SPECIALIST, origin: env.AUTH_ORIGIN, db: env.DB, trust: trust(env),
+    seed: 'stump', name: 'Stump', specialist: SPECIALIST, origin: env.AUTH_ORIGIN, db: env.DB, trust: agentDoorTrust(env),
     capabilities: [...capabilities],
     tools: stumpTools.map(tool => doorTool(tool, toolContext => agentContext(env, toolContext))),
     people: stumpPeople(env),

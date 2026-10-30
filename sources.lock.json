@@ -440,7 +440,7 @@
       "executable": false
     },
     "docs/agents.md": {
-      "sha256": "186130c650198a7e7ebd11a13c74c3f9c107bf40108bf02421d7208998cdd436",
+      "sha256": "3822be062349ab9be208495aa9a71119c1ef6d6af760ac90bedbf05f489e1a52",
       "executable": false
     },
     "docs/ai-provider.md": {
@@ -3528,15 +3528,15 @@
       "executable": false
     },
     "src/stump/agent-door/index.ts": {
-      "sha256": "b899e2c32864507df2b9102dce567c9cdb91586263aa71a80a454381e320cc90",
+      "sha256": "80f48d272d312a7c1c5b4de470aa360dfedc428f2891f99b0307370284e93b30",
       "executable": false
     },
     "src/stump/agent-door/ui/AgentsSettings.tsx": {
-      "sha256": "9ae3555746349de006fd9966e47ae444a66d5080ca2b420a2ff1fd1c059f4de4",
+      "sha256": "d3c0ff18730fbab0789d9f39e2303a9abfdf2782250873f8a6b6e681138e060b",
       "executable": false
     },
     "src/stump/agent-door/ui/policy.ts": {
-      "sha256": "82879591c45f615c54ef57fecc7a48fbd3e178e0c739a9b2e4cace9a76c24a8e",
+      "sha256": "3046bc71c43392262c0ac3c9f1bc4b32dc5649e43be6d76bed5029e5d2a10870",
       "executable": false
     },
     "src/stump/data/erase.ts": {
@@ -3668,7 +3668,7 @@
       "executable": false
     },
     "src/stump/http/routes.ts": {
-      "sha256": "075d9284a1332754f1edbfb0af2802a7e35ff6fc54c277d81492692a1685462d",
+      "sha256": "393bd21afdf0f0cce9abe5d7dfad284b6a4747acdce06a88e1c2b4f1b3f65760",
       "executable": false
     },
     "src/stump/imports/buffer-ledger.ts": {
@@ -3820,7 +3820,7 @@
       "executable": false
     },
     "src/stump/lib/claims/disclosure.ts": {
-      "sha256": "a106293809af0fe0d16ece12706d92ade4fc6558e0166810e4bcce6577c8e798",
+      "sha256": "4387bd3af678862d98a77d5275c4b4efedd972523e0245d7fcfd29dea397bdb2",
       "executable": false
     },
     "src/stump/lib/claims/extract.ts": {
@@ -3832,7 +3832,7 @@
       "executable": false
     },
     "src/stump/lib/claims/mentions.ts": {
-      "sha256": "80fbcde56c0a92519bf1bbf5eb32279d296886eb306b3d984c4328e02be81665",
+      "sha256": "f31747a04a8d38e63a04469f4afe65044e7984c671bbb404b771d69f7e59556b",
       "executable": false
     },
     "src/stump/lib/claims/numbers.ts": {

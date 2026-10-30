@@ -1,6 +1,7 @@
 import { runtimeBindings } from '../../auth.server'
 import { allowedTools, runAsPerson } from '../actions/runner.ts'
 import { issueCredential, listCredentials, revokeCredential } from '../agent-door/credentials.ts'
+import { agentOverview } from '../agent-door/overview.ts'
 import type { StumpEnv } from '../env.ts'
 import { stumpTools } from '../tools/index.ts'
 import { answer, json, personContext, refusal, signedIn } from './person.ts'
@@ -53,6 +54,12 @@ export async function personDoorResponse(request: Request, original: StumpEnv): 
       const input = await body(request), name = typeof input?.name === 'string' ? input.name.trim() : ''
       if (!name || name.length > 80) return refusal('invalid_arguments', { field: 'name' })
       return json(await issueCredential(env.DB, person.id, name), 201)
+    }
+    // Settings · Agents for the people who answer for agents: the policy as it stands and this week's counts.
+    if (path === '/app/api/agent-overview') {
+      if (request.method !== 'GET') return refusal('method_not_allowed')
+      if (!['owner', 'admin', 'editor'].includes(person.role)) return refusal('forbidden')
+      return json(await agentOverview(env, Date.now()))
     }
     const revoke = /^\/app\/api\/agent-credentials\/([A-Za-z0-9_-]{1,80})\/revoke$/.exec(path)
     if (revoke) {

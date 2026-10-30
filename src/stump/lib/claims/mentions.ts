@@ -52,19 +52,24 @@ export interface MentionInput {
 }
 
 /**
- * A name as whole words. Where letters meet digits the space is optional either way,
- * as the claim check folds text (foldText): "Quillmate 2905d0" matches "Quillmate2905d0", and "SOC2" matches "SOC 2".
+ * A name's words as a pattern, without word boundaries. Where letters meet digits the space is optional
+ * either way, as the claim check folds text (foldText): "Quillmate 2905d0" matches "Quillmate2905d0", and
+ * "SOC2" matches "SOC 2". Disclosure reads names the same way, so a name found here is found there too.
  */
-function wordPattern(name: string): string {
+export function namePattern(name: string): string {
   const words = name.trim().split(/\s+/)
-  const pattern = words.map((word, k) => {
+  return words.map((word, k) => {
     const lead = /^(\p{L}{2,})(\p{N}.*)$/u.exec(word)
     const pieces = lead ? `${escapeRegExp(lead[1] as string)}\\s*${escapeRegExp(lead[2] as string)}` : escapeRegExp(word)
     if (k === 0) return pieces
     const joint = /\p{L}$/u.test(words[k - 1] as string) && /^\p{N}/u.test(word) ? '\\s*' : '\\s+'
     return `${joint}${pieces}`
   }).join('')
-  return `(?<![\\p{L}\\p{N}_])${pattern}(?![\\p{L}\\p{N}_])`
+}
+
+/** A name as whole words (namePattern). */
+function wordPattern(name: string): string {
+  return `(?<![\\p{L}\\p{N}_])${namePattern(name)}(?![\\p{L}\\p{N}_])`
 }
 /** The same name whatever its spacing, for comparing how a mention is written. */
 const unspaced = (text: string) => text.replace(/\s+/g, '')

@@ -20,7 +20,8 @@ async function door<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T
 }
 export const agentState = () => door<AgentState>('/agents/api/state')
-export const readPolicy = () => door<{ document: PolicyDocument | null; revision: number | null; complete: boolean }>('/agents/api/policy')
+/** The policy as it stands and this week's counts, for owners, admins and editors (Stump's /app/api/agent-overview). */
+export const agentOverview = () => door<{ document: PolicyDocument | null; week: { since: string; counts: Array<{ class: string; decision: string; count: number }> } }>('/app/api/agent-overview')
 export const savePolicy = (document: PolicyDocument) => door<{ revision: number; complete: boolean }>('/agents/api/policy', { method: 'PUT', body: JSON.stringify({ document }) })
 export const setPaused = (paused: boolean) => door<{ paused: { business: boolean; local: boolean } }>('/agents/api/pause', { method: 'POST', body: JSON.stringify({ paused }) })
 export const approvals = () => door<{ approvals: ApprovalItem[] }>('/agents/api/approvals')
@@ -52,6 +53,9 @@ const REASONS: Record<string, string> = {
 }
 const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 const words = (key: string) => sentence(key.replace(/[._-]+/g, ' ').trim().toLowerCase())
+const DECISIONS: Record<string, string> = { autonomous: 'Allowed', review: 'Allowed, to review', approval: 'Asked first', blocked: 'Blocked', unset: 'No policy yet', none: 'Not decided' }
+/** How the policy handled a call, in Base's words (page-words.ts decisionName). */
+export const decisionName = (decision: string | null) => DECISIONS[decision ?? 'none'] ?? words(decision ?? 'none')
 
 export const className = (cls: string) => cls === '*' ? 'Everything else' : isClass(cls) ? CLASS_LABELS[cls] : words(cls)
 export const classHelp = (cls: string) => isClass(cls) ? classDefinition(cls).when : 'Any kind of action no other answer covers.'
