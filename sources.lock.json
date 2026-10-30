@@ -3152,7 +3152,7 @@
       "executable": false
     },
     "src/stump/imports/door.ts": {
-      "sha256": "2f997a8025b4b45cbd4ca5ef28a32f17d75906d4f648ede73a66b24ff7fe05ff",
+      "sha256": "a0929516e46bb006d286f904012e170848f07b3ef37b6f80d864ff2c0e8863a5",
       "executable": false
     },
     "src/stump/items/state.ts": {
@@ -3656,7 +3656,7 @@
       "executable": false
     },
     "src/stump/tools/venues.ts": {
-      "sha256": "bd45c8b849787b1e631f627b9c5bf7df97ac2c207f09ca2c54bf085de589e317",
+      "sha256": "bfcd04190f2e293b13d454c7ca5d5421b3dbc1a7c9d880d0d43dfecf740fbb53",
       "executable": false
     },
     "src/stump/ui/api.ts": {
@@ -3679,12 +3679,16 @@
       "sha256": "124f77346994f810a3e1363f40f01784c2b6309a60e4d1b990acd61c1f1d8fe0",
       "executable": false
     },
+    "src/stump/venues/import/changes.ts": {
+      "sha256": "96ca9697530fa159a9e6ecc628ed26a818e57734571b43d368816e43839c603c",
+      "executable": false
+    },
     "src/stump/venues/import/kept.ts": {
       "sha256": "a05e6453b043fda2a950bacc238a9100a1f592afd9ed50e5e6ca08ddcf81f8e9",
       "executable": false
     },
     "src/stump/venues/import/source.ts": {
-      "sha256": "891810cda17aa95c078daa0b52288d48308daac87a60c6882f69cec09825c851",
+      "sha256": "0f67cd493e5edd44e94e8ef8a12fad5c932d518c696c5afe9f473012456bc0d5",
       "executable": false
     },
     "src/stump/venues/import/targets.ts": {
@@ -3704,23 +3708,23 @@
       "executable": false
     },
     "src/stump/venues/model.ts": {
-      "sha256": "d42b42c83f1715439735a4f95e594923f83a98c5cdf76b0fbd21a1c8f2522055",
+      "sha256": "346079e6a69c29b7d9f3e697237f4e21d6eec6a81e5af6398be660d873453579",
       "executable": false
     },
     "src/stump/venues/register.ts": {
-      "sha256": "50ea8c4c47a0592d695047606660859fe724e2a135f12d128458141facd49009",
+      "sha256": "9294bb9ae5cdf3814a6f2e8211c8fec3b7f66805d2586acabb3dacf9784d655f",
       "executable": false
     },
     "src/stump/venues/rules.ts": {
-      "sha256": "0d5ae2adeb9a97b58cc7eaf66ab6a07b514cd54caaf66d777e3da13e03bc404a",
+      "sha256": "cae1b1c7d92c84d7a5d2ad242b8aedd5a747cbaf456f8b5c3cea307abbfcbfa2",
       "executable": false
     },
     "src/stump/venues/ui/importer.ts": {
-      "sha256": "4e7232943e48b9a3c29ad410b802666fff9f96de7fbe2df74ea670ae2a24e04b",
+      "sha256": "0d711a12e052603f87a614b0cad9fb74e875aec1c5753ce1b620d2f83f56582e",
       "executable": false
     },
     "src/stump/venues/ui/ImportPanel.tsx": {
-      "sha256": "f5501289548cf0cad75be280370f003cf0f07eed831794903d5b7cd2357c931b",
+      "sha256": "ec422fa735a8f75817140b637bbb991b1487f6978707da0419df2fcf7e42dcbf",
       "executable": false
     },
     "src/stump/venues/ui/labels.ts": {
@@ -3728,19 +3732,19 @@
       "executable": false
     },
     "src/stump/venues/ui/RulesCard.tsx": {
-      "sha256": "91fa03e1804bd5957c550619d086b57d0b93d431903ca85e919aa8d32a873fef",
+      "sha256": "d46fb6146c3c8153170b677021c5a2c06cb2608dd3538a0f1cfa6d768fe7dc35",
       "executable": false
     },
     "src/stump/venues/ui/types.ts": {
-      "sha256": "271cdc2e75665526e6eb4318362545cfc769e04235edb8d93f430ca244399c27",
+      "sha256": "c2437620e5e19900e8dbc912fff2e92b64c05948ccd853ebf940ad4d0538fa81",
       "executable": false
     },
     "src/stump/venues/ui/VenueForm.tsx": {
-      "sha256": "747fde5120a1cacc795ed273388907c7cf4188597345ec0d1934c0a26e2f59f6",
+      "sha256": "f6dd14ae769dc225bf54ff44b30c18acb165046d77be64cdc56420d0cea1554b",
       "executable": false
     },
     "src/stump/venues/ui/VenuePage.tsx": {
-      "sha256": "40f2a85f419cc46e29ecd4b1e98ee8db0e90f98e9bb75ba260331c8ece9ef23b",
+      "sha256": "1049140609ff18dc8ec100d71083950ead68852c947a7a9201a4af4a9ad8398d",
       "executable": false
     },
     "src/stump/venues/ui/VenuesPage.tsx": {
@@ -3768,7 +3772,7 @@
       "executable": false
     },
     "tests/stump/venues.test.mjs": {
-      "sha256": "0921f632b9364855490ecfe3ba88bbb98a7ef6ead3984236a7e5337aa790ef6e",
+      "sha256": "6f9de35071ef75850adb1215e3f15ab5ad6d299ad66406af45c175ba7030b3e9",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {
