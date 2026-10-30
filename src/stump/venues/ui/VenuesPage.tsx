@@ -43,7 +43,7 @@ export function VenuesPage() {
   return <HydrationUnit>
     <section className="st-page" aria-labelledby="venues-title" style={{ maxWidth: 1120 }}>
       <h1 id="venues-title">Venues</h1>
-      <p className="st-sub">Communities, newsletters, podcasts and journalists worth showing up in.</p>
+      {empty ? null : <p className="st-sub">Find and manage the best places to tell your story.</p>}
       {error ? <p className="st-error" role="alert">{error}</p> : null}
       {empty && panel === 'none' ? <div className="st-empty">
         <h2>Add your first venue</h2>
