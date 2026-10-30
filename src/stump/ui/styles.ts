@@ -217,7 +217,7 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-menu button.danger { color: var(--stump-danger); }
 
 /* Accounts, publishing and connected accounts: boxed lists and expanding rows (src/routes/app.settings.accounts.tsx, app.settings.publishing.tsx) */
-.st-dot.off { background: var(--stump-line); }
+.st-dot.off { background: #A9A59C; }
 .st-box { border: 1px solid var(--stump-line); border-radius: var(--stump-radius); padding: 0 calc(var(--stump-space) * 2.5); background: var(--stump-column); }
 .st-box .st-row { padding: calc(var(--stump-space) * 2) 0; }
 .st-row-toggle { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; display: flex; align-items: center; gap: calc(var(--stump-space) * 2); width: 100%; min-height: 44px; }
@@ -277,8 +277,8 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-segmented button[aria-pressed="true"] { background: var(--stump-emerald-tint); color: var(--stump-ink); font-weight: 600; }
 
 /* Empty states: the one place everyday screens carry the pastel stump */
-.st-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 48px 16px; }
-.st-empty img { width: 240px; max-width: 70%; height: auto; margin-bottom: 16px; }
+.st-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 16px 48px; }
+.st-empty img { width: 240px; max-width: 100%; height: auto; margin-bottom: 24px; }
 .st-empty h2 { font-size: 24px; line-height: 30px; font-weight: 800; margin: 0 0 8px; }
 .st-empty p { color: var(--stump-muted); margin: 0 0 24px; max-width: 46ch; }
 
@@ -377,7 +377,7 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-back { display: inline-block; color: var(--stump-muted); text-decoration: none; margin-bottom: calc(var(--stump-space) * 2); }
 .st-back:hover { color: var(--stump-text); }
 .st-rule { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: calc(var(--stump-space) * 2); align-items: center; padding: 14px 0; border-top: 1px solid var(--stump-line); }
-.st-rule:first-of-type { border-top: 0; }
+.st-rule-row:first-of-type > .st-rule { border-top: 0; }
 .st-rule-label { font-weight: 600; }
 .st-rule-value { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
 .st-rule-thread { color: var(--stump-emerald-text); text-underline-offset: 3px; border-radius: 4px; overflow-wrap: anywhere; }
@@ -453,8 +453,12 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-source { display: flex; align-items: flex-end; gap: var(--stump-space); margin-top: calc(var(--stump-space) * 2); max-width: 520px; }
 .st-drafting .st-source .st-field { flex: 1; }
 .st-drafting .st-icon { font: inherit; font-size: 20px; line-height: 1; width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--stump-sunk); color: var(--stump-text); cursor: pointer; }
+/* An account chip reads as chosen or not (SPEC 3.4): unchosen is white with a hairline ring and muted words; chosen is the emerald
+   tint with emerald words and a leading tick. */
 .st-drafting button.st-chip { height: 36px; padding: 0 14px; font-size: var(--stump-size-small); color: var(--stump-ink); }
-.st-drafting .st-chip[aria-pressed="true"] { background: var(--stump-emerald-tint); font-weight: 600; }
+.st-drafting button.st-chip[aria-pressed="false"] { background: var(--stump-white); box-shadow: inset 0 0 0 1px var(--stump-hairline); color: var(--stump-muted); }
+.st-drafting button.st-chip[aria-pressed="true"] { background: var(--stump-emerald-tint); color: var(--stump-emerald-text); font-weight: 600; padding-left: 10px; }
+.st-drafting button.st-chip[aria-pressed="true"] svg { width: 16px; height: 16px; flex: none; }
 .st-drafting .st-chip:disabled { cursor: default; }
 .st-drafting .st-open { margin-top: calc(var(--stump-space) * 3); }
 .st-drafting .st-compose { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: calc(var(--stump-space) * 3); align-items: start; }
@@ -612,14 +616,14 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-setup { min-height: 100vh; background: var(--stump-paper) url('/art/grain.png') repeat; padding: 32px 24px 64px; display: flex; flex-direction: column; align-items: center; }
 .st-setup-brand { align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; color: var(--stump-ink); text-decoration: none; font: 800 28px/1 var(--stump-font); letter-spacing: -0.02em; margin: 0 0 8px 56px; min-height: 44px; }
 .st-setup-brand img { width: 40px; height: 40px; }
-.st-setup-plate { display: block; width: 240px; height: auto; margin: 0 0 12px; }
+.st-setup-plate { display: block; width: 180px; height: auto; margin: 0 0 12px; }
 .st-setup h1 { margin: 0 0 32px; font: 800 64px/1 var(--stump-font); letter-spacing: -0.03em; color: var(--stump-ink); text-align: center; }
 .st-setup-card { width: 100%; max-width: 936px; background: var(--stump-white); border-radius: 18px; box-shadow: 0 1px 2px rgba(28,27,24,.05), 0 14px 32px -14px rgba(92,70,30,.22); padding: 40px 40px 36px; }
 .st-setup-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; }
-.st-setup-steps > li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 0 32px; align-items: start; padding: 0 0 32px; }
+.st-setup-steps > li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 0 32px; align-items: start; padding: 0 0 20px; }
 .st-setup-steps > li:nth-child(odd) { padding-right: 40px; box-shadow: inset -1px 0 0 var(--stump-hairline); }
 .st-setup-steps > li:nth-child(even) { padding-left: 40px; }
-.st-setup-steps > li:nth-child(n+3) { padding-top: 32px; background: linear-gradient(var(--stump-hairline), var(--stump-hairline)) top / 100% 1px no-repeat; }
+.st-setup-steps > li:nth-child(n+3) { padding-top: 20px; background: linear-gradient(var(--stump-hairline), var(--stump-hairline)) top / 100% 1px no-repeat; }
 .st-setup-num { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--stump-emerald); color: var(--stump-white); font: 700 20px/1 var(--stump-font); }
 .st-setup-steps h2 { margin: 6px 0 10px; font: 700 22px/28px var(--stump-font); color: var(--stump-ink); }
 /* The company site, then the company and product names: SPEC 3.4 fields (label above, 44 px, one border, focus on that border). */
@@ -635,13 +639,15 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-setup-pill-noted { display: contents; }
 .st-setup-pill-note { display: none; }
 .st-setup-done { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--stump-body); font-size: 15px; }
-.st-setup-foot { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 8px; }
-.st-setup-foot .st-button.large { min-width: 224px; }
+/* Open Today is centred; "Saved" sits quietly on its line to its right, and an error reads under it, so neither moves the button. */
+.st-setup-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; column-gap: 16px; padding-top: 16px; }
+.st-setup-foot .st-button.large { grid-column: 2; grid-row: 1; min-width: 224px; }
+.st-setup-foot .st-saved-mark { grid-column: 3; grid-row: 1; justify-self: start; }
+.st-setup-foot > .st-note, .st-setup-foot > .st-error { grid-column: 1 / -1; grid-row: 2; text-align: center; }
 @media (max-width: 760px) {
   .st-setup { padding: 16px 16px 40px; }
   .st-setup-brand { margin: 0 0 8px; font-size: 22px; }
   .st-setup-brand img { width: 32px; height: 32px; }
-  .st-setup-plate { width: 180px; }
   .st-setup h1 { font-size: 40px; margin-bottom: 24px; }
   .st-setup-card { padding: 24px 20px; }
   .st-setup-steps { grid-template-columns: 1fr; }
@@ -649,7 +655,11 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
   .st-setup-steps > li:first-child { padding-top: 0; }
   .st-setup-steps > li:nth-child(n+2) { background: linear-gradient(var(--stump-hairline), var(--stump-hairline)) top / 100% 1px no-repeat; }
   .st-setup-steps h2 { font-size: 20px; margin-top: 7px; }
-  .st-setup-foot .st-button.large { width: 100%; }
+  .st-setup-foot { grid-template-columns: minmax(0, 1fr); }
+  .st-setup-foot .st-button.large { grid-column: 1; width: 100%; }
+  .st-setup-foot .st-saved-mark { grid-column: 1; grid-row: 2; justify-self: center; }
+  .st-setup-foot .st-saved-mark:not(:empty) { margin-top: 8px; }
+  .st-setup-foot > .st-note, .st-setup-foot > .st-error { grid-row: 3; }
   .st-setup-pill { white-space: normal; }
 }
 /* 480 and under: every step pill is one 40 px line, so the import pill drops its formats to a 14 px muted line under it. */
@@ -660,16 +670,18 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
   .st-setup-pill-note { display: block; font-size: 14px; line-height: 20px; color: var(--stump-muted); padding-left: 16px; }
 }
 
-/* Venues with none yet (SPEC §4.2 "Empty state, Venues"): the plate and its block centred in the column */
-/* The empty state takes the main column's remaining height and no more, so the page never scrolls. */
-.st-main:has(> .st-venues .st-venues-empty) { display: flex; flex-direction: column; }
-.st-main > .st-venues:has(.st-venues-empty) { flex: 1; display: flex; flex-direction: column; }
+/* The family empty state (SPEC §4.2 "Empty state", kit Empty) on every screen: it takes the main column's remaining height and
+   no more, so the page never scrolls, and centres the plate (240 px; 228 px on a phone) and its block in it, as Venues does. */
+.st-main:has(> .st-page .st-empty) { display: flex; flex-direction: column; }
+.st-main > .st-page:has(.st-empty) { flex: 1; display: flex; flex-direction: column; }
+.st-page > .st-empty { flex: 1; justify-content: center; }
 .st-venues-empty { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.st-venues-empty .st-empty { padding: 24px 0 48px; }
-.st-venues-empty .st-empty img { width: 240px; margin-bottom: 24px; }
+.st-today .st-today-grid:has(.st-empty) { flex: 1; align-items: stretch; }
+.st-today .st-today-grid:has(.st-empty) > .st-today-week { align-self: start; }
+.st-today .st-today-main > .st-empty { flex: 1; justify-content: center; }
 .st-venues-empty .st-empty p { font-size: 17px; max-width: 640px; }
 @media (max-width: 760px) {
-  .st-venues-empty .st-empty img { width: 200px; }
+  .st-empty img { width: 228px; }
   .st-venues-empty .st-empty .st-actions { flex-direction: column; align-self: stretch; }
 }
 
@@ -771,6 +783,10 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-today .st-panel > .st-list > .st-row:last-child { padding-bottom: 4px; min-height: 0; }
 .st-today .st-today-reason a { color: var(--stump-emerald-text); }
 .st-today .st-today-out:focus-visible, .st-today .st-today-finding-title:focus-visible, .st-today .st-today-all:focus-visible, .st-today .st-today-line a:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; border-radius: 6px; }
+/* With a pointer beside Worth answering, "And N more held" is a compact text line under Held's two rows, so the pair stays short. */
+@media (min-width: 900px) {
+  .st-today .st-today-all { min-height: 28px; margin-top: 8px; }
+}
 @media (max-width: 1100px) {
   .st-today .st-today-pair { grid-template-columns: minmax(0, 1fr); }
 }

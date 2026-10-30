@@ -11,7 +11,13 @@ export const Route = createFileRoute('/app/settings/brand')({ component: BrandPa
 
 const key = () => crypto.randomUUID()
 const list = (value: string) => value.split(',').map(item => item.trim()).filter(Boolean)
-const shortDate = (value: string | null) => value ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`)) : ''
+/** "Jan 15, 2027", its parts joined by no-break spaces so a date never breaks across lines; a date within the next 12 months drops its year ("Jan 15"). */
+const shortDate = (value: string | null, soon = false) => {
+  if (!value) return ''
+  const at = new Date(`${value}T00:00:00Z`), now = new Date(), inAYear = new Date(now); inAYear.setFullYear(now.getFullYear() + 1)
+  const year = !(soon && at >= new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z') && at < inAYear)
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', ...(year ? { year: 'numeric' } : {}), timeZone: 'UTC' }).format(at).replace(/ /g, '\u00a0')
+}
 const bare = (value: string) => value.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
 /** A proof in a few words: its own label, else its number and where it lives. */
 const proofText = (proof: unknown) => {
@@ -63,8 +69,8 @@ function BrandPage() {
         <ul className="st-list">{data?.claims.map(claim => <li className="st-kv" key={claim.id}>
           <div className="st-name">{claim.kind === 'banned' ? <span className="st-pill danger">banned</span> : claim.stale ? <span className="st-pill danger">stale</span> : null}{claim.text}</div>
           <div className="st-meta">{claim.kind === 'banned' ? `reason: ${claim.reason ?? ''}`
-            : claim.kind === 'comparative' ? `vs ${claim.competitor ?? ''} · source ${shortDate(claim.source_date)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on)}`
-            : `proof: ${proofText(claim.proof)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on)}`}</div>
+            : claim.kind === 'comparative' ? `vs ${claim.competitor ?? ''} · source ${shortDate(claim.source_date)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on, true)}`
+            : `proof: ${proofText(claim.proof)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on, true)}`}</div>
         </li>)}</ul>
         {writer && data ? <ClaimForm open={!data.claims.length} busy={busy} team={data.team.filter(person => person.status === 'active')} me={data.who.person.id} products={data.products}
           onAdd={args => act({ action: 'claim_create', ...args }, 'Claim added')} /> : null}

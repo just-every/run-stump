@@ -3344,7 +3344,7 @@
       "executable": false
     },
     "src/routes/app.compose.tsx": {
-      "sha256": "79f89bf6054b39dd35b04bf9f41382774b32078c60636fe646fe9ff9073d4b65",
+      "sha256": "d4a7578c8417f7fd54c9809f924c5023a29ca6dc6399167612c7b87a8bd95047",
       "executable": false
     },
     "src/routes/app.connected.$network.tsx": {
@@ -3388,7 +3388,7 @@
       "executable": false
     },
     "src/routes/app.settings.brand.tsx": {
-      "sha256": "c8f65e9db9bce2ad0c3c7079bd828981c60233b8bba41e206bfb69732dbd79b5",
+      "sha256": "66b0d003882a5d79565aa39f162cd6069c629044d5cc2db40d0732695b7a1aef",
       "executable": false
     },
     "src/routes/app.settings.connections.tsx": {
@@ -3408,7 +3408,7 @@
       "executable": false
     },
     "src/routes/app.setup.tsx": {
-      "sha256": "c6eb6374a560dcd79a4c8374001452aeadf7aca9bc1342f13ca25b9b2f02ace5",
+      "sha256": "1a92daa82285d017a76be8cb6e4a19d147862f2394ed5206750f706b98749ce7",
       "executable": false
     },
     "src/routes/app.tsx": {
@@ -3476,7 +3476,7 @@
       "executable": false
     },
     "src/site/styles/docs.css": {
-      "sha256": "5c855d7187fc24d47e1903265dffb5cebdbd00ad8fc962e7b1adf0f5a93983e1",
+      "sha256": "82479026e596959252d9445dc3688e78f8c6e2365823e8d565c9ba7435c27664",
       "executable": false
     },
     "src/site/styles/landing.css": {
@@ -3544,7 +3544,7 @@
       "executable": false
     },
     "src/stump/agent-door/ui/AgentsSettings.tsx": {
-      "sha256": "6d2df14ffb12568c3c55c8c892dd44e472071d8db23647eeae073f1376cbd005",
+      "sha256": "786e31cfbb81de23101d5931a0fd2f76ef802a47a35064a7d0ea9400cc068108",
       "executable": false
     },
     "src/stump/agent-door/ui/policy.ts": {
@@ -4336,7 +4336,7 @@
       "executable": false
     },
     "src/stump/today/TodayPage.tsx": {
-      "sha256": "5f48b309388e25e7b4b295e1c1a80d6113a2c5e71f5eb246fbfa4cb52448935f",
+      "sha256": "8e8da470ba264eef80dfec9ddc5f68a23b24393bad71f60ba3ca44f64dfbe459",
       "executable": false
     },
     "src/stump/tools/accounts.ts": {
@@ -4432,7 +4432,7 @@
       "executable": false
     },
     "src/stump/ui/styles.ts": {
-      "sha256": "22de23aa1deb230ec6446a93973a542b368cb58301b8ce319f78d3ad65f16412",
+      "sha256": "e0db32550545620314e24655f8b92e2c8f152abee4ee95782686395c699fe70b",
       "executable": false
     },
     "src/stump/ui/types.ts": {
@@ -4492,7 +4492,7 @@
       "executable": false
     },
     "src/stump/venues/ui/RulesCard.tsx": {
-      "sha256": "199c7d7cdf3b0e7d1ee0c998244453b50582e10be9b17e8ee5e99ae4791d25d0",
+      "sha256": "575cb6aab71a3e700baea374700fd26afda91fc52ee68176a9434b51cf64ee60",
       "executable": false
     },
     "src/stump/venues/ui/types.ts": {

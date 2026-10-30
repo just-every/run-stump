@@ -185,7 +185,7 @@ function ComposePage() {
           <div className="st-chips">
             {accounts.filter(account => !preview || chosen.includes(account.id)).map(account =>
               <button key={account.id} className="st-chip" type="button" aria-pressed={chosen.includes(account.id)} disabled={!!preview}
-                onClick={() => setPicked(picked.includes(account.id) ? picked.filter(item => item !== account.id) : [...picked, account.id])}>{accountLabel(account)}</button>)}
+                onClick={() => setPicked(picked.includes(account.id) ? picked.filter(item => item !== account.id) : [...picked, account.id])}>{chosen.includes(account.id) ? <Icon name="check" /> : null}{accountLabel(account)}</button>)}
           </div>
           {!preview ? <div className="st-actions st-open">
             <button className="st-button primary" type="button" disabled={busy || !picked.length || (!text.trim() && !source.trim())} onClick={() => void start()}>

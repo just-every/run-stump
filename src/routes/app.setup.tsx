@@ -77,7 +77,7 @@ function SetupPage() {
   return <HydrationUnit>
     <div className="st-setup">
       <a className="st-setup-brand" href="/app"><img src="/brand/stump-mark.svg" alt="" width="40" height="40" />Stump</a>
-      <img className="st-setup-plate" src="/art/stump-small.webp" alt="" width="240" height="154" />
+      <img className="st-setup-plate" src="/art/stump-small.webp" alt="" width="180" height="116" />
       <h1>Set up Stump</h1>
       <section className="st-setup-card" aria-label="Setup steps">
         <ol className="st-setup-steps">
