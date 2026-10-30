@@ -65,7 +65,7 @@ function cleanTerm(raw: string): string {
 }
 
 function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\\/-]/g, '\\$&')
+  return s.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
 }
 
 function compileOne(text: string): CompiledTerm {

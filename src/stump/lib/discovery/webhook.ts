@@ -10,7 +10,7 @@
  * (https://developer.mozilla.org/docs/Web/API/SubtleCrypto/sign).
  */
 import { SourceError } from './errors.ts'
-import { readText, send, rateLimitRetryAt, type HttpOptions } from './http.ts'
+import { failureDetail, readText, send, rateLimitRetryAt, type HttpOptions } from './http.ts'
 import type { AlertMessage } from './alert-types.ts'
 import { parseHttpUrl } from './url.ts'
 import type { DeliveryResult } from './types.ts'
@@ -180,8 +180,8 @@ export async function deliverWebhook(args: HttpOptions & { url: string; secret: 
   try {
     response = await send('alert', args, req.url, req.init)
   } catch (e) {
-    const detail = e instanceof SourceError ? e.message : 'the request failed'
-    return { ...base, outcome: 'unknown', detail: `The receiver may or may not have received the event: ${detail}` }
+    // Built from the error kind only: a receiver's address may carry a token in its path.
+    return { ...base, outcome: 'unknown', detail: `The receiver may or may not have received the event: ${failureDetail(e)}` }
   }
   let note = ''
   try {

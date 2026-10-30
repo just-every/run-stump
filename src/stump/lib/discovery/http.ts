@@ -19,10 +19,15 @@ export interface HttpOptions {
 export const DEFAULT_TIMEOUT_MS = 15_000
 const DEFAULT_RATE_LIMIT_WAIT_MS = 60_000
 
-/** Origin and path only, so stored errors never carry query strings or credentials. */
-export function redactUrl(url: string): string {
+/**
+ * Origin and path only, so stored errors never carry query strings or credentials. An alert address
+ * (Slack incoming webhook, Slack Workflow trigger, a receiver's webhook) carries its credential in the
+ * path, so for `alert` only the origin is kept.
+ */
+export function redactUrl(url: string, source?: SourceKind | 'alert'): string {
   try {
     const u = new URL(url)
+    if (source === 'alert') return u.origin
     const path = u.pathname.length > 60 ? `${u.pathname.slice(0, 57)}...` : u.pathname
     return `${u.protocol}//${u.host}${path}`
   } catch {
@@ -43,7 +48,7 @@ export async function send(
   const timedOut = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
       controller.abort()
-      reject(new SourceError('timeout', source, `Request to ${redactUrl(url)} timed out after ${timeout} ms`))
+      reject(new SourceError('timeout', source, `Request to ${redactUrl(url, source)} timed out after ${timeout} ms`))
     }, timeout)
   })
   try {
@@ -52,11 +57,22 @@ export async function send(
     return await Promise.race([pending, timedOut])
   } catch (e) {
     if (e instanceof SourceError) throw e
-    const reason = e instanceof Error ? e.message : String(e)
-    throw new SourceError('network', source, `Request to ${redactUrl(url)} failed: ${reason}`)
+    const where = redactUrl(url, source)
+    // A thrown message may echo the full address. Alert addresses carry credentials, so their
+    // message is never kept; for sources the address is replaced by its redacted form.
+    if (source === 'alert') throw new SourceError('network', source, `Request to ${where} failed`)
+    const reason = (e instanceof Error ? e.message : String(e)).split(url).join(where)
+    throw new SourceError('network', source, `Request to ${where} failed: ${reason}`)
   } finally {
     if (timer) clearTimeout(timer)
   }
+}
+
+/** A stored delivery detail for a failed send: the error kind only, never the thrown message or the address. */
+export function failureDetail(e: unknown): string {
+  if (e instanceof SourceError && e.kind === 'timeout') return 'the request timed out'
+  if (e instanceof SourceError && e.kind === 'network') return 'the connection failed'
+  return 'the request failed'
 }
 
 /** Milliseconds since epoch when the response says to wait until, or null when it says nothing. */
@@ -85,7 +101,7 @@ export function rateLimitRetryAt(headers: Headers, nowMs: number): number | null
 /** Throws for any non-2xx response, with rate limits and sign-in requirements told apart. */
 export function assertOk(source: SourceKind | 'alert', response: Response, url: string, nowMs: number): void {
   if (response.ok) return
-  const where = redactUrl(url)
+  const where = redactUrl(url, source)
   if (response.status === 429) {
     const retryAt = rateLimitRetryAt(response.headers, nowMs) ?? nowMs + DEFAULT_RATE_LIMIT_WAIT_MS
     throw new SourceError('rate_limited', source, `Rate limited by ${where}`, { status: 429, retry_at: retryAt })
@@ -125,7 +141,7 @@ export async function readText(
 ): Promise<string> {
   const declared = Number(response.headers.get('content-length'))
   if (Number.isFinite(declared) && declared > maxBytes) {
-    throw new SourceError('bad_response', source, `${redactUrl(url)} is larger than ${maxBytes} bytes`)
+    throw new SourceError('bad_response', source, `${redactUrl(url, source)} is larger than ${maxBytes} bytes`)
   }
   const chunks: Uint8Array[] = []
   let total = 0
@@ -137,7 +153,7 @@ export async function readText(
     total += value.byteLength
     if (total > maxBytes) {
       await reader.cancel()
-      throw new SourceError('bad_response', source, `${redactUrl(url)} is larger than ${maxBytes} bytes`)
+      throw new SourceError('bad_response', source, `${redactUrl(url, source)} is larger than ${maxBytes} bytes`)
     }
     chunks.push(value)
   }
@@ -166,7 +182,7 @@ export async function readJson(
   try {
     return JSON.parse(text)
   } catch {
-    throw new SourceError('bad_response', source, `${redactUrl(url)} did not return JSON`)
+    throw new SourceError('bad_response', source, `${redactUrl(url, source)} did not return JSON`)
   }
 }
 

@@ -11,7 +11,7 @@
  * the excerpt goes in a plain_text element, which Slack does not parse.
  */
 import { SourceError } from './errors.ts'
-import { rateLimitRetryAt, readText, send, type HttpOptions } from './http.ts'
+import { failureDetail, rateLimitRetryAt, readText, send, type HttpOptions } from './http.ts'
 import type { AlertFinding, AlertMessage } from './alert-types.ts'
 import { truncateGraphemes } from './text.ts'
 import { parseHttpUrl } from './url.ts'
@@ -129,8 +129,8 @@ export async function postSlackAlert(options: SlackPostOptions): Promise<Deliver
       body: JSON.stringify(buildSlackPayload(options.message)),
     })
   } catch (e) {
-    const detail = e instanceof SourceError ? e.message.replace(url, 'the Slack webhook') : 'the request failed'
-    return { outcome: 'unknown', detail: `Slack may or may not have received the alert: ${detail}` }
+    // Built from the error kind only: a thrown message can carry the webhook address, which is the credential.
+    return { outcome: 'unknown', detail: `Slack may or may not have received the alert: ${failureDetail(e)}` }
   }
   let body = ''
   try {

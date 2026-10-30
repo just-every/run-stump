@@ -119,8 +119,10 @@ export function screenFindings(findings: Finding[], spec: ScreenSpec): ScreenRes
       continue
     }
     const m = matchTerms(terms, { title: f.title, text: f.text, links: f.links.join('\n'), transcript: undefined })
-    // A transcript match was decided at fetch time (the transcript text is not kept on the finding).
-    if (!m.matches && !f.transcript_url) {
+    // A none-term in the title, text or links always drops the finding. A transcript finding is exempt
+    // only from missing positive terms: those were matched in the transcript at fetch time, and the
+    // transcript text is not kept on the finding.
+    if (m.excluded_by.length > 0 || (!m.matches && !f.transcript_url)) {
       dropped.push({ finding: f, reason: 'terms', detail: m.excluded_by[0] ?? m.missing_all[0] })
       continue
     }
