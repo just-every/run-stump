@@ -3536,7 +3536,7 @@
       "executable": false
     },
     "src/stump/agent-door/overview.ts": {
-      "sha256": "6abceef76c796a4c56c884a2238b60b74695e97bba028ad08248e96404d3598f",
+      "sha256": "7343839e1acf7902c042be3f980170e3a1d01eefa0406b5dba2d5baf69434917",
       "executable": false
     },
     "src/stump/agent-door/policy-answers.ts": {
@@ -3544,11 +3544,11 @@
       "executable": false
     },
     "src/stump/agent-door/ui/AgentsSettings.tsx": {
-      "sha256": "93730a875a1aa1095ba5f9c02f7e8bedd36cf119035165bf5f62fdec52ba62a9",
+      "sha256": "6ab062a05b82b50fec347a7acc7f247d4c341d220a53e7a5e6221aa36e8a20b3",
       "executable": false
     },
     "src/stump/agent-door/ui/policy.ts": {
-      "sha256": "063fd49e65836934a61ff1d1e1583ae17fbd9595c985390e230be785b284e13d",
+      "sha256": "cd248cfa2fc467da07722fff2c82a31095df98dd418a9361cd98381f4b285629",
       "executable": false
     },
     "src/stump/data/erase.ts": {

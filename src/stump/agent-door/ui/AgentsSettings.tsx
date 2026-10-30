@@ -8,7 +8,7 @@ import { Icon } from '../../ui/icons.tsx'
 import { Outcome, PanelTitle, Saved, useLoaded, useRun, useSaved, when } from '../../ui/kit.tsx'
 import {
   ANSWERS, actionName, agentOverview, agentState, answerOf, approvals, classHelp, className, clearAnswers, decisionName, markReview, narrower, outcomeWords,
-  policyClasses, principal, readAnswers, recentActivity, reviews, saveAnswer, savePolicy, setPaused, withAnswer, type Disposition, type PolicyDocument,
+  policyClasses, principal, readAnswers, reviews, saveAnswer, savePolicy, setPaused, withAnswer, type Disposition, type PolicyDocument,
 } from './policy.ts'
 
 export function AgentsSettings() {
@@ -16,14 +16,13 @@ export function AgentsSettings() {
     const who = await me()
     // Base's state, policy and audit doors answer only the people who answer for agents; everyone else sees their own agents and approvals.
     const role = who.person.role, owner = role === 'owner', auditor = owner || role === 'admin' || role === 'editor'
-    const [creds, state, overview, answers, waiting, toReview, activity] = await Promise.all([
+    const [creds, state, overview, answers, waiting, toReview] = await Promise.all([
       credentials(), auditor ? agentState() : Promise.resolve(null), auditor ? agentOverview() : Promise.resolve(null),
       owner ? readAnswers().then(answer => answer.answers) : Promise.resolve({} as Record<string, Disposition>),
       approvals().then(answer => answer.approvals.filter(item => item.state === 'pending')),
       reviews().then(answer => answer.reviews.filter(item => item.state === 'open' || item.state === 'flagged')),
-      auditor ? recentActivity() : Promise.resolve(null),
     ])
-    return { owner, creds, state, overview, answers, waiting, toReview, activity }
+    return { owner, creds, state, overview, answers, waiting, toReview, activity: overview?.recent ?? null }
   })
   return <HydrationUnit>
     <section className="st-page st-agents" aria-labelledby="agents-title">
@@ -144,7 +143,7 @@ function Policy({ owner, state, document, stored, refresh }: { owner: boolean; s
       </li>
     })}</ul>
     {narrower(document) ? <p className="st-meta">The policy also has {narrower(document)} narrower {narrower(document) === 1 ? 'rule' : 'rules'} for particular agents or amounts.</p> : null}
-    {owner && !business ? <p className="st-meta st-agents-foot">Ask first goes to the owner, who has a day to answer. Agents use no paid AI.</p> : null}
+    {owner && !business ? <p className="st-meta st-agents-foot">Ask first goes to the owner, who has a day to answer. Drafting through the company's AI provider counts as Sending outside the company.</p> : null}
     {failure ? <p className="st-error" role="alert">{failure}</p> : null}
     {owner && !business ? <PolicyDocumentEditor document={document} stored={Object.keys(stored).length > 0} refresh={refresh} /> : null}
   </section>
