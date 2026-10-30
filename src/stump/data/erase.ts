@@ -10,13 +10,18 @@ import { xPrices } from '../accounts/apps.ts'
 import { readAccount } from '../accounts/store.ts'
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args } from '../actions/types.ts'
-import { recordDeletion } from '../ledger/record.ts'
 import { publishers } from '../publish/publishers.ts'
 import { recheckItems } from './recheck.ts'
+import { erasureRemoval } from './removal.ts'
 import type { PublishContext, Publisher } from '../publish/types.ts'
 
 export type SubjectKind = 'journalist' | 'engager'
-export interface Subject { kind: SubjectKind; contact_id: string | null; handles: string[] }
+/** Where a handle names a person: the networks Stump publishes to and the sources findings come from. */
+export const HANDLE_KEYS = ['x', 'bluesky', 'mastodon', 'linkedin', 'hn', 'rss'] as const
+export type HandleKey = typeof HANDLE_KEYS[number]
+/** An engager's handles, each on its own network or source: erasing X's @alice never touches a different HN alice. */
+export type Handles = Partial<Record<HandleKey, string[]>>
+export interface Subject { kind: SubjectKind; contact_id: string | null; handles: Handles }
 
 /** One of the company's ledger entries naming the person. */
 interface Named { id: string; network: string | null; account_id: string | null; network_id: string | null; route: string; person_id: string | null; legal_hold: string | null }
@@ -33,31 +38,73 @@ export interface DeletionRequest {
 type Remove = (entry: { network: string; account_id: string; network_id: string }, ctx: PublishContext) => Promise<{ outcome: 'deleted' | 'not_found' | 'failed'; error?: string }>
 
 /**
- * Other records holding an engager's data, each found and removed by handle:
- * one line per source. The inbox lane's items join here.
+ * Other records holding an engager's data, each found and removed by the
+ * person's handle on its own network or source: one line per source. The inbox
+ * lane's items join here.
  */
 export interface EngagerData {
   name: string
-  count(db: D1Database, handles: string[]): Promise<number>
-  remove(db: D1Database, handles: string[]): D1PreparedStatement[]
+  count(db: D1Database, handles: Handles): Promise<number>
+  remove(db: D1Database, handles: Handles): D1PreparedStatement[]
 }
 const ENGAGER_DATA: readonly EngagerData[] = []
 
-/** A handle as it is written in posts and findings, without its leading '@', compared without case. */
+/** A handle as it is written in posts and findings, without its leading '@', compared without case (Mastodon's keeps its '@instance'). */
 const folded = (handle: string) => handle.trim().replace(/^@/, '').toLowerCase()
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const isKey = (key: string): key is HandleKey => (HANDLE_KEYS as readonly string[]).includes(key)
 
 export function subjectOf(args: Args): Subject {
   const subject = args.subject as { kind?: unknown; contact_id?: unknown; handles?: unknown }
   if (subject.kind === 'journalist') {
     if (subject.handles !== undefined) refuse('invalid_arguments', { field: 'subject.handles', reason: 'A journalist is erased by their press contact.' })
     if (typeof subject.contact_id !== 'string') refuse('invalid_arguments', { field: 'subject.contact_id', reason: 'Name the journalist\'s press contact.' })
-    return { kind: 'journalist', contact_id: subject.contact_id, handles: [] }
+    return { kind: 'journalist', contact_id: subject.contact_id, handles: {} }
   }
   if (subject.contact_id !== undefined) refuse('invalid_arguments', { field: 'subject.contact_id', reason: 'An engager is erased by their handles.' })
-  const handles = [...new Set((subject.handles as string[] | undefined ?? []).map(folded).filter(Boolean))]
-  if (!handles.length) refuse('invalid_arguments', { field: 'subject.handles', reason: 'Name at least one of the engager\'s handles.' })
+  const given = subject.handles
+  if (!given || typeof given !== 'object' || Array.isArray(given)) refuse('invalid_arguments', { field: 'subject.handles', reason: 'Name each of the engager\'s handles by its network or source, for example {"x": "alice", "hn": "alice"}.' })
+  const handles: Handles = {}
+  for (const [key, value] of Object.entries(given as Record<string, unknown>)) {
+    if (!isKey(key)) refuse('invalid_arguments', { field: `subject.handles.${key}`, reason: `Handles are named by network or source: ${HANDLE_KEYS.join(', ')}.` })
+    const list = [...new Set((Array.isArray(value) ? value : [value]).map(handle => folded(String(handle))).filter(Boolean))]
+    if (list.length) handles[key] = list
+  }
+  if (!Object.keys(handles).length) refuse('invalid_arguments', { field: 'subject.handles', reason: 'Name at least one of the engager\'s handles.' })
   return { kind: 'engager', contact_id: null, handles }
+}
+
+/** The handles on one network or source. */
+const on = (handles: Handles, key: string): string[] => isKey(key) ? handles[key] ?? [] : []
+
+/** A Mastodon handle as user and, when given, the instance it lives on. */
+const mastodonParts = (handle: string) => { const at = handle.indexOf('@'); return at < 0 ? { user: handle, host: null } : { user: handle.slice(0, at), host: handle.slice(at + 1) } }
+const hostOf = (url: string | null) => { try { return url ? new URL(url).host.toLowerCase() : null } catch { return null } }
+
+/**
+ * Whether a post on `network` names one of the person's handles on that
+ * network: a mention ('@handle', not inside a longer handle), or a reply to a
+ * post at an address that belongs to the handle. A Mastodon handle
+ * 'user@instance' matches '@user@instance', and '@user' alone in a post on
+ * that same instance.
+ */
+function namesOnNetwork(network: string, handles: string[], post: { text: string | null; url: string | null; reply_url: string | null }): boolean {
+  const end = '(?![\\w-]|\\.\\w|@)', start = '(^|[^\\w@.])@'
+  const text = post.text ?? '', reply = post.reply_url ?? ''
+  for (const handle of handles) {
+    if (network === 'mastodon') {
+      const { user, host } = mastodonParts(handle)
+      const full = host ? new RegExp(`${start}${escape(user)}@${escape(host)}(?![\\w-]|\\.\\w)`, 'i') : null
+      const local = !host || hostOf(post.url) === host ? new RegExp(`${start}${escape(user)}${end}`, 'i') : null
+      if ((full && full.test(text)) || (local && local.test(text))) return true
+      if (new RegExp(`^https?://${host ? escape(host) : '[^/]+'}/@${escape(user)}(?:/|$)`, 'i').test(reply)) return true
+      continue
+    }
+    if (new RegExp(`${start}${escape(handle)}${end}`, 'i').test(text)) return true
+    const address = network === 'x' ? `(?:www\\.)?(?:x|twitter)\\.com/${escape(handle)}` : network === 'bluesky' ? `bsky\\.app/profile/${escape(handle)}` : null
+    if (address && new RegExp(`^https?://${address}(?:/|$)`, 'i').test(reply)) return true
+  }
+  return false
 }
 
 /** Every record the erasure touches, found before anything changes. */
@@ -74,19 +121,15 @@ export interface Scope {
   entries: Named[]
 }
 
-/** A mention of a handle in a post: '@handle', or '@handle@instance' on Mastodon, not inside a longer handle. */
-const mentionPattern = (handles: string[]) => new RegExp(`(^|[^\\w@.])@(${handles.map(escape).join('|')})(?![\\w-]|\\.\\w)`, 'i')
-/** A post's address that belongs to the handle: x.com/<handle>/..., bsky.app/profile/<handle>/..., <instance>/@<handle>/... */
-const addressPattern = (handles: string[]) => new RegExp(`^https?://[^/]+/(?:profile/|@)?(${handles.map(escape).join('|')})(?:/|$)`, 'i')
 const namePattern = (name: string) => new RegExp(`(^|[^\\p{L}\\p{N}])${escape(name)}(?![\\p{L}\\p{N}])`, 'iu')
 
 export async function scopeOf(ctx: ActionContext, subject: Subject): Promise<Scope> {
   const db = ctx.db
   const scope: Scope = { subject, contact: null, pitches: [], venues: [], findings: [], deliveries: 0, offers: [], other: {}, entries: [] }
   // The company's posts on the ledger that could name the person: what went out, published or handed off, and is not yet gone.
-  const entries = (await db.prepare(`SELECT l.id,l.network,l.account_id,l.network_id,l.route,l.person_id,l.legal_hold,l.text,i.reply_to,i.recipient FROM stump_ledger l LEFT JOIN stump_items i ON i.id=l.item_id
+  const entries = (await db.prepare(`SELECT l.id,l.network,l.account_id,l.network_id,l.route,l.person_id,l.legal_hold,l.text,l.url,i.reply_to,i.recipient FROM stump_ledger l LEFT JOIN stump_items i ON i.id=l.item_id
     WHERE l.route IN ('published','handed_off') AND l.state IN ('posted','uncertain') ORDER BY l.posted_at,l.id`)
-    .all<Named & { text: string | null; reply_to: string | null; recipient: string | null }>()).results
+    .all<Named & { text: string | null; url: string | null; reply_to: string | null; recipient: string | null }>()).results
   let names: (entry: typeof entries[number]) => boolean
   if (subject.kind === 'journalist') {
     const contact = await db.prepare('SELECT id,name FROM stump_press_contacts WHERE id=?').bind(subject.contact_id).first<{ id: string; name: string }>()
@@ -97,16 +140,25 @@ export async function scopeOf(ctx: ActionContext, subject: Subject): Promise<Sco
     const named = namePattern(contact.name)
     names = entry => (entry.text !== null && named.test(entry.text)) || (entry.recipient !== null && (JSON.parse(entry.recipient) as { contact_id?: string }).contact_id === contact.id)
   } else {
-    const mention = mentionPattern(subject.handles), address = addressPattern(subject.handles)
-    const placeholders = subject.handles.map(() => '?').join(',')
-    scope.findings = (await db.prepare(`SELECT id FROM stump_findings WHERE lower(ltrim(trim(author),'@')) IN (${placeholders}) ORDER BY id`).bind(...subject.handles).all<{ id: string }>()).results.map(row => row.id)
+    const handles = subject.handles
+    // Each source's findings by their author on that source, each network's offers by the handle on that network.
+    for (const [source, list] of Object.entries(handles)) {
+      if (source === 'x' || source === 'linkedin') continue
+      const marks = list.map(() => '?').join(',')
+      scope.findings.push(...(await db.prepare(`SELECT id FROM stump_findings WHERE source=? AND lower(ltrim(trim(author),'@')) IN (${marks}) ORDER BY id`).bind(source, ...list).all<{ id: string }>()).results.map(row => row.id))
+    }
     if (scope.findings.length) {
       const ids = scope.findings.map(() => '?').join(',')
       scope.deliveries = (await db.prepare(`SELECT COUNT(*) AS n FROM stump_watch_deliveries WHERE finding_id IN (${ids})`).bind(...scope.findings).first<{ n: number }>())?.n ?? 0
     }
-    scope.offers = (await db.prepare(`SELECT id FROM stump_stack_offers WHERE kind='engager' AND lower(ltrim(trim(handle),'@')) IN (${placeholders}) ORDER BY id`).bind(...subject.handles).all<{ id: string }>()).results.map(row => row.id)
-    for (const source of ENGAGER_DATA) scope.other[source.name] = await source.count(db, subject.handles)
-    names = entry => (entry.text !== null && mention.test(entry.text)) || (entry.reply_to !== null && address.test(String((JSON.parse(entry.reply_to) as { url?: string }).url ?? '')))
+    for (const [network, list] of Object.entries(handles)) {
+      if (network === 'hn' || network === 'rss') continue
+      const marks = list.map(() => '?').join(',')
+      scope.offers.push(...(await db.prepare(`SELECT id FROM stump_stack_offers WHERE kind='engager' AND network=? AND lower(ltrim(trim(handle),'@')) IN (${marks}) ORDER BY id`).bind(network, ...list).all<{ id: string }>()).results.map(row => row.id))
+    }
+    for (const source of ENGAGER_DATA) scope.other[source.name] = await source.count(db, handles)
+    names = entry => entry.network !== null && namesOnNetwork(entry.network, on(handles, entry.network),
+      { text: entry.text, url: entry.url, reply_url: entry.reply_to === null ? null : String((JSON.parse(entry.reply_to) as { url?: string }).url ?? '') })
   }
   scope.entries = entries.filter(names).map(({ id, network, account_id, network_id, route, person_id, legal_hold }) => ({ id, network, account_id, network_id, route, person_id, legal_hold }))
   return scope
@@ -133,12 +185,16 @@ async function requestDeletion(ctx: ActionContext, entry: Named): Promise<Deleti
 }
 
 export async function erase(ctx: ActionContext, scope: Scope) {
-  const db = ctx.db, id = crypto.randomUUID(), actor = { person_id: ctx.person.id, agent_id: ctx.agent?.id ?? null }
+  const db = ctx.db, id = crypto.randomUUID()
   const deletion_requests: DeletionRequest[] = []
   for (const entry of scope.entries) {
     const request = await requestDeletion(ctx, entry)
     deletion_requests.push(request)
-    if (request.outcome === 'deleted' || request.outcome === 'not_found') await db.batch(await recordDeletion(db, entry.id, request.outcome, actor, 'Erasure of a person named in it', ctx.now()))
+    // A post gone from its network reads removed on the ledger, with the network's answer; the entry keeps the post.
+    if (request.outcome === 'deleted' || request.outcome === 'not_found') {
+      await erasureRemoval(db, entry.id, request.outcome, { erasure_id: id, person_id: ctx.person.id, agent_id: ctx.agent?.id ?? null, now: ctx.now() }).run()
+      ctx.emit('ledger.removed', `stump://ledger/${entry.id}`, { reason: 'erasure' })
+    }
   }
 
   const now = ctx.now(), statements: D1PreparedStatement[] = []

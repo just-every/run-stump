@@ -392,11 +392,11 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "4e771575e384cfbd596ade706a4192cea0fb27e977a915845818d76c7c320363",
+      "sha256": "9e4dc27dff3b0dc760e6f3a2148b781bc1fb1c7d7d2408c44416ea0cacd4c9bf",
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "c67351bb6f06687a5123bb18916f67867a56bcebf73168ef1f9c378a0106b139",
+      "sha256": "f52fdd3a7ae0b9dd082eb0ae56347f68e07219405a3305746f46e3364e2bb555",
       "executable": false
     },
     "AGENTS.md": {
@@ -420,7 +420,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "db0e65cb2f8781c69733e1edd82fe1c1b5a402e9da8c2c3ec91bd7068af7d65f",
+      "sha256": "cad6dfd9248741829cdd3f830783c0286b37f2dd6051cd7b8bb23fe1ce8bf27e",
       "executable": false
     },
     "deploy-demo.json": {
@@ -464,7 +464,7 @@
       "executable": false
     },
     "docs/data.md": {
-      "sha256": "80978db7ebe29b0df8a2f8386dad471006685e45135f8aa46e3f20e4f32038e5",
+      "sha256": "78020c90aad3a7b2e09f3f7e3428e12c9179fa38bdd785d54b525c5665b58a46",
       "executable": false
     },
     "docs/deploy.md": {
@@ -932,7 +932,7 @@
       "executable": false
     },
     "scripts/stump/archive-policy.mjs": {
-      "sha256": "cfffacb0a3165a64d9923179881b49c537460872f4ccc7627915ea0a4d22e214",
+      "sha256": "399a7a83f5cd76f7632937b688fe6576d1bb69ffff4c4341f4dd1aeb5119b085",
       "executable": false
     },
     "scripts/stump/local-only.d.mts": {
@@ -3488,7 +3488,7 @@
       "executable": false
     },
     "src/stump/data/erase.ts": {
-      "sha256": "869d036fbf8a5deeb7d3c041cd8b90bb99903ccd6fd2b6005395f34807305d20",
+      "sha256": "701e1d9a60624d79d22cc93245d08237a3904876b71b51574834aaccb174afc0",
       "executable": false
     },
     "src/stump/data/recheck.ts": {
@@ -3548,11 +3548,11 @@
       "executable": false
     },
     "src/stump/imports/buffer-targets.ts": {
-      "sha256": "d6787a27df9b31febc0949df62f7a19dfbe25002ec4f551e88fec8af0c1e53c2",
+      "sha256": "a46b227001ca351c672309277a59d4c85c7f04c4821e16fbf728554602252ca8",
       "executable": false
     },
     "src/stump/imports/buffer.ts": {
-      "sha256": "d2883c8922af8ea2e407b4e2ce285d89a7a90c987bd1528ff5ebd838fbfd7965",
+      "sha256": "f586a4863ef6b92b4ba9c652902ca353113bbf3f8bd9a3d59570f062cf452abb",
       "executable": false
     },
     "src/stump/imports/door.ts": {
@@ -3572,7 +3572,7 @@
       "executable": false
     },
     "src/stump/ledger/entry.ts": {
-      "sha256": "a4fd117ceb57e4921a48f4c570a35c82b79b0edef38412b48c1b80d90ceb72bf",
+      "sha256": "860552ec598ab3d9047da067bc7083c0b79e4fafd0dda21a8b82c381b751ca00",
       "executable": false
     },
     "src/stump/ledger/query.ts": {
@@ -3580,7 +3580,7 @@
       "executable": false
     },
     "src/stump/ledger/record.ts": {
-      "sha256": "c4dccc862f9b9b4e2dd1fe4d739da79e1ba954000174df9931dabe8fef62b737",
+      "sha256": "c3a08cccca09853525e0c681bd022aa9b93ddb22d0536dfa8afa813e824f9b09",
       "executable": false
     },
     "src/stump/ledger/screen-styles.ts": {
@@ -4120,7 +4120,7 @@
       "executable": false
     },
     "src/stump/README.md": {
-      "sha256": "b74b041d9c75db75cdacca6ddc1f5ab1da753ae6169c89ac523183c958948bd0",
+      "sha256": "1d4193281460d83f0e313fd76eabcad4786b2cc37ec0827d17dbad78aafdba6f",
       "executable": false
     },
     "src/stump/stack/connections.ts": {
@@ -4168,7 +4168,7 @@
       "executable": false
     },
     "src/stump/tools/data.ts": {
-      "sha256": "64563bd6bf6c55191103be87c40ee534f9e4ea9c88ad264e618731d981dc6b52",
+      "sha256": "3f5a7104c5e60337d69a59c36611409d7e4c741364146b49a8d246e86f55977f",
       "executable": false
     },
     "src/stump/tools/drafts.ts": {
@@ -4420,7 +4420,7 @@
       "executable": false
     },
     "tests/stump/data.test.mjs": {
-      "sha256": "a6cb4819c7bf9a578a84162da4ce57f4d5d6fb94ba5131900004c757474c4a41",
+      "sha256": "29acfaa5845aa41bfa6bc32ed1956c0fb9427c255c6b96238fbb652c77bc952d",
       "executable": false
     },
     "tests/stump/drafting.test.mjs": {

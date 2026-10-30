@@ -43,18 +43,14 @@ async function known(db: D1Database) {
 /** The handle as each network names it: an atproto handle or X username has no '@' (LinkedIn keeps its own form). */
 const handleOf = (network: string, handle: string) => network === 'linkedin' ? handle.trim() : handle.trim().replace(/^@/, '')
 
-/** Buffer's day-and-time slots for one channel, regrouped as Stump keeps them: days that share their times together. */
+/**
+ * Buffer's day-and-time slots for one channel, one queue slot each, in week
+ * order: the account's slot list carries every posting slot Buffer had.
+ */
 function slotsOf(rows: ImportRow[]): Slot[] {
-  const byDay = new Map<string, string[]>()
-  for (const row of rows) { const day = String(row.payload.day), times = byDay.get(day) ?? []; times.push(String(row.payload.time)); byDay.set(day, times) }
-  const groups = new Map<string, Weekday[]>()
-  for (const day of DAYS) {
-    const times = byDay.get(day)
-    if (!times) continue
-    const key = [...new Set(times)].sort().join(','), days = groups.get(key) ?? []
-    days.push(day); groups.set(key, days)
-  }
-  return [...groups].map(([times, days]) => ({ days, times: times.split(',') }))
+  const byDay = new Map<string, Set<string>>()
+  for (const row of rows) { const day = String(row.payload.day), times = byDay.get(day) ?? new Set<string>(); times.add(String(row.payload.time)); byDay.set(day, times) }
+  return DAYS.flatMap(day => [...byDay.get(day) ?? []].sort().map(time => ({ days: [day], times: [time] })))
 }
 
 /** The reader's result with every channel on a network Stump does not publish to refused, with its posts and slots. */

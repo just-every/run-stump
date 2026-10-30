@@ -3,7 +3,8 @@
 // key. Credentials, sealed secrets and consents in progress stay in the
 // installation. The archive holds each record as a restore leaves it, so
 // exporting the restored installation gives the same records:
-//   - connected accounts wait for their owners to reconnect (no credentials);
+//   - connected accounts wait for their owners to reconnect (no credentials):
+//     state expired, the accounts module's state for an account that needs reconnecting;
 //   - scheduled items are paused until a person schedules them again;
 //   - Orbit and Vane connections and alert destinations wait to be entered again;
 //   - agent credentials are revoked, and a person issues new ones.
@@ -14,7 +15,7 @@ const RESTORED = 'Restored from an archive. Reconnect its account, then schedule
 const rows = {
   stump_accounts(row) {
     if (row.state === 'disconnected') return row
-    return { ...row, state: 'awaiting_reconnect', reconnect_url: reconnectPath(row.id), token_expires_at: null }
+    return { ...row, state: 'expired', reconnect_url: reconnectPath(row.id), token_expires_at: null }
   },
   stump_items(row) {
     if (row.state !== 'scheduled') return row

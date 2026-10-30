@@ -1,15 +1,20 @@
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
-import { erase, removedCount, scopeOf, subjectOf, type Scope } from '../data/erase.ts'
+import { erase, HANDLE_KEYS, removedCount, scopeOf, subjectOf, type Scope } from '../data/erase.ts'
 import { ADMINS } from '../people/roles.ts'
 
 // stump.data.erase: erasure of a person outside the company (STUMP-DATA-002).
 // The full export and restore are the rer export and rer import commands.
+const handle = { anyOf: [{ type: 'string', minLength: 1, maxLength: 300 }, { type: 'array', minItems: 1, maxItems: 10, items: { type: 'string', minLength: 1, maxLength: 300 } }] }
 const subject = {
   type: 'object', additionalProperties: false, required: ['kind'],
   properties: {
     kind: { enum: ['journalist', 'engager'] },
     contact_id: { type: 'string', minLength: 1, maxLength: 64 },
-    handles: { type: 'array', minItems: 1, maxItems: 20, items: { type: 'string', minLength: 1, maxLength: 300 } },
+    // The engager's handle on each network or source, so each match stays on its own network: {"x": "alice", "hn": "alice"}.
+    handles: {
+      type: 'object', additionalProperties: false, minProperties: 1,
+      properties: Object.fromEntries(HANDLE_KEYS.map(key => [key, handle])),
+    },
   },
 }
 

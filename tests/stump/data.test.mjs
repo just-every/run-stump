@@ -65,8 +65,8 @@ test('switching from Buffer: a dry run, sent posts to the ledger, schedules to s
   await until('apply', first.body, ['completed'])
 
   const [account] = (await act('stump.accounts.connect', { action: 'list', include_unconnected: true })).items
-  assert.deepEqual([account.network, account.handle, account.owner.kind, account.state, account.connected_at], ['x', 'synthwellhq', 'company', 'awaiting_reconnect', null])
-  assert.deepEqual((await act('stump.calendar.plan', { action: 'slots', account_id: account.id })).slots, [{ days: ['mon', 'wed'], times: ['09:00'] }])
+  assert.deepEqual([account.network, account.handle, account.owner.kind, account.state, account.connected_at], ['x', 'synthwellhq', 'company', 'expired', null])
+  assert.deepEqual((await act('stump.calendar.plan', { action: 'slots', account_id: account.id })).slots, [{ days: ['mon'], times: ['09:00'] }, { days: ['wed'], times: ['09:00'] }])
   const entries = (await act('stump.ledger.search', { action: 'search' })).items
   assert.equal(entries.length, 2)
   const thanked = entries.find(entry => entry.network_id === '185000000000001')
@@ -101,6 +101,8 @@ test('erasing a person: an engager leaves findings and offers, a journalist thei
   assert.deepEqual(await findings(), ['synthetic-alice', 'synthetic-bob'])
   // The engager offer the inbox writes (migration 0500).
   await app.db.prepare(`INSERT INTO stump_stack_offers(id,seed,kind,network,handle,post_url,occurred_at,created_at) VALUES('o1','orbit','engager','x','synthetic-alice','https://x.com/synthetic-alice/status/9',1,1)`).run()
+  // A different person with the same name on Bluesky.
+  await app.db.prepare(`INSERT INTO stump_stack_offers(id,seed,kind,network,handle,post_url,occurred_at,created_at) VALUES('o2','orbit','engager','bluesky','synthetic-alice','https://bsky.app/profile/synthetic-alice/post/9',1,1)`).run()
   await plan(JSON.stringify({ format: 'buffer-api-v1', profiles: [{ id: 'p-m', service: 'mastodon', service_username: 'synthwell', timezone: 'UTC' }],
     updates: { 'p-m': { sent: [{ id: 'ms1', status: 'sent', text: '@synthetic-alice asked, we answered.', sent_at: at(22, 9), service_update_id: '77', service_link: 'https://mastodon.example/@synthwell/77' },
       { id: 'ms2', status: 'sent', text: 'cc @synthetic-alice@mastodon.example on exports.', sent_at: at(23, 9), service_update_id: '78', service_link: 'https://mastodon.example/@synthwell/78' }] } } }))
@@ -110,12 +112,12 @@ test('erasing a person: an engager leaves findings and offers, a journalist thei
   const held = naming.find(entry => entry.text.startsWith('@synthetic-alice asked'))
   await act('stump.ledger.correct', { action: 'legal_hold', entry_id: held.id, reason: 'Dispute on file' })
 
-  const erased = await act('stump.data.erase', { action: 'erase', subject: { kind: 'engager', handles: ['@synthetic-alice'] } })
+  const erased = await act('stump.data.erase', { action: 'erase', subject: { kind: 'engager', handles: { hn: 'synthetic-alice', x: '@synthetic-alice', mastodon: 'synthetic-alice@mastodon.example' } } })
   assert.deepEqual(erased.deletion_requests.map(request => request.ledger_id).sort(), naming.map(entry => entry.id).sort())
   assert.ok(erased.deletion_requests.every(request => request.network && request.outcome))
   assert.equal(erased.deletion_requests.find(request => request.ledger_id === held.id).outcome, 'kept')
   assert.deepEqual(await findings(), ['synthetic-bob'])
-  assert.deepEqual((await act('stump.stack.send', { action: 'offers' })).items, [])
+  assert.deepEqual((await act('stump.stack.send', { action: 'offers' })).items.map(offer => offer.id), ['o2'], 'each handle is matched on its own network only')
   const kept = (await act('stump.ledger.search', { action: 'get', entry_id: held.id })).entry
   assert.deepEqual([kept.text, kept.legal_hold.reason], [held.text, 'Dispute on file'])
 

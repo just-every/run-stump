@@ -12,7 +12,7 @@
 import { canonicalJson, sha256 } from '../../modules/import-kit/src/provenance/identity.ts'
 import type { D1Database, D1Sql, D1TargetAdapter, D1UndoDependency, TargetRow } from '../../modules/import-kit/src/d1/index.ts'
 import type { Json } from '../../modules/import-kit/src/types.ts'
-import { importedEntrySql, removeImportedEntrySql } from '../ledger/record.ts'
+import { importedEntrySql, removeImportedEntrySql } from './buffer-ledger.ts'
 
 export type BufferKind = 'account' | 'slots' | 'ledger_entry' | 'item'
 export type Value = Record<string, Json>
@@ -51,7 +51,7 @@ const toRow = (destination: string, kind: BufferKind, row: Read): TargetRow => (
 
 function writeAccount(value: Value): D1Sql[] {
   return [sql(`INSERT INTO stump_accounts(id,network,handle,display_name,owner_kind,owner_person_id,connected_by,connected_at,state,reconnect_url,created_at,updated_at)
-    VALUES(?,?,?,?,'company',NULL,NULL,NULL,'awaiting_reconnect',?,${NOW},${NOW})
+    VALUES(?,?,?,?,'company',NULL,NULL,NULL,'expired',?,${NOW},${NOW})
     ON CONFLICT(id) DO UPDATE SET network=excluded.network,handle=excluded.handle,display_name=excluded.display_name,revision=stump_accounts.revision+1,updated_at=excluded.updated_at`,
   value.id, value.network, value.handle, value.display_name, reconnectPath(String(value.id)))]
 }
