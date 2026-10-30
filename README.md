@@ -27,6 +27,17 @@ rer dev just-every/run-stump
 
 If the installer prints a PATH command, run it before the second line. Already have Node 22 or later? `npx -y @runeditrun/rer dev just-every/run-stump` does both steps. Later, run `cd run-stump && rer dev`.
 
+`rer dev just-every/run-stump` starts `main`. To try a branch, a release candidate or a tag, check it out in that folder first, then start it the same way:
+
+```sh
+cd run-stump
+git fetch origin
+git checkout <branch or tag>
+rer dev
+```
+
+`rer dev` installs the dependencies that version locks and keeps your local data. A fresh folder for it works too: `git clone --branch <branch or tag> https://github.com/just-every/run-stump run-stump-rc && cd run-stump-rc && rer dev`.
+
 Open the private sign-in link printed by `rer`, on this computer. The installed `/` is Base's shared Lobby; finish first-run setup at `/setup`. `RER_SITE` names the separate static site (its homepage, `/run` and `/contract`). The domain run-stump.com is not live yet, so the run site is local only.
 
 This checkout pins `@runeditrun/rer` **0.2.91**, Node **22.20.0** and pnpm **10.12.4**. Read [RUN-LOCALLY.md](RUN-LOCALLY.md), [OPERATIONS.md](OPERATIONS.md) and [SEED-COMMAND-CONTRACT.md](SEED-COMMAND-CONTRACT.md) for the verbs (`rer verify`, `rer reset --yes`, `rer deploy`, `rer describe`), data custody and deploy requirements. Local mail is suppressed. Private runtime state and credentials stay outside Git. MIT licensed.

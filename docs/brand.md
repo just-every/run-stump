@@ -20,6 +20,14 @@ Before a post can be marked ready, Stump finds its factual product claims and ma
 - a number that differs from its proof is flagged with the proof's number;
 - an attached image without alt text stops the post until its alt text is set.
 
+A sentence can make several claims, so the check reads it clause by clause: "New in 2.4: when a client is 7 days late, Hourglass sends a reminder" is one claim about the reminder, and a lead-in such as "New in 2.4" claims nothing. What a product does ("adds a weekly summary", "you get your hours by client") counts as a claim to back, as a number, a comparison or a guarantee does.
+
+A post passes when every claim in it is matched and nothing stops it. A sentence that only says what the product does, with no number, comparison or guarantee in it, does not stop the post from being marked ready, but it stays flagged, and the post has not passed, until someone backs it or removes it.
+
+## Backing a claim from a draft
+
+In Compose, **Back claim** beside a flagged sentence opens **Settings › Brand** with that sentence as a new claim, for the draft's product. Add its proof and review date, and Stump records the claim, matches the sentence to it and takes you back to the draft with its checks run again. **Fix claim** selects the flagged words in the variant, so typing replaces them.
+
 The check runs the same way for people and for agents.
 
 ## A person's voice

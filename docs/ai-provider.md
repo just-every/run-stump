@@ -10,6 +10,16 @@ An owner or admin opens **Settings › Connections › AI provider** and enters:
 
 The same setting works locally and once deployed, and an agent can read or change it through `stump.setup.ai` (reading it is standard work; changing it is a security change under your company's policy). **Remove** takes the provider out; drafts from a source then stop until a new one is set.
 
+### A model on your own computer
+
+Any OpenAI-compatible server on this computer works, with no account anywhere. With [Ollama](https://ollama.com):
+
+1. Install it and fetch a model: `ollama pull llama3.2`.
+2. In **Settings › Connections › AI provider**, enter the address `http://127.0.0.1:11434/v1`, the model `llama3.2` and, as the key, any word such as `ollama`: a server on your own computer ignores it, but the field takes one.
+3. In **Compose**, paste a changelog link under **From a source**, pick the accounts and choose **Draft from source**.
+
+LM Studio's server works the same way at `http://127.0.0.1:1234/v1`. A small local model writes plainer drafts than a hosted one; every draft still goes through the claim check.
+
 ### Through the installation's settings instead
 
 An installation can also set the provider before anyone signs in, through Base's AI settings:

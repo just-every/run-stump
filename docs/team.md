@@ -21,7 +21,7 @@ Until they sign in, an invited person holds nothing: a hand-off, a draft in thei
 
 ### On your own computer
 
-Mail is not sent locally, so an invited person signs in from this computer instead: open `/signin` in a browser that has opened the `RER_OPEN` link, and choose **Sign in as <name>** beside them. That accepts their invitation and opens Stump with their role. `rer dev --as person@example.com` starts the app signed in as them. Once deployed with mail, they use the sign-in link Stump emails them.
+Mail is not sent locally, and Stump says so when you invite someone: "<name> is invited", not that an invitation was sent. They sign in from this computer instead: open `/signin` in a browser that has opened the `RER_OPEN` link, and choose **Sign in as <name>** beside them. That accepts their invitation and opens Stump with their role. `rer dev --as person@example.com` starts the app signed in as them. Once deployed with mail, they use the sign-in link Stump emails them.
 
 ## The owner
 

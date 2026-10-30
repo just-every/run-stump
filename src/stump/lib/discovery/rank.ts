@@ -12,7 +12,11 @@
  *   standing      10 : the author's standing where the source gives one
  *   freshness     15 : half-life decay from the post time
  * Where the caller supplies no venue fit or standing, the factor sits at its midpoint and says so,
- * so missing data neither helps nor hurts one finding more than another.
+ * so missing data neither helps nor hurts one finding more than another. Venue fit, standing and freshness
+ * say how good a thread is, not whether it is about the company: a finding whose terms and products appear
+ * only deep in a titled thread's text (a comment under a story about something else) gets 40% of them, so a
+ * fresh off-topic thread never outranks one that is about what the company does.
+ * rankFindings lists a thread once at its rank: each further finding in the same thread counts half.
  *
  * A finding's own text never changes its rank by instruction: see rank-text.ts.
  */
@@ -21,7 +25,7 @@ import { asksForHelp, isAboutTheRanking, neutralise, questionSentences } from '.
 import { compileTerms, matchTerms, type CompiledTerms, type TermLogic } from './terms.ts'
 import type { Finding, SourceKind } from './types.ts'
 
-export type Factor = 'matched_terms' | 'question' | 'venue_fit' | 'author_standing' | 'freshness' | 'marks'
+export type Factor = 'matched_terms' | 'question' | 'venue_fit' | 'author_standing' | 'freshness' | 'marks' | 'repeat_thread'
 
 export interface Reason {
   factor: Factor
@@ -60,6 +64,8 @@ export interface RankContext {
 }
 
 const WEIGHTS = { matched_terms: 30, question: 30, venue_fit: 15, author_standing: 10, freshness: 15 } as const
+/** The share of venue fit, standing and freshness a finding keeps when its match is only deep in a thread about something else. */
+const DEEP_SHARE = 0.4
 const round1 = (n: number) => Math.round(n * 10) / 10
 const DEFAULT_HALF_LIFE: Record<SourceKind, number> = { hn: 24, bluesky: 24, mastodon: 24, rss: 72 }
 
@@ -146,27 +152,31 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
   }
   reasons.push({ factor: 'question', label: questionLabel, points: questionPoints, max: WEIGHTS.question })
 
+  // Matched only deep in a titled thread's text, by a watch term and by every product name it carries: the thread is about something else.
+  const productInHeadline = productHit.matched_terms.length > 0 && (hasTitle ? productHit.matched_in.includes('title') : productHit.matched_in.includes('text'))
+  const share = positives > 0 && !m.unconstrained && !inHeadline && !inTranscript && !productInHeadline ? DEEP_SHARE : 1
+  const offTopic = share < 1 ? ', counted at 40%: the thread is about something else' : ''
   const fit = ctx.venue_fit ? ctx.venue_fit(f) : null
-  const fitPoints = fit === null ? WEIGHTS.venue_fit / 2 : (Math.max(0, Math.min(100, fit)) / 100) * WEIGHTS.venue_fit
+  const fitPoints = share * (fit === null ? WEIGHTS.venue_fit / 2 : (Math.max(0, Math.min(100, fit)) / 100) * WEIGHTS.venue_fit)
   reasons.push({
     factor: 'venue_fit', points: round1(fitPoints), max: WEIGHTS.venue_fit,
-    label: fit === null ? 'no venue fit recorded' : `venue fit ${Math.round(fit)} of 100`,
+    label: `${fit === null ? 'no venue fit recorded' : `venue fit ${Math.round(fit)} of 100`}${offTopic}`,
   })
 
   const standing = ctx.author_standing ? ctx.author_standing(f) : defaultStanding(f)
-  const standingPoints = standing === null ? WEIGHTS.author_standing / 2 : Math.max(0, Math.min(1, standing)) * WEIGHTS.author_standing
+  const standingPoints = share * (standing === null ? WEIGHTS.author_standing / 2 : Math.max(0, Math.min(1, standing)) * WEIGHTS.author_standing)
   reasons.push({
     factor: 'author_standing', points: round1(standingPoints), max: WEIGHTS.author_standing,
-    label: standing === null ? 'author standing unknown' : `author standing ${Math.round(standing * 100)} of 100`,
+    label: `${standing === null ? 'author standing unknown' : `author standing ${Math.round(standing * 100)} of 100`}${offTopic}`,
   })
 
   const now = ctx.now ?? Date.now()
   const ageH = Math.max(0, (now - Date.parse(f.published_at)) / 3_600_000)
   const half = ctx.half_life_hours?.[f.source] ?? DEFAULT_HALF_LIFE[f.source]
-  const freshPoints = Number.isFinite(ageH) ? WEIGHTS.freshness * Math.pow(0.5, ageH / half) : 0
+  const freshPoints = Number.isFinite(ageH) ? share * WEIGHTS.freshness * Math.pow(0.5, ageH / half) : 0
   reasons.push({
     factor: 'freshness', points: round1(freshPoints), max: WEIGHTS.freshness,
-    label: ageH < 1 ? 'posted within the hour' : ageH < 48 ? `posted ${Math.round(ageH)} hours ago` : `posted ${Math.round(ageH / 24)} days ago`,
+    label: `${ageH < 1 ? 'posted within the hour' : ageH < 48 ? `posted ${Math.round(ageH)} hours ago` : `posted ${Math.round(ageH / 24)} days ago`}${offTopic}`,
   })
 
   let total = termPoints + questionPoints + fitPoints + standingPoints + freshPoints
@@ -187,16 +197,30 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
   }
 }
 
-/** Findings ranked best first; ties go to the newer, then to the source id, so the order is stable. */
+const byRank = (a: Ranked, b: Ranked) =>
+  b.relevance - a.relevance ||
+  (a.finding.published_at < b.finding.published_at ? 1 : a.finding.published_at > b.finding.published_at ? -1 : 0) ||
+  (a.finding.source_id < b.finding.source_id ? -1 : 1)
+
+/** The thread a finding sits in: a comment's story, else the finding's own page. */
+export const threadOf = (f: Pick<Finding, 'thread_url' | 'url'>) => f.thread_url ?? f.url
+
+/**
+ * Ranked findings with each thread listed once at its rank: every further finding in a thread already listed (three comments
+ * under one story) counts half, with that reason, so one busy thread never fills the top of the list.
+ */
+export function spreadThreads(ranked: Ranked[]): Ranked[] {
+  const seen = new Set<string>()
+  return [...ranked].sort(byRank).map((r) => {
+    const thread = threadOf(r.finding)
+    if (!seen.has(thread)) { seen.add(thread); return r }
+    return { ...r, relevance: round1(r.relevance / 2), reasons: [...r.reasons, { factor: 'repeat_thread' as const, label: 'another finding in a thread listed above, counted at half', points: round1(-r.relevance / 2), max: 0 }] }
+  }).sort(byRank)
+}
+
+/** Findings ranked best first, each thread listed once at its rank; ties go to the newer, then to the source id, so the order is stable. */
 export function rankFindings(findings: Finding[], ctx: RankContext): Ranked[] {
-  return findings
-    .map((f) => scoreFinding(f, ctx))
-    .sort(
-      (a, b) =>
-        b.relevance - a.relevance ||
-        (a.finding.published_at < b.finding.published_at ? 1 : a.finding.published_at > b.finding.published_at ? -1 : 0) ||
-        (a.finding.source_id < b.finding.source_id ? -1 : 1),
-    )
+  return spreadThreads(findings.map((f) => scoreFinding(f, ctx)))
 }
 
 /** Immediate alerts go out for ranked findings at or above the person's relevance, and never for backfill. */

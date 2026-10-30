@@ -32,7 +32,9 @@ function TeamPage() {
           <PanelTitle icon="people" id="people-title">People</PanelTitle>
           {manage && !inviting ? <button className="st-button primary" type="button" onClick={() => { setNote(null); setInviting(true) }}><Icon name="plus" />Invite</button> : null}
         </div>
-        {manage && inviting ? <Invite onDone={person => { setInviting(false); changed(`Invitation sent to ${person.email}.`) }} onCancel={() => setInviting(false)} /> : null}
+        {manage && inviting ? <Invite onDone={person => { setInviting(false); changed(person.invitation?.by === 'this_computer'
+          ? `${person.display_name} is invited. Mail is not sent on this computer: they sign in at /signin here and choose Sign in as ${person.display_name}.`
+          : `Invitation sent to ${person.email}.`) }} onCancel={() => setInviting(false)} /> : null}
         <table className="st-table" aria-labelledby="people-title">
           <thead><tr><th scope="col">Name</th><th scope="col">Role</th><th scope="col">Connection</th>{manage ? <th scope="col"><span className="st-sr">Actions</span></th> : null}</tr></thead>
           <tbody>{data ? members.map(person => <Person key={person.id} person={person} manage={manage} owner={data.me.person.role === 'owner'} self={person.id === data.me.person.id} onChange={changed} label={label} />) : null}</tbody>

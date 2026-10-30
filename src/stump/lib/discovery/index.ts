@@ -31,7 +31,7 @@ export type { MastodonResult, MastodonTagOptions } from './mastodon.ts'
 export { screenFindings, isListedAuthor, normalizeHandle } from './screen.ts'
 export type { DropReason, Dropped, ScreenResult, ScreenSpec, SourceFilters } from './screen.ts'
 
-export { rankFindings, scoreFinding, qualifiesForImmediateAlert } from './rank.ts'
+export { rankFindings, scoreFinding, spreadThreads, qualifiesForImmediateAlert } from './rank.ts'
 export type { Factor, RankContext, Ranked, Reason } from './rank.ts'
 export { asksForHelp, isAboutTheRanking, neutralise, questionSentences } from './rank-text.ts'
 export { learnFromMarks, marksAdjustment, emptyModel, featuresOf } from './marks.ts'

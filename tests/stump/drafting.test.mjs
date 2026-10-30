@@ -54,6 +54,11 @@ test('the claim check, disclosure and near-duplicate hold stop a draft the same 
   const viaAgent = await app.mcp(agent.token, 'stump.drafts.write', { action: 'create', format: 'post', person_id: owner.id, network: 'bluesky', product_id: product.id, text: 'Brightwell is SOC 2 certified.' })
   assert.deepEqual(viaAgent.result.structuredContent.flags.map(flag => flag.code), banned.flags.map(flag => flag.code))
   assert.equal(viaAgent.result._meta['com.runeditrun/decision'].classes[0].class, 'standard')
+  // An agent's draft speaks for its own person without naming them, and a feature no claim backs is flagged and keeps it from passing.
+  const own = (await app.mcp(agent.token, 'stump.drafts.write', { action: 'create', format: 'post', network: 'bluesky', product_id: product.id, text: 'Brightwell adds a weekly summary email: every Monday you get your bookings per room.' })).result.structuredContent
+  assert.equal(own.person_id, sam.id)
+  assert.equal(own.check.passed, false)
+  assert.ok(own.check.claims.some(claim => claim.status === 'unmatched' && /weekly summary email/.test(claim.text)), JSON.stringify(own.check.claims))
 
   // An employee naming the product outside the company's accounts discloses first (D-2), through both doors.
   const reply = ok(await app.action('sam', 'stump.drafts.write', { action: 'create', format: 'reply', person_id: sam.id, network: 'x', reply_to: { url: 'https://x.com/someone/status/1' }, text: 'Brightwell has recurring bookings for this.' }))

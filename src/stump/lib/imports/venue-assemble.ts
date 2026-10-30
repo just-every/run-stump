@@ -3,7 +3,7 @@
 // readers go through here so the Markdown and the CSV make the same venues.
 import type { ImportRow, ImportWarning, Json, JsonObject, ParsedVenueList, RejectedRow } from './types.ts';
 import { foldName, normalizeVenueUrl } from './url.ts';
-import { aiTextRule, gatesRule, inferKind, jsonList, parseSharedLimit, strongestPriority, type VenueStatus } from './venue-fields.ts';
+import { aiTextRule, gatesRule, inferKind, jsonList, listedColumnRule, parseSharedLimit, strongestPriority, type VenueStatus } from './venue-fields.ts';
 
 export interface VenueDraft {
   line: number;
@@ -33,6 +33,10 @@ export interface VenueDraft {
   readerValue: string | null;
   /** The day the rules pages were read; the Markdown list's own date when it has none. */
   rulesReadAt: string | null;
+  /** The posting, links and disclosure rules the list states in their own columns or keys, as written. */
+  posting: string | null;
+  links: string | null;
+  disclosureLine: string | null;
 }
 
 export interface AlternateDraft { label: string; title: string | null; text: string }
@@ -216,6 +220,11 @@ function venueValue(venue: VenueDraft, exclusionOf: VenueDraft | null, entries: 
   const requirements = venue.requirements ?? entries.map(e => e.requirements).find((text): text is string => !!text) ?? null;
   const gates = gatesRule(requirements, rulesUrls, readAt);
   if (gates) rules.gates = gates;
+  // The readers checked each value already, so a rule column adds its rule here and never an error.
+  for (const [key, text] of [['posting', venue.posting], ['links', venue.links], ['disclosure_line', venue.disclosureLine]] as const) {
+    const rule = listedColumnRule(key, text, rulesUrls, readAt, []);
+    if (rule) rules[key] = rule;
+  }
   const priorities = [...(venue.priority ? [venue.priority] : []), ...entries.map(e => e.priority).filter((p): p is string => p !== null)];
   const products = [...new Set([...venue.products, ...entries.map(e => e.product)].map(p => p.trim()).filter(Boolean))];
   return {

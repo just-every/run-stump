@@ -16,7 +16,7 @@ export { aiHost } from './provider.ts'
 function failure(code: string, host: string, said: string | null): string {
   const quoted = said ? ` It said: "${said}"` : ''
   switch (code) {
-    case 'ai_disabled': return 'No AI provider is set. An owner or admin sets one in Settings › Connections › AI provider.'
+    case 'ai_disabled': return 'No AI provider is set. An owner or admin sets one in Settings › Connections › AI provider: a hosted provider with its key or, while Stump runs on your own computer, a local model (see /docs/ai-provider).'
     case 'ai_misconfigured': return 'The AI provider setting is incomplete: it needs an https address, a model and a key. An owner or admin fixes it in Settings › Connections.'
     case 'ai_invalid_request': return 'The AI provider has no model set. An owner or admin sets one in Settings › Connections.'
     case 'upstream_auth': return `${host} refused the key.${quoted}`

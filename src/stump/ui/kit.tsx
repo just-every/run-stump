@@ -75,9 +75,12 @@ export function useLoaded<T>(load: () => Promise<T>) {
   const [error, setError] = useState<string | null>(null)
   const loader = useRef(load)
   loader.current = load
+  // Only the latest load lands: an earlier one that answers late (the page before a link changed its address) never overwrites it.
+  const latest = useRef(0)
   const refresh = useCallback(async () => {
-    try { setData(await loader.current()); setError(null) }
-    catch (cause) { setError(explain(cause)) }
+    const mine = ++latest.current
+    try { const value = await loader.current(); if (mine === latest.current) { setData(value); setError(null) } }
+    catch (cause) { if (mine === latest.current) setError(explain(cause)) }
   }, [])
   useEffect(() => { void refresh() }, [refresh])
   return { data, error, refresh, setData }
