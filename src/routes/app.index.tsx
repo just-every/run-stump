@@ -15,7 +15,7 @@ function Overview() {
   return <HydrationUnit>
     <section className="st-page" aria-labelledby="overview-title">
       <h1 id="overview-title">Overview</h1>
-      <p className="st-lead">Your earned-channels desk. Venues, drafts and the ledger arrive here as they are built.</p>
+      <p className="st-lead">Your earned-channels desk at a glance.</p>
       <div className="st-status">
         <div><span className={paused ? 'st-dot paused' : 'st-dot'} aria-hidden="true" /><strong>{data ? paused ? 'Publishing is paused' : 'Publishing is on' : ' '}</strong></div>
         <Link className="st-button" to="/app/settings/publishing">Publishing settings</Link>

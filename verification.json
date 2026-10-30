@@ -27,19 +27,12 @@
       ]
     },
     {
-      "name": "app",
-      "browser": false,
-      "hosted": false,
-      "commands": [
-        "node --test tests/stump/team.test.mjs"
-      ]
-    },
-    {
-      "name": "agent-door",
+      "name": "stump",
       "browser": false,
       "hosted": false,
       "commands": [
         "pnpm run build",
+        "node --test tests/stump/team.test.mjs",
         "node node_modules/@runeditrun/rer/cli/agent-door.mjs ."
       ]
     }

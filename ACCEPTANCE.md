@@ -2442,7 +2442,7 @@ Agent surface · target · **partial**
 5. A foreign Origin returns 403, and a header and body method mismatch returns `HeaderMismatch`.
 6. An oversized body returns 413 with no effect.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-002 — The seed's jobs are tools, through the UI's own actions
@@ -2459,7 +2459,7 @@ Agent surface · target · **partial**
 5. The UI action and its tool, on the same fixture, give the same record state and the same audit event type.
 6. The seed's embedded agents appear in the audit as calls to the same tools.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-003 — Records are resources
@@ -2494,7 +2494,7 @@ Agent surface · target · **partial**
 6. Revoking consent in the seed or in Business refuses the next call within 60 seconds.
 7. After unpairing, Business tokens are refused and the seed's own sign-in still works.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-005 — An agent acts as a person in a role, never more
@@ -2510,7 +2510,7 @@ Agent surface · target · **partial**
 4. Calls that widen the agent's own grant or its sponsor's role, or change the policy or Pause, return `self_escalation` and change nothing, even under a policy with every class autonomous; dropping a scope from its own grant runs.
 5. An injection fixture yields no out-of-grant call and no change of class: record text asking for a wider action, or claiming that a recipient is internal.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-006 — Every action declares its risk class
@@ -2527,7 +2527,7 @@ Agent surface · target · **partial**
 5. No tool in `tools / list` declares a class outside the fleet list, and `rer check` fails on one.
 6. A refused call's audit row still records its computed classes.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-007 — The company's policy decides, at one chokepoint
@@ -2546,7 +2546,7 @@ Agent surface · target · **partial**
 7. A policy change applies to the next call within 60 seconds, and the audit cites the new revision.
 8. A policy document with a bad signature or another Business's id is rejected, and the door keeps the last valid revision.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-008 — Truthful attribution
@@ -2564,7 +2564,7 @@ Agent surface · target · **partial**
 6. Activity and exports at 1440 and 390 show `"<agent> for <person>"` for every agent act.
 7. Mail an agent sends to an outside address names `"<agent> for <person>"` as its sender.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-009 — Every agent action is audited with its class and decision
@@ -2582,7 +2582,7 @@ Agent surface · target · **partial**
 6. Removing the agent keeps its rows and its name.
 7. The Agents page works at 1440 and 390 with no serious or critical axe findings.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-010 — Agents can follow changes
@@ -2617,7 +2617,7 @@ Agent surface · target · **partial**
 6. Pause and Pause all agents each stop the next call within 60 seconds, and resume restores access.
 7. An agent token cannot resume.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-012 — Writes are idempotent and conflict-safe
@@ -2633,7 +2633,7 @@ Agent surface · target · **partial**
 4. A stale revision returns a conflict naming the current revision.
 5. A job handle used by another person's token reads as not found.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-013 — Manifest, docs and the conformance journey
@@ -2649,7 +2649,7 @@ Agent surface · target · **partial**
 4. Every acceptance point runs under both policies, every decision matches the policy in force, and under all autonomous no call waits for a person or is refused by policy.
 5. A stranger agent given only the seed URL completes the specialist journey through MCP.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
 
 ### Agent surface
@@ -2665,7 +2665,7 @@ Agent surface · target · **partial** · From new · Cites BASE-AGENT-002, BASE
 2. The Base conformance journey passes on Stump's own venue, item, hand-off, ledger, finding and inbox fixtures.
 3. `/docs/agents` lists every tool with its classes and the test that adds each computed class.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
 **Gap.** The registry holds the team, Pause and ledger-read tools only; the rest of the contract's table arrives with later lanes, and /docs/agents does not exist.
 
 #### STUMP-SURFACE-002 — Internal work computes standard
@@ -2757,7 +2757,7 @@ Agent surface · target · **partial** · From new · Cites BASE-AGENT-005, BASE
 3. Narrowing a person's grants to one company account computes access that narrows, and turning sign-off off for an account computes access that widens.
 4. A call that would widen the calling agent's own grant, its sponsor's role or its sponsor's delegation returns `self_escalation` and changes nothing, under every company policy.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify); `tests/stump/team.test.mjs` "the owner cannot be removed or demoted until ownership is transferred, and the transfer is recorded"
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify); `tests/stump/team.test.mjs` "the owner cannot be removed or demoted until ownership is transferred, and the transfer is recorded"
 **Gap.** Inviting computes access that widens, and self-widening returns self_escalation through both doors; delegation, grants, sign-off paths and security settings are not built.
 
 #### STUMP-SURFACE-008 — Destructive and live
@@ -2848,7 +2848,7 @@ Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE
 3. Pause agents refuses the next agent call within 60 seconds and holds every item an agent scheduled that has not posted, until a person resumes.
 4. Resuming releases the held items in time order, and overdue ones stay held until they are rescheduled or dropped.
 
-**Evidence.** `agent-surface.json` journey in the agent-door shard of `verification.json` (also run by rer verify) (Pause phase)
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify) (Pause phase)
 **Gap.** Pause stops the next agent call; holding agent-scheduled items (`src/stump/publish/tick.ts`) is proven once items can be scheduled, and the Agents page's spend view needs network spend.
 
 #### STUMP-SURFACE-013 — Embedded agents use the same registry

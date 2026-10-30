@@ -13,7 +13,9 @@ test('people join only by invitation, with the invited role, through the person 
   assert.equal(owner.role, 'owner')
   const refused = await app.action('owner', 'stump.team.manage', { action: 'create', email: app.email('persona'), display_name: 'Persona' })
   assert.equal(refused.status, 403); assert.equal(refused.body.code, 'act_refused'); assert.equal(refused.body.rule, 'D-1')
-  assert.notEqual(await app.signIn('stranger', app.email('stranger')), 303, 'an uninvited email cannot sign in')
+  const stranger = app.email('stranger')
+  assert.equal((await app.json('stranger', '/auth/magic-link', { email: stranger })).status < 500, true)
+  assert.equal(app.sentTo(stranger).length, 0, 'an uninvited email gets no way in')
 
   const email = app.email('friend')
   const invited = await app.action('owner', 'stump.team.manage', { action: 'invite', email, display_name: 'Synthetic Friend', role: 'poster', connection: 'friend' })
