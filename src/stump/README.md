@@ -22,6 +22,7 @@ and are never edited in place.
 | `imports/` | The one import door (`door.ts`) and its sources beyond the venue list: `buffer.ts` reads a Buffer export into accounts, queue slots, ledger entries and paused items (`buffer-targets.ts`; the imported entry's write, in `record.ts`'s shape, in `buffer-ledger.ts` until it moves there). |
 | `data/` | Erasure of a person (`erase.ts`; a post deleted at its network reads removed, `removal.ts`) and the draft check run again after an import or erasure (`recheck.ts`); `rer export` and `rer import` follow `scripts/stump/archive-policy.mjs`. |
 | `watches/` | Watches: source polling with per-source state, screening (with the company's one author block list, `blocks.ts`) and ranking reads of findings, immediate alerts to Slack and a signed webhook with replay (credentials sealed in `seal.ts`), and the scheduled event's `pollDueWatches`. |
+| `today/` | The Today screen at `/app`: what needs the signed-in person today (hand-offs due, what is held and why, what goes out today, threads worth answering, recent results and the week's counts), read only through existing actions (`sections.ts` shapes them, `TodayPage.tsx` draws them). |
 | `lib/<name>/` | Pure leaf libraries written by library lanes. A library imports nothing outside its folder. |
 | `ui/` | The signed-in app's shell, navigation, tokens and small shared components. |
 

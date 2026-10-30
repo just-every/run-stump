@@ -5,7 +5,7 @@
 export interface NavEntry { group: 'work' | 'settings'; to: string; label: string }
 
 export const navigation: readonly NavEntry[] = [
-  { group: 'work', to: '/app', label: 'Overview' },
+  { group: 'work', to: '/app', label: 'Today' },
   { group: 'work', to: '/app/compose', label: 'Compose' },
   { group: 'work', to: '/app/handoffs', label: 'Hand-offs' },
   { group: 'work', to: '/app/venues', label: 'Venues' },
