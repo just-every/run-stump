@@ -19,12 +19,15 @@
  * (`drain:<since>:<until>:<newest>`) holding the floor (since_id), the point to continue
  * below (until_id) and the newest id already read; once a poll finishes the backlog it
  * collapses to that newest id. Nothing is skipped and no post is read (or billed) twice.
+ * A page that fails after earlier pages succeeded ends the poll the same way a spent page
+ * budget does: the posts already read come back with their charge and a drain cursor, and the
+ * page's error rides along as `stoppedBy`.
  */
 import { quoteXRead } from './charge'
 import { localXError } from './errors'
 import { fieldsParam, xCall } from './http'
 import { parsePost, postFieldList, type XPostReadback } from './readback'
-import type { XChargeQuote, XContext, XPriceTable, XResult } from './types'
+import type { XChargeQuote, XContext, XError, XPriceTable, XResult } from './types'
 
 export interface XMention extends XPostReadback {
   /** Always true: the author mentioned the account, which is what lets the account reply by API. */
@@ -48,8 +51,15 @@ export interface XMentionsPoll {
   reads: number
   pages: number
   charge: XChargeQuote
-  /** True when more mentions were waiting than the page budget read. */
+  /** True when more mentions may be waiting than this poll read: the page budget ran out, or a later page failed. */
   truncated: boolean
+  /**
+   * The error of a page that failed after earlier pages succeeded, or null. The items, reads
+   * and charge above are what X already billed; store them and the cursor, and wait out the
+   * error's resetAt / retry before the next poll. When the first page fails, the poll itself
+   * returns the error instead.
+   */
+  stoppedBy: XError | null
   /**
    * Store this and pass it back as `sinceId`. While `truncated` it is a drain cursor, so the
    * next poll reads the older mentions this poll had no budget for; after that it is the
@@ -115,6 +125,7 @@ export async function fetchXMentions(ctx: XContext, input: XMentionsInput, price
   let truncated = false
   let lastStatus = 200
   let rateLimit: Extract<XResult<unknown>, { ok: true }>['rateLimit'] = null
+  let stoppedBy: XError | null = null
 
   while (pages < maxPages) {
     const page = await xCall<{ rows: XMention[]; next: string | null; count: number }>(ctx, {
@@ -140,8 +151,12 @@ export async function fetchXMentions(ctx: XContext, input: XMentionsInput, price
       },
     })
     if (!page.ok) {
-      // A failed page after earlier pages is still an error: the cursor stays where it was.
-      return page
+      // Nothing read yet: the poll is the error and the cursor stays where it was.
+      if (pages === 0) return page
+      // X already billed the earlier pages. Keep them, and continue below them next time.
+      stoppedBy = page.error
+      truncated = true
+      break
     }
     lastStatus = page.status
     rateLimit = page.rateLimit
@@ -165,7 +180,7 @@ export async function fetchXMentions(ctx: XContext, input: XMentionsInput, price
     resumeUntilId = oldestId
     nextSinceId = drainCursor(cursor.sinceId, oldestId, highId)
   } else if (truncated) {
-    // Nothing was read on the budgeted pages: keep the cursor exactly as it was.
+    // Nothing was read before the budget ran out or a page failed: keep the cursor exactly as it was.
     nextSinceId = input.sinceId ?? null
   } else {
     nextSinceId = highId
@@ -174,6 +189,6 @@ export async function fetchXMentions(ctx: XContext, input: XMentionsInput, price
     ok: true,
     status: lastStatus,
     rateLimit,
-    value: { items, reads, pages, charge: quoteXRead(reads, prices, false), truncated, nextSinceId, resumeUntilId, newestId },
+    value: { items, reads, pages, charge: quoteXRead(reads, prices, false), truncated, stoppedBy, nextSinceId, resumeUntilId, newestId },
   }
 }

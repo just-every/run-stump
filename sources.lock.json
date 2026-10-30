@@ -1816,7 +1816,7 @@
       "executable": false
     },
     "src/stump/lib/x/mentions.ts": {
-      "sha256": "35b03dcaad4bf318d054a3e5f0da1f6521c34b49c3eb60ec7847695fc98b691e",
+      "sha256": "ea79978154d6f2300f6188f3f6eac8ed45776e9c87c1e6b2395e19762c0afe8a",
       "executable": false
     },
     "src/stump/lib/x/oauth.ts": {
