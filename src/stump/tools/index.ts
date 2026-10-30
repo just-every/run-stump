@@ -3,6 +3,8 @@ import type { StumpTool } from '../actions/types.ts'
 import { calendarTools } from './calendar.ts'
 import { findingsTools } from './findings.ts'
 import { ledgerTools } from './ledger.ts'
+import { linksTools } from './links.ts'
+import { stackTools } from './stack.ts'
 import { teamTools } from './team.ts'
 import { venueTools } from './venues.ts'
 import { watchesTools } from './watches.ts'
@@ -13,6 +15,8 @@ export const stumpTools: readonly StumpTool[] = [
   ...calendarTools,
   ...findingsTools,
   ...ledgerTools,
+  ...linksTools,
+  ...stackTools,
   ...teamTools,
   ...venueTools,
   ...watchesTools,

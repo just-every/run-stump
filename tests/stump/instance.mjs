@@ -18,7 +18,7 @@ const { Agent } = require('undici')
 const root = new URL('../../', import.meta.url).pathname
 const secret = () => randomBytes(32).toString('hex')
 
-/** `edge(request)` is the network edge: it answers an outbound request with a Response, or null to leave it undeclared (502). */
+/** `edge(request)` is the network edge: it answers an outbound request with a Response, or null to leave it undeclared (502); `db` is the installation's D1 for seeding what other lanes write. */
 export async function stump({ edge } = {}) {
   const socket = createServer(); await new Promise(resolve => socket.listen(0, '127.0.0.1', resolve))
   const port = socket.address().port; await new Promise(resolve => socket.close(resolve))
@@ -27,6 +27,7 @@ export async function stump({ edge } = {}) {
   const cert = await readFile(join(directory, 'cert.pem'), 'utf8'), origin = `https://127.0.0.1:${port}`, mail = []
   const setupToken = secret()
   const server = join(root, 'dist/server')
+  let db
   const worker = new Miniflare(convertV4MiniflareOptions({
     https: true, httpsKey: await readFile(join(directory, 'key.pem'), 'utf8'), httpsCert: cert, host: '127.0.0.1', port,
     modules: [{ type: 'ESModule', path: join(server, 'index.js') }, ...(await readdir(join(server, 'assets'))).filter(name => name.endsWith('.js')).map(name => ({ type: 'ESModule', path: join(server, 'assets', name) }))],
@@ -44,7 +45,7 @@ export async function stump({ edge } = {}) {
     },
   }))
   try {
-    const db = await worker.getD1Database('DB')
+    db = await worker.getD1Database('DB')
     for (const name of (await readdir(join(root, 'migrations/core'))).filter(file => file.endsWith('.sql')).sort()) {
       await db.batch(unstable_splitSqlQuery(await readFile(join(root, 'migrations/core', name), 'utf8')).map(sql => db.prepare(sql)))
     }
@@ -90,6 +91,6 @@ export async function stump({ edge } = {}) {
     })()
     return ownerReady.then(async () => (await json('owner', '/app/api/me')).body.person)
   }
-  return { origin, request, json, signIn, action, mcp, owner, sentTo, email: label => `synthetic-stump-${label}-${randomUUID().slice(0, 8)}@example.com`,
+  return { origin, db, request, json, signIn, action, mcp, owner, sentTo, email: label => `synthetic-stump-${label}-${randomUUID().slice(0, 8)}@example.com`,
     async stop() { await dispatcher.close(); await worker.dispose(); await rm(directory, { recursive: true, force: true }) } }
 }

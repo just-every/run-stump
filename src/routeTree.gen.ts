@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppLedgerRouteImport } from './routes/app.ledger'
 import { Route as AppListeningRouteImport } from './routes/app.listening'
 import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
+import { Route as AppSettingsConnectionsRouteImport } from './routes/app.settings.connections'
 import { Route as AppSettingsPublishingRouteImport } from './routes/app.settings.publishing'
 import { Route as AppSettingsTeamRouteImport } from './routes/app.settings.team'
 import { Route as AppVenuesIndexRouteImport } from './routes/app.venues.index'
@@ -28,6 +30,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLedgerRoute = AppLedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppListeningRoute = AppListeningRouteImport.update({
   id: '/listening',
   path: '/listening',
@@ -36,6 +43,11 @@ const AppListeningRoute = AppListeningRouteImport.update({
 const AppSettingsAgentsRoute = AppSettingsAgentsRouteImport.update({
   id: '/settings/agents',
   path: '/settings/agents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsConnectionsRoute = AppSettingsConnectionsRouteImport.update({
+  id: '/settings/connections',
+  path: '/settings/connections',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsPublishingRoute = AppSettingsPublishingRouteImport.update({
@@ -61,18 +73,22 @@ const AppVenuesVenueIdRoute = AppVenuesVenueIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
+  '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/connections': typeof AppSettingsConnectionsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
   '/app/venues/': typeof AppVenuesIndexRoute
 }
 export interface FileRoutesByTo {
+  '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/connections': typeof AppSettingsConnectionsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
@@ -81,9 +97,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/app': typeof AppRouteWithChildren
+  '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/connections': typeof AppSettingsConnectionsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
@@ -93,18 +111,22 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/app'
+    | '/app/ledger'
     | '/app/listening'
     | '/app/'
     | '/app/settings/agents'
+    | '/app/settings/connections'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/app/venues/$venueId'
     | '/app/venues/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/app/ledger'
     | '/app/listening'
     | '/app'
     | '/app/settings/agents'
+    | '/app/settings/connections'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/app/venues/$venueId'
@@ -112,9 +134,11 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/app'
+    | '/app/ledger'
     | '/app/listening'
     | '/app/'
     | '/app/settings/agents'
+    | '/app/settings/connections'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/app/venues/$venueId'
@@ -141,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ledger': {
+      id: '/app/ledger'
+      path: '/ledger'
+      fullPath: '/app/ledger'
+      preLoaderRoute: typeof AppLedgerRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/listening': {
       id: '/app/listening'
       path: '/listening'
@@ -153,6 +184,13 @@ declare module '@tanstack/react-router' {
       path: '/settings/agents'
       fullPath: '/app/settings/agents'
       preLoaderRoute: typeof AppSettingsAgentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings/connections': {
+      id: '/app/settings/connections'
+      path: '/settings/connections'
+      fullPath: '/app/settings/connections'
+      preLoaderRoute: typeof AppSettingsConnectionsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/settings/publishing': {
@@ -187,9 +225,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppLedgerRoute: typeof AppLedgerRoute
   AppListeningRoute: typeof AppListeningRoute
   AppIndexRoute: typeof AppIndexRoute
   AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
+  AppSettingsConnectionsRoute: typeof AppSettingsConnectionsRoute
   AppSettingsPublishingRoute: typeof AppSettingsPublishingRoute
   AppSettingsTeamRoute: typeof AppSettingsTeamRoute
   AppVenuesVenueIdRoute: typeof AppVenuesVenueIdRoute
@@ -197,9 +237,11 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppLedgerRoute: AppLedgerRoute,
   AppListeningRoute: AppListeningRoute,
   AppIndexRoute: AppIndexRoute,
   AppSettingsAgentsRoute: AppSettingsAgentsRoute,
+  AppSettingsConnectionsRoute: AppSettingsConnectionsRoute,
   AppSettingsPublishingRoute: AppSettingsPublishingRoute,
   AppSettingsTeamRoute: AppSettingsTeamRoute,
   AppVenuesVenueIdRoute: AppVenuesVenueIdRoute,

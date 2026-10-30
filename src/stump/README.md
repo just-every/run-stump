@@ -13,6 +13,9 @@ and are never edited in place.
 | `people/` | Roles, connections, invitations and the person behind a session. |
 | `items/` | The item state machine (`state.ts`) and the Pause fence. |
 | `publish/` | The scheduler tick and the per-network publisher interface. |
+| `ledger/` | Reading, searching, correcting and exporting ledger entries (`query.ts`, `correct.ts`, `csv.ts`); entries are written only by the publishing lane's recorder. |
+| `links/` | The company's link rules and `tagOwnLinks`, the one function that puts UTM tags on its own links. |
+| `stack/` | Connections to Orbit and Vane (secrets sealed), offers, signed sends, and `annotateLedgerEntry` for the posting path. |
 | `net/` | `stumpFetch`, the one outbound fetch every network call uses. |
 | `watches/` | Watches: source polling with per-source state, screening (with the company's one author block list, `blocks.ts`) and ranking reads of findings, immediate alerts to Slack and a signed webhook with replay (credentials sealed in `seal.ts`), and the scheduled event's `pollDueWatches`. |
 | `lib/<name>/` | Pure leaf libraries written by library lanes. A library imports nothing outside its folder. |

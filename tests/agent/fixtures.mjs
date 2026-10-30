@@ -11,5 +11,6 @@ export default async function prepare() {
     venue_handle: `synthetic-${id.slice(0, 8)}`,
     slack_webhook: `https://hooks.slack.com/services/T${randomBytes(4).toString('hex')}/B${randomBytes(4).toString('hex')}/${randomBytes(12).toString('hex')}`,
     webhook_secret: randomBytes(16).toString('hex'),
+    orbitSecret: randomBytes(32).toString('hex'),
   } }
 }

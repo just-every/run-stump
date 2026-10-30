@@ -35,6 +35,7 @@
         "node --test tests/stump/team.test.mjs",
         "node --test tests/stump/venues.test.mjs",
         "node --test tests/stump/watches.test.mjs",
+        "node --test tests/stump/ledger-stack.test.mjs",
         "node node_modules/@runeditrun/rer/cli/agent-door.mjs ."
       ]
     }

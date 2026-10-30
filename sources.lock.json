@@ -3079,6 +3079,10 @@
       "sha256": "c8b1f78903cd2eda3951fd80458015fef01d88eb6039608c40c66e846af66a92",
       "executable": false
     },
+    "src/routes/app.settings.connections.tsx": {
+      "sha256": "ae0b52c0afdce10d9118885c3d5b10ec54cdeb0f9dfe742e2f6e4cdb4d2bdaee",
+      "executable": false
+    },
     "src/routes/app.settings.publishing.tsx": {
       "sha256": "69e4f70383c9689431d547be3c8b2979fcc7ae1dabfe750a602e037f023a2409",
       "executable": false
@@ -3161,6 +3165,30 @@
     },
     "src/stump/items/state.ts": {
       "sha256": "d0f1b559d719f879bd933ae8672db7e98b62500c2f95f7f94ff322462c6b157b",
+      "executable": false
+    },
+    "src/stump/ledger/correct.ts": {
+      "sha256": "5d3a0aa9013a88d95e1fa61e01a0f3d1abecfce6f1f594d55109983e64fb69d5",
+      "executable": false
+    },
+    "src/stump/ledger/csv.ts": {
+      "sha256": "3275961a7ad9a675645423460bdab292de1c706bbe85116ed8c5a9f85965221d",
+      "executable": false
+    },
+    "src/stump/ledger/entry.ts": {
+      "sha256": "225ad104eded5c99ca026cc498114056ede83b33c238939733e4529475ecd3eb",
+      "executable": false
+    },
+    "src/stump/ledger/query.ts": {
+      "sha256": "faf02c269e9f1ba907eecb6c99f4ba5938384555cd41b57b010e43d7830c03d8",
+      "executable": false
+    },
+    "src/stump/ledger/screen-styles.ts": {
+      "sha256": "aecc4d8343e3ef7340ea029602a0d22aab9af46e467fa2915ea997f780c593ec",
+      "executable": false
+    },
+    "src/stump/ledger/words.ts": {
+      "sha256": "0c6b41bb1da6b26edf394859563c18d2b914768b31e1b99daa4be6029ee6f933",
       "executable": false
     },
     "src/stump/lib/bluesky/client.ts": {
@@ -3607,6 +3635,18 @@
       "sha256": "dd23e8e5ac678279f125260868372388030522b3a27d06c7a1874f42035eff82",
       "executable": false
     },
+    "src/stump/links/index.ts": {
+      "sha256": "22e8f7d144f1a9e94790ef1244ef2a3a6fe02a98e29cea2dd423d147f8eed955",
+      "executable": false
+    },
+    "src/stump/links/rules.ts": {
+      "sha256": "2dafb214bd23e27a0774e9da4fe394d6a9cf07007aec4a237d9427dcb69a9407",
+      "executable": false
+    },
+    "src/stump/links/tag.ts": {
+      "sha256": "9a8d72954205bf82fe742ad266953296e71fe684bff00ea1f93f55065fc61089",
+      "executable": false
+    },
     "src/stump/net/fetch.ts": {
       "sha256": "830366745c81cc735287c1d5a550582d86d0413349dba6d4887e1b783896d9a4",
       "executable": false
@@ -3656,7 +3696,15 @@
       "executable": false
     },
     "src/stump/tools/ledger.ts": {
-      "sha256": "88ae862c0c9f6956eb1623ee892cf22ee7c453d592811f6f9c56537a8fdbbef5",
+      "sha256": "12e0af5afe8682070dc364083c7018f0f7e9d838fddaebe6717f6558bb5d7dbc",
+      "executable": false
+    },
+    "src/stump/tools/links.ts": {
+      "sha256": "df068ed569c30c620718436dbb42e7e7a549a0268943cece3560105a64f7ab8b",
+      "executable": false
+    },
+    "src/stump/tools/stack.ts": {
+      "sha256": "45c8b5d0994d3ecfd464caee90c3ad86e347f4208a05506d226a48fe4ea352cd",
       "executable": false
     },
     "src/stump/tools/team.ts": {
