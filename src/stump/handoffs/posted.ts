@@ -2,6 +2,7 @@
 // the posted link; Stump checks it is on the venue, confirms the post through the
 // network where docs/networks.md lists a check, writes the ledger entry and marks
 // the hand-off posted (STUMP-HANDOFF-001.5, .8, STUMP-HANDOFF-002, D-5, D-8).
+import { shortContent } from './link-content.ts'
 import { refuse, refuseAct } from '../actions/refusals.ts'
 import type { ActionContext, Args } from '../actions/types.ts'
 import { tagOwnLinks } from '../links/index.ts'
@@ -86,7 +87,7 @@ export async function record(args: Args, ctx: ActionContext) {
   const prepared = row!.agent ? JSON.parse(row!.agent) as { id: string; name: string } : null
   const agent = ctx.agent ? { id: ctx.agent.id, name: ctx.agent.name } : prepared
   // The text as posted: read back where the network shows it, else what the person posted, with the company's own links tagged for the hand-off route.
-  const text = checked.text ?? await tagOwnLinks(ctx.db, { text: ownWords ?? row!.draft_text!, route: 'handoff', source: venue.platform ?? venue.name, campaign: row!.campaign, content: row!.id })
+  const text = checked.text ?? await tagOwnLinks(ctx.db, { text: ownWords ?? row!.draft_text!, route: 'handoff', source: venue.platform ?? venue.name, campaign: row!.campaign, content: shortContent(row!.id) })
   const item = row!.item_id ? await ctx.db.prepare('SELECT revision,claims_used FROM stump_items WHERE id=?').bind(row!.item_id).first<{ revision: number; claims_used: string }>() : null
   const ledgerId = crypto.randomUUID(), postedAt = checked.posted_at ?? now
   const [, updated] = await ctx.db.batch([

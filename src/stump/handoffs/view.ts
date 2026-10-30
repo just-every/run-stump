@@ -1,6 +1,7 @@
 // Hand-offs as both doors answer them, read in a few queries for any number:
 // the venue, the person's name, the draft item's flags and the draft with the
 // company's own links tagged for the hand-off route (STUMP-LINK-001).
+import { shortContent } from './link-content.ts'
 import type { ActionContext } from '../actions/types.ts'
 import { tagOwnLinks } from '../links/index.ts'
 import { readVenue, type VenueRow } from '../venues/model.ts'
@@ -17,7 +18,7 @@ export async function records(ctx: Pick<ActionContext, 'db'>, rows: HandoffRow[]
   const out: HandoffRecord[] = []
   for (const row of rows) {
     const venue = venues.get(row.venue_id)!
-    const draft = row.draft_text === null ? null : await tagOwnLinks(ctx.db, { text: row.draft_text, route: 'handoff', source: venue.platform ?? venue.name, campaign: row.campaign, content: row.id })
+    const draft = row.draft_text === null ? null : await tagOwnLinks(ctx.db, { text: row.draft_text, route: 'handoff', source: venue.platform ?? venue.name, campaign: row.campaign, content: shortContent(row.id) })
     out.push(handoffRecord(row, venue, { person_name: people.get(row.person_id) ?? null, history: history.get(row.id)!, flags: row.item_id ? items.get(row.item_id) ?? [] : [], draft_text: draft }))
   }
   return out
