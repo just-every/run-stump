@@ -45,6 +45,11 @@ export interface StumpAction {
   /** Access and security actions: whose authority changes and whether it widens. */
   authority?(args: Args, ctx: ActionContext): Promise<{ subject: string; widens: boolean } | null>
   target?(args: Args, ctx: ActionContext): NativeTarget | null | Promise<NativeTarget | null>
+  /**
+   * Product rules this action meets by what the call asks for (D-1, D-4): checked with the refused acts,
+   * before the role and the argument schema, so the call answers act_refused naming its rule (refuseAct).
+   */
+  refuses?(args: Args, ctx: ActionContext): Promise<void>
   /** The record's current revision; a call with a stale expected_revision answers revision_conflict. */
   revision?(args: Args, ctx: ActionContext): Promise<number | null>
   run(args: Args, ctx: ActionContext): Promise<unknown>

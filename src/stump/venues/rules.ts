@@ -82,7 +82,7 @@ const said = (rule: Rule | null, ...values: string[]) => rule !== null && values
 /**
  * The routes an item to this venue may take, decided only from its rules
  * (STUMP-VENUE-002.1, .2): publishing needs a rule that lets software post from
- * the company's account; a hand-off with a draft needs a rule that allows
+ * the company's account; a hand-off with a draft is open unless a rule bans
  * AI-written text; a hand-off with a brief and facts is always the floor. Each
  * rule decides by its value whether or not it is sourced, and `unsourced` names
  * the rules that have no source yet (STUMP-VENUE-002.5).
@@ -100,9 +100,11 @@ export function routesFor(venue: VenueRow): RouteAnswer {
     reasons.push(said(posting, 'api', 'company_account')
       ? { route: 'publish', open: true, rule: 'posting', because: `Software may post from the company account.${unsourcedNote(posting)}` }
       : { route: 'publish', open: false, rule: 'posting', because: said(posting, 'members_only') ? 'Only members post here.' : 'No posting rule is recorded.' })
-    reasons.push(said(ai, 'allowed', 'allowed_with_disclosure')
-      ? { route: 'handoff_draft', open: true, rule: 'ai_text', because: `${ai!.value === 'allowed' ? 'AI-written text is allowed.' : 'AI-written text is allowed with disclosure.'}${unsourcedNote(ai)}` }
-      : { route: 'handoff_draft', open: false, rule: 'ai_text', because: said(ai, 'banned') ? 'AI-written text is banned here.' : 'No AI text rule is recorded.' })
+    // Only a rule that bans AI-written text closes the draft (STUMP-HANDOFF-001): with none recorded, the member still gets a draft to edit.
+    reasons.push(said(ai, 'banned')
+      ? { route: 'handoff_draft', open: false, rule: 'ai_text', because: `AI-written text is banned here.${unsourcedNote(ai)}` }
+      : { route: 'handoff_draft', open: true, rule: 'ai_text', because: ai === null ? 'No AI text rule is recorded.'
+        : `${ai.value === 'allowed_with_disclosure' ? 'AI-written text is allowed with disclosure.' : 'AI-written text is allowed.'}${unsourcedNote(ai)}` })
     reasons.push({ route: 'handoff_brief', open: true, rule: null, because: 'A member can always post in their own words from a brief and facts.' })
   }
   return { venue_id: venue.id, routes: reasons.filter(reason => reason.open).map(reason => reason.route), reasons, unsourced }

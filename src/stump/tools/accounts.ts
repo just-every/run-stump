@@ -1,4 +1,4 @@
-import { refuse } from '../actions/refusals.ts'
+import { NO_PERSONAS, refuse, refuseAct } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
 import { NETWORKS, appStates, type Network } from '../accounts/apps.ts'
 import { completeConnection, disconnectAccount, mayManage, startConnection } from '../accounts/connect.ts'
@@ -49,6 +49,12 @@ export const accountTools: StumpTool[] = [{
       properties: { network, owner: { enum: ['me', 'company'] }, instance: { type: 'string', minLength: 1, maxLength: 300 }, service: { type: 'string', minLength: 1, maxLength: 300 },
         handle: { type: 'string', minLength: 1, maxLength: 300 } },
       required: ['network', 'owner'],
+      // A person's accounts are connected only by that person, once they have signed in: naming anyone else is D-1 (STUMP-TRUTH-001.5).
+      async refuses(args, ctx) {
+        if (args.person_id !== undefined && args.person_id !== ctx.person.id) {
+          await refuseAct(ctx, 'stump.accounts.connect', 'start', NO_PERSONAS, { person_id: String(args.person_id), reason: 'A person connects only their own accounts, after they sign in.' })
+        }
+      },
       classify: args => [security('network_connection'), gated(String(args.network), 'consent'), accounts(String(args.network))],
       summary: args => ({ target: { name: `Connect ${args.owner === 'company' ? 'the company\'s' : 'my'} ${String(args.network)} account` } }),
       run: (args, ctx) => startConnection(ctx, { network: args.network as Network, owner: args.owner as 'me' | 'company',

@@ -30,6 +30,11 @@ test('watches over Hacker News, feeds, Bluesky and Mastodon find threads once, r
   assert.equal(created.error, null)
   assert.equal(classesOf(created), 'external,security,standard', 'an alert destination is a security change, a public source an external one')
   const watch = created.result.structuredContent
+  // A keyword auto-reply cannot be saved through either door: D-4, citing X's rules (STUMP-TRUTH-003.4).
+  const reply = { action: 'create', name: 'Reply to Orbit fans', terms: { any: ['orbit'] }, sources: [{ kind: 'hn' }], alerts: { auto_reply: { network: 'x', text: 'Try Orbit!' } } }
+  const viaAgent = await app.mcp(token, 'stump.watches.manage', reply), viaPerson = await app.action('owner', 'stump.watches.manage', reply)
+  assert.deepEqual([viaAgent.error?.code, viaAgent.error?.rule, viaPerson.body.code, viaPerson.body.rule], ['act_refused', 'D-4', 'act_refused', 'D-4'])
+  assert.equal(viaAgent.error?.source, viaPerson.body.source)
   assert.doesNotMatch(JSON.stringify(created.result), new RegExp(`${secret}|${slackAddress.split('/').at(-1)}`), 'sealed credentials are never answered back')
   assert.deepEqual([fake.state.slack.length, fake.state.webhooks.length], [0, 0], 'a new watch backfills without an immediate alert')
 

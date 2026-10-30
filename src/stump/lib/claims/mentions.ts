@@ -2,7 +2,7 @@
 // (STUMP-BRAND-001 recognition, which disclosure (STUMP-TRUTH-002) and the claim
 // check read). Matching is on whole words, case-insensitive unless the profile asks
 // for exact capitalisation, so "Orbit's" and "orbit" match "Orbit". A link to one of a
-// product's own URLs is a mention too. Names inside a text are data: nothing found
+// product's own URLs (its host, under the URL's path when it has one) is a mention too. Names inside a text are data: nothing found
 // here changes a route, a rule or a role.
 
 import { escapeRegExp } from './sentences'
@@ -80,14 +80,25 @@ function findAll(text: string, name: string, caseSensitive: boolean): Array<{ te
   return out
 }
 
-function hostsIn(text: string): Array<{ host: string; text: string; start: number; end: number }> {
-  const out: Array<{ host: string; text: string; start: number; end: number }> = []
+/** A path as links are compared: lower-case, with no trailing slash or trailing sentence punctuation ("" for the site's root). */
+const pathKey = (path: string) => path.toLowerCase().replace(/[.,;:!?)\]'"]+$/u, '').replace(/\/+$/, '')
+
+function hostsIn(text: string): Array<{ host: string; path: string; text: string; start: number; end: number }> {
+  const out: Array<{ host: string; path: string; text: string; start: number; end: number }> = []
   // A host starts at a word boundary, never inside "a-b" or "a.b", so each run is scanned once.
-  for (const m of text.matchAll(/(?<![\p{L}\p{N}_@.-])(?:https?:\/\/)?((?:[\p{L}\p{N}-]+\.)+[\p{L}]{2,})(?::\d+)?(?:[/?#][^\s<>"]*)?/giu)) {
+  for (const m of text.matchAll(/(?<![\p{L}\p{N}_@.-])(?:https?:\/\/)?((?:[\p{L}\p{N}-]+\.)+[\p{L}]{2,})(?::\d+)?(\/[^\s<>"?#]*)?(?:[?#][^\s<>"]*)?/giu)) {
     const start = m.index ?? 0
-    out.push({ host: (m[1] as string).toLowerCase(), text: m[0], start, end: start + m[0].length })
+    out.push({ host: (m[1] as string).toLowerCase(), path: pathKey(m[2] ?? ''), text: m[0], start, end: start + m[0].length })
   }
   return out
+}
+
+/** Where a product lives: its host, and its path when the product has a page of its own on a shared site. */
+function productPlace(url: string): { host: string; path: string } | null {
+  const host = hostOfUrl(url)
+  if (!host) return null
+  const path = /^[^/?#]*(\/[^?#]*)?/.exec(url.trim().replace(/^https?:\/\//i, ''))?.[1] ?? ''
+  return { host, path: pathKey(path) }
 }
 
 /** The lower-case host of a URL or bare domain, without "www.". */
@@ -127,11 +138,13 @@ export function extractMentions(text: string, input: MentionInput): MentionSet {
         products.push({ id: p.id, name, ...f, via, exact_case: unspaced(f.text) === unspaced(name) })
       }
     }
-    const productHosts = new Set((p.urls ?? []).map(hostOfUrl).filter(Boolean))
-    if (productHosts.size > 0) {
+    // A link names the product when it is on the product's host (or a subdomain) and, where the product's URL has a
+    // path, under that path: a company's changelog or another product's page on the same site does not name this one.
+    const places = (p.urls ?? []).map(productPlace).filter((place): place is { host: string; path: string } => place !== null)
+    if (places.length > 0) {
       for (const h of hostsIn(text)) {
         const bare = h.host.replace(/^www\./, '')
-        if ([...productHosts].some((ph) => bare === ph || bare.endsWith(`.${ph}`))) {
+        if (places.some((place) => (bare === place.host || bare.endsWith(`.${place.host}`)) && (place.path === '' || h.path === place.path || h.path.startsWith(`${place.path}/`)))) {
           products.push({ id: p.id, name: bare, text: h.text, start: h.start, end: h.end, via: 'url', exact_case: true })
         }
       }
