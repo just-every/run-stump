@@ -87,14 +87,16 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 /* The settings header the shell draws over every settings screen */
 .st-settings-head { margin: 0 0 32px; }
 .st-settings-title { font: 800 var(--stump-size-title)/38px var(--stump-font); letter-spacing: -0.02em; color: var(--stump-ink); margin: 0 0 20px; }
-.st-tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--stump-hairline); overflow-x: auto; scrollbar-width: none; }
-.st-tabs a { flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 2px; color: var(--stump-muted); text-decoration: none; font-size: 16px; font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+/* The strip scrolls, so its hairline is an inset shadow under the tabs: the current tab's 2 px underline paints whole over it. */
+.st-tabs { display: flex; gap: 28px; box-shadow: inset 0 -1px 0 var(--stump-hairline); overflow-x: auto; scrollbar-width: none; }
+.st-tabs a { flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 2px; color: var(--stump-muted); text-decoration: none; font-size: 16px; font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; }
 .st-tabs a:hover { color: var(--stump-ink); }
 .st-tabs a[aria-current="page"] { color: var(--stump-ink); font-weight: 600; border-bottom-color: var(--stump-emerald); }
 .st-settings .st-page > h1:first-child, .st-settings .st-page h1 { font-size: 24px; line-height: 30px; }
-/* The strip scrolls sideways on a narrow screen; while tabs sit past its right edge, a 24 px fade from white says so. */
+/* The strip scrolls sideways on a narrow screen; while tabs sit past either edge, a 24 px fade from white says so. */
 .st-settings-head .st-tabs-strip { position: relative; }
 .st-settings-head .st-tabs-strip.more::after { content: ""; position: absolute; top: 0; bottom: 1px; right: 0; width: 24px; background: linear-gradient(to right, rgba(255,255,255,0), var(--stump-white)); pointer-events: none; }
+.st-settings-head .st-tabs-strip.less::before { content: ""; position: absolute; z-index: 1; top: 0; bottom: 1px; left: 0; width: 24px; background: linear-gradient(to left, rgba(255,255,255,0), var(--stump-white)); pointer-events: none; }
 
 /* Lists and rows */
 .st-list { list-style: none; margin: 0; padding: 0; }
@@ -323,6 +325,7 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
   .st-settings-title { margin-bottom: 12px; }
   .st-tabs { gap: 20px; margin: 0 -16px; padding: 0 16px; }
   .st-settings-head .st-tabs-strip.more::after { right: -16px; }
+  .st-settings-head .st-tabs-strip.less::before { left: -16px; }
   .st-row { flex-wrap: wrap; }
   .st-panel { padding: 16px; }
   .st-popover { position: fixed; inset: auto 0 0 0; top: auto; width: auto; border-radius: 20px 20px 0 0; padding: 20px 16px calc(24px + env(safe-area-inset-bottom)); }
@@ -401,11 +404,18 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-venue .st-venue-facts dt { font-size: var(--stump-size-small); color: var(--stump-muted); }
 .st-venue .st-venue-facts dd { margin: 0; overflow-wrap: anywhere; }
 .st-venue .st-venue-sub { font-size: var(--stump-size-body); font-weight: 600; margin: 16px 0 4px; padding-top: 16px; border-top: 1px solid var(--stump-hairline); }
+.st-venue .st-venue-main { min-width: 0; }
 @media (max-width: 760px) {
   .st-table th.st-cell, .st-table td.st-cell { display: none; }
   .st-rowline { display: block; font-size: var(--stump-size-small); color: var(--stump-muted); margin-top: 2px; }
   .st-columns { grid-template-columns: minmax(0, 1fr); }
   .st-columns > .st-aside { grid-column: auto; grid-row: auto; }
+  /* One column: a venue's panels read Rules, Routes, Members, Why it fits or About, then Products. */
+  .st-venue .st-venue-main, .st-venue .st-columns > .st-aside { display: contents; }
+  .st-venue .st-venue-routes { order: 1; }
+  .st-venue .st-venue-members { order: 2; }
+  .st-venue .st-venue-why-card { order: 3; }
+  .st-venue .st-venue-products { order: 4; }
   .st-rule { grid-template-columns: 1fr; gap: 2px; }
   .st-kv { grid-template-columns: 1fr; }
   .st-toolbar .st-end { margin-left: 0; }
@@ -468,6 +478,12 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-check-list li { display: flex; gap: 10px; align-items: flex-start; font-size: var(--stump-size-small); }
 .st-drafting .st-check-list li.danger span:last-child { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .st-drafting .st-checks-toggle { display: none; }
+/* A variant row and the Checks summary open at 760 and under: the shared line-icon chevron after the count, turned when open (SPEC 4.2 Compose 390). */
+.st-drafting .st-variant-head .st-chevron { display: none; }
+.st-drafting .st-variant-head[aria-expanded="true"] .st-chevron, .st-drafting .st-checks-toggle[aria-expanded="true"] .st-chevron { transform: rotate(90deg); }
+.st-drafting .st-checks-toggle .st-chevron { margin-left: auto; }
+/* Keyboard focus in a variant's text rings the card itself (SPEC 3.3, H17), 2 px emerald at 2 px offset. */
+.st-drafting .st-variant:has(.st-variant-field textarea:focus-visible) { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
 .st-drafting .st-bar { display: flex; align-items: center; gap: calc(var(--stump-space) * 2); flex-wrap: wrap; padding-top: calc(var(--stump-space) * 3); border-top: 1px solid var(--stump-hairline); }
 .st-drafting .st-button.ink { background: var(--stump-ink); border-color: var(--stump-ink); color: var(--stump-white); padding: 0 24px; }
 .st-drafting .st-button.ink:hover { background: var(--stump-ink-hover); }
@@ -530,8 +546,11 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 @media (max-width: 760px) {
   .st-drafting .st-compose { grid-template-columns: 1fr; }
   .st-drafting .st-checks-toggle { display: flex; align-items: center; gap: 10px; font: inherit; width: 100%; background: none; border: 0; padding: 0; color: var(--stump-text); text-align: left; min-height: 44px; }
-  .st-drafting .st-checks:not(.open) .st-card-head, .st-drafting .st-checks:not(.open) .st-check-list { display: none; }
-  .st-drafting .st-checks.open .st-card-head { margin-top: calc(var(--stump-space) * 2); }
+  .st-drafting .st-checks:not(.open) .st-check-list { display: none; }
+  /* Open, the summary row stays and only the rows under it follow: no second disc, heading or count. */
+  .st-drafting .st-checks .st-card-head, .st-drafting .st-checks .st-check-matched { display: none; }
+  .st-drafting .st-checks.open .st-check-list { margin-top: 12px; }
+  .st-drafting .st-variant-head .st-chevron { display: inline-flex; }
   .st-drafting .st-variants { grid-template-columns: 1fr; }
   .st-drafting .st-variant-head { cursor: pointer; min-height: 44px; padding: 0; }
   .st-drafting .st-variant-body:not(.open) { display: none; }
@@ -613,6 +632,8 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-setup-pill { display: inline-block; min-height: 40px; padding: 10px 16px; border-radius: var(--stump-pill); background: var(--stump-emerald-tint); color: var(--stump-ink); font: 500 15px/20px var(--stump-font); text-decoration: none; white-space: nowrap; }
 .st-setup-pill:hover { background: #DCE9DE; }
 .st-setup-pill-keep { white-space: nowrap; }
+.st-setup-pill-noted { display: contents; }
+.st-setup-pill-note { display: none; }
 .st-setup-done { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--stump-body); font-size: 15px; }
 .st-setup-foot { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 8px; }
 .st-setup-foot .st-button.large { min-width: 224px; }
@@ -631,14 +652,23 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
   .st-setup-foot .st-button.large { width: 100%; }
   .st-setup-pill { white-space: normal; }
 }
+/* 480 and under: every step pill is one 40 px line, so the import pill drops its formats to a 14 px muted line under it. */
+@media (max-width: 480px) {
+  .st-setup-pill { white-space: nowrap; }
+  .st-setup-pill-keep { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .st-setup-pill-noted { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .st-setup-pill-note { display: block; font-size: 14px; line-height: 20px; color: var(--stump-muted); padding-left: 16px; }
+}
 
 /* Venues with none yet (SPEC §4.2 "Empty state, Venues"): the plate and its block centred in the column */
-.st-venues-empty { min-height: calc(100vh - 72px - 40px - 46px - 64px); display: flex; flex-direction: column; justify-content: center; }
+/* The empty state takes the main column's remaining height and no more, so the page never scrolls. */
+.st-main:has(> .st-venues .st-venues-empty) { display: flex; flex-direction: column; }
+.st-main > .st-venues:has(.st-venues-empty) { flex: 1; display: flex; flex-direction: column; }
+.st-venues-empty { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .st-venues-empty .st-empty { padding: 24px 0 48px; }
 .st-venues-empty .st-empty img { width: 240px; margin-bottom: 24px; }
 .st-venues-empty .st-empty p { font-size: 17px; max-width: 640px; }
 @media (max-width: 760px) {
-  .st-venues-empty { min-height: calc(100vh - 56px - 24px - 32px - 48px); }
   .st-venues-empty .st-empty img { width: 200px; }
   .st-venues-empty .st-empty .st-actions { flex-direction: column; align-self: stretch; }
 }

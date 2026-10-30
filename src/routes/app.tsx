@@ -40,10 +40,11 @@ function Sidebar({ path, onNavigate }: { path: string; onNavigate(): void }) {
 function SettingsHead({ path }: { path: string }) {
   const strip = useRef<HTMLElement>(null)
   const [more, setMore] = useState(false)
+  const [less, setLess] = useState(false)
   useEffect(() => {
     const nav = strip.current
     if (!nav) return
-    const measure = () => setMore(nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 1)
+    const measure = () => { setMore(nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 1); setLess(nav.scrollLeft > 0) }
     const active = nav.querySelector<HTMLElement>('a[aria-current="page"]')
     if (active && nav.scrollWidth > nav.clientWidth) {
       // Centre the current tab in the strip, never scrolling the page itself.
@@ -58,7 +59,7 @@ function SettingsHead({ path }: { path: string }) {
   }, [path])
   return <div className="st-settings-head">
     <p className="st-settings-title">Settings</p>
-    <div className={more ? 'st-tabs-strip more' : 'st-tabs-strip'}>
+    <div className={['st-tabs-strip', more ? 'more' : '', less ? 'less' : ''].filter(Boolean).join(' ')}>
       <nav className="st-tabs" aria-label="Settings" ref={strip}>
         {settings.map(entry => <Link key={entry.to} to={entry.to}
           aria-current={path === entry.to || path.startsWith(`${entry.to}/`) ? 'page' : undefined}>{entry.label}</Link>)}

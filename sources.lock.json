@@ -956,7 +956,7 @@
       "executable": false
     },
     "scripts/site/docs.mjs": {
-      "sha256": "2fde1cd84d7441085ddf68821a1382c784e88cb98f22df5efad1c2ef3d993325",
+      "sha256": "0626661f0ddc4b92e70138bf28c1645f89e371e9e4f170cf5c2ca6d7ce48f26d",
       "executable": false
     },
     "scripts/stump/archive-policy.mjs": {
@@ -3344,7 +3344,7 @@
       "executable": false
     },
     "src/routes/app.compose.tsx": {
-      "sha256": "46df9174aff0628c3bb5f51d1b31c2a98dfe4f99f80d02d201fe7110116e9e1a",
+      "sha256": "79f89bf6054b39dd35b04bf9f41382774b32078c60636fe646fe9ff9073d4b65",
       "executable": false
     },
     "src/routes/app.connected.$network.tsx": {
@@ -3360,7 +3360,7 @@
       "executable": false
     },
     "src/routes/app.inbox.tsx": {
-      "sha256": "7e8f38fcd8c88e68b5991bb68877fcfc711c9f2bfd0647869f8ec850f7ba0854",
+      "sha256": "bbbf9d04391e38f915baed747e139e34a15fa6a10aea1f0bf96f7f9bc511ac92",
       "executable": false
     },
     "src/routes/app.index.tsx": {
@@ -3372,7 +3372,7 @@
       "executable": false
     },
     "src/routes/app.listening.tsx": {
-      "sha256": "d4123f782bf3174e0c73be286ffff55a795a0ab419297f6df433215a0d7212ba",
+      "sha256": "b1d79620db71061875b4114a128bf9aa55f6df7ba2a1995c7f77787788c6a46d",
       "executable": false
     },
     "src/routes/app.pause.tsx": {
@@ -3408,11 +3408,11 @@
       "executable": false
     },
     "src/routes/app.setup.tsx": {
-      "sha256": "990efd27fad70a718e5f30114178cc5c2fb2e88b6d91956ea15087f6c5faa518",
+      "sha256": "c6eb6374a560dcd79a4c8374001452aeadf7aca9bc1342f13ca25b9b2f02ace5",
       "executable": false
     },
     "src/routes/app.tsx": {
-      "sha256": "71bee42cc594d3bf917801b652e3244eb82d3bee43b47206ef911df4e59ed2ac",
+      "sha256": "576ffdcfd26ceb6273f39059438f6432008b93038fd5901898501c0eccfd9fe0",
       "executable": false
     },
     "src/routes/app.venues.$venueId.tsx": {
@@ -3476,7 +3476,7 @@
       "executable": false
     },
     "src/site/styles/docs.css": {
-      "sha256": "143523d806505b5c3c7455161db12ab839215d7940ab6097f5ac9fe0637140bd",
+      "sha256": "5c855d7187fc24d47e1903265dffb5cebdbd00ad8fc962e7b1adf0f5a93983e1",
       "executable": false
     },
     "src/site/styles/landing.css": {
@@ -4332,7 +4332,7 @@
       "executable": false
     },
     "src/stump/today/sections.ts": {
-      "sha256": "0d2f5228367af5340d0422b6bd18597e7731c7afc27a5e6468469675f667bd26",
+      "sha256": "f46986a9d8d9e88cd4452d6cf07e91108d182405f002b3544e0b4eaf405f28aa",
       "executable": false
     },
     "src/stump/today/TodayPage.tsx": {
@@ -4432,7 +4432,7 @@
       "executable": false
     },
     "src/stump/ui/styles.ts": {
-      "sha256": "6b3f1e6abadc1bd7bd158581a78b4600c47a797f845392b8d174f19c04a744e1",
+      "sha256": "22de23aa1deb230ec6446a93973a542b368cb58301b8ce319f78d3ad65f16412",
       "executable": false
     },
     "src/stump/ui/types.ts": {
@@ -4504,7 +4504,7 @@
       "executable": false
     },
     "src/stump/venues/ui/VenuePage.tsx": {
-      "sha256": "0112ef43e9071e85f4550dc3b782f3503c637866378abaddd2b7f856d422197e",
+      "sha256": "8c6719c3068ccec008b9e716229b407836ac19054520523feee5e4d2c100ae03",
       "executable": false
     },
     "src/stump/venues/ui/VenuesPage.tsx": {

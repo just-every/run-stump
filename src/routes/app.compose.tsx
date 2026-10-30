@@ -125,10 +125,11 @@ function ComposePage() {
     <button className="st-checks-toggle" type="button" aria-expanded={checksOpen} onClick={() => setChecksOpen(!checksOpen)}>
       <Disc icon={flagRows.size ? 'alert' : 'check'} tone={flagRows.size ? 'danger' : undefined} />
       <span>{matched.size} {matched.size === 1 ? 'claim' : 'claims'} matched{flagRows.size ? ` · ${flagRows.size} to fix` : ''}</span>
+      <span className="st-chevron" aria-hidden="true"><Icon name="chevronRight" /></span>
     </button>
     <h2 className="st-card-head" id="checks-title"><Disc icon={flagRows.size ? 'alert' : 'check'} tone={flagRows.size ? 'danger' : undefined} />Checks</h2>
     <ul className="st-check-list">
-      <li><Disc icon="check" /><span>{matched.size} {matched.size === 1 ? 'claim' : 'claims'} matched</span></li>
+      <li className="st-check-matched"><Disc icon="check" /><span>{matched.size} {matched.size === 1 ? 'claim' : 'claims'} matched</span></li>
       {(data?.claims ?? []).filter(claim => matched.has(claim.id)).map(claim => <li key={claim.id} className="st-check-detail"><span>{claim.text}{proofLabel(claim.proof) ? ` · ${proofLabel(claim.proof)}` : ''}</span></li>)}
       {[...flagRows.values()].map(({ flag, item }) => <li key={`${flag.code}-${String(flag.text ?? flag.network)}`} className="danger"><Disc icon="alert" tone="danger" /><span>
         {flagLine(flag, spanOf(flag, claimsOf()))}
@@ -204,7 +205,7 @@ function ComposePage() {
             ? <><span className="st-held-long">The {networkName(held[0]!.network)} variant holds until fixed</span><span className="st-held-short" aria-hidden="true">{networkName(held[0]!.network)} held until fixed</span></>
             : <><span className="st-held-long">{variants.length === 2 ? 'Both variants hold' : `All ${variants.length} variants hold`} until fixed</span><span className="st-held-short" aria-hidden="true">{variants.length === 2 ? 'Both' : `All ${variants.length}`} held until fixed</span></>}</span>
           : <button className="st-button ink" type="button" disabled={busy} onClick={() => void schedule('schedule_master')}>
-            {alone ? 'Schedule' : held.length ? `Schedule ${variants.length - held.length} ${variants.length - held.length === 1 ? 'post' : 'posts'}` : 'Schedule all'} →
+            {alone ? 'Schedule' : held.length ? `Schedule ${variants.length - held.length} ${variants.length - held.length === 1 ? 'post' : 'posts'}` : 'Schedule all'} <Icon name="arrowRight" />
           </button>}
         <WhenPicker value={when} onChange={setWhen} />
         {held.length === variants.length ? null : held.length
@@ -241,6 +242,7 @@ function VariantCard({ variant, claims, select, onSelected, onSave }: { variant:
       <strong>{networkName(variant.network)}</strong>
       {variant.differs_from_master ? <span className="st-pill">Edited</span> : null}
       {variant.count ? <span className={over ? 'st-chars over' : 'st-chars'}>{variant.count.count.toLocaleString()} / {variant.count.limit.toLocaleString()}</span> : null}
+      <span className="st-chevron" aria-hidden="true"><Icon name="chevronRight" /></span>
     </button>
     <div className={open ? 'st-variant-body open' : 'st-variant-body'}>
       <label className="st-sr" htmlFor={`variant-${variant.item_id}`}>{networkName(variant.network)} text</label>

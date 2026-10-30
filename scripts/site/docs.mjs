@@ -58,7 +58,12 @@ function render(markdown) {
         const language = (lang ?? '').trim().split(/\s+/)[0].toLowerCase();
         if (!language) problems.push('has a code block without a language');
         const name = languages[language] ?? language.toUpperCase();
-        return `<div class="docs-code" data-copy-scope><div class="docs-code-head"><span>${escapeHtml(name || 'Code')}</span><button type="button" class="docs-copy" data-copy aria-label="Copy code" hidden></button></div><pre><code>${keepSlugs(escapeHtml(code.replace(/\n$/, '')))}</code></pre></div>\n`;
+        const body = keepSlugs(escapeHtml(code.replace(/\n$/, '')));
+        // A shell card sets each command on its own line with a hanging indent, so a wrapped tail sits under its command;
+        // the line breaks stay in the text, so Copy copies the block exactly.
+        const shell = name === 'Shell';
+        const lines = shell ? body.split('\n').map((line, index, all) => `<span class="docs-line">${line}${index < all.length - 1 ? '\n' : ''}</span>`).join('') : body;
+        return `<div class="docs-code${shell ? ' docs-code--shell' : ''}" data-copy-scope><div class="docs-code-head"><span>${escapeHtml(name || 'Code')}</span><button type="button" class="docs-copy" data-copy aria-label="Copy code" hidden></button></div><pre><code>${lines}</code></pre></div>\n`;
       },
       html({ text: raw }) { return escapeHtml(raw); },
       link({ href, title, tokens }) {

@@ -113,7 +113,7 @@ export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string
     const master = typeof item.master_id === 'string' ? item.master_id : null
     const draft = master ? { master } : { item: item.id }
     const action = flag?.code.startsWith('claim_') ? { label: 'Fix claim', to: { kind: 'compose' as const, ...draft, fix: item.id } }
-      : { label: over ? 'Edit variant' : 'Open draft', to: { kind: 'compose' as const, ...draft } }
+      : { label: over ? master ? 'Edit variant' : 'Edit post' : 'Open draft', to: { kind: 'compose' as const, ...draft } }
     const thread = flag && typeof flag.thread_url === 'string' && typeof flag.where === 'string' && reason.includes(flag.where) ? { words: flag.where, url: flag.thread_url } : null
     const mine = item.person_id === personId, changed = at(item.updated_at)
     const placed = placedName(item, names, products)

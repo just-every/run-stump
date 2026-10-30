@@ -167,7 +167,7 @@ function Finding({ finding, rank, watch, focal, act, may, context, onFocus, onCh
         {more > 0 ? <li className="st-meta st-chip-more" title={chips.slice(1).map(chip => chip.label).join(', ')}>+{more}</li> : null}
       </ul> : null}
       {focal ? <div className="st-finding-actions">
-        {job && !working ? <button type="button" className="st-button primary" onClick={() => setWorking(true)}>{JOB_WORDS[job]} <span aria-hidden="true">→</span></button> : null}
+        {job && !working ? <button type="button" className="st-button primary" onClick={() => setWorking(true)}>{JOB_WORDS[job]} <Icon name="arrowRight" /></button> : null}
         <a className="st-open-link" href={finding.url} target="_blank" rel="noopener noreferrer">Open thread ↗</a>
       </div> : null}
       {focal && working && job === 'reply' ? <ReplyForm finding={finding} context={context} onClose={() => setWorking(false)} /> : null}
@@ -244,7 +244,7 @@ function HandOffForm({ finding, watch, context, onClose }: { finding: FindingVie
     </div>
     <Outcome message={message} />
     <div className="st-actions">
-      <button className="st-button primary" type="submit" disabled={busy || !members.data}>Hand off <span aria-hidden="true">→</span></button>
+      <button className="st-button primary" type="submit" disabled={busy || !members.data}>Hand off <Icon name="arrowRight" /></button>
       <button className="st-button quiet" type="button" onClick={onClose}>Cancel</button>
     </div>
   </form>
