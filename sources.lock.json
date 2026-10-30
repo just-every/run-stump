@@ -367,6 +367,10 @@
     }
   ],
   "files": {
+    ".github/workflows/run-demo.yml": {
+      "sha256": "41365ec7c002e9451166313b085f9e64ed2e3ea002c27f3d5ead845bc9c302b2",
+      "executable": false
+    },
     ".github/workflows/run-site.yml": {
       "sha256": "1d3ce495145e2790d3d3448e208d99ef43c80e9298afe0d3cc3969cce90322e0",
       "executable": false
@@ -409,6 +413,10 @@
     },
     "CONTRACT.md": {
       "sha256": "0031abd77222421b92bc932b369b70e4489e522eb83f4f52459bd11f029b50e9",
+      "executable": false
+    },
+    "deploy-demo.json": {
+      "sha256": "2062572f4583433d969b2210476d52399a6045f22ece5435c2176bc49e2aecb8",
       "executable": false
     },
     "deploy-site.json": {
