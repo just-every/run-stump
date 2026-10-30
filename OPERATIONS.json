@@ -99,7 +99,8 @@
       ],
       "inputs": [
         "package.json",
-        "scripts/installer/local.mjs"
+        "scripts/installer/local.mjs",
+        "scripts/stump/archive-policy.mjs"
       ],
       "effects": "See SEED-COMMAND-CONTRACT.md for export effects."
     },
@@ -110,7 +111,8 @@
       ],
       "inputs": [
         "package.json",
-        "scripts/installer/local.mjs"
+        "scripts/installer/local.mjs",
+        "scripts/stump/archive-policy.mjs"
       ],
       "effects": "See SEED-COMMAND-CONTRACT.md for import effects."
     },

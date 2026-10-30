@@ -91,7 +91,14 @@ export interface LedgerEntry {
   hold: unknown
   removal: { reason: string; person_id: string; agent_id: string | null; at: string } | null
   legal_hold: { reason: string; person_id: string; agent_id: string | null; at: string } | null
+  /** Results the entry arrived with from the tool it was imported from: {source, values, read_at}. */
+  results: { source: string; values: Record<string, number>; read_at: string | null } | null
   versions: LedgerVersion[]
+}
+
+function importedResults(value: unknown): LedgerEntry['results'] {
+  const results = json(value) as { source: string; values: Record<string, number>; read_at: number | null } | null
+  return results ? { source: results.source, values: results.values, read_at: iso(results.read_at) } : null
 }
 
 export function toEntry(row: LedgerRow, versions: LedgerVersion[]): LedgerEntry {
@@ -102,6 +109,6 @@ export function toEntry(row: LedgerRow, versions: LedgerVersion[]): LedgerEntry 
     claims: json(row.claims) as unknown[], product_id: row.product_id as string | null, campaign: row.campaign as string | null, route: row.route as LedgerEntry['route'],
     state: row.state as LedgerEntry['state'], confirmation: row.confirmation as LedgerEntry['confirmation'], revision: row.revision as number | null, posted_at: iso(row.posted_at),
     charge_usd: row.charge_usd as number | null, approved_by: json(row.approved_by), hold: json(row.hold), removal: json(row.removal) as LedgerEntry['removal'],
-    legal_hold: json(row.legal_hold) as LedgerEntry['legal_hold'], versions: withCurrent(row, versions),
+    legal_hold: json(row.legal_hold) as LedgerEntry['legal_hold'], results: importedResults(row.results), versions: withCurrent(row, versions),
   }
 }

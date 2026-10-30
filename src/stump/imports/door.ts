@@ -12,6 +12,8 @@ import { REJECTED_KIND } from '../lib/imports/index.ts'
 import { resolvePerson } from '../people/store.ts'
 import { rowChanges, type PlanRow } from '../venues/import/changes.ts'
 import { keptAfterUndo, releaseKept } from '../venues/import/kept.ts'
+import { BUFFER_DESTINATION, bufferKept, bufferSource, checkImportedItems, releaseBufferKept } from './buffer.ts'
+import { bufferTargets } from './buffer-targets.ts'
 import { VENUE_DESTINATION, venueListSource } from '../venues/import/source.ts'
 import { venueListTargets } from '../venues/import/targets.ts'
 
@@ -31,6 +33,12 @@ interface ImportSource {
   changes(rows: PlanRow[]): Promise<unknown[]>
   /** Rows the file names that are already the seed's own records, kept as they are. */
   existing(): unknown[]
+  /** What a finished Undo kept, because a person edited it since or something else uses it. */
+  kept(jobId: string): Promise<unknown[]>
+  /** Hands what an Undo kept back to Stump: a later import of the file meets it as Stump's own. */
+  release(kept: unknown[]): Promise<void>
+  /** Work that follows the import's records once they exist, run again until it is done. */
+  settle(): Promise<void>
 }
 type SourceFactory = (db: D1Database, ownerId: string) => Promise<ImportSource>
 
@@ -40,6 +48,17 @@ const venueList = (namespace: 'outreach-md' | 'venues-csv'): SourceFactory => as
     destination: VENUE_DESTINATION, targets: venueListTargets, source, rejected, existing,
     summary: () => summary() as unknown as Record<string, number> | null,
     changes: rows => rowChanges(db, rows, mapped),
+    kept: jobId => keptAfterUndo(db, jobId), release: kept => releaseKept(db, kept as never), settle: async () => {},
+  }
+}
+
+const buffer: SourceFactory = async (db, ownerId) => {
+  const { source, summary, rejected, existing, changes } = await bufferSource(db, ownerId)
+  return {
+    destination: BUFFER_DESTINATION, targets: bufferTargets, source, summary, rejected, existing, changes,
+    kept: jobId => bufferKept(db, jobId), release: kept => releaseBufferKept(db, kept as never),
+    // Imported items get the draft check once their accounts exist.
+    settle: async () => { await checkImportedItems(db, Date.now()) },
   }
 }
 
@@ -47,6 +66,7 @@ const venueList = (namespace: 'outreach-md' | 'venues-csv'): SourceFactory => as
 const SOURCES: Record<string, SourceFactory> = {
   'outreach-md': venueList('outreach-md'),
   'venues-csv': venueList('venues-csv'),
+  buffer,
 }
 
 const headers = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
@@ -102,12 +122,13 @@ export async function importDoorResponse(request: Request, original: StumpEnv): 
     }
   }
   const response = await kit(action, body)
+  if (response.ok && (action === 'apply' || action === 'status')) await entry.settle()
   if (!response.ok || action !== 'undo') return response
   // Undo keeps what was edited since, and what something else now uses; it says which.
   const result = await response.json() as Record<string, unknown>, job = result.job as { id?: string; state?: string } | undefined
-  const kept = job?.id ? await keptAfterUndo(env.DB, job.id) : []
+  const kept = job?.id ? await entry.kept(job.id) : []
   // A finished Undo hands what it kept back to Stump: a later import of the list meets it as already in the register.
-  if (job?.state === 'undone') await releaseKept(env.DB, kept)
+  if (job?.state === 'undone') await entry.release(kept)
   result.kept = kept
   return Response.json(result, { status: response.status, headers })
 
