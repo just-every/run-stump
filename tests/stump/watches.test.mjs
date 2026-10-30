@@ -24,7 +24,7 @@ const manage = args => ok(app.mcp(token, 'stump.watches.manage', args))
 const findings = id => ok(app.mcp(token, 'stump.findings.work', { action: 'list', watch_id: id }))
 const classesOf = answer => answer.result?._meta?.['com.runeditrun/decision']?.classes?.map(item => item.class).sort().join(',')
 
-test('a watch finds Hacker News threads, ranks them with reasons, alerts Slack and a signed webhook once, replays the event, and mutes', async () => {
+test('watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute', async () => {
   const created = await app.mcp(token, 'stump.watches.manage', { action: 'create', name: 'Orbit on Hacker News', terms: { all: ['orbit', 'crm'], none: ['orbital'] }, sources: [{ kind: 'hn' }],
     alerts: { immediate_min_relevance: 40, slack: { webhook_url: slackAddress }, webhook: { url: 'https://receiver.example.test/hook', secret } } })
   assert.equal(created.error, null)
@@ -79,21 +79,18 @@ test('a watch finds Hacker News threads, ranks them with reasons, alerts Slack a
   const limited = await manage({ action: 'create', name: 'Ask and Show', terms: { all: ['orbit', 'crm'] }, sources: [{ kind: 'hn', story_types: ['ask_hn', 'show_hn'] }] })
   assert.ok((await findings(limited.id)).items.every(item => ['ask_hn', 'show_hn'].includes(item.kind)), 'story types narrow the source')
   const guarded = await manage({ action: 'create', name: 'Blocked first', terms: { all: ['orbit', 'crm'] }, sources: [] })
-  await manage({ action: 'block_author', author: '@BlockedBob', source: { kind: 'hn' } })
+  await manage({ action: 'block_author', handle: '@BlockedBob', source: 'hn' })
   await manage({ action: 'add_source', watch_id: guarded.id, source: { kind: 'hn' } })
   assert.ok(!(await findings(guarded.id)).items.some(item => item.author === 'blockedbob'), 'an author on the company block list never becomes a finding on any watch')
-  await manage({ action: 'unblock_author', author: 'blockedbob', source: { kind: 'hn' } })
+  await manage({ action: 'unblock_author', handle: 'blockedbob', source: { kind: 'hn' } })
   assert.ok(!(await findings(guarded.id)).items.some(item => item.author === 'blockedbob'), 'unblocking applies from the next poll')
   await manage({ action: 'poll', watch_id: guarded.id })
   assert.ok((await findings(guarded.id)).items.some(item => item.author === 'blockedbob'))
-})
 
-test('feeds, Bluesky and Mastodon become findings once, honour caching and rate limits, and refuse what is not a source', async () => {
   const F = 'https://feeds.example.test'
-  const created = await app.action('owner', 'stump.watches.manage', { action: 'create', name: 'Feeds', terms: { all: ['orbit', 'crm'] },
+  const feeds = await manage({ action: 'create', name: 'Feeds', terms: { all: ['orbit', 'crm'] },
     sources: ['blog', 'mirror', 'atom', 'alerts', 'podcast'].map(name => ({ kind: 'rss', url: `${F}/${name}.xml` })) })
-  assert.equal(created.status, 200); const watch = created.body.result
-  const items = (await app.action('owner', 'stump.findings.work', { action: 'list', watch_id: watch.id })).body.result.items
+  const items = (await findings(feeds.id)).items
   const at = part => items.find(item => item.url.includes(part))
   assert.ok(at('orbit-crm-small-team') && at('atom-orbit-crm') && at('podcast.example.test/ep12') && !at('ep11') && !at('/release'), 'matching items arrive with title, link and author; others do not')
   assert.equal(items.filter(item => item.url.includes('orbit-crm-small-team')).length, 1, 'an item reached through two feeds is one finding')
@@ -101,42 +98,41 @@ test('feeds, Bluesky and Mastodon become findings once, honour caching and rate 
   assert.equal(at('ep12').transcript_url, `${F}/ep12.vtt`, 'a transcript match links the episode')
   assert.ok(at('ep12').reason_details.some(reason => reason.factor === 'matched_terms' && reason.points > 0 && /episode transcript/.test(reason.label)), 'and is credited with the match')
   assert.ok(items.every(item => !/[<>]|onerror|onclick/i.test(item.text + item.title)), 'markup in a feed item reaches no screen as HTML')
-  assert.equal((await app.action('owner', 'stump.watches.manage', { action: 'poll', watch_id: watch.id })).body.result.added, 0)
+  assert.equal((await manage({ action: 'poll', watch_id: feeds.id })).added, 0)
   assert.ok(fake.state.conditional >= 4, 'an unchanged feed is fetched with its ETag and adds nothing')
-  const reddit = await app.action('owner', 'stump.watches.manage', { action: 'add_source', watch_id: watch.id, source: { kind: 'rss', url: 'https://www.reddit.com/r/saas/.rss' } })
-  assert.equal(reddit.body.code, 'reddit_not_a_source'); assert.match(reddit.body.reason, /licensed data supplier/)
-  const total = (await app.action('owner', 'stump.findings.work', { action: 'list', watch_id: watch.id })).body.result.total
+  const reddit = await app.mcp(token, 'stump.watches.manage', { action: 'add_source', watch_id: feeds.id, source: { kind: 'rss', url: 'https://www.reddit.com/r/saas/.rss' } })
+  assert.equal(reddit.error?.code, 'reddit_not_a_source'); assert.match(reddit.error.reason, /licensed data supplier/)
+  const total = (await findings(feeds.id)).total
   fake.state.fail['malformed:/atom.xml'] = true
-  await app.action('owner', 'stump.watches.manage', { action: 'poll', watch_id: watch.id })
-  const broken = (await app.action('owner', 'stump.watches.manage', { action: 'get', watch_id: watch.id })).body.result
-  assert.equal(broken.last_error.kind, 'parse', 'a malformed feed shows its error on the watch')
-  assert.equal((await app.action('owner', 'stump.findings.work', { action: 'list', watch_id: watch.id })).body.result.total, total, 'earlier findings stay')
+  await manage({ action: 'poll', watch_id: feeds.id })
+  assert.equal((await manage({ action: 'get', watch_id: feeds.id })).last_error.kind, 'parse', 'a malformed feed shows its error on the watch')
+  assert.equal((await findings(feeds.id)).total, total, 'earlier findings stay')
 
-  const social = await app.action('owner', 'stump.watches.manage', { action: 'create', name: 'Social', terms: { any: ['crm'] },
+  const social = await manage({ action: 'create', name: 'Social', terms: { any: ['crm'] },
     sources: [{ kind: 'bluesky' }, { kind: 'mastodon', instance: 'mastodon.social', hashtags: ['crm'] }, { kind: 'mastodon', instance: 'fosstodon.org', hashtags: ['crm'] }] })
-  const posts = (await app.action('owner', 'stump.findings.work', { action: 'list', watch_id: social.body.result.id })).body.result.items
+  const posts = (await findings(social.id)).items
   assert.ok(posts.some(item => item.author === 'sara.bsky.example' && item.url === 'https://bsky.app/profile/sara.bsky.example/post/3kaaa'), 'a Bluesky post with handle and link')
   const toots = posts.filter(item => item.source === 'mastodon')
   assert.deepEqual(toots.map(item => item.author).sort(), [['oss_dev', 'fosstodon.org'], ['priya', 'mastodon.social']].map(account => account.join('@')), 'a Mastodon watch limited to two instances and one hashtag')
-  assert.equal((await app.action('owner', 'stump.watches.manage', { action: 'poll', watch_id: social.body.result.id })).body.result.added, 0, 'repeated polls add no duplicates')
+  assert.equal((await manage({ action: 'poll', watch_id: social.id })).added, 0, 'repeated polls add no duplicates')
   fake.state.fail.bluesky_retry_after = 120
   const requests = fake.state.requests.length
-  const first = await app.action('owner', 'stump.watches.manage', { action: 'poll', watch_id: social.body.result.id, source_key: 'bluesky' })
-  const next = Date.parse((await app.action('owner', 'stump.watches.manage', { action: 'get', watch_id: social.body.result.id })).body.result.next_poll_at) - Date.now()
-  assert.equal(first.body.result.sources[0].error.kind, 'rate_limited'); assert.ok(next > 100_000 && next < 130_000, 'the watch shows when it will poll next')
-  await app.action('owner', 'stump.watches.manage', { action: 'poll', watch_id: social.body.result.id, source_key: 'bluesky' })
+  const first = await manage({ action: 'poll', watch_id: social.id, source: 'bluesky' })
+  const next = Date.parse((await manage({ action: 'get', watch_id: social.id })).next_poll_at) - Date.now()
+  assert.equal(first.sources[0].error.kind, 'rate_limited'); assert.ok(next > 100_000 && next < 130_000, 'the watch shows when it will poll next')
+  await manage({ action: 'poll', watch_id: social.id, source_key: 'bluesky' })
   assert.equal(fake.state.requests.length, requests + 1, 'a rate limit is honoured: no second request inside the window')
   fake.state.fail.bluesky_retry_after = 0
 
-  const grown = await app.action('owner', 'stump.watches.manage', { action: 'create', name: 'Grown', terms: { all: ['orbit', 'crm'] }, sources: [{ kind: 'hn' }] })
+  const grown = await manage({ action: 'create', name: 'Grown', terms: { all: ['orbit', 'crm'] }, sources: [{ kind: 'hn' }] })
   fake.state.requests.length = 0
-  const added = await app.action('owner', 'stump.watches.manage', { action: 'add_source', watch_id: grown.body.result.id, source: { kind: 'bluesky' } })
-  assert.ok(added.body.result.poll.added > 0 && fake.state.requests.every(request => request.startsWith('https://api.bsky.app')), 'adding a source backfills that source only')
+  const added = await manage({ action: 'add_source', watch_id: grown.id, source: { kind: 'bluesky' } })
+  assert.ok(added.poll.added > 0 && fake.state.requests.every(request => request.startsWith('https://api.bsky.app')), 'adding a source backfills that source only')
   fake.state.requests.length = 0
-  assert.equal((await app.action('owner', 'stump.watches.manage', { action: 'backfill', watch_id: grown.body.result.id, source: { kind: 'bluesky' } })).body.result.added, 0, 'a second backfill adds no duplicates')
+  assert.equal((await manage({ action: 'backfill', watch_id: grown.id, source: 'bluesky' })).added, 0, 'a second backfill adds no duplicates')
   assert.ok(fake.state.requests.length && fake.state.requests.every(request => request.startsWith('https://api.bsky.app')), 'a backfill naming a source reads that source only')
-  assert.equal((await app.action('owner', 'stump.watches.manage', { action: 'backfill', watch_id: grown.body.result.id, source: { kind: 'rss', url: `${F}/blog.xml` } })).body.code, 'not_found', 'and refuses a source the watch does not follow')
-  const count = (await app.action('owner', 'stump.findings.work', { action: 'list', watch_id: grown.body.result.id })).body.result.total
-  await app.action('owner', 'stump.watches.manage', { action: 'update', watch_id: grown.body.result.id, terms: { all: ['orbit', 'crm', 'recommendations'] } })
-  assert.equal((await app.action('owner', 'stump.findings.work', { action: 'list', watch_id: grown.body.result.id })).body.result.total, count, 'changing a filter leaves earlier findings in place')
+  assert.equal((await app.mcp(token, 'stump.watches.manage', { action: 'backfill', watch_id: grown.id, source: { kind: 'rss', url: `${F}/blog.xml` } })).error?.code, 'not_found', 'and refuses a source the watch does not follow')
+  const count = (await findings(grown.id)).total
+  await manage({ action: 'update', watch_id: grown.id, terms: { all: ['orbit', 'crm', 'recommendations'] } })
+  assert.equal((await findings(grown.id)).total, count, 'changing a filter leaves earlier findings in place')
 })

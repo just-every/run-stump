@@ -147,7 +147,7 @@ function Finding({ finding, rank, watch, focal, may, onChange }: { finding: Find
     </div>
     {may ? <MoreMenu items={[
       { label: watch.muted ? 'Unmute watch' : 'Mute watch', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'mute', watch_id: watch.id, muted: !watch.muted, idempotency_key: key() })); await onChange() } },
-      ...(finding.author ? [{ label: 'Block author', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'block_author', watch_id: watch.id, author: finding.author, source: { kind: finding.source }, idempotency_key: key() })); await onChange() } }] : []),
+      ...(finding.author ? [{ label: 'Block author', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'block_author', watch_id: watch.id, handle: finding.author, source: finding.source, idempotency_key: key() })); await onChange() } }] : []),
       ...(finding.routes.includes('dismiss') ? [{ label: 'Dismiss', run: async () => { await run(() => runAction('stump.findings.work', { action: 'dismiss', finding_id: finding.id, idempotency_key: key() })); await onChange() } }] : []),
     ]} /> : <span />}
   </li>
@@ -217,7 +217,7 @@ function Editor({ watch, role, blocked = [], onDone, onCancel }: { watch?: Watch
   }
   async function unblock(author: BlockedAuthor) {
     if (!watch) return
-    const done = await run(() => runAction('stump.watches.manage', { action: 'unblock_author', author: author.handle, ...(author.source ? { source: { kind: author.source } } : {}), idempotency_key: key() }), () => 'Unblocked. Their posts count from the next check.')
+    const done = await run(() => runAction('stump.watches.manage', { action: 'unblock_author', handle: author.handle, ...(author.source ? { source: author.source } : {}), idempotency_key: key() }), () => 'Unblocked. Their posts count from the next check.')
     if (done !== undefined) await onDone(watch.id)
   }
   return <form className="st-editor" onSubmit={submit} aria-label={watch ? 'Edit watch' : 'New watch'}>

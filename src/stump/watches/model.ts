@@ -48,7 +48,8 @@ export const schemas = {
   name: { type: 'string', minLength: 1, maxLength: 120 },
   product_ids: { type: 'array', maxItems: 50, items: { type: 'string', minLength: 1, maxLength: 64 } },
   terms: { type: 'object', additionalProperties: false, properties: { all: termList, any: termList, none: termList } },
-  source: sourceItem,
+  /** One source: its kind alone (hn, rss, bluesky, mastodon) or the object add_source and create take. */
+  source: { anyOf: [{ enum: [...SOURCE_KINDS] }, sourceItem] },
   sources: { type: 'array', maxItems: 20, items: sourceItem },
   alerts: {
     type: 'object', additionalProperties: false,
@@ -59,6 +60,7 @@ export const schemas = {
     },
   },
   interval_minutes: { type: 'integer', minimum: 5, maximum: 1440 },
+  handle: { type: 'string', minLength: 1, maxLength: 300 },
   author: { type: 'string', minLength: 1, maxLength: 300 },
   event_id: { type: 'string', minLength: 1, maxLength: 100 },
   finding_id: { type: 'string', minLength: 1, maxLength: 64 },
@@ -87,10 +89,16 @@ export function normaliseTerms(input: unknown): TermLogic {
   return terms
 }
 
-/** One source, checked and keyed. Reddit feeds are refused with the supplier and alert routes (STUMP-WATCH-002.8). */
-/** `index` -1 names a lone source (add_source). */
+/** A source named by its kind alone ('hn') reads as `{kind: 'hn'}`. */
+export const sourceObject = (input: unknown): Record<string, unknown> =>
+  typeof input === 'string' ? { kind: input } : (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
+
+/**
+ * One source, checked and keyed. Reddit feeds are refused with the supplier and alert routes (STUMP-WATCH-002.8).
+ * `index` -1 names a lone source (add_source).
+ */
 export function normaliseSource(input: unknown, terms: TermLogic, index = 0): WatchSource {
-  const raw = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
+  const raw = sourceObject(input)
   const kind = raw.kind as SourceKind
   const field = index < 0 ? 'source' : `sources[${index}]`
   if (!SOURCE_KINDS.includes(kind)) refuse('invalid_arguments', { field: `${field}.kind` })

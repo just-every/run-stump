@@ -392,7 +392,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "2571eec3e7463dc559122487f42968595fc64c070ffbe58463fc625139607acc",
+      "sha256": "c21298cfd06181e45b5e8869e40da7149aa24cfa865cc29d1809d07c32330736",
       "executable": false
     },
     "agent-surface.json": {
@@ -420,7 +420,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "230adcc7624eece53c888f94d554101d3c79ac2768c6aefa52d3ba1004f79420",
+      "sha256": "4d02efaad8d1823a0fbe7ab736220e43819157ac132b04e4a6e197f621801ba6",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2164,7 +2164,7 @@
       "executable": false
     },
     "src/routes/app.listening.tsx": {
-      "sha256": "5e135adbbfa5daae4be1cdeea2f61015e37ac512bf92b83c48784d2ff7e9eb39",
+      "sha256": "b23409aef6723bf07a65256cda308b9d5f54b9c1273baa660d3665bd098eb899",
       "executable": false
     },
     "src/routes/app.settings.agents.tsx": {
@@ -2744,7 +2744,7 @@
       "executable": false
     },
     "src/stump/tools/watches.ts": {
-      "sha256": "6a267f916ac8f67ca30064df98d34451ea49068b0f1dc9d3e37c6f4cfb951880",
+      "sha256": "b209c07526a316309fc321fb33b81a243d43b040c498ae0588dbeb57009bfb1a",
       "executable": false
     },
     "src/stump/ui/api.ts": {
@@ -2788,7 +2788,7 @@
       "executable": false
     },
     "src/stump/watches/model.ts": {
-      "sha256": "0aab3255beaee93cce43565eb77f679673fa9a50cf147b5537b139013884de64",
+      "sha256": "89b826cc72f540c5d793d0c3b53ce52c5b304b2fc2a9398f6f5d0844ea8ad369",
       "executable": false
     },
     "src/stump/watches/poll.ts": {
@@ -2800,7 +2800,7 @@
       "executable": false
     },
     "src/stump/watches/routes.ts": {
-      "sha256": "9b3b6d06cc77fb0211c4a51ba622913794c0ce5a907ccd44cfea070554acd970",
+      "sha256": "012a28183abef2a4b934994484dd6a7900ff409a4ca703b6bc8087608253b451",
       "executable": false
     },
     "src/stump/watches/scheduled.ts": {
@@ -2852,7 +2852,7 @@
       "executable": false
     },
     "tests/stump/watches.test.mjs": {
-      "sha256": "5b45502f2f6ae81f2b80391b3559512005e53758a36212fe8c93ccd7c2bff9c9",
+      "sha256": "3f69e09a70313a3dee4a9c4179fa6fd669476ebadf9fc17f5635f1098f229ea3",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

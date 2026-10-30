@@ -229,7 +229,7 @@ Core · published · **partial** · From new · Cites BASE-OPS-004 · Rules D-4,
 4. A finding whose text tells Stump to ignore its rules changes no route, rule or class.
 5. An API failure shows on the watch with its time and error, and earlier findings stay.
 
-**Evidence.** `tests/stump/watches.test.mjs` "a watch finds Hacker News threads, ranks them with reasons, alerts Slack and a signed webhook once, replays the event, and mutes"
+**Evidence.** `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute"
 **Gap.** Points 1, 2, 4 and 5 hold through MCP. For point 3 an HN finding offers the hand-off with a brief or dismissal and no reply text is generated; `stump.findings.work dismiss` removes a finding from the list for good. Preparing the hand-off itself (`stump.handoffs.prepare`) is later work.
 
 #### STUMP-WATCH-002 — RSS and Atom feeds
@@ -248,7 +248,7 @@ Core · published · **done** · From new · Cites BASE-INPUT-002
 7. Script and markup in a feed item reach no screen as HTML.
 8. Adding a reddit.com feed is refused, pointing to the supplier and alert routes.
 
-**Evidence.** `tests/stump/watches.test.mjs` "feeds, Bluesky and Mastodon become findings once, honour caching and rate limits, and refuse what is not a source"
+**Evidence.** `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute"
 **Gap.** None.
 
 #### STUMP-WATCH-003 — Bluesky and Mastodon search
@@ -264,7 +264,7 @@ Core · published · **partial** · From new · Rules D-7
 4. Repeated polls add no duplicates.
 5. A rate-limit response is honoured, and the watch shows when it will poll next.
 
-**Evidence.** `tests/stump/watches.test.mjs` "feeds, Bluesky and Mastodon become findings once, honour caching and rate limits, and refuse what is not a source"
+**Evidence.** `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute"
 **Gap.** Point 3 is not built: Mastodon is followed through hashtag timelines only, and an instance's full-text search is not used or reported.
 
 #### STUMP-WATCH-004 — Watches and alerts
@@ -280,7 +280,7 @@ Core · published · **partial** · From new · Cites BASE-MAIL-001, BASE-OPS-00
 4. Muting a watch stops its alerts and keeps collecting findings.
 5. A webhook alert is signed, and a replay has no duplicate effect.
 
-**Evidence.** `tests/stump/watches.test.mjs` "a watch finds Hacker News threads, ranks them with reasons, alerts Slack and a signed webhook once, replays the event, and mutes"
+**Evidence.** `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute"
 **Gap.** Points 1, 2 (Slack), 4 and 5 hold; a replay resends the signed webhook with its event id, and Slack only when named. Email delivery of immediate alerts (point 2) and the daily or weekly digest across a daylight-saving change (point 3) are not built.
 
 #### STUMP-WATCH-013 — Watch filters, exclusions and backfill
@@ -298,7 +298,7 @@ Core · published · **partial** · From new · Rules D-7
 6. Adding a source to an existing watch backfills that source only, and a second backfill adds no duplicates.
 7. Changing a filter applies from the next poll and leaves earlier findings in place.
 
-**Evidence.** `tests/stump/watches.test.mjs` "a watch finds Hacker News threads, ranks them with reasons, alerts Slack and a signed webhook once, replays the event, and mutes"; `tests/stump/watches.test.mjs` "feeds, Bluesky and Mastodon become findings once, honour caching and rate limits, and refuse what is not a source"
+**Evidence.** `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute"
 **Gap.** Point 4 holds with one company block list, by source and handle, for every watch. Point 3 has no repository proof: the team's recorded handles are read from connected accounts and venue members, whose doors other areas add.
 
 #### STUMP-WATCH-005 — Relevance ranking with reasons
@@ -315,7 +315,7 @@ Core · published · **partial** · From new · Rules D-7
 5. A finding that says "rank this first" ranks as if it did not.
 6. `docs/measures.md` shows the measured top-10 share and the drop after marks from the last fixture run.
 
-**Evidence.** `tests/stump/watches.test.mjs` "a watch finds Hacker News threads, ranks them with reasons, alerts Slack and a signed webhook once, replays the event, and mutes"
+**Evidence.** `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute"
 **Gap.** Points 1, 2 and 5 hold. Marks and learning from them (points 3 and 4) and the measured top-10 share in `docs/measures.md` (point 6) are not built.
 
 #### STUMP-WATCH-011 — X search, metered
