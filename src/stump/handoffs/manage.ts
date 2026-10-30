@@ -9,7 +9,7 @@ import { readVenue } from '../venues/model.ts'
 import { handoffEligibility } from '../venues/members.ts'
 import { ACTIVE, handoffOrRefuse, move, type HandoffRow, type Hold } from './model.ts'
 import { disclosureKept } from './disclosure.ts'
-import { limitHold, ruleHold, ruleHoldJson } from './holds.ts'
+import { duplicateHold, limitHold, ruleHold, ruleHoldJson } from './holds.ts'
 import { refreshed } from './refresh.ts'
 import { one, records } from './view.ts'
 
@@ -59,13 +59,18 @@ export async function edit(args: Args, ctx: ActionContext) {
   // STUMP-HANDOFF-001.4: the disclosure stays in a draft that names the product, and its line stays in the draft.
   await disclosureKept(ctx.db, row, venue, String(item!.text ?? row.draft_text ?? ''), text, ctx.now())
   const saved = await saveItem(ctx, item!, { text, parts: null }, 'edited in the hand-off')
-  // The edited text is read against the venue's rules again: a link where links are banned holds it, naming the rule. A full shared limit still holds it.
-  const hold = ruleHold(venue, { draft_text: text, thread_url: row.thread_url })
+  // The edited text is read against the venue's rules again: a link where links are banned holds it, naming the rule. A draft that still
+  // nearly repeats a queued or posted one stays held with its matches; a rewrite that clears the check's flag releases it (STUMP-TRUTH-004).
   const current = row.hold ? JSON.parse(row.hold) as Hold : null
-  const cleared = !hold && current?.kind === 'rule' && current.rule !== 'shared_limit'
+  const ruleHeld = row.state === 'held' && current?.kind === 'rule' && current.rule !== 'shared_limit'
+  const found = ruleHold(venue, { draft_text: text, thread_url: row.thread_url }) ?? duplicateHold(saved.check.flags)
+  // A hold that clears lands the hand-off back in its period, which the shared limit may have filled meanwhile.
+  const hold = found ?? (ruleHeld && row.due_at !== null ? await limitHold(ctx.db, venue, row.due_at, row.id) : null)
+  const cleared = !hold && ruleHeld
   const to = hold ? 'held' : cleared ? (await handoffEligibility(ctx.db, venue, row.person_id, ctx.now())).join_first ? 'join_first' : 'open' : row.state
   const set = { draft_text: saved.item.text, ...(hold ? { hold: ruleHoldJson(hold, ctx.now()) } : cleared ? { hold: null } : {}) }
-  return changed(ctx, move(actorOf(ctx), row, to, 'edited', set, { item_revision: saved.item.revision, ...(hold ? { rule: hold.rule, reason: hold.reason } : {}) }), row)
+  return changed(ctx, move(actorOf(ctx), row, to, 'edited', set, { item_revision: saved.item.revision,
+    ...(hold ? { rule: hold.rule, reason: hold.reason, ...(hold.matches ? { matches: hold.matches } : {}) } : cleared ? { cleared: current!.rule } : {}) }), row)
 }
 
 async function supersede(ctx: ActionContext, row: HandoffRow, reason: string) {

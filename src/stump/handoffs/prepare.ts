@@ -14,7 +14,7 @@ import { handoffEligibility } from '../venues/members.ts'
 import { rulesOf, venueOrRefuse, type VenueRow } from '../venues/model.ts'
 import { routesFor } from '../venues/rules.ts'
 import { disclosureFor, factsFor, nextOpening, outsideVoice, talkingPoints } from './brief.ts'
-import { limitHold, ruleHold, ruleHoldJson, type RuleHold } from './holds.ts'
+import { duplicateHold, limitHold, ruleHold, ruleHoldJson, type RuleHold } from './holds.ts'
 import { onVenue, parseLink } from './link.ts'
 import { history } from './model.ts'
 
@@ -90,9 +90,9 @@ export async function admit(ctx: ActionContext, planned: Plan) {
   return { eligibility, full }
 }
 
-/** The drafting request a hand-off makes: one post for the person at the venue. */
+/** The drafting request a hand-off makes: one post for the person at the venue, aimed at the thread the hand-off names. */
 const draftArgs = (args: Args): Args => ({
-  format: 'post', person_id: args.person_id, product_id: args.product_id, venue_id: args.venue_id,
+  format: 'post', person_id: args.person_id, product_id: args.product_id, venue_id: args.venue_id, ...(typeof args.thread_url === 'string' ? { thread_url: args.thread_url } : {}),
   ...(args.generate === true ? { generate: true } : { text: args.text }), ...(args.campaign !== undefined ? { campaign: args.campaign } : {}), ...(args.recommends !== undefined ? { recommends: args.recommends } : {}),
 })
 
@@ -107,7 +107,7 @@ export async function prepare(ctx: ActionContext, args: Args, planned: Plan): Pr
   const { eligibility, full } = await admit(ctx, planned)
   const { venue, person, product, brand, due, route, d8, unused } = planned
   const disclosure = disclosureFor(venue, person, brand, product.name)
-  let itemId: string | null = null, draft: string | null = null, used: string[] = []
+  let itemId: string | null = null, draft: string | null = null, used: string[] = [], flags: Array<{ code: string; blocking?: unknown; matches?: unknown }> = []
   if (planned.writes) {
     // A hand-written draft that names the company carries the disclosure from the start (D-2).
     const made = await createItem(ctx, draftArgs(args))
@@ -122,10 +122,12 @@ export async function prepare(ctx: ActionContext, args: Args, planned: Plan): Pr
     }
     draft = String(row.text ?? '')
     used = check.claims_used
+    flags = check.flags
   }
   const facts = factsFor(brand, product.id, ctx.now(), used)
   const id = crypto.randomUUID(), now = ctx.now()
-  const hold: RuleHold | null = ruleHold(venue, { draft_text: draft, thread_url: (args.thread_url as string | undefined) ?? null }) ?? full
+  // A venue rule holds it first; then a draft that nearly repeats a queued or posted one (STUMP-TRUTH-004), with its matches; then a full shared limit.
+  const hold: RuleHold | null = ruleHold(venue, { draft_text: draft, thread_url: (args.thread_url as string | undefined) ?? null }) ?? duplicateHold(flags) ?? full
   const state = hold ? 'held' : eligibility.join_first ? 'join_first' : 'open'
   const opening = hold?.rule === 'shared_limit' ? Date.parse(hold.next_open_at ?? '') || null : await nextOpening(ctx.db, venue, now)
   const actor = { db: ctx.db, person: ctx.person, agent: ctx.agent, now: ctx.now }
@@ -138,7 +140,7 @@ export async function prepare(ctx: ActionContext, args: Args, planned: Plan): Pr
         opening, holdJson, (args.thread_url as string | undefined) ?? null, (args.campaign as string | undefined) ?? null,
         ctx.agent ? JSON.stringify({ id: ctx.agent.id, name: ctx.agent.name }) : null, ctx.person.id, now, now, route, args.recommends === true ? 1 : 0),
     history(actor, id, 'prepared', null, state, { route, lapse: args.lapse, due_at: new Date(due).toISOString(), item_id: itemId,
-      ...(hold ? { rule: hold.rule, reason: hold.reason, ...(hold.next_open_at !== undefined ? { next_open_at: hold.next_open_at } : {}) } : {}),
+      ...(hold ? { rule: hold.rule, reason: hold.reason, ...(hold.next_open_at !== undefined ? { next_open_at: hold.next_open_at } : {}), ...(hold.matches ? { matches: hold.matches } : {}) } : {}),
       ...(eligibility.join_first ? { join_first: true } : {}), ...(d8 ? { d8: true } : {}),
       ...(unused ? { text_not_used: { field: unused.field, rule: unused.rule, source: unused.source, reason: unused.because } } : {}) }),
   ])

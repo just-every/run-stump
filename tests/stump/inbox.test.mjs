@@ -116,7 +116,7 @@ test('the company reads its X mentions once at its read price, answers only peop
   const text = 'Yes. Pick every other week when you set the pattern, and each visit books itself.'
   const replied = ok(await inbox('stump.inbox.reply', { action: 'reply', inbox_item_id: linh.id, account_id: account.id, text }))
   assert.deepEqual([replied.state, replied.posted, x.created.length, x.created[0].reply.in_reply_to_tweet_id], ['posted', true, 1, linh.network_id])
-  const { entry } = ok(await inbox('stump.ledger.search', { action: 'get', entry_id: replied.ledger_id }))
+  const entry = ok(await inbox('stump.ledger.search', { action: 'get', entry_id: replied.ledger_id }))
   assert.deepEqual([entry.url, entry.text, entry.route, entry.state, entry.confirmation, entry.charge_usd], [replied.url, text, 'published', 'posted', 'network', 0.015])
   const second = await inbox('stump.inbox.reply', { action: 'reply', inbox_item_id: linh.id, account_id: account.id, text: 'One more thing about patterns.' })
   assert.deepEqual([second.body.code, second.body.act, second.body.reply_item_id], ['act_refused', 'x_one_reply_per_interaction', replied.item_id])

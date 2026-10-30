@@ -18,6 +18,8 @@ export interface Hold {
   review_at: string | null; rule: string | null; source_url: string | null; at: string
   /** A shared-limit hold: when the venue next has room. */
   next_open_at?: string | null
+  /** A near-duplicate hold (STUMP-TRUTH-004): the ledger entries and queued items the draft nearly repeats. */
+  matches?: Array<{ id: string; kind: 'item' | 'ledger'; score: number; url: string | null }>
 }
 
 export interface HandoffRow {

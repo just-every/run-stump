@@ -14,6 +14,8 @@ export interface AuditRow {
   approval: { id: string; by: string[] } | null; review: { id: string; by: string | null } | null
   idempotency_key: string | null; trace: string | null; ignored_arguments: string[]; replay_of: string | null
   classification_refusal?: string
+  /** An act_refused call: the product rule that refused it and its source (Stump adaptation). */
+  rule?: string; source?: string; read_at?: string
 }
 export interface Evidence { document: PolicyDocument; usage: Record<string, number>; classes: ClassAndFacts[]; result: string; rules: unknown }
 export function newAudit(rt: Runtime, principal: Principal, tool: string, door: AuditRow['door'], trace: unknown): AuditRow {
@@ -40,6 +42,8 @@ export function outcomeRow(row: AuditRow, result: import('./types.ts').CallResul
   if (result.decision) recordDecision(row, result.decision)
   if (row.outcome !== 'replayed' && row.outcome !== 'failed') row.outcome = result.code === 'output_invalid' || result.code === 'execution_failed' ? 'failed' : result.outcome
   row.code = result.code ?? null
+  // Stump adaptation: a refused act is audited with the rule and source it names, so the audit shows why (STUMP-SURFACE-010.3).
+  if (result.code === 'act_refused' && result.fields) for (const key of ['rule', 'source', 'read_at'] as const) if (typeof result.fields[key] === 'string') row[key] = result.fields[key] as string
   row.approval = result.approval ? { id: result.approval.id, by: (result.receipt?.approved_by as string[]) ?? [] } : null
   row.review = result.review ? { id: result.review.id, by: null } : null
 }
@@ -67,13 +71,15 @@ export async function usage(rt: Runtime, document: PolicyDocument, principal: Pr
 }
 export const usageToday = (sums: Record<string, number>) => (rule: Rule, cls: ClassId) => sums[`${rule.id}:${cls}`] ?? 0
 export async function auditPage(rt: Runtime, url: URL) {
-  const rows = (await rt.options.db.prepare('SELECT sequence,row,evidence FROM agent_door_audit WHERE sequence>? ORDER BY sequence LIMIT 200').bind(Number(url.searchParams.get('after')) || 0).all<{ sequence: number; row: string; evidence: string | null }>()).results
+  // Stump adaptation: the agent and class filters apply before the page limit, so a filtered page is never empty while matching rows lie further on.
+  const agent = url.searchParams.get('agent') || null, cls = url.searchParams.get('class') || null
+  const rows = (await rt.options.db.prepare(`SELECT sequence,row,evidence FROM agent_door_audit WHERE sequence>?1 AND (?2 IS NULL OR agent=?2)
+    AND (?3 IS NULL OR EXISTS(SELECT 1 FROM json_each(agent_door_audit.classes) WHERE value=?3)) ORDER BY sequence LIMIT 200`)
+    .bind(Number(url.searchParams.get('after')) || 0, agent, cls).all<{ sequence: number; row: string; evidence: string | null }>()).results
   let differs = 0
   const visible = []
   for (const record of rows) {
     const row: AuditRow = { ...JSON.parse(record.row), sequence: record.sequence }
-    if (url.searchParams.get('agent') && row.agent.id !== url.searchParams.get('agent')) continue
-    if (url.searchParams.get('class') && !row.classes.some(item => item.class === url.searchParams.get('class'))) continue
     if (record.evidence) {
       const evidence: Evidence = JSON.parse(record.evidence)
       const result = decide({ document: evidence.document, revision: row.revision, call: { seed: rt.options.seed, specialist: row.agent.specialist ?? null, agent: row.agent.id, classes: evidence.classes }, usageToday: usageToday(evidence.usage) })

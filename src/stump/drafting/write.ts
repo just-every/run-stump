@@ -202,7 +202,8 @@ export async function createItem(ctx: ActionContext, args: Args) {
 }
 
 const sourceRef = (source: Source) => ({ url: source.url, title: source.title, read_at: source.read_at, sha256: source.sha256 })
-const options = (args: Args) => Object.fromEntries(['poll', 'content_warning', 'visibility', 'recommends', 'prompt'].filter(key => args[key] !== undefined).map(key => [key, args[key]]))
+// thread_url comes only from a hand-off (stump.drafts.write takes no such argument): the thread its draft is aimed at, which the venue's rules read (D-3).
+const options = (args: Args) => Object.fromEntries(['poll', 'content_warning', 'visibility', 'recommends', 'prompt', 'thread_url'].filter(key => args[key] !== undefined).map(key => [key, args[key]]))
 
 /** One source drafted for every target, each through the provider; one failure leaves no draft at all (STUMP-DRAFT-002). */
 export async function draftFromSource(ctx: ActionContext, args: Args) {

@@ -1,4 +1,4 @@
-Stump has no feature, for people or for agents, for the acts the platforms or US law ban, or for engagement that software fakes. Asking for one answers `act_refused` with the rule and its source, and changes nothing.
+Stump has no feature, for people or for agents, for the acts the platforms or US law ban, or for engagement that software fakes. Asking for one answers `act_refused` with the rule and its source, and changes nothing. The agents' audit log records each refusal with the same rule and source.
 
 ## What Stump refuses
 

@@ -10,6 +10,14 @@ Where a venue keeps posting for its members, Stump hands the post to the named m
 
 Someone outside the company, such as an investor or a friend, who recommends a product gets talking points and facts only, and says the words are their own before the post is recorded.
 
+## When a hand-off is held
+
+A hand-off waits, with the reason on it, while something stops the post:
+
+- A venue rule. A venue that keeps self-promotion to its weekly thread holds a hand-off aimed anywhere else. One aimed at that thread stays open.
+- A draft that nearly repeats something the company posted or queued. The hold links the earlier post, and rewriting the draft releases it.
+- The venue's shared limit for the period. The hold names the date the venue has room again.
+
 ## Who sees a hand-off
 
 Each person works their own queue, ordered by due date. A poster sees only their own hand-offs. A person who is not yet a member of the venue gets its join steps and gates first.

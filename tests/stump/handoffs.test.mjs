@@ -115,7 +115,7 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
   const posted = ok(await record('maya', { handoff_id: handoff.id, url: `${thread}c1/` }))
   assert.deepEqual([posted.state, posted.confirmation], ['posted', 'person'])
   assert.ok(!seen.slice(before).some(url => /reddit\.com/.test(url)))
-  const entry = ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: posted.ledger_id })).entry
+  const entry = ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: posted.ledger_id }))
   assert.deepEqual([entry.route, entry.person_id, entry.venue_id, entry.by], ['handed_off', maya.id, subreddit.id, 'Wren for Maya Chen'])
   assert.match(entry.text, /utm_source=reddit/)
   assert.equal(ok(await record('maya', { handoff_id: handoff.id, url: `${thread}c1/` })).ledger_id, posted.ledger_id)
@@ -134,7 +134,7 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
   posts.set('at://did:plc:maya/app.bsky.feed.post/3kbb', { uri: 'at://did:plc:maya/app.bsky.feed.post/3kbb', author: { did: 'did:plc:maya', handle: 'maya.synthetic.bsky.social' }, record: { text: 'I work at Brightwell. Recurring bookings are here.', createdAt: new Date().toISOString() } })
   const checked = ok(await record('maya', { handoff_id: sky.id, url: 'https://bsky.app/profile/maya.synthetic.bsky.social/post/3kbb' }))
   assert.equal(checked.confirmation, 'network')
-  assert.equal(ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: checked.ledger_id })).entry.text, 'I work at Brightwell. Recurring bookings are here.')
+  assert.equal(ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: checked.ledger_id })).text, 'I work at Brightwell. Recurring bookings are here.')
 })
 
 test('a hand-off never waits in silence: a hold runs its lapse at its review date, a rule change holds it, and removing a person moves it on', async () => {

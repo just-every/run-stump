@@ -1,5 +1,6 @@
 // Each act on a hand-off, and the Worker's scheduled tick, reads the venue's rules,
-// its shared limit and the person's membership as they are now (D-3,
+// its draft's near-duplicate flag (STUMP-TRUTH-004), its shared limit and the
+// person's membership as they are now (D-3,
 // STUMP-HANDOFF-003, STUMP-VENUE-003.4, STUMP-VENUE-006.3): a person's hold whose
 // review date has come runs the lapse action, a rule that newly forbids the post
 // holds it with the rule named, a rule or full limit that no longer applies
@@ -8,7 +9,8 @@
 import type { StumpEnv } from '../env.ts'
 import { handoffEligibility } from '../venues/members.ts'
 import { readVenue, type VenueRow } from '../venues/model.ts'
-import { limitHold, ruleHold, ruleHoldJson } from './holds.ts'
+import { refreshItems } from '../venues/rules.ts'
+import { draftDuplicateHold, limitHold, ruleHold, ruleHoldJson } from './holds.ts'
 import { lapse } from './lapse.ts'
 import { ACTIVE, move, type Actor, type HandoffRow, type Hold } from './model.ts'
 
@@ -25,8 +27,9 @@ async function refreshRow(actor: Actor, row: HandoffRow, venue: VenueRow): Promi
     return current.review_at && Date.parse(current.review_at) <= now ? { statements: await lapse(actor, row, venue, 'review_date'), lapsed: true } : none
   }
   const held = (hold: NonNullable<ReturnType<typeof ruleHold>>) => ({ statements: move(actor, row, 'held', 'rule_hold', { hold: ruleHoldJson(hold, now) },
-    { rule: hold.rule, reason: hold.reason, source_url: hold.source_url, ...(hold.next_open_at !== undefined ? { next_open_at: hold.next_open_at } : {}) }), lapsed: false })
-  const venueHold = ruleHold(venue, row)
+    { rule: hold.rule, reason: hold.reason, source_url: hold.source_url, ...(hold.next_open_at !== undefined ? { next_open_at: hold.next_open_at } : {}), ...(hold.matches ? { matches: hold.matches } : {}) }), lapsed: false })
+  // A venue rule that forbids it, else a draft that nearly repeats a queued or posted one until it is rewritten.
+  const venueHold = ruleHold(venue, row) ?? await draftDuplicateHold(actor.db, row.item_id)
   if (venueHold && (row.state !== 'held' || current?.rule !== venueHold.rule)) return held(venueHold)
   if (!venueHold && row.state === 'held' && current?.kind === 'rule') {
     // A venue rule or full shared limit no longer holds it: back in the queue, unless its period is (still) full.
@@ -70,10 +73,19 @@ export async function refreshed(actor: Actor, rows: HandoffRow[]): Promise<Hando
   return ids.map(id => byId.get(id)!).filter(Boolean)
 }
 
-/** The Worker's scheduled tick: every waiting hand-off, refreshed and lapsed where its time has come, each with its history. */
+/**
+ * The Worker's scheduled tick: every waiting hand-off, refreshed and lapsed where its time has come, each with its history.
+ * The draft items at those venues are read against the rules too, with the thread each is aimed at (D-3, STUMP-VENUE-002.3),
+ * so a draft inside the venue's promotion thread is never held for self-promotion and one outside it is.
+ */
 export async function tickHandoffs(env: StumpEnv, now: number): Promise<{ refreshed: number; lapsed: number }> {
   const actor: Actor = { db: env.DB, person: null, agent: null, now: () => now }
   const rows = (await env.DB.prepare("SELECT * FROM stump_handoffs WHERE state IN ('open','join_first','held') ORDER BY due_at,id").all<HandoffRow>()).results
+  for (const venueId of new Set(rows.map(row => row.venue_id))) {
+    const venue = await readVenue(env.DB, venueId)
+    const statements = venue ? await refreshItems(env.DB, venue, actor) : []
+    if (statements.length) await env.DB.batch(statements)
+  }
   const { changed, lapsed } = await refreshAll(actor, rows)
   return { refreshed: changed, lapsed }
 }

@@ -47,7 +47,8 @@ export const ledgerTools: StumpTool[] = [{
       properties: { entry_id: id }, required: ['entry_id'],
       classify: () => standard(),
       target: args => ({ kind: 'ledger', id: String(args.entry_id) }),
-      async run(args, ctx) { return { entry: (await one(ctx, String(args.entry_id))).entry } },
+      // The entry record itself, with its versions, as every get answers its record.
+      async run(args, ctx) { return (await one(ctx, String(args.entry_id))).entry },
     },
     history: {
       roles: EVERYONE, read: true,

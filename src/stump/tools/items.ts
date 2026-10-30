@@ -3,6 +3,7 @@ import { refuse, refuseAct } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
 import { shownHandle } from '../accounts/handle.ts'
 import { readAccount } from '../accounts/store.ts'
+import { storeCheck } from '../drafting/items.ts'
 import { moveItem, pauseFor } from '../items/state.ts'
 import { CONTRIBUTORS, EDITORS } from '../people/roles.ts'
 import { itemView, readItem, type FullItemRow } from '../publish/items.ts'
@@ -202,7 +203,9 @@ export const itemTools: StumpTool[] = [{
         const mediaId = crypto.randomUUID(), alt = typeof args.alt === 'string' && args.alt.trim() ? args.alt.trim() : null
         await ctx.db.prepare('INSERT INTO stump_media(id,item_id,name,type,size,sha256,bytes,alt,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
           .bind(mediaId, row.id, file.name, file.type, bytes.byteLength, sha, bytes, alt, ctx.person.id, ctx.now()).run()
-        return { media: { id: mediaId, item_id: row.id, name: file.name, type: file.type, size: bytes.byteLength, sha256: sha, alt }, item: await itemView(ctx.db, row) }
+        // The item's stored flags follow its media: an image without alt text flags it, one with alt text does not (STUMP-PUBLISH-002.5).
+        await storeCheck(ctx, { ...row })
+        return { media: { id: mediaId, item_id: row.id, name: file.name, type: file.type, size: bytes.byteLength, sha256: sha, alt }, item: await itemView(ctx.db, (await readItem(ctx.db, row.id))!) }
       },
     },
     set_alt: {
@@ -217,7 +220,10 @@ export const itemTools: StumpTool[] = [{
         if (media.person_id !== ctx.person.id && !EDITORS.includes(ctx.person.role)) refuse('forbidden', { media_id: media.id })
         const alt = String(args.alt).trim() || null
         await ctx.db.prepare('UPDATE stump_media SET alt=? WHERE id=?').bind(alt, media.id).run()
-        return { media: { id: media.id, item_id: media.item_id, name: media.name, type: media.type, size: media.size, alt } }
+        // Setting or clearing alt text checks the item again, so its stored flags (and publishing) read the media as it is now (STUMP-PUBLISH-002.5).
+        const row = media.item_id ? await readItem(ctx.db, media.item_id) : null
+        if (row) await storeCheck(ctx, { ...row })
+        return { media: { id: media.id, item_id: media.item_id, name: media.name, type: media.type, size: media.size, alt }, ...(row ? { item: await itemView(ctx.db, (await readItem(ctx.db, row.id))!) } : {}) }
       },
     },
   },
