@@ -93,10 +93,18 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-tabs a:hover { color: var(--stump-ink); }
 .st-tabs a[aria-current="page"] { color: var(--stump-ink); font-weight: 600; border-bottom-color: var(--stump-emerald); }
 .st-settings .st-page > h1:first-child, .st-settings .st-page h1 { font-size: 24px; line-height: 30px; }
-/* The strip scrolls sideways on a narrow screen; while tabs sit past either edge, a 24 px fade from white says so. */
+/* The strip scrolls sideways on a narrow screen; while tabs sit past either edge, a chevron on a fade from white says so and steps it along. */
 .st-settings-head .st-tabs-strip { position: relative; }
-.st-settings-head .st-tabs-strip.more::after { content: ""; position: absolute; top: 0; bottom: 1px; right: 0; width: 24px; background: linear-gradient(to right, rgba(255,255,255,0), var(--stump-white)); pointer-events: none; }
-.st-settings-head .st-tabs-strip.less::before { content: ""; position: absolute; z-index: 1; top: 0; bottom: 1px; left: 0; width: 24px; background: linear-gradient(to left, rgba(255,255,255,0), var(--stump-white)); pointer-events: none; }
+.st-settings-head .st-tabs-step-tip { position: absolute; top: 0; z-index: 2; }
+.st-settings-head .st-tabs-step-tip.more { right: 0; }
+.st-settings-head .st-tabs-step-tip.less { left: 0; }
+.st-settings-head .st-tabs-step { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 44px; padding: 0; border: 0; color: var(--stump-ink); cursor: pointer; background: linear-gradient(to right, rgba(255,255,255,0), var(--stump-white) 45%); }
+.st-settings-head .st-tabs-step-tip.more .st-tabs-step { justify-content: flex-end; padding-right: 4px; }
+.st-settings-head .st-tabs-step-tip.less .st-tabs-step { justify-content: flex-start; padding-left: 4px; background: linear-gradient(to left, rgba(255,255,255,0), var(--stump-white) 45%); }
+.st-settings-head .st-tabs-step-tip.less .st-tabs-step svg { transform: rotate(180deg); }
+.st-settings-head .st-tabs-step svg { width: 20px; height: 20px; }
+.st-settings-head .st-tabs-step-tip.less [role="tooltip"] { left: 0; transform: none; }
+.st-settings-head .st-tabs-step:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: -2px; border-radius: 8px; }
 
 /* Lists and rows */
 .st-list { list-style: none; margin: 0; padding: 0; }
@@ -324,8 +332,10 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
   .st-settings .st-page h1 { font-size: 22px; line-height: 28px; }
   .st-settings-title { margin-bottom: 12px; }
   .st-tabs { gap: 20px; margin: 0 -16px; padding: 0 16px; }
-  .st-settings-head .st-tabs-strip.more::after { right: -16px; }
-  .st-settings-head .st-tabs-strip.less::before { left: -16px; }
+  .st-settings-head .st-tabs-step-tip.more { right: -16px; }
+  .st-settings-head .st-tabs-step-tip.less { left: -16px; }
+  .st-settings-head .st-tabs-step-tip.more .st-tabs-step { padding-right: 12px; }
+  .st-settings-head .st-tabs-step-tip.less .st-tabs-step { padding-left: 12px; }
   .st-row { flex-wrap: wrap; }
   .st-panel { padding: 16px; }
   .st-popover { position: fixed; inset: auto 0 0 0; top: auto; width: auto; border-radius: 20px 20px 0 0; padding: 20px 16px calc(24px + env(safe-area-inset-bottom)); }
@@ -511,6 +521,7 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-variant-field textarea::selection { background: rgba(11,138,96,.22); }
 .st-drafting .st-kv { grid-template-columns: minmax(160px, 260px) minmax(0, 1fr); gap: calc(var(--stump-space) * 2); padding: 14px 0; border-top: 1px solid var(--stump-hairline); align-items: center; }
 .st-drafting .st-kv:first-child { border-top: 0; }
+.st-drafting .st-proof-link { color: var(--stump-emerald-text); overflow-wrap: anywhere; }
 .st-drafting .st-inline { display: flex; align-items: center; gap: var(--stump-space); color: var(--stump-muted); }
 .st-drafting .st-inline input { font: inherit; color: var(--stump-text); flex: 1; min-width: 0; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; background: transparent; }
 .st-drafting .st-inline input:hover { border-color: var(--stump-hairline); }
@@ -638,7 +649,10 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-setup-pill-keep { white-space: nowrap; }
 .st-setup-pill-noted { display: contents; }
 .st-setup-pill-note { display: none; }
-.st-setup-done { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--stump-body); font-size: 15px; }
+.st-setup-done { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 12px; color: var(--stump-body); font-size: 15px; line-height: 22px; }
+.st-setup-fields .st-setup-done { margin: 0; overflow-wrap: anywhere; }
+.st-setup-done .st-tick { margin-top: 2px; }
+.st-setup-note { margin: 0; color: var(--stump-muted); font-size: 15px; }
 /* Open Today is centred; "Saved" sits quietly on its line to its right, and an error reads under it, so neither moves the button. */
 .st-setup-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; column-gap: 16px; padding-top: 16px; }
 .st-setup-foot .st-button.large { grid-column: 2; grid-row: 1; min-width: 224px; }

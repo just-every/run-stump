@@ -67,10 +67,13 @@ export function move(actor: Actor, row: Pick<HandoffRow, 'id' | 'state' | 'revis
   ]
 }
 
+/** How the draft came to be: written through the AI provider, with the person's voice guide, and who prepared it (with `agent` on the record). */
+export interface Drafted { ai: boolean; in_voice: boolean; by: { person_id: string; name: string | null } }
+
 interface HistoryRow { action: string; from_state: string | null; to_state: string | null; person_id: string | null; agent_id: string | null; detail: string; at: number }
 
 /** The hand-off as both doors answer it: the venue's rules as they read now, the facts, the brief or draft, the hold and its history. */
-export function handoffRecord(row: HandoffRow, venue: VenueRow, extra: { person_name: string | null; product_name: string | null; history: HistoryRow[]; flags: unknown[]; draft_text: string | null }) {
+export function handoffRecord(row: HandoffRow, venue: VenueRow, extra: { person_name: string | null; product_name: string | null; history: HistoryRow[]; flags: unknown[]; draft_text: string | null; drafted?: Drafted | null }) {
   const howTo = json<Record<string, unknown>>(venue.how_to_post, {})
   return {
     id: row.id, venue_id: row.venue_id, venue: { id: venue.id, name: venue.name, url: venue.url, kind: venue.kind, platform: venue.platform, how_to_post: howTo },
@@ -80,7 +83,7 @@ export function handoffRecord(row: HandoffRow, venue: VenueRow, extra: { person_
     own_words: row.own_words, own_words_required: extra.draft_text === null, attestation_required: row.attestation_required === 1, recommends: row.recommends === 1,
     join_steps: json<string[]>(row.join_steps, []), next_open_at: iso(row.next_open_at), hold: json<Hold | null>(row.hold, null), flags: extra.flags,
     url: row.url, ledger_id: row.ledger_id, confirmation: row.confirmation, posted_at: iso(row.posted_at), attested_at: iso(row.attested_at),
-    campaign: row.campaign, agent: json<{ id: string; name: string } | null>(row.agent, null), revision: row.revision,
+    campaign: row.campaign, agent: json<{ id: string; name: string } | null>(row.agent, null), drafted: extra.drafted ?? null, revision: row.revision,
     created_at: iso(row.created_at), updated_at: iso(row.updated_at),
     history: extra.history.map(entry => ({ action: entry.action, from: entry.from_state, to: entry.to_state, person_id: entry.person_id, agent_id: entry.agent_id,
       detail: JSON.parse(entry.detail) as Record<string, unknown>, at: new Date(entry.at).toISOString() })),

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
 import { Icon } from '../stump/ui/icons.tsx'
@@ -20,6 +20,9 @@ function domainOf(value: string): string | null {
   try { return new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`).hostname.replace(/^www\./, '').toLowerCase() || null } catch { return null }
 }
 
+/** A step's stored value, read back from Stump after it saved: what Today and the rest of the app now use. */
+const Stored = ({ children }: { children: ReactNode }) => <p className="st-setup-done"><span className="st-tick" aria-hidden="true"><Icon name="check" /></span><span>{children}</span></p>
+
 function SetupPage() {
   const { data, refresh } = useLoaded(async () => {
     const who = await me()
@@ -38,6 +41,7 @@ function SetupPage() {
   const [typed, setSite] = useState<string | null>(null)
   const site = typed ?? data?.links.own_domains[0] ?? ''
   const [names, setNames] = useState<{ company: string; product: string } | null>(null)
+  const [siteNote, setSiteNote] = useState<string | null>(null)
   const product = data?.products[0] ?? null
   const company = names?.company ?? data?.company ?? ''
   const productName = names?.product ?? product?.name ?? ''
@@ -66,8 +70,10 @@ function SetupPage() {
     const domain = domainOf(site.trim())
     if (!domain) return
     if (await saveDomain(domain)) { saved(); setSite(null); await refresh() }
-    const read = await run(() => runAction<{ url: string; name: string | null }>('stump.brand.manage', { action: 'site_read', url: site.trim() }))
-    if (!read?.name) return
+    // A site Stump cannot read leaves the names to the owner: a quiet line says so, never a refusal code.
+    setSiteNote(null)
+    const read = await runAction<{ url: string; name: string | null }>('stump.brand.manage', { action: 'site_read', url: site.trim() }).catch(() => null)
+    if (!read?.name) { setSiteNote(`Stump could not read ${domain}. Type the names below.`); return }
     const next = { company: data?.company || read.name, product: product?.name || read.name }
     setNames(next)
     if (!data?.company) await saveCompany(next.company)
@@ -90,9 +96,11 @@ function SetupPage() {
                 <input value={site} placeholder="yourcompany.com" inputMode="url" autoComplete="url" maxLength={2048}
                   onChange={event => setSite(event.target.value)} onBlur={() => void readSite()} onKeyDown={event => { if (event.key === 'Enter') void readSite() }} />
               </label>
+              {siteNote ? <p className="st-setup-note">{siteNote}</p> : null}
               <label className="st-field">Company name
                 <input key={`c-${company}`} defaultValue={company} maxLength={120} autoComplete="organization" onBlur={event => void saveCompany(event.target.value.trim())} />
               </label>
+              {data?.company ? <Stored>{data.company} saved</Stored> : null}
             </div>
           </li>
           <li>
@@ -102,13 +110,14 @@ function SetupPage() {
               <label className="st-field">Product name
                 <input key={`p-${productName}`} defaultValue={productName} maxLength={120} onBlur={event => void saveProduct(event.target.value.trim())} />
               </label>
+              {product ? <Stored>{product.name} saved</Stored> : null}
             </div>
           </li>
           <li>
             <span className="st-setup-num" aria-hidden="true">3</span>
             <div>
               <h2>Connect an account</h2>
-              {data?.accounts.length ? <p className="st-setup-done"><span className="st-tick" aria-hidden="true"><Icon name="check" /></span>{data.accounts.map(account => accountWord(account)).join(', ')}</p> : null}
+              {data?.accounts.length ? <Stored>{data.accounts.map(account => accountWord(account)).join(', ')}</Stored> : null}
               <div className="st-setup-pills">
                 <a className="st-setup-pill" href="/app/settings/accounts?connect=bluesky">Bluesky</a>
                 <a className="st-setup-pill" href="/app/settings/accounts?connect=mastodon">Mastodon</a>
@@ -119,7 +128,7 @@ function SetupPage() {
             <span className="st-setup-num" aria-hidden="true">4</span>
             <div>
               <h2>Bring your venues</h2>
-              {data?.venues ? <p className="st-setup-done"><span className="st-tick" aria-hidden="true"><Icon name="check" /></span>{data.venues} {data.venues === 1 ? 'venue' : 'venues'}</p> : null}
+              {data?.venues ? <Stored>{data.venues} {data.venues === 1 ? 'venue' : 'venues'}</Stored> : null}
               <div className="st-setup-pills">
                 <span className="st-setup-pill-noted">
                   <a className="st-setup-pill" href="/app/venues?import=1">Import a venue list<span className="st-setup-pill-keep"> (Markdown or CSV)</span></a>

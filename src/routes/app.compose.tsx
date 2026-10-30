@@ -8,6 +8,7 @@ import { Icon } from '../stump/ui/icons.tsx'
 import { countText, extractUrls, type Network } from '../stump/lib/text/index.ts'
 import { accountLabel, flagLine, networkName, proofLabel, spanAt, spanOf, type Account, type Check, type ClaimFinding, type ClaimView, type Count, type Flag, type MasterPreview, type Variant } from '../stump/drafting/view.ts'
 import type { ItemRecord } from '../stump/drafting/records.ts'
+import { US_ZONES, deviceZone, instantIn, nextHour, storeZone, storedZone, zoneName } from '../stump/ui/zones.ts'
 
 // `master` opens a master post and its variants; `item` opens one draft that has no master; `fix` names the
 // variant whose claim to select, so "Fix claim" (here or on Today) lands on the words to change.
@@ -34,7 +35,6 @@ const key = () => crypto.randomUUID()
 const blocking = (flags: Flag[]) => flags.filter(flag => flag.blocking)
 
 const graphemes = (value: string) => [...new Intl.Segmenter().segment(value)].length
-const localNow = () => { const at = new Date(Date.now() + 3_600_000); at.setMinutes(0, 0, 0); return new Date(at.getTime() - at.getTimezoneOffset() * 60_000).toISOString().slice(0, 16) }
 
 function ComposePage() {
   const { master: masterId, item: itemId, fix } = Route.useSearch()
@@ -56,7 +56,17 @@ function ComposePage() {
   const [text, setText] = useState('')
   const [source, setSource] = useState('')
   const [picked, setPicked] = useState<string[]>([])
-  const [when, setWhen] = useState(localNow)
+  // When it goes out: a wall-clock time in the zone the person schedules in (zones.ts), next hour by default.
+  const [zone, setZone] = useState(deviceZone)
+  const [when, setWhen] = useState(() => nextHour(deviceZone()))
+  const [queueZones, setQueueZones] = useState<string[]>([])
+  const zoneSet = useRef(false)
+  function pickZone(next: string, remember = true) {
+    zoneSet.current = true
+    setZone(next)
+    if (remember) storeZone(next)
+  }
+  useEffect(() => { const stored = storedZone(); if (stored) { pickZone(stored, false); setWhen(nextHour(stored)) } }, [])
   const [checksOpen, setChecksOpen] = useState(false)
   const [note, setNote] = useState<{ text: string; error: boolean } | null>(null)
   const preview = data?.preview ?? null
@@ -69,6 +79,17 @@ function ComposePage() {
   const variants = preview?.items ?? (alone ? [alone] : [])
   const open = !!(preview || alone)
   const held = variants.filter(variant => blocking(variant.flags).length)
+  // The chosen accounts' own queue zones (Settings · Publishing) are offered too; with no remembered choice the first is the default.
+  useEffect(() => {
+    let live = true
+    void Promise.all(chosen.map(id => runAction<{ time_zone: string | null }>('stump.calendar.plan', { action: 'slots', account_id: id }).then(slots => slots.time_zone, () => null))).then(found => {
+      if (!live) return
+      const zones = [...new Set(found.filter((value): value is string => !!value))]
+      setQueueZones(zones)
+      if (zones[0] && !zoneSet.current) { pickZone(zones[0], false); setWhen(nextHour(zones[0])) }
+    })
+    return () => { live = false }
+  }, [chosen.join(',')])
   // The master is never posted itself: it counts quietly against the largest chosen network's limit; each variant card and Checks carry the over-limit signal.
   const largest = Math.max(...variants.map(variant => variant.count?.limit ?? -Infinity), ...accounts.filter(account => chosen.includes(account.id)).map(account => ({ x: 280, bluesky: 300, mastodon: 500, linkedin: 3000 } as Record<string, number>)[account.network] ?? -Infinity))
 
@@ -91,8 +112,9 @@ function ComposePage() {
     if (!open) return
     setNote(null)
     try {
-      if (action === 'schedule_master' && preview) await runAction('stump.items.schedule', { action: 'schedule_master', master_id: preview.master.id, at: new Date(when).toISOString(), idempotency_key: key() })
-      else if (action === 'schedule_master' && alone) await runAction('stump.items.schedule', { action: 'schedule', item_id: alone.item_id, account_id: alone.account_id, at: new Date(when).toISOString(), idempotency_key: key() })
+      const at = new Date(instantIn(when, zone)).toISOString()
+      if (action === 'schedule_master' && preview) await runAction('stump.items.schedule', { action: 'schedule_master', master_id: preview.master.id, at, idempotency_key: key() })
+      else if (action === 'schedule_master' && alone) await runAction('stump.items.schedule', { action: 'schedule', item_id: alone.item_id, account_id: alone.account_id, at, time_zone: zone, idempotency_key: key() })
       else await Promise.all(variants.filter(variant => !blocking(variant.flags).length).map(variant => runAction('stump.calendar.plan', { action: 'queue', item_id: variant.item_id, account_id: variant.account_id, idempotency_key: key() })))
       setNote({ text: action === 'schedule_master' ? 'Scheduled.' : 'Added to the queue.', error: false })
     } catch (cause) {
@@ -207,7 +229,7 @@ function ComposePage() {
           : <button className="st-button ink" type="button" disabled={busy} onClick={() => void schedule('schedule_master')}>
             {alone ? 'Schedule' : held.length ? `Schedule ${variants.length - held.length} ${variants.length - held.length === 1 ? 'post' : 'posts'}` : 'Schedule all'} <Icon name="arrowRight" />
           </button>}
-        <WhenPicker value={when} onChange={setWhen} />
+        <WhenPicker value={when} zone={zone} zones={[...new Set([...queueZones, deviceZone(), ...US_ZONES.map(([id]) => id)])]} onChange={setWhen} onZone={pickZone} />
         {held.length === variants.length ? null : held.length
           ? <span className="st-pill held">{held.length === 1 ? `${networkName(held[0]!.network)} variant holds alone` : `${held.length} variants hold`}</span>
           : <button className="st-button quiet" type="button" disabled={busy} onClick={() => void schedule('queue')}>Add to queue</button>}
@@ -282,8 +304,11 @@ function Marked({ text, network, limit, claims }: { text: string; network: strin
   })}{'\n'}</div>
 }
 
-/** The schedule time as a pill ("Tue, Nov 3 · 9:00 AM MT") that opens a day and time picker; the value is a local "YYYY-MM-DDTHH:mm". */
-function WhenPicker({ value, onChange }: { value: string; onChange(value: string): void }) {
+/**
+ * The schedule time as a pill ("Tue, Nov 3 · 9:00 AM MT") that opens a day, time and time zone picker; the value is a
+ * wall-clock "YYYY-MM-DDTHH:mm" in `zone`, so changing the zone keeps the time and moves the instant.
+ */
+function WhenPicker({ value, zone, zones, onChange, onZone }: { value: string; zone: string; zones: string[]; onChange(value: string): void; onZone(zone: string): void }) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -293,14 +318,15 @@ function WhenPicker({ value, onChange }: { value: string; onChange(value: string
     document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape)
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape) }
   }, [open])
-  const at = new Date(value)
-  const zone = (() => { try { return new Intl.DateTimeFormat('en-US', { timeZoneName: 'shortGeneric' }).formatToParts(at).find(part => part.type === 'timeZoneName')?.value ?? '' } catch { return '' } })()
-  const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' })
-  const label = Number.isNaN(at.getTime()) ? 'Pick a time' : `${new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(at)} · ${time.format(at)}${zone ? ` ${zone}` : ''}`
+  const at = new Date(instantIn(value, zone))
+  const abbr = (() => { try { return new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'shortGeneric' }).formatToParts(at).find(part => part.type === 'timeZoneName')?.value ?? '' } catch { return '' } })()
+  const time = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' })
+  const day = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-US', { timeZone: zone, ...options }).format(at)
+  const label = Number.isNaN(at.getTime()) ? 'Pick a time' : `${day({ weekday: 'short', month: 'short', day: 'numeric' })} · ${time.format(at)}${abbr ? ` ${abbr}` : ''}`
   // Under 600 px the bar shows the short form ("Oct 30 · 7:00 AM"), so the time always reads whole.
-  const short = Number.isNaN(at.getTime()) ? label : `${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(at)} · ${time.format(at)}`
+  const short = Number.isNaN(at.getTime()) ? label : `${day({ month: 'short', day: 'numeric' })} · ${time.format(at)}`
   // At 480 and under, a time on the hour drops its minutes ("Oct 30 · 10 AM"), so the bar keeps one row beside the held note.
-  const tiny = Number.isNaN(at.getTime()) ? label : `${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(at)} · ${new Intl.DateTimeFormat('en-US', at.getMinutes() ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' }).format(at)}`
+  const tiny = Number.isNaN(at.getTime()) ? label : `${day({ month: 'short', day: 'numeric' })} · ${value.endsWith(':00') ? day({ hour: 'numeric' }) : time.format(at)}`
   const [dayPart, timePart] = value.split('T')
   return <div className="st-when" ref={box}>
     <button type="button" className="st-when-pill" aria-haspopup="dialog" aria-expanded={open} aria-label={label} onClick={() => setOpen(!open)}>
@@ -309,6 +335,8 @@ function WhenPicker({ value, onChange }: { value: string; onChange(value: string
     {open ? <div className="st-when-pop" role="dialog" aria-label="When it goes out">
       <label className="st-field">Day<input type="date" value={dayPart ?? ''} onChange={event => event.target.value && onChange(`${event.target.value}T${timePart ?? '09:00'}`)} /></label>
       <label className="st-field">Time<input type="time" step={300} value={timePart ?? ''} onChange={event => event.target.value && onChange(`${dayPart}T${event.target.value}`)} /></label>
+      <label className="st-field">Time zone<select value={zone} onChange={event => onZone(event.target.value)}>
+        {zones.map(id => <option key={id} value={id}>{zoneName(id)}</option>)}</select></label>
       <button type="button" className="st-button primary small" onClick={() => setOpen(false)}>Done</button>
     </div> : null}
   </div>

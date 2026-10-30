@@ -86,12 +86,13 @@ function Nothing({ children }: { children: ReactNode }) {
  * Nothing at all for today: the family empty state in the column, with the next thing worth doing (an ink "Add a venue", or
  * "Write a post" once venues exist) and an outline for the other, each only for a person who may do it.
  */
-function Quiet({ role, venues }: { role: Role; venues: number }) {
+function Quiet({ role, venues, product }: { role: Role; venues: number; product: string | null }) {
   const venue = ['owner', 'admin', 'editor'].includes(role) ? <a className={venues ? 'st-button outline' : 'st-button primary'} href="/app/venues?add=1" key="venue">Add a venue</a> : null
   const post = CONTRIBUTORS.includes(role) ? <Link className={venues ? 'st-button primary' : 'st-button outline'} to="/app/compose" key="post">Write a post</Link> : null
   const actions = (venues ? [post, venue] : [venue, post]).filter(Boolean)
   return <Empty title="Nothing due today" actions={actions.length ? <>{actions}</> : undefined}>
-    {!actions.length ? 'Hand-offs and posts that need you show up here.' : venues ? 'Write your next post for the venues worth showing up in.' : 'Add the venues worth showing up in, then write your first post.'}
+    {!actions.length ? 'Hand-offs and posts that need you show up here.' : venues ? 'Write your next post for the venues worth showing up in.'
+      : `${product ? `${product} is set up. ` : ''}Add the venues worth showing up in, then write your first post.`}
   </Empty>
 }
 
@@ -139,7 +140,7 @@ export function TodayPage() {
       <h1 id="today-title">Today</h1>
       <p className="st-lead">{now === null ? ' ' : new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(now))}</p>
       {ready || work.error ? <div className={counted ? 'st-today-grid' : 'st-today-grid solo'}>
-        {quiet && work.data ? <div className="st-today-main"><Quiet role={work.data.who.person.role as Role} venues={work.data.venues.size} /></div> : <div className="st-today-main">
+        {quiet && work.data ? <div className="st-today-main"><Quiet role={work.data.who.person.role as Role} venues={work.data.venues.size} product={[...work.data.products.values()][0] ?? null} /></div> : <div className="st-today-main">
           <section className="st-panel focus" aria-labelledby="today-due">
             <PanelTitle icon="clock" id="today-due">Due today</PanelTitle>
             <Failed error={work.error} />

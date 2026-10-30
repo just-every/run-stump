@@ -35,7 +35,8 @@ function Sidebar({ path, onNavigate }: { path: string; onNavigate(): void }) {
 
 /**
  * The Settings title and its underline tabs over every settings screen. On a narrow screen the strip scrolls sideways
- * (SPEC §4.2): the current tab is scrolled into view, and while tabs sit past the right edge a fade there says so.
+ * (SPEC §4.2): the current tab is scrolled into view, and while tabs sit past either edge a chevron there says so and
+ * steps the strip along.
  */
 function SettingsHead({ path }: { path: string }) {
   const strip = useRef<HTMLElement>(null)
@@ -57,6 +58,7 @@ function SettingsHead({ path }: { path: string }) {
     window.addEventListener('resize', measure)
     return () => { nav.removeEventListener('scroll', measure); window.removeEventListener('resize', measure) }
   }, [path])
+  const step = (direction: 1 | -1) => strip.current?.scrollBy({ left: direction * strip.current.clientWidth * 0.6, behavior: 'smooth' })
   return <div className="st-settings-head">
     <p className="st-settings-title">Settings</p>
     <div className={['st-tabs-strip', more ? 'more' : '', less ? 'less' : ''].filter(Boolean).join(' ')}>
@@ -64,6 +66,10 @@ function SettingsHead({ path }: { path: string }) {
         {settings.map(entry => <Link key={entry.to} to={entry.to}
           aria-current={path === entry.to || path.startsWith(`${entry.to}/`) ? 'page' : undefined}>{entry.label}</Link>)}
       </nav>
+      {less ? <Tip label="Earlier tabs" side="below" className="st-tabs-step-tip less">
+        <button type="button" className="st-tabs-step" aria-label="Earlier settings tabs" onClick={() => step(-1)}><Icon name="chevronRight" /></button></Tip> : null}
+      {more ? <Tip label="More tabs" side="below" align="end" className="st-tabs-step-tip more">
+        <button type="button" className="st-tabs-step" aria-label="More settings tabs" onClick={() => step(1)}><Icon name="chevronRight" /></button></Tip> : null}
     </div>
   </div>
 }

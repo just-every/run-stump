@@ -32,6 +32,9 @@ function LedgerPage() {
   useEffect(() => { const timer = setTimeout(() => { setLimit(STEP); setFilters(current => ({ ...current, q: typed.trim() || undefined })) }, 250); return () => clearTimeout(timer) }, [typed])
 
   const person = (id: string | null) => context.data?.team.items.find(item => item.id === id)?.display_name ?? null
+  // A hand-off was posted by hand by its member: Who names them, and the agent on the record (it prepared the brief or recorded the link) reads as a quiet line under it.
+  // Every other entry reads "<agent> for <person>" as the record says.
+  const who = (entry: LedgerEntry) => handedOff(entry) && entry.agent && entry.by.startsWith(`${entry.agent.name} for `) ? entry.by.slice(entry.agent.name.length + 5) : entry.by
   const applied = Object.entries(filters).filter(([, value]) => value) as Array<[keyof Filters, string]>
   const label = (field: keyof Filters, value: string) =>
     field === 'person_id' ? person(value) ?? 'someone' : field === 'venue_id' ? names[value] ?? 'a venue' : field === 'network' ? networkName(value) : field === 'route' ? ROUTE_WORDS[value] ?? value : field === 'state' ? STATE_WORDS[value] ?? value : value
@@ -97,14 +100,15 @@ function LedgerPage() {
                 ? <button className="st-row-button" type="button" onClick={() => { setNames(current => ({ ...current, [entry.venue_id!]: entry.venue_name! })); set('venue_id', entry.venue_id!) }}>{entry.venue_name}</button>
                 : networkName(entry.network)}</td>
               <td className="who">{entry.person_id
-                ? <button className="st-row-button" type="button" onClick={() => set('person_id', entry.person_id!)}>{entry.by}</button> : entry.by}</td>
+                ? <button className="st-row-button" type="button" onClick={() => set('person_id', entry.person_id!)}>{who(entry)}</button> : who(entry)}
+                {handedOff(entry) && entry.agent ? <span className="st-quiet">agent: {entry.agent.name}</span> : null}</td>
               <td className="route">{ROUTE_WORDS[entry.route as string] ?? String(entry.route)}</td>
               <td className="state"><StateChip state={String(entry.state)} />
                 {entry.confirmation === 'person' && entry.state === 'posted' ? <span className="st-quiet">confirmed by {person(entry.person_id) ?? 'the member'}</span> : null}</td>
               <td className="link">{entry.url ? <a href={String(entry.url)} target="_blank" rel="noreferrer noopener" aria-label={`View post on ${networkName(entry.network) || 'the network'}`}>View ↗</a> : null}</td>
               <td className="st-phone">
                 <button className="st-row-button" type="button" aria-expanded={open} aria-controls={`entry-${entry.id}`} onClick={() => setOpenId(open ? null : entry.id)}>
-                  <span className="st-phone-main">{[entry.venue_name ?? networkName(entry.network), entry.by].filter(Boolean).join(' · ')}</span>
+                  <span className="st-phone-main">{[entry.venue_name ?? networkName(entry.network), who(entry)].filter(Boolean).join(' · ')}</span>
                   <span className="st-phone-meta">{[at ? when(at) : 'Not posted', ROUTE_WORDS[entry.route as string] ?? entry.route, STATE_WORDS[entry.state as string] ?? entry.state].filter(Boolean).join(' · ')}</span>
                 </button>
                 {entry.url ? <a href={String(entry.url)} target="_blank" rel="noreferrer noopener" aria-label={`View post on ${networkName(entry.network) || 'the network'}`}>View ↗</a> : null}
@@ -118,6 +122,8 @@ function LedgerPage() {
     </section>
   </HydrationUnit>
 }
+
+const handedOff = (entry: LedgerEntry) => entry.route === 'handed_off'
 
 /** A ledger state as a chip: Posted on the success tint with its dot, a failure on the danger tint, the rest neutral. */
 function StateChip({ state }: { state: string }) {
