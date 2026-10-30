@@ -63,7 +63,7 @@ export const itemRecord = (row: Row) => ({
   claims_used: parse<string[]>(row.claims_used, []), sources: parse(row.sources, []), ai: parse(row.ai, null), url: row.url ?? null,
   network_id: row.network_id ?? null, scheduled_at: iso(row.scheduled_at), time_zone: row.time_zone ?? null, hold: parse(row.hold, null),
   error: parse(row.error, null), recipient: parse(row.recipient, null), subject: row.subject ?? null, reply_to: parse(row.reply_to, null),
-  differs_from_master: Number(row.differs_from_master ?? 0), campaign: row.campaign ?? null, options: parse(row.options, {}),
+  differs_from_master: Number(row.differs_from_master ?? 0) === 1, campaign: row.campaign ?? null, options: parse(row.options, {}),
   agent: parse(row.agent, null), approved_by: parse(row.approved_by, null), created_by: row.created_by, created_at: iso(row.created_at), updated_at: iso(row.updated_at),
 })
 export type ItemRecord = ReturnType<typeof itemRecord>

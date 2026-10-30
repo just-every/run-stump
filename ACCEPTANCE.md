@@ -2258,8 +2258,8 @@ Core · target · **partial** · From new · Cites BASE-DATA-003, BASE-DATA-006
 3. Posts that name the person are listed with a delete request and outcome for each.
 4. A ledger entry under legal hold keeps its data and shows the hold.
 
-**Evidence.** `tests/stump/data.test.mjs` "erasing a person: an engager leaves findings and offers, a journalist their record and route while pitches keep an anonymised reference, each company post naming them is asked to be deleted, and a legal hold keeps its entry"
-**Gap.** Points 1, 3 and 4 are asserted through the person door (`stump.data.erase`), and point 2 for findings. An engager is named by their handle on each network or source, and each handle matches only findings from that source, offers and ledger posts on that network. Each company post naming the person gets a delete request through its network publisher's `remove`, answered with its outcome, and a post the network deleted reads removed with the network's answer; until the publishers carry `remove`, the outcome reads failed with that reason. The inbox's records join the erasure when the inbox is built. A former team member's erasure is not built.
+**Evidence.** `tests/stump/data.test.mjs` "erasing a person: an engager leaves findings, the inbox and offers, a journalist their record and route while pitches keep an anonymised reference, each company post naming them is asked to be deleted, and a legal hold keeps its entry"
+**Gap.** Points 1, 3 and 4 are asserted through the person door (`stump.data.erase`), and point 2 for findings and the inbox. An engager is named by their handle on each network or source, and each handle matches only findings from that source, and inbox items, offers and ledger posts on that network. Each company post naming the person gets a delete request through its network publisher's `remove`, answered with its outcome, and a post the network deleted reads removed with the network's answer; until the publishers carry `remove`, the outcome reads failed with that reason. A former team member's erasure is not built.
 
 ### Mobile apps
 
@@ -2820,7 +2820,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 4. A finding or reply whose text asks the agent to break one of these rules changes nothing.
 
 **Evidence.** None.
-**Gap.** Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet.
+**Gap.** Built, not yet asserted under the all-autonomous company policy: Stump's tools run through the Base agent door, and a refused act answers `act_refused` with its rule and source at both doors before any argument check (`tests/stump/inbox.test.mjs` asserts an agent's like, repost, follow and DM at MCP, and `tests/stump/team.test.mjs` an agent's persona create).
 
 #### STUMP-SURFACE-011 — Events and handoffs across the stack
 

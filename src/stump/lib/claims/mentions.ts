@@ -51,10 +51,23 @@ export interface MentionInput {
   company_names?: readonly string[]
 }
 
+/**
+ * A name as whole words. Where letters meet digits the space is optional either way,
+ * as the claim check folds text (foldText): "Quillmate 2905d0" matches "Quillmate2905d0", and "SOC2" matches "SOC 2".
+ */
 function wordPattern(name: string): string {
-  const parts = name.trim().split(/\s+/).map(escapeRegExp)
-  return `(?<![\\p{L}\\p{N}_])${parts.join('\\s+')}(?![\\p{L}\\p{N}_])`
+  const words = name.trim().split(/\s+/)
+  const pattern = words.map((word, k) => {
+    const lead = /^(\p{L}{2,})(\p{N}.*)$/u.exec(word)
+    const pieces = lead ? `${escapeRegExp(lead[1] as string)}\\s*${escapeRegExp(lead[2] as string)}` : escapeRegExp(word)
+    if (k === 0) return pieces
+    const joint = /\p{L}$/u.test(words[k - 1] as string) && /^\p{N}/u.test(word) ? '\\s*' : '\\s+'
+    return `${joint}${pieces}`
+  }).join('')
+  return `(?<![\\p{L}\\p{N}_])${pattern}(?![\\p{L}\\p{N}_])`
 }
+/** The same name whatever its spacing, for comparing how a mention is written. */
+const unspaced = (text: string) => text.replace(/\s+/g, '')
 
 function findAll(text: string, name: string, caseSensitive: boolean): Array<{ text: string; start: number; end: number }> {
   if (name.trim() === '') return []
@@ -111,7 +124,7 @@ export function extractMentions(text: string, input: MentionInput): MentionSet {
     ]
     for (const { name, via } of names) {
       for (const f of findAll(text, name, p.case_sensitive === true)) {
-        products.push({ id: p.id, name, ...f, via, exact_case: f.text === name })
+        products.push({ id: p.id, name, ...f, via, exact_case: unspaced(f.text) === unspaced(name) })
       }
     }
     const productHosts = new Set((p.urls ?? []).map(hostOfUrl).filter(Boolean))
@@ -134,7 +147,7 @@ export function extractMentions(text: string, input: MentionInput): MentionSet {
             product_id: p.id,
             ...f,
             via: n === cname ? 'name' : 'alias',
-            exact_case: f.text === n,
+            exact_case: unspaced(f.text) === unspaced(n),
           })
         }
       }
@@ -147,7 +160,7 @@ export function extractMentions(text: string, input: MentionInput): MentionSet {
   for (const person of input.people ?? []) {
     for (const name of [person.name, ...(person.aliases ?? [])]) {
       for (const f of findAll(text, name, false)) {
-        people.push({ id: person.id, name, ...f, via: name === person.name ? 'name' : 'alias', exact_case: f.text === name })
+        people.push({ id: person.id, name, ...f, via: name === person.name ? 'name' : 'alias', exact_case: unspaced(f.text) === unspaced(name) })
       }
     }
     for (const handle of person.handles ?? []) {
@@ -161,7 +174,7 @@ export function extractMentions(text: string, input: MentionInput): MentionSet {
   }
 
   for (const name of input.company_names ?? []) {
-    for (const f of findAll(text, name, false)) company.push({ id: name, name, ...f, via: 'name', exact_case: f.text === name })
+    for (const f of findAll(text, name, false)) company.push({ id: name, name, ...f, via: 'name', exact_case: unspaced(f.text) === unspaced(name) })
   }
 
   return {

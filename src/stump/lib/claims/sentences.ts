@@ -57,14 +57,18 @@ function stem(word: string): string {
   return w
 }
 
-/** Lower-case NFKC text with straight quotes and a space between a letter and a following digit ("SOC2" -> "soc 2"). */
+/**
+ * Lower-case NFKC text with straight quotes, and a space where a word's leading
+ * letters meet its digits ("SOC2" -> "soc 2", "Quillmate2905d0" -> "quillmate 2905d0").
+ * A run that starts with a digit, such as an id "2905d0e3fe6c", stays one word.
+ */
 export function foldText(text: string): string {
   return text
     .normalize('NFKC')
     .toLowerCase()
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
-    .replace(/(\p{L})(?=\d)/gu, '$1 ')
+    .replace(/(?<![\p{L}\p{N}])(\p{L}{2,})(?=\d)/gu, '$1 ')
 }
 
 /** Unit abbreviations match the word they stand for ("$29/mo" and "$49 per month"). */
@@ -73,12 +77,16 @@ const ABBREVIATIONS: Record<string, string> = {
   mo: 'month', mos: 'month', mth: 'month', yr: 'year', yrs: 'year',
 }
 
-/** Content words of a text, stemmed, with stop words and numbers removed. */
+/**
+ * Content words of a text, stemmed, with stop words and numbers removed. A run of
+ * letters and digits is one word ("2905d0e3fe6c" never yields "d", "e" or "fe"),
+ * and a one-character word carries no content.
+ */
 export function contentTokens(text: string): string[] {
   const out: string[] = []
-  for (const m of foldText(text).matchAll(/[\p{L}][\p{L}\p{N}]*/gu)) {
+  for (const m of foldText(text).matchAll(/[\p{L}\p{N}]+/gu)) {
     const w = m[0]
-    if (STOP.has(w)) continue
+    if (w.length < 2 || !/\p{L}/u.test(w) || STOP.has(w)) continue
     const stemmed = stem(w)
     out.push(ABBREVIATIONS[stemmed] ?? stemmed)
   }

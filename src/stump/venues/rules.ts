@@ -1,6 +1,6 @@
-// Venue rules and the routes they allow (STUMP-VENUE-002, D-3). A rule opens a
-// route only with its source; a rule that restricts binds whether or not it is
-// sourced. Every act on a venue reads the rules at the moment it runs.
+// Venue rules and the routes they allow (STUMP-VENUE-002, D-3). Routes follow
+// each rule's value, sourced or not; a rule with no source reads as unsourced
+// (STUMP-VENUE-002.5). Every act on a venue reads the rules at the moment it runs.
 import { refuse } from '../actions/refusals.ts'
 import { normalizeVenueUrl } from '../lib/imports/index.ts'
 import { moveItem, type ItemState, type Mover } from '../items/state.ts'
@@ -81,10 +81,11 @@ const said = (rule: Rule | null, ...values: string[]) => rule !== null && values
 
 /**
  * The routes an item to this venue may take, decided only from its rules
- * (STUMP-VENUE-002.1, .2): publishing needs a sourced rule that lets software
- * post from the company's account; a hand-off with a draft needs a sourced rule
- * that allows AI-written text; a hand-off with a brief and facts is always the
- * floor. A banned rule closes its route whether or not it is sourced.
+ * (STUMP-VENUE-002.1, .2): publishing needs a rule that lets software post from
+ * the company's account; a hand-off with a draft needs a rule that allows
+ * AI-written text; a hand-off with a brief and facts is always the floor. Each
+ * rule decides by its value whether or not it is sourced, and `unsourced` names
+ * the rules that have no source yet (STUMP-VENUE-002.5).
  */
 export function routesFor(venue: VenueRow): RouteAnswer {
   const rules = rulesOf(venue), reasons: RouteReason[] = []
@@ -95,12 +96,13 @@ export function routesFor(venue: VenueRow): RouteAnswer {
   else if (said(rules.self_promotion, 'banned')) closeAll('self_promotion', 'The venue bans self-promotion.')
   else {
     const posting = rules.posting, ai = rules.ai_text
-    reasons.push(said(posting, 'api', 'company_account') && posting!.sourced
-      ? { route: 'publish', open: true, rule: 'posting', because: 'Software may post from the company account.' }
-      : { route: 'publish', open: false, rule: 'posting', because: said(posting, 'members_only') ? 'Only members post here.' : posting ? 'The posting rule has no source.' : 'No posting rule is recorded.' })
-    reasons.push(said(ai, 'allowed', 'allowed_with_disclosure') && ai!.sourced
-      ? { route: 'handoff_draft', open: true, rule: 'ai_text', because: ai!.value === 'allowed' ? 'AI-written text is allowed.' : 'AI-written text is allowed with disclosure.' }
-      : { route: 'handoff_draft', open: false, rule: 'ai_text', because: said(ai, 'banned') ? 'AI-written text is banned here.' : ai ? 'The AI text rule has no source.' : 'No AI text rule is recorded.' })
+    const unsourcedNote = (rule: Rule | null) => rule && !rule.sourced ? ' The rule has no source yet.' : ''
+    reasons.push(said(posting, 'api', 'company_account')
+      ? { route: 'publish', open: true, rule: 'posting', because: `Software may post from the company account.${unsourcedNote(posting)}` }
+      : { route: 'publish', open: false, rule: 'posting', because: said(posting, 'members_only') ? 'Only members post here.' : 'No posting rule is recorded.' })
+    reasons.push(said(ai, 'allowed', 'allowed_with_disclosure')
+      ? { route: 'handoff_draft', open: true, rule: 'ai_text', because: `${ai!.value === 'allowed' ? 'AI-written text is allowed.' : 'AI-written text is allowed with disclosure.'}${unsourcedNote(ai)}` }
+      : { route: 'handoff_draft', open: false, rule: 'ai_text', because: said(ai, 'banned') ? 'AI-written text is banned here.' : 'No AI text rule is recorded.' })
     reasons.push({ route: 'handoff_brief', open: true, rule: null, because: 'A member can always post in their own words from a brief and facts.' })
   }
   return { venue_id: venue.id, routes: reasons.filter(reason => reason.open).map(reason => reason.route), reasons, unsourced }

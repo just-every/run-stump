@@ -64,6 +64,12 @@ export async function savePrices(db: D1Database, table: XPriceTable, personId: s
 
 export type AppState = 'not_needed' | 'not_created' | 'connected'
 
+/** Whether each network can be connected now: its app state alone, with no keys, steps or prices (every role reads it). */
+export async function appStates(db: D1Database): Promise<Array<{ network: Network; state: AppState }>> {
+  const keyed = new Set((await db.prepare("SELECT network FROM stump_network_apps WHERE client_secret IS NOT NULL AND client_secret<>''").all<{ network: string }>()).results.map(row => row.network))
+  return NETWORKS.map(network => ({ network, state: (APP_NETWORKS as readonly string[]).includes(network) ? keyed.has(network) ? 'connected' : 'not_created' : 'not_needed' }))
+}
+
 /** Each network's app as setup shows it: state, steps, callback URLs, scopes and masked keys. */
 export async function describeApps(db: D1Database, env: StumpEnv) {
   const rows = new Map((await db.prepare('SELECT * FROM stump_network_apps').all<AppRow>()).results.map(app => [app.network, app]))

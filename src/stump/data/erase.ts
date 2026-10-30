@@ -1,8 +1,8 @@
 // Erasure of a person outside the company (STUMP-DATA-002): a journalist by
 // their press contact, or an engager by their handles. Their personal data
 // leaves press contacts, pitches (which keep an anonymised reference),
-// journalist venues, findings and their alerts, the inbox and offers to send
-// them to Orbit. Each of the company's posts that names them is asked to be
+// journalist venues, findings and their alerts, the inbox items they wrote and
+// offers to send them to Orbit. Each of the company's posts that names them is asked to be
 // deleted at its network through that network's publisher, and the answer for
 // each ledger entry comes back with its outcome; an entry under legal hold is
 // kept and named as kept. The erasure is audited by counts and outcomes only.
@@ -39,15 +39,35 @@ type Remove = (entry: { network: string; account_id: string; network_id: string 
 
 /**
  * Other records holding an engager's data, each found and removed by the
- * person's handle on its own network or source: one line per source. The inbox
- * lane's items join here.
+ * person's handle on its own network or source: one line per source.
  */
 export interface EngagerData {
   name: string
   count(db: D1Database, handles: Handles): Promise<number>
   remove(db: D1Database, handles: Handles): D1PreparedStatement[]
 }
-const ENGAGER_DATA: readonly EngagerData[] = []
+
+/** The inbox rows an engager wrote, each matched on its own network by the author's handle without '@' or case. */
+const inboxMatch = (handles: Handles) => {
+  const pairs = Object.entries(handles).filter(([network]) => network !== 'hn' && network !== 'rss').flatMap(([network, list]) => (list ?? []).map(handle => [network, handle] as const))
+  return { where: pairs.length ? pairs.map(() => "(network=? AND lower(ltrim(trim(author_handle),'@'))=?)").join(' OR ') : '0', binds: pairs.flat() }
+}
+const ENGAGER_DATA: readonly EngagerData[] = [{
+  // The inbox (STUMP-INBOX-001): their mentions, replies and quotes, with the offer that would take them to Orbit.
+  // Removing the row takes its offer and reply links with it; the company's own reply stays an item and a ledger entry.
+  name: 'inbox_items',
+  async count(db, handles) {
+    const { where, binds } = inboxMatch(handles)
+    return (await db.prepare(`SELECT COUNT(*) AS n FROM stump_inbox_items WHERE ${where}`).bind(...binds).first<{ n: number }>())?.n ?? 0
+  },
+  remove(db, handles) {
+    const { where, binds } = inboxMatch(handles)
+    return [
+      db.prepare(`DELETE FROM stump_stack_offers WHERE id IN (SELECT offer_id FROM stump_inbox_items WHERE offer_id IS NOT NULL AND (${where}))`).bind(...binds),
+      db.prepare(`DELETE FROM stump_inbox_items WHERE ${where}`).bind(...binds),
+    ]
+  },
+}]
 
 /** A handle as it is written in posts and findings, without its leading '@', compared without case (Mastodon's keeps its '@instance'). */
 const folded = (handle: string) => handle.trim().replace(/^@/, '').toLowerCase()

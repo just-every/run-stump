@@ -50,15 +50,17 @@ test('the register keeps one venue per place, and its rules decide the routes an
   const stale = await manage('owner', { action: 'update', venue_id: subreddit.id, expected_revision: subreddit.revision, why: 'stale' })
   assert.equal(stale.body.code, 'revision_conflict')
 
-  // Members keep posting for themselves, and a rule with no source opens nothing.
+  // Members keep posting for themselves; a rule decides by its value and one with no source reads as unsourced.
   const rules = await app.action('owner', 'stump.venues.rules', { action: 'set', venue_id: subreddit.id, rules: {
     posting: { value: 'members_only', source_url: source, read_at: '2026-10-28' }, ai_text: { value: 'banned', source_url: source, read_at: '2026-10-28' },
     gates: { value: { karma: 100 }, source_url: source, read_at: '2026-10-28' } } })
   assert.deepEqual(rules.body.result.routes.routes, ['handoff_brief'])
   const unsourced = await app.mcp(token, 'stump.venues.rules', { action: 'set', venue_id: journalist.result.structuredContent.id, rules: { posting: { value: 'company_account' }, ai_text: { value: 'allowed' } } })
-  assert.deepEqual(unsourced.result.structuredContent.routes.routes, ['handoff_brief'])
-  const sourced = await app.mcp(token, 'stump.venues.rules', { action: 'set', venue_id: journalist.result.structuredContent.id, rules: { posting: { value: 'api', source_url: source, read_at: '2026-10-29' } } })
-  assert.deepEqual(sourced.result.structuredContent.routes.routes, ['publish', 'handoff_brief'])
+  assert.deepEqual(unsourced.result.structuredContent.routes.routes, ['publish', 'handoff_draft', 'handoff_brief'])
+  assert.deepEqual(unsourced.result.structuredContent.routes.unsourced, ['posting', 'ai_text'])
+  const sourced = await app.mcp(token, 'stump.venues.rules', { action: 'set', venue_id: journalist.result.structuredContent.id, rules: { posting: { value: 'members_only', source_url: source, read_at: '2026-10-29' } } })
+  assert.deepEqual(sourced.result.structuredContent.routes.routes, ['handoff_draft', 'handoff_brief'])
+  assert.deepEqual(sourced.result.structuredContent.routes.unsourced, ['ai_text'])
 
   const limit = await app.action('owner', 'stump.venues.fit', { action: 'set_limit', venue_id: subreddit.id, limit: { posts: 1, per: 'week' } })
   assert.deepEqual(limit.body.result.venue.shared_limit, { posts: 1, per: 'week', text: null })

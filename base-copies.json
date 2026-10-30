@@ -503,11 +503,12 @@
         "src/modules/agent-door/policy/document.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/policy/decide.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/policy/SHA256SUMS": "2135c394939f4a737adabdc8003b0e667b31ac5a",
-        "src/modules/agent-door/policy/PROVENANCE.md": "2135c394939f4a737adabdc8003b0e667b31ac5a"
+        "src/modules/agent-door/policy/PROVENANCE.md": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/counting.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
       },
       "acknowledged": {
         "src/modules/agent-door/pipeline.ts": {
-          "sha256": "993ed51846a540112bd1cc0cac8bf3fe20c38adcf61d5d54afccc53a286f991b",
+          "sha256": "ab8e2b0680e248545c0013759feb49ba3bb11f0fff70d048c7c5447345503af5",
           "mode": "100644"
         },
         "src/modules/agent-door/execution.ts": {
@@ -536,6 +537,10 @@
         },
         "src/modules/agent-door/policy/PROVENANCE.md": {
           "sha256": "7a507d9f8b18c6ee2da2c847c927c420496af3d5265d4cb7f858dd51eee8906b",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/counting.ts": {
+          "sha256": "3b9db7f2113c36ab0d825129f73a4e94adbd7a706b48e52ac28445377ea5c3c7",
           "mode": "100644"
         }
       }

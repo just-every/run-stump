@@ -76,12 +76,22 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
     if (item !== undefined) row.continuation_item_id = item
     claimKey = key === null ? null : operationId === undefined ? key : operationKey(operationId, name, key, item)
     const ctx = context(rt, principal, door, [], approvers)
+    /**
+     * Arguments the schema refuses: the tool's own resolution reads every argument sent first, so a
+     * refused act, an unknown action, a forbidden tool or the field its action refuses answers as
+     * itself, as the person door answers; otherwise invalid_arguments names the field.
+     */
+    const refuseArguments = async (field: string | undefined) => {
+      const sent = Object.fromEntries(Object.entries(raw ?? {}).filter(([name]) => name !== 'idempotency_key' && name !== 'expected_revision'))
+      try { await nativeTarget(tool, sent, ctx) } catch (cause) { if (cause instanceof ToolRefusal) throw cause }
+      return refuse('invalid_arguments', field === undefined ? undefined : { field })
+    }
     if (!tool.readOnly && !key) return refuse('idempotency_key_required')
     if (tool.widens === false && row.ignored_arguments.length) return refuse('invalid_arguments')
     if (tool.authority === 'none' && row.ignored_arguments.length) return refuse('undeclared_arguments')
     // A tool that closes its input schema (additionalProperties: false) refuses an argument it does not declare, naming it, instead of dropping it.
     const undeclared = tool.inputSchema.additionalProperties === false ? row.ignored_arguments.filter(key => key !== 'idempotency_key' && key !== 'expected_revision') : []
-    if (undeclared.length) return refuse('invalid_arguments', { field: undeclared[0] })
+    if (undeclared.length) return await refuseArguments(undeclared[0])
     let previous: { outcome: string | null; decision_id: string } | undefined
     const requestDigest = await digest({ name, arguments: declared, ...(principal.clientId === undefined ? {} : { client_id: principal.clientId }) })
     if (tool.readOnly && requestState !== undefined) {
@@ -99,7 +109,8 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
         previous = saved
       }
     }
-    if (!raw || !validateSchema(tool.inputSchema, declared)) return refuse('invalid_arguments')
+    if (!raw) return refuse('invalid_arguments')
+    if (!validateSchema(tool.inputSchema, declared)) return await refuseArguments(Object.keys(args).find(key => !validateSchema(properties[key]!, args[key])))
     const cached = previous?.outcome ? await approvalReplay(rt, JSON.parse(previous.outcome)) : undefined
     // Completed mutations retain their effect evidence after preparation is
     // consumed. Native classification must still admit the current sponsor.

@@ -106,6 +106,9 @@ test('the company reads its X mentions once at its read price, answers only peop
   for (const act of ['like', 'repost', 'follow', 'dm']) {
     const asked = await inbox('stump.inbox.reply', { action: act, inbox_item_id: linh.id, account_id: account.id })
     assert.deepEqual([asked.body.code, asked.body.rule, typeof asked.body.source], ['act_refused', 'D-4', 'string'], act)
+    // An agent asking for the act on a post, with an argument no action takes, still hears the rule first.
+    const agentAsked = await app.mcp(agent.token, 'stump.inbox.reply', { action: act, url: linh.url })
+    assert.deepEqual([agentAsked.error?.code, agentAsked.error?.rule, typeof agentAsked.error?.source], ['act_refused', 'D-4', 'string'], act)
   }
   assert.equal(x.created.length, 0)
 

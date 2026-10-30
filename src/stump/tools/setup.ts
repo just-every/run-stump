@@ -1,7 +1,7 @@
 import { refuse } from '../actions/refusals.ts'
 import type { StumpTool } from '../actions/types.ts'
 import { APP_NETWORKS, checkKeys, checkPrices, describeApps, saveKeys, savePrices, type AppNetwork } from '../accounts/apps.ts'
-import { ADMINS, EVERYONE } from '../people/roles.ts'
+import { ADMINS } from '../people/roles.ts'
 
 // stump.setup.apps: the company's own network apps and the X price table
 // (STUMP-CONNECT-002, STUMP-SURFACE-004). Keys are sealed and read back masked.
@@ -15,7 +15,8 @@ export const setupTools: StumpTool[] = [{
   scope: 'stump:setup', classes: ['security', 'gated'], clauses: ['STUMP-CONNECT-002', 'STUMP-SURFACE-004'],
   actions: {
     list: {
-      roles: EVERYONE, read: true,
+      // Network apps are Admin work (STUMP-TEAM-001); everyone else reads each network's readiness from stump.accounts.connect list.
+      roles: ADMINS, read: true,
       classify: () => [security('network_apps', 0)],
       async run(_args, ctx) { const items = await describeApps(ctx.db, ctx.env); return { items, total: items.length } },
     },
