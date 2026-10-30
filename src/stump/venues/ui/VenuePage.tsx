@@ -166,7 +166,7 @@ function DetailsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
   ]
   return <section className="st-card" aria-labelledby="details-title">
     <h2 id="details-title">About this venue</h2>
-    <dl className="st-kv">{rows.filter(([, value]) => value).map(([label, value]) => <div key={label} style={{ display: 'contents' }}><dt>{label}</dt><dd>{label === 'Address' || label === DETAIL_LABELS.guest_intake_url ? <a href={value!} target="_blank" rel="noreferrer noopener">{value}</a> : value}</dd></div>)}</dl>
+    <dl className="st-kv">{rows.filter(([, value]) => value).map(([label, value]) => <div key={label} style={{ display: 'contents' }}><dt>{label}</dt><dd>{label === 'Address' || label === DETAIL_LABELS.guest_intake ? <a href={value!} target="_blank" rel="noreferrer noopener">{value}</a> : value}</dd></div>)}</dl>
     {venue.products.length ? <>
       <h3 style={{ fontSize: 'var(--stump-size-body)', margin: '16px 0 4px' }}>Products</h3>
       <ul className="st-list">{venue.products.map(product => <li className="st-row" key={product.product_id}><div className="st-row-main"><div className="st-name">{product.name ?? 'Product'}</div>

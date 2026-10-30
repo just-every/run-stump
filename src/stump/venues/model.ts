@@ -39,19 +39,24 @@ export function placeKey(url: string | null, name: string): string {
 
 const webAddress = (value: string) => { try { return /^https?:$/.test(new URL(value).protocol) } catch { return false } }
 
-/** A kind's details, each key present (null when unset), checked against its type. */
-export function kindDetails(kind: VenueKind, url: string | null, input: Record<string, unknown>): Record<string, unknown> {
+/**
+ * A kind's details, each key present (null when unset), checked against its
+ * type. A refusal names the field as the caller sent it: `guest_intake` at the
+ * top level, `details.guest_intake` inside details (`top` holds the former).
+ */
+export function kindDetails(kind: VenueKind, url: string | null, input: Record<string, unknown>, top: ReadonlySet<string> = new Set()): Record<string, unknown> {
   const fields: { url: boolean; details: Record<string, string>; required: readonly string[] } = KIND_FIELDS[kind], out: Record<string, unknown> = {}
-  for (const key of Object.keys(input)) if (!Object.hasOwn(fields.details, key)) refuse('invalid_arguments', { field: `details.${key}`, reason: `A ${kind} has no ${key}.` })
+  const named = (key: string) => top.has(key) ? key : `details.${key}`
+  for (const key of Object.keys(input)) if (!Object.hasOwn(fields.details, key)) refuse('invalid_arguments', { field: named(key), reason: `A ${kind} has no ${key}.` })
   for (const [key, type] of Object.entries(fields.details)) {
     const value = input[key] ?? null
     const valid = value === null || (type === 'text' ? typeof value === 'string' && value.length <= 300
-      : type === 'url' ? typeof value === 'string' && value.length <= 2048 && (!value.trim() || webAddress(value.trim()))
+      : type === 'url' ? typeof value === 'string' && value.length <= 2048 && webAddress(value.trim())
       : type === 'list' ? Array.isArray(value) && value.length <= 20 && value.every(item => typeof item === 'string' && item.trim().length > 0 && item.length <= 80)
       : type === 'integer' ? Number.isSafeInteger(value) && (value as number) >= 0
         : type === 'number' ? typeof value === 'number' && Number.isFinite(value) && value >= 0
           : typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value))
-    if (!valid) refuse('invalid_arguments', { field: `details.${key}`, ...(type === 'url' ? { reason: 'Give an http(s) address.' } : type === 'list' ? { reason: 'Give up to 20 short words or phrases.' } : {}) })
+    if (!valid) refuse('invalid_arguments', { field: named(key), ...(type === 'url' ? { reason: 'Give an http(s) address.' } : type === 'list' ? { reason: 'Give up to 20 short words or phrases.' } : {}) })
     out[key] = typeof value === 'string' ? value.trim() || null : Array.isArray(value) ? (value.length ? value.map(item => String(item).trim()) : null) : value
   }
   // A subreddit's name comes from its address when not given: reddit.com/r/<name>.
@@ -60,7 +65,7 @@ export function kindDetails(kind: VenueKind, url: string | null, input: Record<s
     out.subreddit = name ? `r/${name}` : null
   }
   if (fields.url && !url) refuse('invalid_arguments', { field: 'url', reason: `A ${kind} needs its address.` })
-  for (const key of fields.required) if (!out[key]) refuse('invalid_arguments', { field: `details.${key}`, reason: `A ${kind} needs its ${key}.` })
+  for (const key of fields.required) if (!out[key]) refuse('invalid_arguments', { field: named(key), reason: `A ${kind} needs its ${key}.` })
   return out
 }
 
@@ -111,11 +116,14 @@ export async function productLinks(db: D1Database, ids: string[]): Promise<Map<s
 
 /** The venue as both doors answer it. Routes and the next open date are computed by the caller. */
 export function publicVenue(row: VenueRow, products: ProductLink[], computed: { routes: string[]; next_open_at: string | null; imported: boolean }) {
+  const details = json<Record<string, unknown>>(row.details, {})
   return {
+    // The kind's own fields read back under the names a create takes (a podcast's topics and guest_intake), and under details.
+    ...details,
     id: row.id, kind: row.kind, name: row.name, url: row.url, platform: row.platform, status: row.status, priority: priorityWord(row.priority),
     products, rules: rulesOf(row), routes: computed.routes, shared_limit: limitOf(row), next_open_at: computed.next_open_at,
     archived: row.archived === 1, excluded: json<{ reason: string; alternative: string | null } | null>(row.excluded, null),
-    details: json<Record<string, unknown>>(row.details, {}), audience: row.audience, why: row.why, reader_value: row.reader_value,
+    details, audience: row.audience, why: row.why, reader_value: row.reader_value,
     how_to_post: json<Record<string, unknown>>(row.how_to_post, {}), requirements: json<Record<string, unknown>>(row.requirements, {}),
     reception: row.reception, notes: row.notes, imported: computed.imported, revision: row.revision,
     created_at: iso(row.created_at), updated_at: iso(row.updated_at), archived_at: iso(row.archived_at),

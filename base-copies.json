@@ -494,7 +494,16 @@
         "modules/agent-door/transport.ts",
         "modules/agent-door/types.ts",
         "modules/agent-door/wire.ts"
-      ]
+      ],
+      "adapted": {
+        "src/modules/agent-door/pipeline.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
+      },
+      "acknowledged": {
+        "src/modules/agent-door/pipeline.ts": {
+          "sha256": "993ed51846a540112bd1cc0cac8bf3fe20c38adcf61d5d54afccc53a286f991b",
+          "mode": "100644"
+        }
+      }
     },
     {
       "path": "src/modules/business-settings",

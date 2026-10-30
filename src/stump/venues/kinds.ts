@@ -8,7 +8,7 @@ export const KIND_FIELDS = {
   slack: { label: 'Slack community', url: true, details: { workspace: 'text', channel: 'text' }, required: [] },
   discord: { label: 'Discord server', url: true, details: { server: 'text', channel: 'text' }, required: [] },
   newsletter: { label: 'Newsletter', url: true, details: { publisher: 'text', cadence: 'text', subscribers: 'integer', contact: 'text' }, required: [] },
-  podcast: { label: 'Podcast', url: true, details: { host: 'text', cadence: 'text', guest_intake_url: 'url', topics: 'list', contact: 'text' }, required: [] },
+  podcast: { label: 'Podcast', url: true, details: { host: 'text', cadence: 'text', guest_intake: 'url', topics: 'list', contact: 'text' }, required: [] },
   directory: { label: 'Directory', url: true, details: { listing_url: 'text', price_usd: 'number' }, required: [] },
   publication: { label: 'Publication', url: true, details: { section: 'text', contact: 'text' }, required: [] },
   journalist: { label: 'Journalist', url: false, details: { publication: 'text', beat: 'text', contact: 'text' }, required: ['publication'] },
@@ -23,5 +23,5 @@ export const ROUTE_LABELS: Record<string, string> = { publish: 'Publish', handof
 export const DETAIL_LABELS: Record<string, string> = {
   subreddit: 'Subreddit', flair: 'Flair', section: 'Section', workspace: 'Workspace', channel: 'Channel', server: 'Server', publisher: 'Publisher', cadence: 'Cadence',
   subscribers: 'Subscribers', contact: 'Contact', host: 'Host', listing_url: 'Listing', price_usd: 'Price (USD)', publication: 'Publication', beat: 'Beat',
-  launch_day: 'Launch day', guest_intake_url: 'Guest intake', topics: 'Topics', date: 'Date', location: 'Location', network: 'Network', handle: 'Handle',
+  launch_day: 'Launch day', guest_intake: 'Guest intake', topics: 'Topics', date: 'Date', location: 'Location', network: 'Network', handle: 'Handle',
 }

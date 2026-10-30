@@ -37,12 +37,6 @@ const written = (value: unknown) => JSON.stringify(typeof value === 'string' ? (
 const standard = (measure = 1) => [{ class: 'standard' as const, facts: { measure } }]
 const clean = (value: unknown) => typeof value === 'string' ? value.trim() || null : null
 const mover = (ctx: ActionContext) => ({ db: ctx.db, person: ctx.person, agent: ctx.agent, now: ctx.now })
-/** An argument the action does not declare is refused by name, never dropped: what a person gave is kept or they are told. */
-const DOOR_KEYS = new Set(['action', 'idempotency_key', 'expected_revision'])
-function onlyDeclared(args: Args, properties: Record<string, unknown>) {
-  const kind = typeof args.kind === 'string' ? args.kind : 'venue'
-  for (const key of Object.keys(args)) if (!DOOR_KEYS.has(key) && !Object.hasOwn(properties, key)) refuse('invalid_arguments', { field: key, reason: `A ${kind} has no ${key}.` })
-}
 
 /** The venue as both doors answer it, with its routes, products and next open date now. */
 export async function answer(ctx: Pick<ActionContext, 'db' | 'now'>, rows: VenueRow[]): Promise<PublicVenue[]> {
@@ -99,7 +93,7 @@ function fieldsOf(args: Args, current?: VenueRow): Fields {
   // A kind's fields may come under details or at the top level; a field of another kind is refused by name, never dropped.
   const given = (args.details ?? (current && kind === current.kind ? JSON.parse(current.details) : {})) as Record<string, unknown>
   const top = Object.fromEntries(Object.keys(DETAIL_FIELDS).filter(key => args[key] !== undefined).map(key => [key, args[key]]))
-  const details = kindDetails(kind, url, { ...given, ...top })
+  const details = kindDetails(kind, url, { ...given, ...top }, new Set(Object.keys(top)))
   return { kind, name, url, url_key: placeKey(url, name), details }
 }
 
@@ -136,7 +130,8 @@ export async function listVenues(ctx: ActionContext, args: Args) {
   // Excluded venues are hidden unless asked for, or unless the filter names the status itself.
   if (args.include_excluded !== true && args.status !== 'excluded') where.push("v.status<>'excluded'")
   if (args.include_archived !== true) where.push('v.archived=0')
-  if (typeof args.q === 'string') { where.push("(v.name LIKE ? ESCAPE '\\' OR v.url LIKE ? ESCAPE '\\')"); const like = `%${args.q.replace(/[\\%_]/g, c => `\\${c}`)}%`; values.push(like, like) }
+  // instr, not LIKE: D1 refuses a LIKE pattern over 50 bytes, and a search may be any length.
+  if (typeof args.q === 'string') { where.push('(instr(lower(v.name),lower(?))>0 OR instr(lower(COALESCE(v.url,\'\')),lower(?))>0)'); values.push(args.q, args.q) }
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : ''
   const rows = (await ctx.db.prepare(`SELECT v.* FROM stump_venues v ${clause} ORDER BY COALESCE(v.priority,0) DESC,v.name COLLATE NOCASE,v.id LIMIT 1000`).bind(...values).all<VenueRow>()).results
   const total = await ctx.db.prepare(`SELECT COUNT(*) AS n FROM stump_venues v ${clause}`).bind(...values).first<{ n: number }>()
@@ -169,7 +164,7 @@ export const manageActions: Record<string, StumpAction> = {
     roles: EDITORS, properties: FIELDS, required: ['kind', 'name'],
     classify: () => standard(),
     summary: args => ({ target: { name: String(args.name) } }),
-    run: (args, ctx) => { onlyDeclared(args, FIELDS); return insertVenue(ctx, args, (args.status as string | undefined) ?? 'candidate') },
+    run: (args, ctx) => insertVenue(ctx, args, (args.status as string | undefined) ?? 'candidate'),
   },
   propose: {
     // Anyone who drafts may propose a candidate; an excluded or known place is named instead of proposed again.
@@ -178,7 +173,6 @@ export const manageActions: Record<string, StumpAction> = {
     classify: () => standard(),
     summary: args => ({ target: { name: String(args.name ?? args.url) } }),
     async run(args, ctx) {
-      onlyDeclared(args, manageActions.propose!.properties!)
       const url = clean(args.url)
       if (!url) refuse('invalid_arguments', { field: 'url' })
       let name = clean(args.name)
@@ -202,7 +196,6 @@ export const manageActions: Record<string, StumpAction> = {
     roles: EDITORS, properties: { venue_id: venueId, ...FIELDS }, required: ['venue_id'],
     classify: () => standard(), summary, target, revision,
     async run(args, ctx) {
-      onlyDeclared(args, manageActions.update!.properties!)
       const venue = await venueOrRefuse(ctx.db, args.venue_id)
       const fields = fieldsOf(args, venue)
       if (fields.url_key !== venue.url_key) await samePlace(ctx, fields.url_key, venue.id)
