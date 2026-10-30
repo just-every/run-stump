@@ -1,6 +1,6 @@
 // The run site `rer build --site` writes (run-stump.com): the homepage, the
-// docs built from docs/site.json and docs/*.md, /run (which sends the reader
-// on to the install doc), /contract and Base's hosting page from Base, and the
+// docs built from docs/site.json and docs/*.md, /run and /docs/getting-started
+// (which send the reader on to the install doc), /contract and Base's hosting page from Base, and the
 // not-found page. Nothing here reads installation data.
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -41,9 +41,10 @@ export function sitePages({ contract, hosting, styles = [], clients = {} }: Part
       page('/docs', 'Docs · Stump', docsLead, createElement(DocsIndex, { sections: docs.sections }), search),
       ...pages.map((entry, index) => page(`/docs/${entry.slug}`, `${entry.title} · Stump docs`, entry.summary,
         createElement(DocsArticle, { page: entry, sections: docs.sections, previous: pages[index - 1], next: pages[index + 1] }), search)),
-      // rer requires a /run page; Stump's is the install doc's old address, sent on to it (one path per resource).
-      { path: '/run', html: siteDocument({ title: 'Install Stump · Stump docs', description: DESCRIPTION, path: '/run', canonical: links.run, moved: true, styles,
-        body: renderToStaticMarkup(createElement(Moved, { to: links.run, title: 'Install Stump' })) }) },
+      // rer requires a /run page, and Base's hosting page links the install doc by its old slug: both send the
+      // reader on to /docs/install, so the install doc keeps one address.
+      ...['/run', '/docs/getting-started'].map(path => ({ path, html: siteDocument({ title: 'Install Stump · Stump docs', description: DESCRIPTION, path, canonical: links.run, moved: true, styles,
+        body: renderToStaticMarkup(createElement(Moved, { to: links.run, title: 'Install Stump' })) }) })),
       // rer supplies hosting (null when the seed does not deploy to Workers); a caller without it gets no hosting page.
       ...(hosting !== undefined ? [{ path: '/docs/hosting', html: hostingPageHtml(identity, data, hosting, contract, homepage) }] : []),
       ...(contract ? [{ path: '/contract', html: contractPageHtml(identity, data, contract, homepage) }] : []),
