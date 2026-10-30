@@ -72,6 +72,19 @@ export function spanAt(text: string, flag: Flag, claims: ClaimFinding[] = []): [
   return at < 0 ? null : [at, at + span.length]
 }
 
+/**
+ * Where a claim flag's words sit in a variant's text, to select them for fixing: a mismatch's number and the word it measures
+ * ("$12 a"), any other claim flag its whole sentence (the banned claim, the unproven statement). Null when the text no longer holds it.
+ */
+export function claimRange(text: string, flag: Flag, claims: ClaimFinding[] = []): [number, number] | null {
+  if (flag.code === 'claim_number_mismatch') return spanAt(text, flag, claims)
+  const words = typeof flag.text === 'string' ? flag.text : ''
+  if (!flag.code.startsWith('claim_') || !words) return null
+  const near = typeof flag.start === 'number' ? text.indexOf(words, Math.max(0, flag.start - 1)) : -1
+  const at = near >= 0 ? near : text.indexOf(words)
+  return at < 0 ? null : [at, at + words.length]
+}
+
 /** One line for a flag, in the person's words; `span` names the claim itself where the check found it. */
 export function flagLine(flag: Flag, span?: string | null): string {
   switch (flag.code) {

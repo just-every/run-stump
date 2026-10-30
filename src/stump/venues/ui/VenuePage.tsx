@@ -231,11 +231,17 @@ function ProductsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
     {items.length ? <>
       {venue.products.length ? <h3 className="st-venue-sub">Items aimed here</h3> : null}
       <ul className="st-list st-venue-items">{items.map(item => <li className="st-row" key={item.id}>
-        <div className="st-row-main"><div className="st-name">{itemName(item, names)}</div>
+        <div className="st-row-main"><ItemLink item={item}>{itemName(item, names)}</ItemLink>
           <div className="st-meta">{itemWords(venue, item)}</div></div>
       </li>)}</ul>
     </> : null}
   </section>
+}
+
+/** An item aimed here opens where it is worked on: a hand-off's brief, else the draft (its master post) in Compose. */
+function ItemLink({ item, children }: { item: VenueItem; children: ReactNode }) {
+  if (item.handoff) return <Link className="st-name" to="/app/handoffs/$handoffId" params={{ handoffId: item.handoff.id }}>{children}</Link>
+  return <Link className="st-name" to="/app/compose" search={item.master_id ? { master: item.master_id } : { item: item.id }}>{children}</Link>
 }
 
 const cap = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)

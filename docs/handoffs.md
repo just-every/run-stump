@@ -10,7 +10,7 @@ Open the venue under **Venues**. Where its rules keep posting for its members, i
 
 The brief opens next. Editors and admins hand off to anyone on the team; a contributor hands off only to themselves. From **Listening**, a finding on a venue you have recorded has **Hand off** too, with the thread filled in.
 
-An agent starts one with `stump.handoffs.prepare` (`venue_id`, `person_id`, `product_id`, `due_at`, `lapse`, and optionally `thread_url`, `text` or `generate`). Preparing a hand-off is a step a person completes, so it follows your company's policy for that kind of action, and an approver sees "Hand a post at <venue> to <person>".
+An agent starts one with `stump.handoffs.prepare` (`venue_id`, `person_id`, `product_id`, `due_at`, `lapse`, and optionally `thread_url`, `text` or `generate`). Preparing a hand-off is a step a person completes, so it follows your company's policy for that kind of action, and an approver sees "Hand <person> a post on <venue>", the product it is for, and whether the brief carries talking points, an AI draft or a draft written by the preparer.
 
 ## What a brief holds
 

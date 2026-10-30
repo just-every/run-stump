@@ -68,7 +68,10 @@ export const teamTools: StumpTool[] = [{
         if (!invited) refuse('already_member', { person_id: id })
         await (await history(ctx, 'invite', { id, email: address }, { role: args.role, connection: args.connection ?? null })).run()
         ctx.emit('team.invited', `stump://people/${id}`, { role: args.role })
-        return publicPerson((await readPerson(ctx.db, id))!)
+        // How the invitation reaches them: Base emails a sign-in link once deployed; a local installation sends no mail,
+        // so they sign in from this computer at /signin.
+        const invitation = ctx.env.AUTH_LOCAL === 'true' ? { by: 'this_computer' as const, sign_in: '/signin' } : { by: 'email' as const }
+        return { ...publicPerson((await readPerson(ctx.db, id))!), invitation }
       },
     },
     list: {

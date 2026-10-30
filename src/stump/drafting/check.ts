@@ -195,8 +195,10 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   }) : []
   if (duplicates.length) flags.push({ code: 'near_duplicate', blocking: true, rule: 'STUMP-TRUTH-004', window_days: brand.window_days, matches: duplicates })
 
+  // A draft passes when nothing stops it and every claim it makes is matched (STUMP-BRAND-004.1, .4): a statement only flagged for a
+  // person to back leaves it free to be marked ready, but it has not passed until someone backs or removes it.
   return {
-    passed: !flags.some(flag => flag.blocking), claims: claimCheck.claims, mentions: claimCheck.mentions, flags, counts: counts.counts,
+    passed: !flags.some(flag => flag.blocking) && claimCheck.claims.every(finding => finding.status === 'matched'), claims: claimCheck.claims, mentions: claimCheck.mentions, flags, counts: counts.counts,
     disclosure: { required: disclosure.required, status: disclosure.status, because: disclosure.because }, duplicates, claims_used: claimsUsed(claimCheck.claims), venue_hold: held,
   }
 }

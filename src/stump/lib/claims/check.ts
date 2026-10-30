@@ -2,7 +2,8 @@
 //
 // A sentence can make several claims ("Orbit syncs with Slack, cuts triage time by 80%
 // and has zero downtime"), so each sentence is read clause by clause: it is split at
-// ';', commas and the conjunctions 'and' and 'but', and a clause that names no product
+// ';', a colon, commas and the conjunctions 'and' and 'but', a condition ("when a client
+// is late, ...") stays with the clause it conditions, and a clause that names no product
 // takes the sentence's subject. A clause is matched to the company's claims by the
 // content words it shares with a claim, both ways: a claim is matched when at least three
 // quarters of its content words appear (two or fewer must all appear), or when at least
@@ -232,7 +233,10 @@ type Hit = { p: Prepared; score: number; conflict?: Conflict }
 type Unit = Span & { candidate?: ClaimCandidate; banned?: Hit; best?: Hit }
 
 const MIN_CLAUSE_WORDS = 3
-const CLAUSE_BREAK = /;\s+|,\s+(?:(?:and|but)\s+)?|\s+(?:and|but)\s+/giu
+// A lead-in ends at a colon ("New in Orbit 2.4: ..."), as a clause ends at ';', a comma, 'and' or 'but'.
+const CLAUSE_BREAK = /[;:]\s+|,\s+(?:(?:and|but)\s+)?|\s+(?:and|but)\s+/giu
+/** A piece that opens with a subordinating word ("when a client is late") is a condition of the clause beside it, not a statement of its own. */
+const SUBORDINATE = /^(?:when|whenever|if|once|after|before|until|unless|while|as soon as|because|since|so that)\b/iu
 
 /**
  * A sentence's clauses, with offsets into the draft. A piece of fewer than three words
@@ -270,6 +274,18 @@ function clauseSpans(span: Span, numbers: readonly FoundNumber[]): Span[] {
   if (first && pieces.length > 1 && words(first.start, first.end) < MIN_CLAUSE_WORDS) {
     first.end = (pieces[1] as { end: number }).end
     pieces.splice(1, 1)
+  }
+  // A condition joins the clause it conditions: the one after it, or the one before when it comes last.
+  for (let k = 0; k < pieces.length; k++) {
+    const piece = pieces[k] as { start: number; end: number }
+    if (pieces.length < 2 || !SUBORDINATE.test(span.text.slice(piece.start, piece.end))) continue
+    if (k + 1 < pieces.length) {
+      piece.end = (pieces[k + 1] as { end: number }).end
+      pieces.splice(k + 1, 1)
+    } else {
+      (pieces[k - 1] as { end: number }).end = piece.end
+      pieces.splice(k, 1)
+    }
   }
   return pieces.map((p) => ({ text: span.text.slice(p.start, p.end), start: span.start + p.start, end: span.start + p.end }))
 }

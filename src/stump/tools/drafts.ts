@@ -63,7 +63,8 @@ export const draftTools: StumpTool[] = [{
   scope: 'stump:drafts', classes: ['standard', 'external'], clauses: ['STUMP-DRAFT-010', 'STUMP-DRAFT-001', 'STUMP-DRAFT-002', 'STUMP-DRAFT-006', 'STUMP-DRAFT-011', 'STUMP-DRAFT-007', 'STUMP-BRAND-002'],
   actions: {
     create: {
-      roles: CONTRIBUTORS, properties: writeFields, required: ['format', 'person_id'],
+      // The person defaults to the one drafting (an agent's own person); a personal account's draft speaks for its owner.
+      roles: CONTRIBUTORS, properties: writeFields, required: ['format'],
       async classify(args, ctx) { await screen(ctx, args, 'create'); return draftingClasses(ctx, args.generate === true ? 1 : 0, 1) },
       summary: args => ({ target: { name: `Draft a ${String(args.format)}${args.generate === true ? ' through the AI provider' : ''}` } }),
       async run(args, ctx) {
@@ -86,7 +87,9 @@ export const draftTools: StumpTool[] = [{
       },
     },
     master: {
-      roles: CONTRIBUTORS, properties: { text: writeFields.text, account_ids: ids(12), person_id: id, product_id: id, generate: writeFields.generate, source_url: url, prompt: writeFields.prompt, voice_id: id },
+      // `venues` aims an account's variant at a venue (the instance, community or channel it posts in), so its rules apply and the ledger files it there.
+      roles: CONTRIBUTORS, properties: { text: writeFields.text, account_ids: ids(12), person_id: id, product_id: id, generate: writeFields.generate, source_url: url, prompt: writeFields.prompt, voice_id: id,
+        venues: { type: 'array', maxItems: 12, items: { type: 'object', required: ['account_id', 'venue_id'], additionalProperties: false, properties: { account_id: id, venue_id: id } } } },
       required: ['account_ids'],
       async classify(args, ctx) { await screen(ctx, { ...args, person_id: args.person_id ?? ctx.person.id }, 'master'); return draftingClasses(ctx, args.generate === true ? 1 : 0, (args.account_ids as unknown[]).length) },
       summary: args => ({ target: { name: `Open a post for ${(args.account_ids as unknown[]).length} accounts` } }),

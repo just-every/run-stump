@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, type ReactNode } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
@@ -7,7 +7,13 @@ import type { Team } from '../stump/ui/types.ts'
 import { Disc } from '../stump/drafting/disc.tsx'
 import type { ClaimView, Product, VoiceView } from '../stump/drafting/view.ts'
 
-export const Route = createFileRoute('/app/settings/brand')({ component: BrandPage })
+// From Compose's "Back claim" or "Update the proof": `item` (and `master`) is the draft to return to, `claim` the sentence to record as a claim.
+type Search = { item?: string; master?: string; claim?: string }
+export const Route = createFileRoute('/app/settings/brand')({
+  validateSearch: (search: Record<string, unknown>): Search => Object.fromEntries((['item', 'master', 'claim'] as const)
+    .filter(name => typeof search[name] === 'string' && search[name]).map(name => [name, search[name] as string])),
+  component: BrandPage,
+})
 
 const key = () => crypto.randomUUID()
 const list = (value: string) => value.split(',').map(item => item.trim()).filter(Boolean)
@@ -38,13 +44,23 @@ function Proof({ proof }: { proof: unknown }) {
 }
 
 function BrandPage() {
+  const { item, master, claim: sentence } = Route.useSearch()
+  const navigate = useNavigate()
   const { data, error, refresh } = useLoaded(async () => {
-    const [who, products, claims, voices, team] = await Promise.all([
+    const [who, products, claims, voices, team, draft] = await Promise.all([
       me(), runAction<{ items: Product[] }>('stump.brand.manage', { action: 'product_list' }), runAction<{ items: ClaimView[] }>('stump.brand.manage', { action: 'claim_list' }),
       runAction<{ items: VoiceView[] }>('stump.brand.manage', { action: 'voice_list' }), runAction<Team>('stump.team.manage', { action: 'list' }),
+      item ? runAction<{ product_id: string | null }>('stump.drafts.revise', { action: 'get', item_id: item }) : null,
     ])
-    return { who, products: products.items, claims: claims.items, voices: voices.items, team: team.items }
+    return { who, products: products.items, claims: claims.items, voices: voices.items, team: team.items, draftProduct: draft?.product_id ?? null }
   })
+  const draft = item ? { ...(master ? { master } : { item }) } : null
+  /** A claim recorded from a draft's sentence backs that sentence (its wording joins the claim's), then the draft opens again with its check run. */
+  async function backAndReturn(claimId: string) {
+    if (!item || !draft) return
+    const backed = sentence ? await run(() => runAction('stump.drafts.check', { action: 'back', item_id: item, claim_id: claimId, text: sentence, idempotency_key: key() })) : true
+    if (backed !== undefined) await navigate({ to: '/app/compose', search: draft })
+  }
   const { busy, message, run } = useRun()
   const { shown, saved } = useSaved()
   const editor = data ? ['owner', 'admin', 'editor'].includes(data.who.person.role) : false
@@ -74,6 +90,7 @@ function BrandPage() {
 
       <section className="st-card" aria-labelledby="claims-title">
         <h2 className="st-card-head" id="claims-title"><Disc icon="doc" />Claims</h2>
+        {draft ? <p className="st-meta"><Link className="st-quiet-link" to="/app/compose" search={draft}>Back to the draft</Link></p> : null}
         {data && !data.claims.length ? <p className="st-meta">No claims yet. Drafts flag every product claim until one here backs it.</p> : null}
         <ul className="st-list">{data?.claims.map(claim => <li className="st-kv" key={claim.id}>
           <div className="st-name">{claim.kind === 'banned' ? <span className="st-pill danger">banned</span> : claim.stale ? <span className="st-pill danger">stale</span> : null}{claim.text}</div>
@@ -81,8 +98,9 @@ function BrandPage() {
             : claim.kind === 'comparative' ? `vs ${claim.competitor ?? ''} · source ${shortDate(claim.source_date)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on, true)}`
             : <>proof: <Proof proof={claim.proof} /> · owner {name(claim.owner_id)} · review {shortDate(claim.review_on, true)}</>}</div>
         </li>)}</ul>
-        {writer && data ? <ClaimForm open={!data.claims.length} busy={busy} team={data.team.filter(person => person.status === 'active')} me={data.who.person.id} products={data.products}
-          onAdd={args => act({ action: 'claim_create', ...args }, 'Claim added')} /> : null}
+        {writer && data ? <ClaimForm key={sentence ?? ''} open={!data.claims.length || !!sentence} busy={busy} team={data.team.filter(person => person.status === 'active')} me={data.who.person.id} products={data.products}
+          initial={sentence ? { text: sentence, product_id: data.draftProduct ?? '' } : null}
+          onAdd={async args => { const made = await act({ action: 'claim_create', ...args }, 'Claim added') as { id: string } | undefined; if (made && draft) await backAndReturn(made.id); return made }} /> : null}
       </section>
 
       <section className="st-card" aria-labelledby="voices-title">
@@ -161,9 +179,9 @@ function ProductForm({ open, busy, onAdd }: { open: boolean; busy: boolean; onAd
   </form>}</Adder>
 }
 
-function ClaimForm({ open, busy, team, me: self, products, onAdd }: { open: boolean; busy: boolean; team: Team['items']; me: string; products: Product[]; onAdd: (args: Record<string, unknown>) => Promise<unknown> }) {
+function ClaimForm({ open, busy, team, me: self, products, initial, onAdd }: { open: boolean; busy: boolean; team: Team['items']; me: string; products: Product[]; initial: { text: string; product_id: string } | null; onAdd: (args: Record<string, unknown>) => Promise<unknown> }) {
   const empty = { text: '', kind: 'allowed', proof: '', owner_id: self, review_on: '', reason: '', competitor: '', source_url: '', source_date: '', product_id: '' }
-  const [form, setForm] = useState(empty)
+  const [form, setForm] = useState(initial ? { ...empty, ...initial } : empty)
   const set = (name: keyof typeof form) => (event: { target: { value: string } }) => setForm({ ...form, [name]: event.target.value })
   return <Adder open={open} label="Add claim">{close => <form className="st-form" onSubmit={async event => {
     event.preventDefault()

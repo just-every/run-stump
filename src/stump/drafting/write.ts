@@ -109,7 +109,8 @@ export async function screen(ctx: ActionContext, args: Args, action: string) {
       if (because) await refuseEndorsement(ctx, action, person, because)
     }
   }
-  const venues = action === 'from_source' ? ((args.targets as Args[] | undefined) ?? []).map(target => target.venue_id).filter(Boolean) : args.venue_id !== undefined ? [args.venue_id] : []
+  const venues = action === 'from_source' ? ((args.targets as Args[] | undefined) ?? []).map(target => target.venue_id).filter(Boolean)
+    : action === 'master' ? ((args.venues as Args[] | undefined) ?? []).map(entry => entry.venue_id) : args.venue_id !== undefined ? [args.venue_id] : []
   for (const venueId of generate ? venues : []) {
     const venue = await venueRow(ctx, venueId), rule = venue.rules.ai_text
     if (AI_BANNED.has(String(rule?.value ?? '').toLowerCase()) || rule?.value === false) {
@@ -229,7 +230,11 @@ export async function createMaster(ctx: ActionContext, args: Args) {
   const accountIds = [...new Set(args.account_ids as string[])]
   const accounts = await Promise.all(accountIds.map(async accountId => { const account = await readAccount(ctx.db, accountId); if (!account) refuse('not_found', { account_id: accountId }); return account }))
   const author = await speaker(ctx, args.person_id ?? ctx.person.id, 'master')
-  const variants = await Promise.all(accounts.map(account => target(ctx, { account_id: account.id, product_id: args.product_id, ...(account.owner_kind === 'company' ? { person_id: author.id } : {}) }, 'master', author.id)))
+  // Each variant may be aimed at a venue; one named for an account the post does not go to is a mistake, never ignored.
+  const aimed = new Map(((args.venues as Array<{ account_id: string; venue_id: string }> | undefined) ?? []).map(entry => [entry.account_id, entry.venue_id]))
+  for (const accountId of aimed.keys()) if (!accountIds.includes(accountId)) refuse('invalid_arguments', { field: 'venues', reason: `The post does not go to account ${accountId}.` })
+  const variants = await Promise.all(accounts.map(account => target(ctx, { account_id: account.id, product_id: args.product_id, ...(aimed.has(account.id) ? { venue_id: aimed.get(account.id) } : {}),
+    ...(account.owner_kind === 'company' ? { person_id: author.id } : {}) }, 'master', author.id)))
   let text = typeof args.text === 'string' ? args.text : null, ai: Drafted['ai'] | undefined, source: Source | null = null
   if (args.generate === true) {
     source = typeof args.source_url === 'string' ? await readSource(ctx.env, args.source_url, ctx.now()) : null
@@ -245,7 +250,7 @@ export async function createMaster(ctx: ActionContext, args: Args) {
   const master = ctx.db.prepare('INSERT INTO stump_masters(id,person_id,product_id,text,account_ids,sources,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)')
     .bind(masterId, author.id, (args.product_id as string | undefined) ?? null, text, JSON.stringify(accountIds), JSON.stringify(sources), ctx.person.id, now, now)
   await insertItems(ctx, variants.map((variant, index) => ({
-    id: ids[index]!, format: 'post', network: variant.network, account_id: variant.account!.id, venue_id: null, person_id: variant.person_id, product_id: variant.product_id,
+    id: ids[index]!, format: 'post', network: variant.network, account_id: variant.account!.id, venue_id: variant.venue_id, person_id: variant.person_id, product_id: variant.product_id,
     master_id: masterId, text, parts: null, differs_from_master: 0 as const, sources, ...(ai ? { ai } : {}),
   })), [master])
   return { master_id: masterId, ids }

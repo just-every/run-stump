@@ -40,7 +40,47 @@ Any MCP client that speaks streamable HTTP at `2025-11-25` or later connects wit
 {"mcpServers": {"stump": {"type": "http", "url": "http://127.0.0.1:8787/mcp", "headers": {"Authorization": "Bearer <token>"}}}}
 ```
 
-`tools/list` lists the tools your person may use, each with its classes.
+`tools/list` lists the tools your person may use, each with its classes. Each tool's `action` argument lists the actions it runs, and its description says what each action needs and takes, so an agent reads them before its first call.
+
+## Tools and their actions
+
+Each action's required arguments are in parentheses; the rest are optional. An agent acts for its own person, so where an action takes `person_id` to say whom a draft speaks for, leaving it out means that person.
+
+| Tool | Actions |
+| --- | --- |
+| `stump.accounts.connect` | `start` (network, owner), `complete`, `list`, `disconnect` (account_id), `reconnect` (account_id), `record_label` (account_id, automated_label) |
+| `stump.brand.manage` | `product_create` (name), `product_update` (product_id), `product_list`, `site_read` (url), `company_update` (company_names), `claim_create` (text, kind, owner_id), `claim_update` (claim_id), `claim_get` (claim_id), `claim_list`, `voice_create` (person_id, samples), `voice_update` (voice_id), `voice_get` (voice_id), `voice_list` |
+| `stump.calendar.pause` | `pause`, `resume`, `state` |
+| `stump.calendar.plan` | `set_slots` (account_id, time_zone, slots), `slots` (account_id), `queue` (item_id, account_id), `release_import` (item_ids, confirm_source_cleared) |
+| `stump.data.erase` | `erase` (subject) |
+| `stump.drafts.write` | `create` (format), `from_source` (source_url, targets), `master` (account_ids) |
+| `stump.drafts.revise` | `get` (item_id), `list`, `save` (item_id), `diff` (item_id, from, to), `restore` (item_id, revision), `mark_ready` (item_id), `save_master` (master_id, text) |
+| `stump.drafts.check` | `run` (item_id), `count` (text, networks), `back` (item_id, claim_id), `set_duplicate_window` (days) |
+| `stump.drafts.preview` | `master` (master_id), `item` (item_id), `targets` |
+| `stump.findings.work` | `list` (watch_id), `dismiss` (finding_id) |
+| `stump.handoffs.prepare` | `prepare` (venue_id, person_id, product_id, due_at, lapse) |
+| `stump.handoffs.check_link` | `record` (handoff_id, url) |
+| `stump.handoffs.manage` | `queue`, `get` (handoff_id), `edit` (handoff_id, draft_text), `skip` (handoff_id, reason), `hold` (handoff_id, reason, review_at), `release` (handoff_id) |
+| `stump.inbox.read` | `poll` (account_id), `list` (account_id), `check` (inbox_item_id, account_id, text) |
+| `stump.inbox.reply` | `reply` (inbox_item_id, account_id) |
+| `stump.items.schedule` | `schedule` (item_id, account_id, at), `publish` (item_id), `resume` (item_id), `resolve` (item_id, decision), `schedule_master` (master_id, at) |
+| `stump.items.media` | `attach` (item_id, file), `set_alt` (media_id, alt) |
+| `stump.ledger.search` | `search`, `get` (entry_id), `history`, `export_csv` |
+| `stump.ledger.correct` | `correct` (entry_id, note), `mark_removed` (entry_id, reason), `corrections`, `legal_hold` (entry_id, reason) |
+| `stump.links.manage` | `set_rules` (own_domains, mediums), `rules`, `preview` (text, route, source, content) |
+| `stump.press.contacts` | `create` (kind, name), `get` (contact_id), `list` |
+| `stump.setup.apps` | `list`, `set` (network, client_id, client_secret), `set_prices` (network, prices) |
+| `stump.setup.ai` | `get`, `set` (base_url, model), `clear` |
+| `stump.stack.connect` | `connect` (seed, origin, secret), `list`, `disconnect` (seed) |
+| `stump.stack.send` | `offers`, `send` (offer_id) |
+| `stump.team.manage` | `invite` (email, display_name, role), `list`, `set_role` (person_id, role), `update` (person_id), `remove` (person_id) |
+| `stump.venues.manage` | `create` (kind, name), `propose` (url), `get` (venue_id), `list`, `update` (venue_id), `exclude` (venue_id, reason, alternative), `archive` (venue_id), `restore` (venue_id) |
+| `stump.venues.rules` | `set` (venue_id, rules), `routes` (venue_id) |
+| `stump.venues.fit` | `set_limit` (venue_id, limit), `usage` (venue_id) |
+| `stump.venues.members` | `add` (venue_id, person_id, handle), `list`, `eligibility` (venue_id, person_id), `apply` (venue_id, handle), `approve_application` (application_id) |
+| `stump.watches.manage` | `create` (name), `get` (watch_id), `list`, `poll` (watch_id), `update` (watch_id), `mute` (watch_id), `add_source` (watch_id, source), `backfill` (watch_id), `block_author`, `unblock_author`, `replay_delivery` (event_id) |
+
+A first draft, for example: `stump.drafts.write` with `{"action": "create", "format": "post", "text": "…", "idempotency_key": "…"}`. Its answer carries the draft's id and its `check`: `passed` is true only when every claim in it is matched and nothing stops it, and each flag says whether it is `blocking`. The draft is listed in **Compose** under **Drafts**, as "<agent> for <person>", for a person to open and review. `stump.team.manage` `list` gives the team's person ids, for a draft that speaks for someone else.
 
 ## One door, one set of rules
 

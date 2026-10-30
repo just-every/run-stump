@@ -1,4 +1,4 @@
-import { isListedAuthor, scoreFinding, type Finding, type SourceKind } from '../lib/discovery/index.ts'
+import { isListedAuthor, scoreFinding, spreadThreads, type Finding, type SourceKind } from '../lib/discovery/index.ts'
 import { blockedAuthors, blockRefs } from './blocks.ts'
 import { loadProducts, mentionsOf, rankContext } from './context.ts'
 import { loadVenues, routesFor } from './routes.ts'
@@ -25,11 +25,13 @@ export async function rankedFindings(db: D1Database, watch: WatchRow, now: numbe
     .all<{ source: SourceKind; author: string | null; source_ref: string | null; author_id: string | null }>()).results
   const total = blocked.length ? authors.filter(row => !isListedAuthor({ source: row.source, author: row.author ?? '', source_ref: row.source_ref ?? '', ...(row.author_id ? { author_id: row.author_id } : {}) } as Finding, blocked)).length : authors.length
   const products = await loadProducts(db), venues = await loadVenues(db), context = rankContext(watch, products, now)
-  const scored = rows.map(row => {
+  const read = rows.map(row => {
     const finding = row.raw ? JSON.parse(row.raw) as Finding : null
-    const ranked = finding ? scoreFinding(finding, context) : null
-    return { row, finding, ranked }
-  }).filter(item => listed(item.finding)).sort((a, b) => (b.ranked?.relevance ?? b.row.relevance ?? 0) - (a.ranked?.relevance ?? a.row.relevance ?? 0) || (b.row.published_at ?? 0) - (a.row.published_at ?? 0) || (a.row.id < b.row.id ? -1 : 1))
+    return { row, finding, ranked: finding ? scoreFinding(finding, context) : null }
+  }).filter(item => listed(item.finding))
+  // Each thread is listed once at its rank; a further finding in it (another comment under the same story) counts half.
+  const spread = new Map(spreadThreads(read.flatMap(item => item.ranked ? [item.ranked] : [])).map(ranked => [ranked.finding, ranked]))
+  const scored = read.map(item => ({ ...item, ranked: item.finding ? spread.get(item.finding) ?? item.ranked : null })).sort((a, b) => (b.ranked?.relevance ?? b.row.relevance ?? 0) - (a.ranked?.relevance ?? a.row.relevance ?? 0) || (b.row.published_at ?? 0) - (a.row.published_at ?? 0) || (a.row.id < b.row.id ? -1 : 1))
   const items = []
   for (const { row, finding, ranked } of scored.slice(0, limit)) {
     const where = finding ? routesFor(venues, finding) : { routes: [], venue: null }

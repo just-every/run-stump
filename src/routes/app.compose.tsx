@@ -6,8 +6,9 @@ import { Disc } from '../stump/drafting/disc.tsx'
 import { Outcome, Tip, useLoaded, useRun } from '../stump/ui/kit.tsx'
 import { Icon } from '../stump/ui/icons.tsx'
 import { countText, extractUrls, type Network } from '../stump/lib/text/index.ts'
-import { accountLabel, flagLine, networkName, proofLabel, spanAt, spanOf, type Account, type Check, type ClaimFinding, type ClaimView, type Count, type Flag, type MasterPreview, type Variant } from '../stump/drafting/view.ts'
+import { accountLabel, claimRange, flagLine, networkName, proofLabel, spanAt, spanOf, type Account, type Check, type ClaimFinding, type ClaimView, type Count, type Flag, type MasterPreview, type Variant } from '../stump/drafting/view.ts'
 import type { ItemRecord } from '../stump/drafting/records.ts'
+import { openDrafts, venuesFor, type VenueChoice } from '../stump/drafting/drafts-list.ts'
 import { US_ZONES, deviceZone, instantIn, nextHour, storeZone, storedZone, zoneName } from '../stump/ui/zones.ts'
 
 // `master` opens a master post and its variants; `item` opens one draft that has no master; `fix` names the
@@ -56,16 +57,23 @@ function ComposePage() {
     const alone = !masterId && itemId ? await draftAlone(itemId, targets.items) : null
     const checks = await Promise.all((preview?.items ?? (alone ? [alone] : [])).map(variant =>
       runAction<Check & { item_id: string }>('stump.drafts.check', { action: 'run', item_id: variant.item_id, idempotency_key: key() }).catch(() => null)))
-    return { who, accounts: targets.items, claims: claims.items, preview, alone, checks: checks.filter((check): check is Check & { item_id: string } => !!check) }
+    // With nothing open: the drafts waiting (an agent's among them) to open and review, and what a new post is for and where it goes.
+    const blank = !preview && !alone
+    const [drafts, products, venues] = blank ? await Promise.all([openDrafts(), runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' }),
+      runAction<{ items: VenueChoice[] }>('stump.venues.manage', { action: 'list' })]) : [[], { items: [] }, { items: [] }]
+    return { who, accounts: targets.items, claims: claims.items, preview, alone, checks: checks.filter((check): check is Check & { item_id: string } => !!check), drafts, products: products.items, venues: venues.items }
   })
   useEffect(() => { void refresh() }, [masterId, itemId, refresh])
-  // The variant whose claim is selected for fixing: from the address on arrival, then from each "Fix claim".
-  const [fixing, setFixing] = useState<{ item: string; at: number } | null>(fix ? { item: fix, at: 0 } : null)
+  // The variant and the claim selected for fixing: from the address on arrival (its first claim to fix), then from each "Fix claim".
+  const [fixing, setFixing] = useState<{ item: string; at: number; flag?: Flag } | null>(fix ? { item: fix, at: 0 } : null)
   useEffect(() => { if (fix) setFixing({ item: fix, at: Date.now() }) }, [fix])
   const { busy, message, run } = useRun()
   const [text, setText] = useState('')
   const [source, setSource] = useState('')
   const [picked, setPicked] = useState<string[]>([])
+  // What the new post is for, and the venue each account's variant is aimed at.
+  const [product, setProduct] = useState('')
+  const [aimed, setAimed] = useState<Record<string, string>>({})
   // When it goes out: a wall-clock time in the zone the person schedules in (zones.ts), next hour by default.
   const [zone, setZone] = useState(deviceZone)
   const [when, setWhen] = useState(() => nextHour(deviceZone()))
@@ -106,9 +114,13 @@ function ComposePage() {
   // The master is never posted itself: it counts quietly against the largest chosen network's limit; each variant card and Checks carry the over-limit signal.
   const largest = Math.max(...variants.map(variant => variant.count?.limit ?? -Infinity), ...accounts.filter(account => chosen.includes(account.id)).map(account => ({ x: 280, bluesky: 300, mastodon: 500, linkedin: 3000 } as Record<string, number>)[account.network] ?? -Infinity))
 
+  const products = data?.products ?? []
+  const productId = product || (products.length === 1 ? products[0]!.id : '')
   async function start() {
     const generate = !text.trim() && !!source.trim()
-    const made = await run(() => runAction<{ master: { id: string } }>('stump.drafts.write', { action: 'master', account_ids: picked, ...(generate ? { generate: true, source_url: source.trim() } : { text, ...(source.trim() ? { source_url: source.trim() } : {}) }), idempotency_key: key() }))
+    const venues = picked.filter(id => aimed[id]).map(id => ({ account_id: id, venue_id: aimed[id]! }))
+    const made = await run(() => runAction<{ master: { id: string } }>('stump.drafts.write', { action: 'master', account_ids: picked, ...(productId ? { product_id: productId } : {}), ...(venues.length ? { venues } : {}),
+      ...(generate ? { generate: true, source_url: source.trim() } : { text, ...(source.trim() ? { source_url: source.trim() } : {}) }), idempotency_key: key() }))
     if (made) await navigate({ search: { master: made.master.id } })
   }
   async function saveMaster() {
@@ -146,13 +158,21 @@ function ComposePage() {
     if (!flagRows.has(id)) flagRows.set(id, { flag, item: variant.item_id })
   }
   // Sentences to back that do not stop the post: what the product does, with no number or comparison in it.
-  const toBack = new Map<string, Flag>()
-  for (const variant of variants) for (const flag of variant.flags) if (!flag.blocking && flag.code === 'claim_unmatched' && !flagRows.has(`${flag.code}:${String(flag.text ?? '')}`)) toBack.set(String(flag.text ?? ''), flag)
+  const toBack = new Map<string, { flag: Flag; item: string }>()
+  for (const variant of variants) for (const flag of variant.flags) if (!flag.blocking && flag.code === 'claim_unmatched' && !flagRows.has(`${flag.code}:${String(flag.text ?? '')}`)) toBack.set(String(flag.text ?? ''), { flag, item: variant.item_id })
+  // Backing a claim opens Settings › Brand with the sentence as a new claim, and comes back here once it is recorded.
+  const backTo = (item: string, flag: Flag) => ({ item, ...(preview ? { master: preview.master.id } : {}), ...(flag.code === 'claim_unmatched' && typeof flag.text === 'string' ? { claim: flag.text } : {}) })
   // The claim itself, as the check found it in its sentence ("50% faster"), not the whole sentence.
   const claimsOf = (itemId?: string): ClaimFinding[] => data?.checks.filter(check => !itemId || check.item_id === itemId).flatMap(check => check.claims) ?? []
   // Each variant's claims that differ from their proof, as ranges of its text to mark on the danger tint.
   const claimRanges = (variant: Variant) => blocking(variant.flags).filter(flag => flag.code === 'claim_number_mismatch')
     .map(flag => spanAt(variant.text, flag, claimsOf(variant.item_id))).filter((range): range is [number, number] => !!range)
+  // The words "Fix claim" selects: that flag's own claim, or, arriving from Today, the variant's first claim to fix.
+  const fixRange = (variant: Variant, flag?: Flag) => {
+    const flags = flag ? [flag] : blocking(variant.flags).filter(item => item.code.startsWith('claim_')).sort((a, b) => Number(a.start ?? 0) - Number(b.start ?? 0))
+    for (const item of flags) { const range = claimRange(variant.text, item, claimsOf(variant.item_id)); if (range) return range }
+    return null
+  }
   const disclosure = data?.checks.find(check => check.disclosure.required)
   const repeats = variants.some(variant => variant.flags.some(flag => flag.code === 'near_duplicate'))
 
@@ -169,13 +189,13 @@ function ComposePage() {
       {[...flagRows.values()].map(({ flag, item }) => <li key={`${flag.code}-${String(flag.text ?? flag.network)}`} className="danger"><Disc icon="alert" tone="danger" /><span>
         {flagLine(flag, spanOf(flag, claimsOf()))}
         {flag.code.startsWith('claim_') ? <span className="st-fix">
-          <button className="st-pill" type="button" onClick={() => setFixing({ item, at: Date.now() })}>Fix claim</button>
-          <Link className="st-quiet-link" to="/app/settings/brand">Update the proof</Link>
+          <button className="st-pill" type="button" onClick={() => setFixing({ item, at: Date.now(), flag })}>Fix claim</button>
+          <Link className="st-quiet-link" to="/app/settings/brand" search={backTo(item, flag)}>Update the proof</Link>
         </span> : null}
       </span></li>)}
-      {[...toBack.values()].map(flag => <li key={`back-${String(flag.text ?? '')}`}><Disc icon="alert" /><span>
+      {[...toBack.values()].map(({ flag, item }) => <li key={`back-${String(flag.text ?? '')}`}><Disc icon="alert" /><span>
         {flagLine(flag)}
-        <Link className="st-pill" to="/app/settings/brand">Back claim</Link>
+        <Link className="st-pill" to="/app/settings/brand" search={backTo(item, flag)}>Back claim</Link>
       </span></li>)}
       {variants.length && !variants.some(variant => variant.flags.some(flag => flag.code.startsWith('disclosure_')))
         ? <li><Disc icon="check" /><span>Disclosure · {disclosure ? 'in place' : 'company accounts'}</span></li> : null}
@@ -184,7 +204,7 @@ function ComposePage() {
   </section>
 
   const variantCards = allVariants.map(variant => <VariantCard key={`${variant.item_id}-${variant.revision}`} variant={variant} claims={claimRanges(variant)}
-    select={fixing?.item === variant.item_id ? { range: claimRanges(variant)[0] ?? null, at: fixing.at } : null} onSelected={() => setFixing(null)}
+    select={fixing?.item === variant.item_id ? { range: fixRange(variant, fixing.flag), at: fixing.at } : null} onSelected={() => setFixing(null)}
     onSave={next => void saveVariant(variant, next)} />)
 
   return <HydrationUnit>
@@ -222,6 +242,14 @@ function ComposePage() {
               <button key={account.id} className="st-chip" type="button" aria-pressed={chosen.includes(account.id)} disabled={!!preview}
                 onClick={() => setPicked(picked.includes(account.id) ? picked.filter(item => item !== account.id) : [...picked, account.id])}>{chosen.includes(account.id) ? <Icon name="check" /> : null}{accountLabel(account)}</button>)}
           </div>
+          {!preview && (products.length > 1 || picked.some(id => venuesFor(data?.venues ?? [], accounts.find(account => account.id === id)).length)) ? <div className="st-form st-compose-aim">
+            {products.length > 1 ? <label className="st-field">Product<select value={product} onChange={event => setProduct(event.target.value)}>
+              <option value="">No product</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
+            {picked.map(id => { const account = accounts.find(item => item.id === id), choices = venuesFor(data?.venues ?? [], account)
+              return account && choices.length ? <label className="st-field" key={id}>Venue for {accountLabel(account)}<select value={aimed[id] ?? ''} onChange={event => setAimed({ ...aimed, [id]: event.target.value })}>
+                <option value="">No venue</option>{choices.map(venue => <option key={venue.id} value={venue.id} disabled={!venue.routes.includes('publish')}>
+                  {venue.name}{venue.routes.includes('publish') ? '' : ' (no direct posts)'}</option>)}</select></label> : null })}
+          </div> : null}
           {!preview ? <div className="st-actions st-open">
             <button className="st-button primary" type="button" disabled={busy || !picked.length || (!text.trim() && !source.trim())} onClick={() => void start()}>
               {!text.trim() && source.trim() ? 'Draft from source' : 'Open variants'}
@@ -230,6 +258,12 @@ function ComposePage() {
         </section>
         {preview ? checks : null}
       </div>}
+      {!open && data?.drafts.length ? <section className="st-card st-compose-drafts" aria-labelledby="drafts-title">
+        <h2 className="st-card-head" id="drafts-title"><Disc icon="doc" />Drafts</h2>
+        <ul className="st-list">{data.drafts.map(draft => <li className="st-row" key={draft.key}>
+          <div className="st-row-main"><Link className="st-name" to="/app/compose" search={draft.to}>{draft.name}</Link><div className="st-meta">{draft.meta}</div></div>
+        </li>)}</ul>
+      </section> : null}
       {preview ? <section className="st-card" aria-labelledby="variants-title">
         <h2 className="st-card-head" id="variants-title"><Disc icon="grid" />Variants</h2>
         <div className="st-variants">{variantCards}</div>

@@ -188,8 +188,34 @@ export function parseGates(text: string | null): JsonObject | null {
     ?? /\baccount(?:\s+age)?\s*(?:of|at least|over|older than|>=|≥|:|-|must be|is)?\s*(\d{1,4})\s*\+?\s*(day|week|month|year)s?/i.exec(plain);
   if (age) gates.account_age_days = Number(age[1]) * DAYS[age[2]!.toLowerCase()]!;
   if (/\b(?:moderators?|mods?|admins?)\s+(?:must\s+)?approve|\bapproval\b|\bapproved\s+(?:members|accounts|users)\b/i.test(plain)) gates.approval = true;
-  if (/\bmembers?\s+only\b|\bmust\s+(?:be\s+a\s+member|join)\b|\bjoin\s+(?:first|before)\b/i.test(plain)) gates.membership = true;
+  // "membership", "members only", "join first": posting there takes being a member; "no membership needed" does not.
+  const membership = /\bmembers?(?:hip)?\s*(?:-\s*)?only\b|\bmembership\b|\bmust\s+(?:be\s+a\s+member|join)\b|\bjoin\s+(?:first|before)\b|\binvit(?:e|ation)[\s-]+only\b/i;
+  const waived = /\b(?:no|without|not|never)\s+(?:\w+\s+)?membership\b|\bmembership\s+(?:is\s+)?(?:not\s+(?:needed|required)|optional)\b/i;
+  if (membership.test(plain) && !waived.test(plain)) gates.membership = true;
   return Object.keys(gates).length ? gates : null;
+}
+
+/** Values the list may give each rule column, as a person writes them ("members only") and as Stump records them. */
+const RULE_VALUES: Record<'posting' | 'links', Record<string, string>> = {
+  posting: { api: 'api', company_account: 'company_account', company: 'company_account', members_only: 'members_only', members: 'members_only' },
+  links: { allowed: 'allowed', banned: 'banned' },
+};
+
+/**
+ * A rule the list states in its own column: `posting` (api, company account or members only), `links` (allowed or
+ * banned) or `disclosure_line` (the line a post there must carry), sourced like every listed rule. An empty cell states
+ * no rule; a value outside the rule's own is an error naming it.
+ */
+export function listedColumnRule(key: 'posting' | 'links' | 'disclosure_line', text: string | null, rulesUrls: string[], readAt: string | null, errors: string[]): JsonObject | null {
+  const raw = (text ?? '').trim();
+  if (!raw) return null;
+  if (key === 'disclosure_line') {
+    if (raw.length > 280) { errors.push('disclosure_line is longer than 280 characters'); return null; }
+    return listedRule(raw, rulesUrls, readAt, key);
+  }
+  const value = RULE_VALUES[key][raw.toLowerCase().replace(/[\s-]+/g, '_')];
+  if (!value) { errors.push(`${key} "${raw}" is not one of ${[...new Set(Object.values(RULE_VALUES[key]))].join(', ').replace(/_/g, ' ')}`); return null; }
+  return listedRule(value, rulesUrls, readAt, key);
 }
 
 /** The gates rule the list states, from its requirements. */

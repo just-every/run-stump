@@ -6,7 +6,7 @@
 // Venue columns:  venue_id, name, url, platform, kind, status, priority, audience,
 //   promotion_route, rules, rules_urls, rules_read_at, shared_limit, reception, seeds
 //   (or products), human_written_required, requirements, why, reader_value, reason,
-//   alternative, sources.
+//   alternative, sources, and the rules posting, links and disclosure_line.
 // Entry columns:  entry_id, product, post_type, post_url, community_url, how_to_post,
 //   requirements, why, reader_value, notes, draft_title, draft.
 // A row with a `reason`, or status "excluded", is an excluded venue.
@@ -16,7 +16,7 @@ import { DEFAULT_LIMITS, ImportInputError } from './types.ts';
 import { parseCsv } from './csv.ts';
 import { normalizeVenueUrl } from './url.ts';
 import { assembleVenueList, venueKey, type EntryDraft, type VenueDraft } from './venue-assemble.ts';
-import { checkUrlList, normalizePriority, normalizeStatus, parseBool, parseLinkCheck, parseListCell, str, uniqueFolded } from './venue-fields.ts';
+import { checkUrlList, listedColumnRule, normalizePriority, normalizeStatus, parseBool, parseLinkCheck, parseListCell, str, uniqueFolded } from './venue-fields.ts';
 
 const ALIASES: Record<string, string> = {
   id: 'venue_id', venue: 'name', title: 'name', link: 'url', website: 'url', type: 'kind',
@@ -24,6 +24,7 @@ const ALIASES: Record<string, string> = {
   draft_text: 'draft', human_written: 'human_written_required', reasons: 'reason',
   rules_url: 'rules_urls', rule_url: 'rules_urls', rules_link: 'rules_urls', rules_links: 'rules_urls', why_it_matters: 'why',
   read_at: 'rules_read_at', rules_read_on: 'rules_read_at', read_on: 'rules_read_at', requirement: 'requirements',
+  posting_rule: 'posting', who_posts: 'posting', links_rule: 'links', disclosure: 'disclosure_line',
 };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -78,6 +79,7 @@ export function parseVenuesCsv(input: string, limits: Partial<ImportLimits> = {}
     checkUrlList('rules_urls', lists.rules_urls!, errors);
     const readAt = str(get('rules_read_at'));
     if (readAt && !DATE.test(readAt)) errors.push(`rules_read_at "${readAt}" is not a date (YYYY-MM-DD)`);
+    for (const key of ['posting', 'links', 'disclosure_line'] as const) listedColumnRule(key, get(key), [], null, errors);
 
     const entryId = str(get('entry_id'));
     let entry: EntryDraft | null = null;
@@ -108,6 +110,7 @@ export function parseVenuesCsv(input: string, limits: Partial<ImportLimits> = {}
       humanWritten: human === true, humanWrittenStated: get('human_written_required') !== '', priority: entryId ? null : priority,
       excluded: isExcluded ? { reason: reason!, alternative: str(get('alternative')) } : null, sources: lists.sources!, listedEntryIds: [],
       requirements: str(get('requirements')), why: str(get('why')), readerValue: str(get('reader_value')), rulesReadAt: readAt,
+      posting: str(get('posting')), links: str(get('links')), disclosureLine: str(get('disclosure_line')),
     };
     if (!draft) { rejected.push({ id, kind: entryId ? 'entry' : isExcluded ? 'excluded' : 'venue', line: row.line, reason: errors.join('; '), reasons: errors }); continue; }
 
@@ -126,7 +129,7 @@ export function parseVenuesCsv(input: string, limits: Partial<ImportLimits> = {}
   return assembleVenueList({ source: 'venues-csv', listDate: null, venues, excluded, entries, rejected, warnings: [] });
 }
 
-const SCALARS = ['externalId', 'platform', 'audience', 'promotionRoute', 'rulesText', 'sharedLimit', 'reception', 'priority'] as const;
+const SCALARS = ['externalId', 'platform', 'audience', 'promotionRoute', 'rulesText', 'sharedLimit', 'reception', 'priority', 'posting', 'links', 'disclosureLine'] as const;
 
 /** Fold a later row about the same venue into the first; returns a reason when the rows disagree. */
 function mergeVenueRow(first: VenueDraft, later: VenueDraft): string | null {

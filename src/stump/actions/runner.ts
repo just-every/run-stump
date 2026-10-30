@@ -3,14 +3,28 @@ import { validateSchema } from '../../modules/agent-door/json-schema.ts'
 import { BANNED_ACTS, refuse, refuseAct } from './refusals.ts'
 import type { ActionContext, Args, StumpAction, StumpTool } from './types.ts'
 
-const ACTION: JsonSchema = { type: 'string', minLength: 1, maxLength: 64 }
+const ACTION = { type: 'string', minLength: 1, maxLength: 64 } satisfies JsonSchema
 /** Arguments every door takes on every call, whether or not the action reads them. */
 const DOOR_KEYS = ['idempotency_key', 'expected_revision'] as const
 const canonical = (value: unknown) => JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item) ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item)
 
-/** The tool's one input schema: `action` plus every property any action reads. */
+/** One action in a few words for an agent reading the schema: "create (needs format; takes text, parts, ...)". */
+function actionWords(name: string, action: StumpAction): string {
+  const required = action.required ?? [], optional = Object.keys(action.properties ?? {}).filter(key => !required.includes(key))
+  const parts = [required.length ? `needs ${required.join(', ')}` : '', optional.length ? `takes ${optional.join(', ')}` : ''].filter(Boolean)
+  return parts.length ? `${name} (${parts.join('; ')})` : name
+}
+
+/**
+ * The tool's one input schema: `action`, naming the actions the tool runs and what each needs, plus every property any action reads.
+ * A banned act asked for by name (`like`, `repost`) is outside the list and still answers act_refused, never a schema error:
+ * resolveAction reads every call the schema refuses before anything answers it.
+ */
 export function toolSchema(tool: StumpTool): JsonSchemaObject {
-  const properties: Record<string, JsonSchema> = { action: ACTION }
+  const names = Object.keys(tool.actions)
+  const properties: Record<string, JsonSchema> = {
+    action: { ...ACTION, enum: names, description: `What to do: ${names.map(name => actionWords(name, tool.actions[name]!)).join('. ')}.` },
+  }
   for (const [name, action] of Object.entries(tool.actions)) {
     for (const [key, schema] of Object.entries(action.properties ?? {})) {
       if (key === 'action' || (DOOR_KEYS as readonly string[]).includes(key)) throw new TypeError(`${tool.name}.${name} declares reserved argument ${key}`)

@@ -14,7 +14,7 @@ import type { ImportWarning, ImportLimits, ParsedVenueList, RejectedRow } from '
 import { DEFAULT_LIMITS, ImportInputError } from './types.ts';
 import { isHttpUrl, normalizeVenueUrl } from './url.ts';
 import { assembleVenueList, type AlternateDraft, type EntryDraft, type ExtraCopyDraft, type VenueDraft } from './venue-assemble.ts';
-import { checkUrlList, normalizePriority, normalizeStatus, parseBool, parseJsonStringList, parseLinkCheck, str, uniqueFolded } from './venue-fields.ts';
+import { checkUrlList, listedColumnRule, normalizePriority, normalizeStatus, parseBool, parseJsonStringList, parseLinkCheck, str, uniqueFolded } from './venue-fields.ts';
 
 type Mode = 'prose' | 'entries' | 'venues' | 'excluded';
 type Sub = 'keys' | 'draft' | 'alternates' | 'extra' | 'other';
@@ -295,6 +295,7 @@ function finishVenue(block: Block, venues: VenueDraft[], rejected: RejectedRow[]
   if (readAt && !DATE.test(readAt)) errors.push(`rules_read_at "${readAt}" is not a date (YYYY-MM-DD)`);
   const priority = get('priority').trim() ? normalizePriority(get('priority')) : null;
   if (get('priority').trim() && !priority) errors.push(`priority "${get('priority')}" is not one of top, high, strong, medium, low or fallback`);
+  for (const key of ['posting', 'links', 'disclosure_line'] as const) listedColumnRule(key, get(key), [], null, errors);
   if (errors.length) { reject(rejected, id, 'venue', block.line, errors); return; }
   venues.push({
     line: block.line, externalId: parts!.id, name: parts!.location, url, platform: str(get('platform')), explicitKind: get('kind'), status: status!,
@@ -302,6 +303,7 @@ function finishVenue(block: Block, venues: VenueDraft[], rejected: RejectedRow[]
     sharedLimit: str(get('shared_limit')), reception: str(get('reception')), products: uniqueFolded(lists.seeds!), humanWritten: human === true,
     humanWrittenStated: get('human_written_required').trim() !== '', priority, excluded: null, sources: [], listedEntryIds: lists.entries!,
     requirements: str(get('requirements')), why: str(get('why')), readerValue: str(get('reader_value')), rulesReadAt: readAt,
+    posting: str(get('posting')), links: str(get('links')), disclosureLine: str(get('disclosure_line')),
   });
 }
 
@@ -324,5 +326,6 @@ function finishExcluded(block: Block, excluded: VenueDraft[], rejected: Rejected
     line: block.line, externalId: null, name, url, platform: null, explicitKind: '', status: 'excluded', audience: null, promotionRoute: null,
     rulesText: null, rulesUrls: [], sharedLimit: null, reception: null, products: uniqueFolded(seeds ?? []), humanWritten: false, humanWrittenStated: false, priority: null,
     excluded: { reason: reason!, alternative: str(get('alternative')) }, sources: sources ?? [], listedEntryIds: [], requirements: null, why: null, readerValue: null, rulesReadAt: null,
+    posting: null, links: null, disclosureLine: null,
   });
 }
