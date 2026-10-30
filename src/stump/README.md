@@ -12,7 +12,9 @@ and are never edited in place.
 | `http/` | The person door under `/app/api` and the `/app` document gate. |
 | `people/` | Roles, connections, invitations and the person behind a session. |
 | `items/` | The item state machine (`state.ts`) and the Pause fence. |
-| `publish/` | The scheduler tick and the per-network publisher interface. |
+| `publish/` | The scheduler tick, scheduling checks, queue slots and one publisher per network (Bluesky, Mastodon, X, LinkedIn). |
+| `accounts/` | Connected accounts and the company's network apps: consent, sealed credentials (`seal.ts`), refresh and disconnect. |
+| `ledger/record.ts` | The one writer of `stump_ledger` and `stump_ledger_versions`. |
 | `net/` | `stumpFetch`, the one outbound fetch every network call uses. |
 | `lib/<name>/` | Pure leaf libraries written by library lanes. A library imports nothing outside its folder. |
 | `ui/` | The signed-in app's shell, navigation, tokens and small shared components. |

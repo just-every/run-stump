@@ -2666,9 +2666,9 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Published | 0 | 1 | 49 | 50 |
+| Published | 0 | 4 | 46 | 50 |
 | Target and push further | 0 | 16 | 114 | 130 |
-| All | 0 | 17 | 163 | 180 |
+| All | 0 | 20 | 160 | 180 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -2690,29 +2690,29 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 | `STUMP-WATCH-013` | Watch filters, exclusions and backfill | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-WATCH-005` | Relevance ranking with reasons | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-WATCH-011` | X search, metered | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-PUBLISH-001` | Accounts bound to a person or the company | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-CONNECT-001` | Connection ownership and disconnect | published | missing | | Not built: Base has no OAuth connection store module yet, and no Stump code exists. |
-| `STUMP-PUBLISH-002` | Bluesky posts and threads | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-PUBLISH-003` | Mastodon posts and threads | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-PUBLISH-004` | X posts and threads | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-PUBLISH-005` | LinkedIn member posts | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
+| `STUMP-PUBLISH-001` | Accounts bound to a person or the company | published | partial | `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back"; `agent-surface.json` journey steps setup-x, connect-x, finish-x and slots-x | Points 2, 4 and 6 hold for the company's X account through the person door and MCP: it reads back as the company's, a consent completes only for the person who started it, and no answer carries a token. Points 1, 3 and 5 (a person's Bluesky account, an account owned by someone else, and the items a disconnect unschedules) are built in `src/stump/accounts/`; their committed proof needs drafted items and a second account. |
+| `STUMP-CONNECT-001` | Connection ownership and disconnect | published | partial | `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back" | Point 6 holds: each connection shows its owner, who connected it and when. Reconnecting is refused for anyone but the owner, and disconnecting unschedules and lists queued items (`src/stump/accounts/connect.ts`); points 1, 2, 4 and 5 also need person removal and revocation detection at the network, which are not built. |
+| `STUMP-PUBLISH-002` | Bluesky posts and threads | published | missing | | Built: `src/stump/publish/bluesky.ts` publishes posts, threads as reply chains, facets and images with alt text, read back from the PDS. The proving test needs drafted items, which `stump.drafts.write` creates. |
+| `STUMP-PUBLISH-003` | Mastodon posts and threads | published | missing | | Built: `src/stump/publish/mastodon.ts` publishes at the instance's own limit with content warnings, visibility, polls, media with alt text and threads, with an Idempotency-Key per post. The proving test needs drafted items, which `stump.drafts.write` creates. |
+| `STUMP-PUBLISH-004` | X posts and threads | published | missing | | Built: `src/stump/publish/x.ts` publishes posts, threads, polls and media through the company's app, charges each call from the price table, holds exhausted credits and rate limits, and refuses an agent's publish without the Automated label. The proving test needs drafted items, which `stump.drafts.write` creates. |
+| `STUMP-PUBLISH-005` | LinkedIn member posts | published | missing | | Built: `src/stump/publish/linkedin.ts` publishes member posts with links, preview text and images with alt text within the day limit, and holds a member's items for a reconnect. The proving test needs drafted items, which `stump.drafts.write` creates. |
 | `STUMP-PUBLISH-007` | Threads posts | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-PUBLISH-008` | LinkedIn company page | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-PUBLISH-021` | LinkedIn documents, polls, video and first comments | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-PUBLISH-006` | Scheduling and delivery truth | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-CONNECT-002` | The company's own network apps | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
+| `STUMP-PUBLISH-006` | Scheduling and delivery truth | published | missing | | Built: `src/stump/publish/schedule.ts` and `src/stump/publish/tick.ts` schedule in the account's time zone, claim the exact revision once, read back before posted, and hold lost answers as uncertain with an owner. The proving test needs drafted items, which `stump.drafts.write` creates. |
+| `STUMP-CONNECT-002` | The company's own network apps | published | partial | `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back"; `agent-surface.json` journey steps setup-x, connect-x, finish-x and slots-x | Points 1 and 2 hold: setup lists each network with its steps, callback URLs, scopes and state, and the X app's keys move X to connected and read back masked; the Publishing screen is `src/routes/app.settings.publishing.tsx`. Points 3 to 5 (X's approval for AI replies, declared externals, a self-host with no apps) are not proven. |
 | `STUMP-BRAND-001` | Products and brand profile | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-BRAND-002` | A real person's voice | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-BRAND-003` | Fact and claim memory | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-BRAND-004` | Claim check on every draft | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-DRAFT-010` | One post, every network | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
+| `STUMP-DRAFT-010` | One post, every network | published | missing | | The scheduling side is built: `stump.items.schedule` schedule_master schedules every passing variant and holds a flagged one alone (`src/stump/tools/items.ts`). Opening and editing variants, and the proving test, need `stump.drafts.write`. |
 | `STUMP-DRAFT-001` | Formats and network limits | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-DRAFT-002` | Drafts from a source | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-DRAFT-003` | Revisions and comments | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-DRAFT-004` | Network previews | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-DRAFT-006` | AI provider, cost and failure | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-PLAN-001` | Content calendar | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-PLAN-002` | Posting slots and good times | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
+| `STUMP-PLAN-002` | Posting slots and good times | published | missing | | Built: queue slots in the account's time zone, the next open slot, and moving queued items off a removed slot (`src/stump/publish/slots.ts`). The proving test needs drafted items, which `stump.drafts.write` creates. |
 | `STUMP-INBOX-001` | Replies and mentions on own accounts | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-INBOX-002` | Answering people who engaged first | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-IMPORT-001` | Buffer | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
@@ -2819,7 +2819,7 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 | `STUMP-SURFACE-001` | Registry and complete earned-channels jobs | target | partial | `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify) | The registry holds the team, Pause and ledger-read tools only; the rest of the contract's table arrives with later lanes, and /docs/agents does not exist. |
 | `STUMP-SURFACE-002` | Internal work computes standard | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |
 | `STUMP-SURFACE-003` | Public posts and outside exposure compute external | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |
-| `STUMP-SURFACE-004` | Network spend and paid listings compute money | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |
+| `STUMP-SURFACE-004` | Network spend and paid listings compute money | target | missing | | Built: an X publish computes money in USD from the company's price table, URL and plain posts apart, and the next call carries an updated price (`src/stump/publish/schedule.ts`). The proving test needs drafted items, which `stump.drafts.write` creates. |
 | `STUMP-SURFACE-005` | Steps venues and providers keep for a person compute gated | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |
 | `STUMP-SURFACE-006` | Commitments and outside accounts | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |
 | `STUMP-SURFACE-007` | Access and security | target | partial | `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify); `tests/stump/team.test.mjs` "the owner cannot be removed or demoted until ownership is transferred, and the transfer is recorded", "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked" | Inviting computes access that widens, and self-widening returns self_escalation through both doors, before the role check; delegation, grants, sign-off paths and security settings are not built. |

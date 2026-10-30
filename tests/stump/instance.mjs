@@ -18,7 +18,8 @@ const { Agent } = require('undici')
 const root = new URL('../../', import.meta.url).pathname
 const secret = () => randomBytes(32).toString('hex')
 
-export async function stump() {
+/** `bindings` adds Worker bindings; `outbound` answers a request at the network edge first, or returns null to pass it on. */
+export async function stump({ bindings = {}, outbound = null } = {}) {
   const socket = createServer(); await new Promise(resolve => socket.listen(0, '127.0.0.1', resolve))
   const port = socket.address().port; await new Promise(resolve => socket.close(resolve))
   const directory = await mkdtemp(join(tmpdir(), 'stump-test-'))
@@ -32,9 +33,11 @@ export async function stump() {
     modulesRoot: server, compatibilityDate: '2026-09-08', compatibilityFlags: ['nodejs_compat'], d1Databases: { DB: `stump-test-${randomUUID()}` },
     assets: { directory: join(root, 'dist/client'), binding: 'ASSETS', run_worker_first: true, routerConfig: { has_user_worker: true } },
     bindings: { AUTH_ORIGIN: origin, AUTH_LOCAL: 'false', OWNER_EMAIL: 'synthetic-stump-owner@example.com', SESSION_SECRET: secret(), INSTALLATION_KEY: secret(), SETUP_TOKEN: setupToken,
-      MAIL_PROVIDER: 'sendgrid', MAIL_API_KEY: 'synthetic-stump-1', MAIL_FROM: 'synthetic-stump-2@example.com' },
+      MAIL_PROVIDER: 'sendgrid', MAIL_API_KEY: 'synthetic-stump-1', MAIL_FROM: 'synthetic-stump-2@example.com', ...bindings },
     log: new Log(LogLevel.ERROR),
     async outboundService(request) {
+      const answered = outbound ? await outbound(request) : null
+      if (answered) return answered
       if (request.url !== 'https://api.sendgrid.com/v3/mail/send') return new Response('Undeclared network request', { status: 502 })
       mail.push(await request.json())
       return new Response(null, { status: 202, headers: { 'x-message-id': `synthetic-stump-${mail.length}` } })

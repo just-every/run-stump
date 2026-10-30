@@ -8,10 +8,10 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 0 | 3 | 141 | 144 |
+| Core | 0 | 6 | 138 | 144 |
 | Agent surface | 0 | 14 | 14 | 28 |
 | Later | 0 | 0 | 8 | 8 |
-| Full target | 0 | 17 | 163 | 180 |
+| Full target | 0 | 20 | 160 | 180 |
 
 Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c9a` (30 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
@@ -339,7 +339,7 @@ Core · published · **missing** · From new · Rules D-4 · Register R-1
 
 #### STUMP-PUBLISH-001 — Accounts bound to a person or the company
 
-Core · published · **missing** · From new · Cites BASE-SECRET-001, BASE-ACCESS-004 · Rules D-1
+Core · published · **partial** · From new · Cites BASE-SECRET-001, BASE-ACCESS-004 · Rules D-1
 
 **Requirement.** Each connected network account belongs either to one signed-in person, who connects it through the network's own consent screen, or to the company, connected by an admin and named as the company's. Stump reads the account's handle, display name and profile from the network and keeps them current. One network account has one owner, and there is no account pool. The owner of a personal account names which colleagues may schedule to it (STUMP-TEAM-003). Ownership and disconnect follow STUMP-CONNECT-001.
 
@@ -351,12 +351,12 @@ Core · published · **missing** · From new · Cites BASE-SECRET-001, BASE-ACCE
 5. Disconnecting revokes the token at the network where it supports that, and lists the scheduled items it stops.
 6. A scheduled item's export shows the account's handle and owner and no token field, and no door accepts a token or password typed in for another person.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back"; `agent-surface.json` journey steps setup-x, connect-x, finish-x and slots-x
+**Gap.** Points 2, 4 and 6 hold for the company's X account through the person door and MCP: it reads back as the company's, a consent completes only for the person who started it, and no answer carries a token. Points 1, 3 and 5 (a person's Bluesky account, an account owned by someone else, and the items a disconnect unschedules) are built in `src/stump/accounts/`; their committed proof needs drafted items and a second account.
 
 #### STUMP-CONNECT-001 — Connection ownership and disconnect
 
-Core · published · **missing** · From new
+Core · published · **partial** · From new
 
 **Requirement.** Stump keeps its network tokens in an OAuth connection store that it asks Base to add as a shared module, recorded as a ct NEW proposal for Base, and cites that Base duty once it exists. Stump's delta is ownership: each connection belongs to the person who completed the network's consent, or to the company, and never changes owner. Disconnecting, a revocation at the network, or the owner leaving the team unschedules every item queued on that connection and lists them to whoever can reassign them; a company connection outlives the admin who made it.
 
@@ -368,8 +368,8 @@ Core · published · **missing** · From new
 5. Reconnecting restores no unscheduled item by itself; the owner re-queues the items they choose.
 6. Each connection shows its owner, who connected it and when.
 
-**Evidence.** None.
-**Gap.** Not built: Base has no OAuth connection store module yet, and no Stump code exists.
+**Evidence.** `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back"
+**Gap.** Point 6 holds: each connection shows its owner, who connected it and when. Reconnecting is refused for anyone but the owner, and disconnecting unschedules and lists queued items (`src/stump/accounts/connect.ts`); points 1, 2, 4 and 5 also need person removal and revocation detection at the network, which are not built.
 
 #### STUMP-PUBLISH-002 — Bluesky posts and threads
 
@@ -387,7 +387,7 @@ Core · published · **missing** · From new · Rules D-5 · Register R-6
 7. A video with alt text publishes and reads back with its alt text.
 
 **Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Gap.** Built: `src/stump/publish/bluesky.ts` publishes posts, threads as reply chains, facets and images with alt text, read back from the PDS. The proving test needs drafted items, which `stump.drafts.write` creates.
 
 #### STUMP-PUBLISH-003 — Mastodon posts and threads
 
@@ -405,7 +405,7 @@ Core · published · **missing** · From new · Rules D-4, D-5 · Register R-6
 7. On an instance whose rules require the bot flag, an agent's publish to an account without it returns `act_refused` naming the rule, and the same post from a person's own composer publishes.
 
 **Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Gap.** Built: `src/stump/publish/mastodon.ts` publishes at the instance's own limit with content warnings, visibility, polls, media with alt text and threads, with an Idempotency-Key per post. The proving test needs drafted items, which `stump.drafts.write` creates.
 
 #### STUMP-PUBLISH-004 — X posts and threads
 
@@ -424,7 +424,7 @@ Core · published · **missing** · From new · Rules D-4, D-5 · Register R-1
 8. Once the label and bio are recorded, the agent's publish goes to the company's policy like any call.
 
 **Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Gap.** Built: `src/stump/publish/x.ts` publishes posts, threads, polls and media through the company's app, charges each call from the price table, holds exhausted credits and rate limits, and refuses an agent's publish without the Automated label. The proving test needs drafted items, which `stump.drafts.write` creates.
 
 #### STUMP-PUBLISH-005 — LinkedIn member posts
 
@@ -441,7 +441,7 @@ Core · published · **missing** · From new · Rules D-4, D-5 · Register R-2
 6. No like, comment or share action on other members' posts exists in the app, the API or MCP.
 
 **Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Gap.** Built: `src/stump/publish/linkedin.ts` publishes member posts with links, preview text and images with alt text within the day limit, and holds a member's items for a reconnect. The proving test needs drafted items, which `stump.drafts.write` creates.
 
 #### STUMP-PUBLISH-007 — Threads posts
 
@@ -510,11 +510,11 @@ Core · published · **missing** · From new · Cites BASE-OPS-003, BASE-OPS-004
 7. An edit carrying a stale expected revision, from a person or an agent, while the publisher fires is refused with the current revision, and the scheduled revision is unchanged and posts once.
 
 **Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Gap.** Built: `src/stump/publish/schedule.ts` and `src/stump/publish/tick.ts` schedule in the account's time zone, claim the exact revision once, read back before posted, and hold lost answers as uncertain with an owner. The proving test needs drafted items, which `stump.drafts.write` creates.
 
 #### STUMP-CONNECT-002 — The company's own network apps
 
-Core · published · **missing** · From new · Cites BASE-DATA-004, BASE-INSTALL-001 · Register R-1, R-2, R-3, R-4
+Core · published · **partial** · From new · Cites BASE-DATA-004, BASE-INSTALL-001 · Register R-1, R-2, R-3, R-4
 
 **Requirement.** Each company runs Stump with its own developer apps and keys, so nothing depends on Run Edit Run's accounts. Setup walks through each network's app: Bluesky and Mastodon need none, X needs a developer app on pay-per-use, LinkedIn needs an app with Share on LinkedIn and, for a page, Community Management API vetting, and Meta needs an app with Threads access and App Review for people without a role. Each shows its callback URLs, scopes and state (not created, in development, under review, approved), and the company records approvals such as X's approval for AI replies. Every network is a declared external.
 
@@ -525,8 +525,8 @@ Core · published · **missing** · From new · Cites BASE-DATA-004, BASE-INSTAL
 4. Every network host appears in the installation's declared externals.
 5. A self-hosted install with no apps still runs Bluesky and Mastodon.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back"; `agent-surface.json` journey steps setup-x, connect-x, finish-x and slots-x
+**Gap.** Points 1 and 2 hold: setup lists each network with its steps, callback URLs, scopes and state, and the X app's keys move X to connected and read back masked; the Publishing screen is `src/routes/app.settings.publishing.tsx`. Points 3 to 5 (X's approval for AI replies, declared externals, a self-host with no apps) are not proven.
 
 ### Brand, voice and claims
 
@@ -612,7 +612,7 @@ Core · published · **missing** · From new · Rules D-3
 7. Each variant reads back from its network with the text its preview showed.
 
 **Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Gap.** The scheduling side is built: `stump.items.schedule` schedule_master schedules every passing variant and holds a flagged one alone (`src/stump/tools/items.ts`). Opening and editing variants, and the proving test, need `stump.drafts.write`.
 
 #### STUMP-DRAFT-001 — Formats and network limits
 
@@ -722,7 +722,7 @@ Core · published · **missing** · From new
 4. Removing a slot moves its items to the next open slots and lists them.
 
 **Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Gap.** Built: queue slots in the account's time zone, the next open slot, and moving queued items off a removed slot (`src/stump/publish/slots.ts`). The proving test needs drafted items, which `stump.drafts.write` creates.
 
 ### Engagement inbox
 
@@ -2711,7 +2711,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 5. Under a company spend cap, the call that would cross it returns `budget_exhausted` before any effect.
 
 **Evidence.** None.
-**Gap.** Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet.
+**Gap.** Built: an X publish computes money in USD from the company's price table, URL and plain posts apart, and the next call carries an updated price (`src/stump/publish/schedule.ts`). The proving test needs drafted items, which `stump.drafts.write` creates.
 
 #### STUMP-SURFACE-005 — Steps venues and providers keep for a person compute gated
 

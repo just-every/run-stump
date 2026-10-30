@@ -2,12 +2,13 @@
 export const ITEM_STATES = ['draft', 'ready', 'scheduled', 'posting', 'posted', 'partly_posted', 'failed', 'uncertain', 'held', 'paused', 'cancelled'] as const
 export type ItemState = typeof ITEM_STATES[number]
 
-/** Allowed moves. posted and cancelled are final; uncertain becomes a hold with an owner, never a blind retry (D-5). */
+/** Allowed moves. posted and cancelled are final; uncertain becomes a hold with an owner, never a blind retry (D-5).
+ * A send the network refused for now (a rate limit, a day limit, credits, a reconnect) holds with its reason. */
 export const TRANSITIONS: Readonly<Record<ItemState, readonly ItemState[]>> = {
   draft: ['ready', 'scheduled', 'held', 'cancelled'],
   ready: ['draft', 'scheduled', 'posting', 'held', 'cancelled'],
   scheduled: ['draft', 'ready', 'posting', 'held', 'paused', 'cancelled'],
-  posting: ['posted', 'partly_posted', 'failed', 'uncertain'],
+  posting: ['posted', 'partly_posted', 'failed', 'uncertain', 'held'],
   posted: [],
   partly_posted: ['posting', 'held', 'cancelled'],
   failed: ['draft', 'scheduled', 'held', 'cancelled'],

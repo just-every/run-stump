@@ -1,9 +1,29 @@
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
-import { EDITORS, EVERYONE } from '../people/roles.ts'
-import { moveItem, type ItemState } from '../items/state.ts'
+import { readAccount, type AccountRow } from '../accounts/store.ts'
+import { CONTRIBUTORS, EDITORS, EVERYONE } from '../people/roles.ts'
+import { moveItem, pauseFor, type ItemState } from '../items/state.ts'
+import { readItem } from '../publish/items.ts'
+import { commit, item as readSchedulable, mover, prepare } from '../publish/schedule.ts'
+import { checkSlots, nextOpen, saveSlots, slotsView } from '../publish/slots.ts'
 
 const scope = { enum: ['all', 'account'] }
+
+/** Slots are kept by whoever may publish to the account: its editors, or a personal account's own person. */
+async function plannable(ctx: ActionContext, args: Args): Promise<AccountRow> {
+  const account = await readAccount(ctx.db, String(args.account_id))
+  if (!account) refuse('not_found', { account_id: String(args.account_id) })
+  if (account.owner_kind === 'company' ? !EDITORS.includes(ctx.person.role) : account.owner_person_id !== ctx.person.id) refuse('not_account_owner', { account_id: account.id })
+  return account
+}
+
+/** The item checked for the account's next open slot, as any schedule is checked. */
+async function queued(ctx: ActionContext, args: Args) {
+  const row = await readSchedulable(ctx, args.item_id)
+  const at = await nextOpen(ctx.db, String(args.account_id), ctx.now() + 60_000, row.id)
+  if (at === null) refuse('no_open_slot', { account_id: String(args.account_id) })
+  return prepare(ctx, 'queue', { item_id: row.id, account_id: args.account_id, at: new Date(at).toISOString() })
+}
 const accountId = { type: 'string', minLength: 1, maxLength: 64 }
 const iso = (ms: number | null) => ms === null ? null : new Date(ms).toISOString()
 
@@ -87,6 +107,70 @@ export const calendarTools: StumpTool[] = [{
           paused: paused.map(row => ({ scope: row.scope, account_id: row.account_id, person_id: row.person_id, agent_id: row.agent_id, at: iso(row.paused_at) })),
           history: history.map(row => ({ action: row.action, scope: row.scope, account_id: row.account_id, person_id: row.person_id, agent_id: row.agent_id, at: iso(row.at) })),
         }
+      },
+    },
+  },
+}, {
+  name: 'stump.calendar.plan', title: 'Plan the queue',
+  description: 'Keep each account\'s queue slots in its own time zone, add an item to the account\'s next open slot, and release imported posts once their old tool\'s queue is cleared.',
+  scope: 'stump:calendar', classes: ['standard', 'live'], clauses: ['STUMP-PLAN-002', 'STUMP-PLAN-007', 'STUMP-IMPORT-001'],
+  actions: {
+    set_slots: {
+      roles: CONTRIBUTORS,
+      properties: { account_id: accountId, time_zone: { type: 'string', minLength: 1, maxLength: 64 },
+        slots: { type: 'array', maxItems: 20, items: { type: 'object', required: ['days', 'times'], additionalProperties: false,
+          properties: { days: { type: 'array', minItems: 1, maxItems: 7, items: { enum: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] } },
+            times: { type: 'array', minItems: 1, maxItems: 24, items: { type: 'string', pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' } } } } } },
+      required: ['account_id', 'time_zone', 'slots'],
+      async classify(args, ctx) { await plannable(ctx, args); return [{ class: 'standard', facts: { measure: 1 } }] },
+      target: args => ({ kind: 'account', id: String(args.account_id) }),
+      async run(args, ctx) {
+        const account = await plannable(ctx, args)
+        const moved = await saveSlots(ctx, account, checkSlots(args.time_zone, args.slots))
+        return { ...await slotsView(ctx.db, account.id, ctx.now()), moved }
+      },
+    },
+    slots: {
+      roles: EVERYONE, read: true,
+      properties: { account_id: accountId }, required: ['account_id'],
+      classify: () => [{ class: 'standard', facts: { measure: 0 } }],
+      async run(args, ctx) {
+        const account = await readAccount(ctx.db, String(args.account_id))
+        if (!account) refuse('not_found', { account_id: String(args.account_id) })
+        return slotsView(ctx.db, account.id, ctx.now())
+      },
+    },
+    queue: {
+      roles: CONTRIBUTORS,
+      properties: { item_id: accountId, account_id: accountId }, required: ['item_id', 'account_id'],
+      async classify(args, ctx) { await queued(ctx, args); return [{ class: 'live', facts: { measure: 1, service: 'publishing queue' } }] },
+      target: args => ({ kind: 'item', id: String(args.item_id) }),
+      async run(args, ctx) { return { item: await commit(ctx, await queued(ctx, args), { queued: true }) } },
+    },
+    release_import: {
+      roles: EDITORS,
+      properties: { item_ids: { type: 'array', minItems: 1, maxItems: 500, items: accountId }, confirm_source_cleared: { type: 'boolean' } },
+      required: ['item_ids', 'confirm_source_cleared'],
+      classify: args => [{ class: 'live', facts: { measure: Array.isArray(args.item_ids) ? args.item_ids.length : 0, service: 'publishing queue' } }],
+      async run(args, ctx) {
+        // Imported queued posts stay paused until the person confirms the old tool's queue is cleared, so nothing posts twice.
+        if (args.confirm_source_cleared !== true) refuse('confirm_source_cleared', { reason: 'Clear the queue in the tool you switched from first.' })
+        const now = ctx.now(), released: string[] = [], overdue: string[] = [], stillPaused: string[] = [], skipped: Array<{ item_id: string; reason: string }> = []
+        for (const id of args.item_ids as string[]) {
+          const row = await readItem(ctx.db, id)
+          const imported = row ? (JSON.parse(row.options) as { imported_from?: unknown }).imported_from : undefined
+          if (!row || row.state !== 'paused' || !imported) { skipped.push({ item_id: id, reason: !row ? 'not_found' : row.state !== 'paused' ? 'not_paused' : 'not_imported' }); continue }
+          if (await pauseFor(ctx.db, row.account_id)) { stillPaused.push(id); continue }
+          if (row.scheduled_at !== null && row.scheduled_at > now) {
+            await ctx.db.batch(moveItem(mover(ctx), row, 'scheduled', 'import released'))
+            released.push(id)
+          } else {
+            await ctx.db.batch(moveItem(mover(ctx), row, 'held', 'import released after its time',
+              { hold: JSON.stringify({ owner_id: ctx.person.id, reason: 'Its time passed before the import was released. Reschedule or drop it.', next_attempt_at: null, kind: 'overdue' }) }))
+            overdue.push(id)
+          }
+        }
+        return { released, held_overdue: overdue, still_paused: stillPaused, skipped }
       },
     },
   },
