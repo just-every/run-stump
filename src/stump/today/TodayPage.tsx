@@ -5,7 +5,7 @@ import type { ItemRecord } from '../drafting/records.ts'
 import type { Account } from '../drafting/view.ts'
 import type { Handoff } from '../handoffs/ui/words.ts'
 import type { LedgerEntry } from '../ledger/entry.ts'
-import { READERS, type Role } from '../people/roles.ts'
+import { CONTRIBUTORS, READERS, type Role } from '../people/roles.ts'
 import { me, runAction } from '../ui/api.ts'
 import { Icon } from '../ui/icons.tsx'
 import { Chip, PanelTitle, useLoaded } from '../ui/kit.tsx'
@@ -90,6 +90,7 @@ export function TodayPage() {
   const out = work.data && day ? goingOut(work.data.items, work.data.accounts, day) : null
   // A poster reads only their own work; Listening's findings are for the rest of the team.
   const reader = !work.data || READERS.includes(work.data.who.person.role as Role)
+  const writer = !!work.data && CONTRIBUTORS.includes(work.data.who.person.role as Role)
   const [focal, ...moreDue] = due?.rows ?? []
   const shownHeld = held?.slice(0, 5) ?? []
 
@@ -149,7 +150,7 @@ export function TodayPage() {
           <section className="st-panel" aria-labelledby="today-out">
             <PanelTitle icon="send" id="today-out">Going out today</PanelTitle>
             <Failed error={work.error} />
-            {out && !out.length ? <Nothing>Nothing scheduled for today. <Link to="/app/compose">Write a post</Link> and pick a time.</Nothing> : null}
+            {out && !out.length ? <Nothing>Nothing scheduled for today.{writer ? <> <Link to="/app/compose">Write a post</Link> and pick a time.</> : ' Posts the team schedules for today show here.'}</Nothing> : null}
             {out?.length ? <ul className="st-list">
               {out.map(row => {
                 const line = <><span className="st-today-out-line">{row.time} · {row.network}{row.who ? ` · ${row.who}` : ''}{row.text ? ` · ${row.text}` : ''}</span>{row.paused ? <Chip tone="held">Paused</Chip> : null}</>
