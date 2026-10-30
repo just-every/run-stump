@@ -2204,7 +2204,7 @@
       "executable": false
     },
     "src/routeTree.gen.ts": {
-      "sha256": "0424b1b0e1329e0a60bb02cb7decf1b20a83b99bbd16e06fe82e60dadc5f43ba",
+      "sha256": "2fd5f62044c13344d00e53c137354e3f79caf05a53f3feadbcce11cfaf2e7d26",
       "executable": false
     },
     "src/server.dev.ts": {
