@@ -2,7 +2,7 @@ import type { Seed } from './connections.ts'
 
 export interface OfferRow {
   id: string; seed: Seed; kind: 'engager' | 'annotation'; state: 'offered' | 'sent' | 'failed' | 'dismissed'; ledger_id: string | null
-  network: string | null; handle: string | null; display_name: string | null; post_url: string | null; engagement: string | null; public_email: string | null
+  network: string | null; network_id: string | null; handle: string | null; display_name: string | null; post_url: string | null; engagement: string | null; public_email: string | null
   network_user_id: string | null; occurred_at: number; attempts: number; outcome: string | null; created_by: string | null; created_at: number; sent_by: string | null; sent_at: number | null
 }
 
@@ -11,7 +11,8 @@ const iso = (at: number | null) => at === null ? null : new Date(at).toISOString
 export function publicOffer(row: OfferRow) {
   return {
     id: row.id, seed: row.seed, kind: row.kind, state: row.state, ledger_id: row.ledger_id, network: row.network, handle: row.handle, display_name: row.display_name,
-    post_url: row.post_url, engagement: row.engagement, email: row.public_email, occurred_at: iso(row.occurred_at), attempts: row.attempts,
+    // The engagement itself (or the annotated post): the network's id for it and its URL (STUMP-STACK-002.1).
+    network_id: row.network_id, url: row.post_url, post_url: row.post_url, engagement: row.engagement, email: row.public_email, occurred_at: iso(row.occurred_at), attempts: row.attempts,
     outcome: row.outcome ? JSON.parse(row.outcome) as Record<string, unknown> : null, created_at: iso(row.created_at), sent_by: row.sent_by, sent_at: iso(row.sent_at),
   }
 }
@@ -46,6 +47,8 @@ export interface NewEngager {
   handle: string
   display_name?: string | null
   post_url: string
+  /** The network's own id for the post the person engaged with. */
+  network_id: string
   /** What the person did, in a word or two: asked a question, replied, mentioned the product. */
   engagement?: string | null
   /** Only an email the person shows publicly on their own profile. */
@@ -61,8 +64,8 @@ export interface NewEngager {
  */
 export async function offerEngager(db: D1Database, input: NewEngager, by: string | null, now: number): Promise<OfferRow> {
   const network = input.network.trim().toLowerCase(), handle = input.handle.trim()
-  await db.prepare(`INSERT OR IGNORE INTO stump_stack_offers(id,seed,kind,state,network,handle,display_name,post_url,engagement,public_email,network_user_id,occurred_at,created_by,created_at)
-    VALUES(?,'orbit','engager','offered',?,?,?,?,?,?,?,?,?,?)`)
-    .bind(crypto.randomUUID(), network, handle, input.display_name ?? null, input.post_url, input.engagement ?? null, input.public_email ?? null, input.network_user_id ?? null, input.occurred_at, by, now).run()
+  await db.prepare(`INSERT OR IGNORE INTO stump_stack_offers(id,seed,kind,state,network,network_id,handle,display_name,post_url,engagement,public_email,network_user_id,occurred_at,created_by,created_at)
+    VALUES(?,'orbit','engager','offered',?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(crypto.randomUUID(), network, input.network_id, handle, input.display_name ?? null, input.post_url, input.engagement ?? null, input.public_email ?? null, input.network_user_id ?? null, input.occurred_at, by, now).run()
   return (await db.prepare("SELECT * FROM stump_stack_offers WHERE kind='engager' AND network=? AND handle=? AND post_url=?").bind(network, handle, input.post_url).first<OfferRow>())!
 }

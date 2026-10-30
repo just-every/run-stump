@@ -6,7 +6,7 @@ import { readOffer, type OfferRow } from './offers.ts'
 import { SealError } from './seal.ts'
 import { annotationFor, postAnnotation } from './vane.ts'
 
-interface LedgerRow { id: string; network: string | null; text: string | null; url: string | null; posted_at: number | null; state: string }
+interface LedgerRow { id: string; network: string | null; network_id?: string | null; text: string | null; url: string | null; posted_at: number | null; state: string }
 
 export type SendResult =
   | { status: 'sent' | 'failed'; offer: OfferRow; outcome: SendOutcome }
@@ -63,11 +63,11 @@ export async function sendOffer(env: StumpEnv, offerId: string, by: string | nul
  * connected the annotation waits as an offer and goes when Vane is connected.
  */
 export async function annotateLedgerEntry(env: StumpEnv, entryId: string, by: string | null = null, now = Date.now()): Promise<SendResult> {
-  const entry = await env.DB.prepare('SELECT id,network,url,posted_at,state FROM stump_ledger WHERE id=?').bind(entryId).first<LedgerRow>()
+  const entry = await env.DB.prepare('SELECT id,network,network_id,url,posted_at,state FROM stump_ledger WHERE id=?').bind(entryId).first<LedgerRow>()
   if (!entry) throw new Error(`No ledger entry ${entryId}`)
   if (entry.state !== 'posted' || entry.posted_at === null) return { status: 'skipped', offer: null, reason: `A ${entry.state} entry gets no annotation.` }
-  await env.DB.prepare(`INSERT OR IGNORE INTO stump_stack_offers(id,seed,kind,state,ledger_id,network,post_url,occurred_at,created_by,created_at)
-    VALUES(?,'vane','annotation','offered',?,?,?,?,?,?)`).bind(crypto.randomUUID(), entry.id, entry.network, entry.url, entry.posted_at, by, now).run()
+  await env.DB.prepare(`INSERT OR IGNORE INTO stump_stack_offers(id,seed,kind,state,ledger_id,network,network_id,post_url,occurred_at,created_by,created_at)
+    VALUES(?,'vane','annotation','offered',?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), entry.id, entry.network, entry.network_id ?? null, entry.url, entry.posted_at, by, now).run()
   const offer = await env.DB.prepare("SELECT id FROM stump_stack_offers WHERE kind='annotation' AND ledger_id=?").bind(entry.id).first<{ id: string }>()
   return sendOffer(env, offer!.id, by, now)
 }

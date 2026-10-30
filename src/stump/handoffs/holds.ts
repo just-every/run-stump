@@ -1,12 +1,39 @@
 // What holds a hand-off at its venue (D-3): a venue rule that forbids it now,
 // read from the rules as they are, or the company's shared limit there being
-// full in its due period (STUMP-VENUE-003.4), held with the next open date.
+// full in its due period (STUMP-VENUE-003.4), held with the next open date, or
+// a draft that nearly repeats what the company queued or posted (STUMP-TRUTH-004),
+// held with the matches until a rewrite clears the drafting check's flag.
 import { usage } from '../venues/limits.ts'
 import { rulesOf, type VenueRow } from '../venues/model.ts'
 import { holdFor, routesFor } from '../venues/rules.ts'
 import type { Hold } from './model.ts'
 
-export interface RuleHold { rule: string; reason: string; source_url: string | null; next_open_at?: string | null }
+/** A near-duplicate's match: the ledger entry (with its URL) or queued item the draft nearly repeats. */
+export interface DuplicateMatch { id: string; kind: 'item' | 'ledger'; score: number; url: string | null }
+export interface RuleHold { rule: string; reason: string; source_url: string | null; next_open_at?: string | null; matches?: DuplicateMatch[] }
+
+/** The rule a near-duplicate hold names: the drafting check's own (STUMP-TRUTH-004). */
+export const DUPLICATE_RULE = 'STUMP-TRUTH-004'
+
+/**
+ * The hold a draft's blocking near_duplicate flag puts on its hand-off, naming
+ * the matches, or null when the draft check found none (STUMP-TRUTH-004.1). The
+ * same flags a rewrite clears release it.
+ */
+export function duplicateHold(flags: ReadonlyArray<{ code: string; blocking?: unknown; matches?: unknown }>): RuleHold | null {
+  const flag = flags.find(entry => entry.code === 'near_duplicate' && entry.blocking === true)
+  if (!flag) return null
+  const matches = Array.isArray(flag.matches) ? flag.matches as DuplicateMatch[] : []
+  const named = matches.map(match => match.url ?? `${match.kind === 'ledger' ? 'ledger entry' : 'queued item'} ${match.id}`)
+  return { rule: DUPLICATE_RULE, reason: `The draft nearly repeats ${named.join(', ') || 'an earlier post'}. Rewrite it to clear the hold.`, source_url: null, matches }
+}
+
+/** The near-duplicate hold the hand-off's draft item carries now, from the flags its last check stored. */
+export async function draftDuplicateHold(db: D1Database, itemId: string | null): Promise<RuleHold | null> {
+  if (!itemId) return null
+  const row = await db.prepare('SELECT flags FROM stump_items WHERE id=?').bind(itemId).first<{ flags: string }>()
+  return row ? duplicateHold(JSON.parse(row.flags) as Array<{ code: string }>) : null
+}
 
 /** The venue rule that forbids this hand-off now, if any. */
 export function ruleHold(venue: VenueRow, handoff: { draft_text: string | null; thread_url: string | null }): RuleHold | null {
@@ -42,4 +69,4 @@ export async function limitHold(db: D1Database, venue: VenueRow, at: number, sel
 }
 
 export const ruleHoldJson = (hold: RuleHold, now: number) => JSON.stringify({ kind: 'rule', reason: hold.reason, rule: hold.rule, source_url: hold.source_url, by: null, by_name: null, agent: null,
-  review_at: null, at: new Date(now).toISOString(), ...(hold.next_open_at !== undefined ? { next_open_at: hold.next_open_at } : {}) } satisfies Hold)
+  review_at: null, at: new Date(now).toISOString(), ...(hold.next_open_at !== undefined ? { next_open_at: hold.next_open_at } : {}), ...(hold.matches ? { matches: hold.matches } : {}) } satisfies Hold)

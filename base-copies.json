@@ -516,7 +516,7 @@
           "mode": "100644"
         },
         "src/modules/agent-door/audit.ts": {
-          "sha256": "40a2db4fae2acb9741cb1047ac0c057e8c09caf17c6651275cdc7c283f94225e",
+          "sha256": "ca378e09479f1fe2889de3981a24dfdeaec0295f3af451b0568b958d14fc49df",
           "mode": "100644"
         },
         "src/modules/agent-door/policy/catalogue.ts": {

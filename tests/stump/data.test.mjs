@@ -122,7 +122,7 @@ test('erasing a person: an engager leaves findings, the inbox and offers, a jour
   assert.deepEqual(await findings(), ['synthetic-bob'])
   assert.deepEqual((await act('stump.stack.send', { action: 'offers' })).items.map(offer => offer.id), ['o2'], 'each handle is matched on its own network only')
   assert.deepEqual([(await app.db.prepare('SELECT id FROM stump_inbox_items ORDER BY id').all()).results.map(row => row.id), erased.removed.inbox_items], [['i2'], 1], 'the engager leaves the inbox')
-  const kept = (await act('stump.ledger.search', { action: 'get', entry_id: held.id })).entry
+  const kept = await act('stump.ledger.search', { action: 'get', entry_id: held.id })
   assert.deepEqual([kept.text, kept.legal_hold.reason], [held.text, 'Dispute on file'])
 
   const contact = await act('stump.press.contacts', { action: 'create', kind: 'journalist', name: 'Jordan Reed', contact_route: { kind: 'email', value: 'synthetic-stump-reporter@example.com', source_url: 'https://example.com/staff', read_at: '2026-10-30' } })

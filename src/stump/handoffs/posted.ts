@@ -58,7 +58,7 @@ export async function record(args: Args, ctx: ActionContext) {
   }
   if (row!.state !== 'open') {
     const hold = row!.hold ? JSON.parse(row!.hold) as Hold : null
-    refuse('handoff_not_open', { handoff_id: row!.id, state: row!.state, ...(hold ? { rule: hold.rule, reason: hold.reason } : {}), ...(row!.state === 'join_first' ? { join_steps: JSON.parse(row!.join_steps) } : {}) })
+    refuse('handoff_not_open', { handoff_id: row!.id, state: row!.state, ...(hold ? { rule: hold.rule, reason: hold.reason, ...(hold.matches ? { matches: hold.matches } : {}) } : {}), ...(row!.state === 'join_first' ? { join_steps: JSON.parse(row!.join_steps) } : {}) })
   }
   if (!onVenue(venue, link)) refuse('link_not_on_venue', { handoff_id: row!.id, venue_id: venue.id, venue: venue.name, url: link.href, reason: `That link is not on ${venue.name}.` })
   // D-8: the person attests their words are their own.

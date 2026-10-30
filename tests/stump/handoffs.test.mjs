@@ -76,6 +76,8 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
   const drafted = await app.mcp(token, 'stump.handoffs.prepare', { action: 'prepare', venue_id: subreddit.id, person_id: maya.id, product_id: product.id, thread_url: thread, due_at: new Date(week(1) + 3 * DAY).toISOString(), lapse: 'expire', generate: true, campaign: 'launch' })
   const handoff = drafted.result.structuredContent
   assert.equal(handoff.state, 'open'); assert.equal(handoff.route, 'handoff_draft')
+  // Its draft is aimed at the venue's weekly thread, so the self-promotion rule holds neither the hand-off nor its draft.
+  assert.ok(!handoff.flags.some(flag => flag.code === 'venue_rule'), JSON.stringify(handoff.flags))
   assert.ok(handoff.draft_text.startsWith(handoff.disclosure_line), handoff.draft_text)
   assert.match(handoff.draft_text, /brightwell\.example\/changelog\/3-2\?[^ ]*utm_medium=community/)
   assert.deepEqual(handoff.facts.map(fact => fact.claim_id), [claim.id])
@@ -115,7 +117,7 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
   const posted = ok(await record('maya', { handoff_id: handoff.id, url: `${thread}c1/` }))
   assert.deepEqual([posted.state, posted.confirmation], ['posted', 'person'])
   assert.ok(!seen.slice(before).some(url => /reddit\.com/.test(url)))
-  const entry = ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: posted.ledger_id })).entry
+  const entry = ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: posted.ledger_id }))
   assert.deepEqual([entry.route, entry.person_id, entry.venue_id, entry.by], ['handed_off', maya.id, subreddit.id, 'Wren for Maya Chen'])
   assert.match(entry.text, /utm_source=reddit/)
   assert.equal(ok(await record('maya', { handoff_id: handoff.id, url: `${thread}c1/` })).ledger_id, posted.ledger_id)
@@ -127,14 +129,19 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
   assert.equal((await record('priya', { handoff_id: friend.id, url: `${thread}c3/`, own_words: 'Disclosure: I am a friend of the team. It saved our desk an hour a day.' })).body.code, 'attestation_required')
   assert.equal(ok(await record('priya', { handoff_id: friend.id, url: `${thread}c3/`, own_words: 'Disclosure: I am a friend of the team. It saved our desk an hour a day.', attest_own_words: true })).state, 'posted')
 
+  // A draft that nearly repeats the posted one is held, naming the ledger entry, until Maya rewrites it (STUMP-TRUTH-004).
+  const repeat = ok(await prepare('owner', { venue_id: bluesky.id, person_id: maya.id, due_at: new Date(week(1)).toISOString(), generate: true }))
+  assert.deepEqual([repeat.state, repeat.hold.rule, repeat.hold.matches.map(match => [match.id, match.url])], ['held', 'STUMP-TRUTH-004', [[posted.ledger_id, posted.url]]])
+  const sky = ok(await app.action('maya', 'stump.handoffs.manage', { action: 'edit', handoff_id: repeat.id, draft_text: `${repeat.disclosure_line} We moved our standing appointments over this week and nothing double-booked.` }))
+  assert.deepEqual([sky.state, sky.hold], ['open', null])
+
   // Bluesky is read back from the AppView: its author must be Maya's handle, and the ledger keeps the text as posted.
-  const sky = ok(await prepare('owner', { venue_id: bluesky.id, person_id: maya.id, due_at: new Date(week(1)).toISOString(), generate: true }))
   posts.set('at://did:plc:someone/app.bsky.feed.post/3kaa', { uri: 'at://did:plc:someone/app.bsky.feed.post/3kaa', author: { did: 'did:plc:someone', handle: 'someone.bsky.social' }, record: { text: 'Not Maya.', createdAt: new Date().toISOString() } })
   assert.equal((await record('maya', { handoff_id: sky.id, url: 'https://bsky.app/profile/someone.bsky.social/post/3kaa' })).body.code, 'author_mismatch')
   posts.set('at://did:plc:maya/app.bsky.feed.post/3kbb', { uri: 'at://did:plc:maya/app.bsky.feed.post/3kbb', author: { did: 'did:plc:maya', handle: 'maya.synthetic.bsky.social' }, record: { text: 'I work at Brightwell. Recurring bookings are here.', createdAt: new Date().toISOString() } })
   const checked = ok(await record('maya', { handoff_id: sky.id, url: 'https://bsky.app/profile/maya.synthetic.bsky.social/post/3kbb' }))
   assert.equal(checked.confirmation, 'network')
-  assert.equal(ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: checked.ledger_id })).entry.text, 'I work at Brightwell. Recurring bookings are here.')
+  assert.equal(ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: checked.ledger_id })).text, 'I work at Brightwell. Recurring bookings are here.')
 })
 
 test('a hand-off never waits in silence: a hold runs its lapse at its review date, a rule change holds it, and removing a person moves it on', async () => {

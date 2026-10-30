@@ -9,7 +9,7 @@ import { readPerson } from '../people/store.ts'
 import { handoffEligibility } from '../venues/members.ts'
 import { readVenue, type VenueRow } from '../venues/model.ts'
 import { disclosureFor, factsFor, nextOpening, outsideVoice, talkingPoints } from './brief.ts'
-import { limitHold, ruleHold, ruleHoldJson } from './holds.ts'
+import { draftDuplicateHold, limitHold, ruleHold, ruleHoldJson } from './holds.ts'
 import { ACTIVE, move, type Actor, type HandoffRow, type HandoffState, type Hold } from './model.ts'
 
 const DAY = 86_400_000
@@ -42,11 +42,13 @@ async function nextMember(actor: Actor, venue: VenueRow, row: HandoffRow, leavin
  * limit in that period (with the next open date), else open, or join-first for
  * someone not yet a member.
  */
-async function placed(actor: Actor, venue: VenueRow, row: Pick<HandoffRow, 'id' | 'thread_url'>, draft: string | null, personId: string, due: number) {
-  const hold = ruleHold(venue, { draft_text: draft, thread_url: row.thread_url }) ?? await limitHold(actor.db, venue, due, row.id)
+async function placed(actor: Actor, venue: VenueRow, row: Pick<HandoffRow, 'id' | 'thread_url' | 'item_id'>, draft: string | null, personId: string, due: number) {
+  // A draft it keeps still nearly repeating a queued or posted one stays held until rewritten (STUMP-TRUTH-004).
+  const hold = ruleHold(venue, { draft_text: draft, thread_url: row.thread_url }) ?? (draft === null ? null : await draftDuplicateHold(actor.db, row.item_id))
+    ?? await limitHold(actor.db, venue, due, row.id)
   const eligibility = await handoffEligibility(actor.db, venue, personId, actor.now())
   const state: HandoffState = hold ? 'held' : eligibility.join_first ? 'join_first' : 'open'
-  return { state, eligibility, hold: hold ? ruleHoldJson(hold, actor.now()) : null, detail: hold ? { rule: hold.rule, reason_held: hold.reason, ...(hold.next_open_at !== undefined ? { next_open_at: hold.next_open_at } : {}) } : {} }
+  return { state, eligibility, hold: hold ? ruleHoldJson(hold, actor.now()) : null, detail: hold ? { rule: hold.rule, reason_held: hold.reason, ...(hold.next_open_at !== undefined ? { next_open_at: hold.next_open_at } : {}), ...(hold.matches ? { matches: hold.matches } : {}) } : {} }
 }
 
 /** Reassigns to the next member, with the brief rebuilt for them: their disclosure, the facts, and talking points in place of another person's draft. */
