@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppComposeRouteImport } from './routes/app.compose'
 import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
+import { Route as AppSettingsBrandRouteImport } from './routes/app.settings.brand'
 import { Route as AppSettingsPublishingRouteImport } from './routes/app.settings.publishing'
 import { Route as AppSettingsTeamRouteImport } from './routes/app.settings.team'
 
@@ -25,9 +27,19 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppComposeRoute = AppComposeRouteImport.update({
+  id: '/compose',
+  path: '/compose',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsAgentsRoute = AppSettingsAgentsRouteImport.update({
   id: '/settings/agents',
   path: '/settings/agents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsBrandRoute = AppSettingsBrandRouteImport.update({
+  id: '/settings/brand',
+  path: '/settings/brand',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsPublishingRoute = AppSettingsPublishingRouteImport.update({
@@ -43,22 +55,28 @@ const AppSettingsTeamRoute = AppSettingsTeamRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
+  '/app/compose': typeof AppComposeRoute
   '/app/': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
 }
 export interface FileRoutesByTo {
+  '/app/compose': typeof AppComposeRoute
   '/app': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/app': typeof AppRouteWithChildren
+  '/app/compose': typeof AppComposeRoute
   '/app/': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
 }
@@ -66,21 +84,27 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/app'
+    | '/app/compose'
     | '/app/'
     | '/app/settings/agents'
+    | '/app/settings/brand'
     | '/app/settings/publishing'
     | '/app/settings/team'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/app/compose'
     | '/app'
     | '/app/settings/agents'
+    | '/app/settings/brand'
     | '/app/settings/publishing'
     | '/app/settings/team'
   id:
     | '__root__'
     | '/app'
+    | '/app/compose'
     | '/app/'
     | '/app/settings/agents'
+    | '/app/settings/brand'
     | '/app/settings/publishing'
     | '/app/settings/team'
   fileRoutesById: FileRoutesById
@@ -105,11 +129,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/compose': {
+      id: '/app/compose'
+      path: '/compose'
+      fullPath: '/app/compose'
+      preLoaderRoute: typeof AppComposeRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/settings/agents': {
       id: '/app/settings/agents'
       path: '/settings/agents'
       fullPath: '/app/settings/agents'
       preLoaderRoute: typeof AppSettingsAgentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings/brand': {
+      id: '/app/settings/brand'
+      path: '/settings/brand'
+      fullPath: '/app/settings/brand'
+      preLoaderRoute: typeof AppSettingsBrandRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/settings/publishing': {
@@ -130,15 +168,19 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppComposeRoute: typeof AppComposeRoute
   AppIndexRoute: typeof AppIndexRoute
   AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
+  AppSettingsBrandRoute: typeof AppSettingsBrandRoute
   AppSettingsPublishingRoute: typeof AppSettingsPublishingRoute
   AppSettingsTeamRoute: typeof AppSettingsTeamRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppComposeRoute: AppComposeRoute,
   AppIndexRoute: AppIndexRoute,
   AppSettingsAgentsRoute: AppSettingsAgentsRoute,
+  AppSettingsBrandRoute: AppSettingsBrandRoute,
   AppSettingsPublishingRoute: AppSettingsPublishingRoute,
   AppSettingsTeamRoute: AppSettingsTeamRoute,
 }

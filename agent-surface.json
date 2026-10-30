@@ -4,8 +4,14 @@
   "specialist": "earned-channels-marketer",
   "capabilities": ["tools", "policy", "pause", "audit", "idempotency"],
   "tools": [
+    { "name": "stump.brand.manage", "scope": "stump:brand", "readOnly": false, "classes": ["standard", "sensitive"], "clauses": ["STUMP-BRAND-001", "STUMP-BRAND-002", "STUMP-BRAND-003"] },
     { "name": "stump.calendar.pause", "scope": "stump:calendar", "readOnly": false, "classes": ["live"], "clauses": ["STUMP-PLAN-007"] },
+    { "name": "stump.drafts.check", "scope": "stump:drafts", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-BRAND-004", "STUMP-DRAFT-005", "STUMP-TRUTH-002", "STUMP-TRUTH-004"] },
+    { "name": "stump.drafts.preview", "scope": "stump:drafts", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-DRAFT-004"] },
+    { "name": "stump.drafts.revise", "scope": "stump:drafts", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-DRAFT-003", "STUMP-TEAM-002"] },
+    { "name": "stump.drafts.write", "scope": "stump:drafts", "readOnly": false, "classes": ["standard", "external"], "clauses": ["STUMP-DRAFT-010", "STUMP-DRAFT-001", "STUMP-DRAFT-002", "STUMP-DRAFT-006", "STUMP-DRAFT-011", "STUMP-DRAFT-007", "STUMP-BRAND-002"] },
     { "name": "stump.ledger.search", "scope": "stump:ledger", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001", "STUMP-LEDGER-002"] },
+    { "name": "stump.press.contacts", "scope": "stump:press", "readOnly": false, "classes": ["standard", "sensitive"], "clauses": ["STUMP-PITCH-001"] },
     { "name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001"] }
   ],
   "notTools": [
@@ -44,9 +50,20 @@
       "tool": "stump.ledger.search",
       "args": { "action": "search" },
       "expect": [{ "class": "standard" }]
-    }
+    },
+    {"id": "product", "tool": "stump.brand.manage", "args": {"action": "product_create", "name": "Synthetic product", "tone": "plain, warm, exact"}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "voice", "tool": "stump.brand.manage", "args": {"action": "voice_create", "person_id": {"$sponsor": "id"}, "samples": ["Shipped the calendar fix today.", "Small change, big relief for anyone booking every week."], "do": ["short", "plain"], "dont": ["exclamation marks"]}, "expect": [{"class": "standard", "facts": {"measure": 1}}, {"class": "sensitive", "facts": {"measure": 1, "kind": "writing samples"}}]},
+    {"id": "draft", "tool": "stump.drafts.write", "args": {"action": "create", "format": "post", "person_id": {"$sponsor": "id"}, "network": "bluesky", "text": "Recurring bookings are here: pick a pattern once and every visit books itself."}, "expect": [{"class": "standard", "facts": {"measure": 1}}], "inject": {"generate": false, "internal": true, "classes": ["standard"]}},
+    {"id": "ai-draft", "tool": "stump.drafts.write", "args": {"action": "create", "format": "post", "person_id": {"$sponsor": "id"}, "network": "mastodon", "generate": true, "prompt": "Announce recurring bookings in two sentences."}, "expect": [{"class": "external", "facts": {"measure": 1, "counterparty": "known", "provider": "ai.synthetic-stump.example"}}]},
+    {"id": "save", "tool": "stump.drafts.revise", "args": {"action": "save", "item_id": {"$from": "draft", "pointer": "/id"}, "text": "Recurring bookings are here: set a pattern once and every visit books itself."}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "check", "tool": "stump.drafts.check", "args": {"action": "run", "item_id": {"$from": "draft", "pointer": "/id"}}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "preview", "tool": "stump.drafts.preview", "args": {"action": "item", "item_id": {"$from": "draft", "pointer": "/id"}}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "publication", "tool": "stump.press.contacts", "args": {"action": "create", "kind": "publication", "name": "Synthetic Weekly", "topics": ["scheduling"]}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "journalist", "tool": "stump.press.contacts", "args": {"action": "create", "kind": "journalist", "name": "Synthetic Reporter", "beat": "small business software", "publication": "Synthetic Weekly", "contact_route": {"kind": "email", "value": "synthetic-stump-reporter@example.com", "source_url": "https://example.com/staff", "read_at": "2026-10-30"}}, "expect": [{"class": "standard", "facts": {"measure": 1}}, {"class": "sensitive", "facts": {"measure": 1, "kind": "contact route"}}]}
   ],
   "verification": {
-    "fixtures": { "module": "tests/agent/fixtures.mjs" }
+    "fixtures": { "module": "tests/agent/fixtures.mjs" },
+    "owner": { "bindings": { "AI_ENABLED": { "module": "tests/agent/ai-enabled.mjs" }, "AI_BASE_URL": { "module": "tests/agent/ai-base-url.mjs" }, "AI_API_KEY": { "module": "tests/agent/ai-key.mjs" }, "AI_MODEL": { "module": "tests/agent/ai-model.mjs" } } },
+    "network": { "module": "tests/agent/network.mjs", "origins": ["https://ai.synthetic-stump.example"] }
   }
 }
