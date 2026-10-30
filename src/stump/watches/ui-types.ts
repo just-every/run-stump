@@ -1,0 +1,26 @@
+// The watches doors' answers, as the Listening screen reads them (src/stump/tools/watches.ts, findings.ts).
+export interface ShownError { at: string; kind: string; message: string; source?: string; status?: number; retry_at?: string }
+export interface WatchSourceView {
+  kind: 'hn' | 'rss' | 'bluesky' | 'mastodon'; key: string; story_types?: string[]; url?: string; instance?: string; hashtags?: string[]; lang?: string
+  backfilled_at: string | null; last_polled_at: string | null; next_poll_at: string | null; last_error: ShownError | null
+}
+export interface WatchView {
+  id: string; name: string; product_ids: string[]
+  terms: { all?: string[]; any?: string[]; none?: string[] }
+  sources: WatchSourceView[]
+  alerts: { immediate_min_relevance: number; slack: { configured: boolean; host: string; last_error: ShownError | null } | null; webhook: { configured: boolean; host: string; secret_set: boolean; last_error: ShownError | null } | null } | null
+  interval_minutes: number; muted: boolean; muted_until: string | null; blocked_authors: string[]
+  last_error: ShownError | null; next_poll_at: string | null
+  findings: { total: number; backfill: number }
+  revision: number
+}
+export interface FindingView {
+  id: string; watch_id: string; source: string; kind: string | null; url: string; title: string; text: string; author: string; points: number | null
+  published_at: string | null; relevance: number; reasons: string[]; answerable: boolean
+  reason_details: Array<{ factor: string; label: string; points: number; max: number }>
+  routes: Array<'publish' | 'handoff_draft' | 'handoff_brief'>; venue: { id: string; name: string } | null
+  backfill: boolean; mentions: Array<{ kind: 'product' | 'competitor'; product: string; matched: string }>
+}
+export interface WatchList { items: WatchView[]; total: number }
+export interface FindingList { watch: { id: string; name: string }; items: FindingView[]; total: number }
+export interface PollView { added: number; alerts_sent: number; sources: Array<{ source: string; status: string; added: number; error?: ShownError }> }

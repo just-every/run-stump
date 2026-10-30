@@ -4,9 +4,11 @@
   "specialist": "earned-channels-marketer",
   "capabilities": ["tools", "policy", "pause", "audit", "idempotency"],
   "tools": [
+    { "name": "stump.findings.work", "scope": "stump:findings", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-WATCH-005"] },
     { "name": "stump.calendar.pause", "scope": "stump:calendar", "readOnly": false, "classes": ["live"], "clauses": ["STUMP-PLAN-007"] },
     { "name": "stump.ledger.search", "scope": "stump:ledger", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001", "STUMP-LEDGER-002"] },
-    { "name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001"] }
+    { "name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001"] },
+    { "name": "stump.watches.manage", "scope": "stump:watches", "readOnly": false, "classes": ["standard", "external", "security"], "clauses": ["STUMP-WATCH-001", "STUMP-WATCH-002", "STUMP-WATCH-003", "STUMP-WATCH-004", "STUMP-WATCH-013"], "sponsorEscalation": false }
   ],
   "notTools": [
     { "clauses": ["STUMP-VENUE-004", "STUMP-IMPORT-001"], "reason": "import-door" },
@@ -44,6 +46,29 @@
       "tool": "stump.ledger.search",
       "args": { "action": "search" },
       "expect": [{ "class": "standard" }]
+    },
+    {
+      "id": "watch",
+      "tool": "stump.watches.manage",
+      "args": {
+        "action": "create", "name": "Synthetic watch", "terms": { "any": ["synthetic"] }, "sources": [{ "kind": "rss", "url": "https://feeds.example.invalid/synthetic.xml" }],
+        "alerts": { "immediate_min_relevance": 50, "slack": { "webhook_url": { "$fixture": "slack_webhook", "pointer": "" } }, "webhook": { "url": "https://receiver.example.invalid/hook", "secret": { "$fixture": "webhook_secret", "pointer": "" } } }
+      },
+      "expect": [{ "class": "standard", "facts": { "measure": 1 } }, { "class": "external", "facts": { "measure": 1, "counterparty": "public" } }, { "class": "security", "facts": { "measure": 1, "setting": "alert destinations" } }],
+      "inject": { "classes": ["standard"], "risk": "none", "internal": true }
+    },
+    {
+      "id": "mute",
+      "tool": "stump.watches.manage",
+      "args": { "action": "mute", "watch_id": { "$from": "watch", "pointer": "/id" } },
+      "expect": [{ "class": "standard", "facts": { "measure": 1 } }],
+      "inject": { "classes": ["standard"], "risk": "none", "internal": true }
+    },
+    {
+      "id": "findings",
+      "tool": "stump.findings.work",
+      "args": { "action": "list", "watch_id": { "$from": "watch", "pointer": "/id" } },
+      "expect": [{ "class": "standard", "facts": { "measure": 0 } }]
     }
   ],
   "verification": {

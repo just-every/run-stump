@@ -13,6 +13,7 @@ import { AGENT_PATHS, stumpAgentDoor } from './stump/agent-door/index.ts'
 import { appDocumentGate } from './stump/http/app-gate.ts'
 import { personDoorResponse } from './stump/http/routes.ts'
 import { publishDue } from './stump/publish/tick.ts'
+import { pollDueWatches } from './stump/watches/scheduled.ts'
 
 const api = new Hono<{ Bindings: Bindings }>()
 api.get('/health', (context) => context.json({ status: 'ok', ...deploymentHealth(context.env) }))
@@ -28,7 +29,10 @@ function noTransform(response: Response): Response {
 
 export default withDemo<Bindings, ExportedHandler<Bindings>>({
   // The scheduler tick: due items go out unless a Pause covers them (src/stump/publish/tick.ts).
-  async scheduled(controller, env) { await publishDue(runtimeBindings(env), controller.scheduledTime) },
+  async scheduled(controller, env) {
+    try { await publishDue(runtimeBindings(env), controller.scheduledTime) }
+    finally { await pollDueWatches(runtimeBindings(env), controller.scheduledTime) }
+  },
   async fetch(request, env, execution) {
     const asset = await staticAssetResponse(request, env)
     if (asset) return asset

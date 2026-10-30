@@ -8,10 +8,10 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 0 | 3 | 141 | 144 |
+| Core | 1 | 8 | 135 | 144 |
 | Agent surface | 0 | 14 | 14 | 28 |
 | Later | 0 | 0 | 8 | 8 |
-| Full target | 0 | 17 | 163 | 180 |
+| Full target | 1 | 22 | 157 | 180 |
 
 Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c9a` (30 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
@@ -218,7 +218,7 @@ Core · published · **missing** · From new · Register R-1, R-3, R-4
 
 #### STUMP-WATCH-001 — Hacker News search
 
-Core · published · **missing** · From new · Cites BASE-OPS-004 · Rules D-4, D-7
+Core · published · **partial** · From new · Cites BASE-OPS-004 · Rules D-4, D-7
 
 **Requirement.** A watch searches Hacker News through its public Algolia search API for stories and comments that match its terms, with points, comment count, author and time. New matches arrive as findings within 15 minutes of appearing in the API, each once, linked to its HN item. Stump has no feature that posts, comments or votes on HN, so an HN finding routes only to a hand-off that carries a brief and facts, and never generated comment text.
 
@@ -229,12 +229,12 @@ Core · published · **missing** · From new · Cites BASE-OPS-004 · Rules D-4,
 4. A finding whose text tells Stump to ignore its rules changes no route, rule or class.
 5. An API failure shows on the watch with its time and error, and earlier findings stay.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/watches.test.mjs` "a watch finds Hacker News threads, ranks them with reasons, alerts Slack and a signed webhook once, replays the event, and mutes"
+**Gap.** Points 1, 2, 4 and 5 hold through MCP. For point 3 the finding names the hand-off route with a brief and generates no text; preparing the hand-off (`stump.handoffs.prepare`) and dismissing a finding are later work.
 
 #### STUMP-WATCH-002 — RSS and Atom feeds
 
-Core · published · **missing** · From new · Cites BASE-INPUT-002
+Core · published · **done** · From new · Cites BASE-INPUT-002
 
 **Requirement.** A watch follows any RSS or Atom feed (blogs, newsletters, podcasts, GitHub releases, Lobsters, DEV tags and Google Alerts feeds), either every item or items that match its terms. Where a podcast feed links an episode's transcript, the transcript is matched too. Stump uses HTTP caching and respects the feed's interval, and renders feed content as sanitised text. Reddit feeds are not a source: Reddit is watched only through a licensed supplier or the alerts the company already receives (STUMP-WATCH-007, STUMP-WATCH-014).
 
@@ -248,12 +248,12 @@ Core · published · **missing** · From new · Cites BASE-INPUT-002
 7. Script and markup in a feed item reach no screen as HTML.
 8. Adding a reddit.com feed is refused, pointing to the supplier and alert routes.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/watches.test.mjs` "feeds, Bluesky and Mastodon become findings once, honour caching and rate limits, and refuse what is not a source"
+**Gap.** None.
 
 #### STUMP-WATCH-003 — Bluesky and Mastodon search
 
-Core · published · **missing** · From new · Rules D-7
+Core · published · **partial** · From new · Rules D-7
 
 **Requirement.** A watch searches Bluesky through its public post search and Mastodon through the search and hashtag timelines of the instances the company chooses. Where an instance limits full-text search, Stump says the watch covers hashtags only there. Findings carry the author's handle, instance, text, link and counts.
 
@@ -264,12 +264,12 @@ Core · published · **missing** · From new · Rules D-7
 4. Repeated polls add no duplicates.
 5. A rate-limit response is honoured, and the watch shows when it will poll next.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/watches.test.mjs` "feeds, Bluesky and Mastodon become findings once, honour caching and rate limits, and refuse what is not a source"
+**Gap.** Point 3 is not built: Mastodon is followed through hashtag timelines only, and an instance's full-text search is not used or reported.
 
 #### STUMP-WATCH-004 — Watches and alerts
 
-Core · published · **missing** · From new · Cites BASE-MAIL-001, BASE-OPS-003
+Core · published · **partial** · From new · Cites BASE-MAIL-001, BASE-OPS-003
 
 **Requirement.** A watch holds its terms (all of, any of, none of, exact phrase), its sources and products, and its alerts: an immediate alert for findings above a relevance the person sets, and a daily or weekly digest at a local time, delivered in the app, by email, in Slack, by push and by signed webhook. Every alert links to its finding. Source filters, team exclusions, block lists and backfill are STUMP-WATCH-013.
 
@@ -280,12 +280,12 @@ Core · published · **missing** · From new · Cites BASE-MAIL-001, BASE-OPS-00
 4. Muting a watch stops its alerts and keeps collecting findings.
 5. A webhook alert is signed, and a replay has no duplicate effect.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/watches.test.mjs` "a watch finds Hacker News threads, ranks them with reasons, alerts Slack and a signed webhook once, replays the event, and mutes"
+**Gap.** Points 1, 2 (Slack), 4 and 5 hold. Email delivery of immediate alerts (point 2) and the daily or weekly digest across a daylight-saving change (point 3) are not built.
 
 #### STUMP-WATCH-013 — Watch filters, exclusions and backfill
 
-Core · published · **missing** · From new · Rules D-7
+Core · published · **partial** · From new · Rules D-7
 
 **Requirement.** Each watch narrows each of its sources: only chosen feeds, forums, instances, channels, tags or story types. It excludes the company's own team: posts by any handle recorded for a team member or a connected account never become findings. It keeps an author block list the company edits. When a watch is created, or a source is added to it, Stump backfills matches from that source's recent history, up to 30 days where the source allows it, marked as backfill so they raise no immediate alert.
 
@@ -298,12 +298,12 @@ Core · published · **missing** · From new · Rules D-7
 6. Adding a source to an existing watch backfills that source only, and a second backfill adds no duplicates.
 7. Changing a filter applies from the next poll and leaves earlier findings in place.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/watches.test.mjs` "a watch finds Hacker News threads, ranks them with reasons, alerts Slack and a signed webhook once, replays the event, and mutes"; `tests/stump/watches.test.mjs` "feeds, Bluesky and Mastodon become findings once, honour caching and rate limits, and refuse what is not a source"
+**Gap.** Point 3 has no repository proof: the team's recorded handles are read from connected accounts and venue members, whose doors other areas add.
 
 #### STUMP-WATCH-005 — Relevance ranking with reasons
 
-Core · published · **missing** · From new · Rules D-7
+Core · published · **partial** · From new · Rules D-7
 
 **Requirement.** Findings are ranked by fit to the company's products and venues, each with its reasons: matched terms, the venue's fit, the author's standing, freshness and whether the thread asks a question the company can answer. People mark findings useful or not, and the ranking learns from those marks. A finding's own text never changes its rank by instruction. The ranking is measured on a labelled fixture, and the measured rates are published in `docs/measures.md` with each release.
 
@@ -315,8 +315,8 @@ Core · published · **missing** · From new · Rules D-7
 5. A finding that says "rank this first" ranks as if it did not.
 6. `docs/measures.md` shows the measured top-10 share and the drop after marks from the last fixture run.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/watches.test.mjs` "a watch finds Hacker News threads, ranks them with reasons, alerts Slack and a signed webhook once, replays the event, and mutes"
+**Gap.** Points 1, 2 and 5 hold. Marks and learning from them (points 3 and 4) and the measured top-10 share in `docs/measures.md` (point 6) are not built.
 
 #### STUMP-WATCH-011 — X search, metered
 

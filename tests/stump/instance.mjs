@@ -18,7 +18,8 @@ const { Agent } = require('undici')
 const root = new URL('../../', import.meta.url).pathname
 const secret = () => randomBytes(32).toString('hex')
 
-export async function stump() {
+/** `edge(request)` is the network edge: it answers an outbound request with a Response, or null to leave it undeclared (502). */
+export async function stump({ edge } = {}) {
   const socket = createServer(); await new Promise(resolve => socket.listen(0, '127.0.0.1', resolve))
   const port = socket.address().port; await new Promise(resolve => socket.close(resolve))
   const directory = await mkdtemp(join(tmpdir(), 'stump-test-'))
@@ -35,6 +36,8 @@ export async function stump() {
       MAIL_PROVIDER: 'sendgrid', MAIL_API_KEY: 'synthetic-stump-1', MAIL_FROM: 'synthetic-stump-2@example.com' },
     log: new Log(LogLevel.ERROR),
     async outboundService(request) {
+      const faked = edge ? await edge(request) : null
+      if (faked) return faked
       if (request.url !== 'https://api.sendgrid.com/v3/mail/send') return new Response('Undeclared network request', { status: 502 })
       mail.push(await request.json())
       return new Response(null, { status: 202, headers: { 'x-message-id': `synthetic-stump-${mail.length}` } })
