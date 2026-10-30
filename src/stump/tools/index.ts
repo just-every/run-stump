@@ -5,6 +5,7 @@ import { brandTools } from './brand.ts'
 import { calendarTools } from './calendar.ts'
 import { draftTools } from './drafts.ts'
 import { findingsTools } from './findings.ts'
+import { handoffTools } from './handoffs.ts'
 import { itemTools } from './items.ts'
 import { ledgerTools } from './ledger.ts'
 import { linksTools } from './links.ts'
@@ -23,6 +24,7 @@ export const stumpTools: readonly StumpTool[] = [
   ...calendarTools,
   ...draftTools,
   ...findingsTools,
+  ...handoffTools,
   ...itemTools,
   ...ledgerTools,
   ...linksTools,

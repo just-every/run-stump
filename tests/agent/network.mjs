@@ -3,9 +3,13 @@
 // - the company's AI provider: OpenAI-compatible chat completions with a JSON
 //   draft and its usage and cost;
 // - X API v2: the OAuth 2.0 token exchange and the account read, so the
-//   journey connects the company's X account through its own app.
+//   journey connects the company's X account through its own app;
+// - Bluesky's public AppView: a handle resolved to its DID (a did:web naming the
+//   handle's host), and a post thread read by that DID's at-URI, so the journey
+//   records a hand-off's link checked with the network.
 const AI = 'https://ai.synthetic-stump.example'
 const X = 'https://api.x.com'
+const APPVIEW = 'https://public.api.bsky.app'
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 
 async function ai(request, url) {
@@ -32,11 +36,23 @@ async function x(request, url) {
   return json({ title: 'Not Found', status: 404 }, 404)
 }
 
+function appview(url) {
+  if (url.pathname === '/xrpc/com.atproto.identity.resolveHandle') {
+    const handle = url.searchParams.get('handle') ?? ''
+    return handle.endsWith('.bsky.social') ? json({ did: `did:web:${handle}` }) : json({ error: 'InvalidRequest', message: 'Unable to resolve handle' }, 400)
+  }
+  const [, did, rkey] = /^at:\/\/(did:web:[^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/.exec(url.searchParams.get('uri') ?? '') ?? []
+  if (url.pathname !== '/xrpc/app.bsky.feed.getPostThread' || !did) return json({ error: 'NotFound', message: 'Post not found' }, 400)
+  return json({ thread: { $type: 'app.bsky.feed.defs#threadViewPost', post: { uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: 'bafysynthetic', author: { did, handle: did.slice('did:web:'.length) },
+    record: { $type: 'app.bsky.feed.post', text: 'Synthetic hand-off post.', createdAt: new Date().toISOString() }, indexedAt: new Date().toISOString() } } })
+}
+
 export default {
   async fetch(request) {
     const url = new URL(request.url)
     if (url.origin === AI) return ai(request, url)
     if (url.origin === X) return x(request, url)
+    if (url.origin === APPVIEW) return appview(url)
     return new Response('Not declared', { status: 404 })
   },
 }

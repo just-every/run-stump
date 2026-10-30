@@ -16,6 +16,8 @@ import { Route as AppLedgerRouteImport } from './routes/app.ledger'
 import { Route as AppListeningRouteImport } from './routes/app.listening'
 import { Route as AppPauseRouteImport } from './routes/app.pause'
 import { Route as AppConnectedNetworkRouteImport } from './routes/app.connected.$network'
+import { Route as AppHandoffsIndexRouteImport } from './routes/app.handoffs.index'
+import { Route as AppHandoffsHandoffIdRouteImport } from './routes/app.handoffs.$handoffId'
 import { Route as AppSettingsAccountsRouteImport } from './routes/app.settings.accounts'
 import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
 import { Route as AppSettingsBrandRouteImport } from './routes/app.settings.brand'
@@ -59,6 +61,16 @@ const AppPauseRoute = AppPauseRouteImport.update({
 const AppConnectedNetworkRoute = AppConnectedNetworkRouteImport.update({
   id: '/connected/$network',
   path: '/connected/$network',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHandoffsIndexRoute = AppHandoffsIndexRouteImport.update({
+  id: '/handoffs/',
+  path: '/handoffs/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHandoffsHandoffIdRoute = AppHandoffsHandoffIdRouteImport.update({
+  id: '/handoffs/$handoffId',
+  path: '/handoffs/$handoffId',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsAccountsRoute = AppSettingsAccountsRouteImport.update({
@@ -116,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/app/pause': typeof AppPauseRoute
   '/app/': typeof AppIndexRoute
   '/app/connected/$network': typeof AppConnectedNetworkRoute
+  '/app/handoffs/$handoffId': typeof AppHandoffsHandoffIdRoute
   '/app/settings/accounts': typeof AppSettingsAccountsRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/brand': typeof AppSettingsBrandRoute
@@ -124,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
   '/oauth/bluesky/client-metadata.json': typeof OauthBlueskyClientMetadataDotjsonRoute
+  '/app/handoffs/': typeof AppHandoffsIndexRoute
   '/app/venues/': typeof AppVenuesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -133,6 +147,7 @@ export interface FileRoutesByTo {
   '/app/pause': typeof AppPauseRoute
   '/app': typeof AppIndexRoute
   '/app/connected/$network': typeof AppConnectedNetworkRoute
+  '/app/handoffs/$handoffId': typeof AppHandoffsHandoffIdRoute
   '/app/settings/accounts': typeof AppSettingsAccountsRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/brand': typeof AppSettingsBrandRoute
@@ -141,6 +156,7 @@ export interface FileRoutesByTo {
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
   '/oauth/bluesky/client-metadata.json': typeof OauthBlueskyClientMetadataDotjsonRoute
+  '/app/handoffs': typeof AppHandoffsIndexRoute
   '/app/venues': typeof AppVenuesIndexRoute
 }
 export interface FileRoutesById {
@@ -152,6 +168,7 @@ export interface FileRoutesById {
   '/app/pause': typeof AppPauseRoute
   '/app/': typeof AppIndexRoute
   '/app/connected/$network': typeof AppConnectedNetworkRoute
+  '/app/handoffs/$handoffId': typeof AppHandoffsHandoffIdRoute
   '/app/settings/accounts': typeof AppSettingsAccountsRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/brand': typeof AppSettingsBrandRoute
@@ -160,6 +177,7 @@ export interface FileRoutesById {
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
   '/oauth/bluesky/client-metadata.json': typeof OauthBlueskyClientMetadataDotjsonRoute
+  '/app/handoffs/': typeof AppHandoffsIndexRoute
   '/app/venues/': typeof AppVenuesIndexRoute
 }
 export interface FileRouteTypes {
@@ -172,6 +190,7 @@ export interface FileRouteTypes {
     | '/app/pause'
     | '/app/'
     | '/app/connected/$network'
+    | '/app/handoffs/$handoffId'
     | '/app/settings/accounts'
     | '/app/settings/agents'
     | '/app/settings/brand'
@@ -180,6 +199,7 @@ export interface FileRouteTypes {
     | '/app/settings/team'
     | '/app/venues/$venueId'
     | '/oauth/bluesky/client-metadata.json'
+    | '/app/handoffs/'
     | '/app/venues/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -189,6 +209,7 @@ export interface FileRouteTypes {
     | '/app/pause'
     | '/app'
     | '/app/connected/$network'
+    | '/app/handoffs/$handoffId'
     | '/app/settings/accounts'
     | '/app/settings/agents'
     | '/app/settings/brand'
@@ -197,6 +218,7 @@ export interface FileRouteTypes {
     | '/app/settings/team'
     | '/app/venues/$venueId'
     | '/oauth/bluesky/client-metadata.json'
+    | '/app/handoffs'
     | '/app/venues'
   id:
     | '__root__'
@@ -207,6 +229,7 @@ export interface FileRouteTypes {
     | '/app/pause'
     | '/app/'
     | '/app/connected/$network'
+    | '/app/handoffs/$handoffId'
     | '/app/settings/accounts'
     | '/app/settings/agents'
     | '/app/settings/brand'
@@ -215,6 +238,7 @@ export interface FileRouteTypes {
     | '/app/settings/team'
     | '/app/venues/$venueId'
     | '/oauth/bluesky/client-metadata.json'
+    | '/app/handoffs/'
     | '/app/venues/'
   fileRoutesById: FileRoutesById
 }
@@ -272,6 +296,20 @@ declare module '@tanstack/react-router' {
       path: '/connected/$network'
       fullPath: '/app/connected/$network'
       preLoaderRoute: typeof AppConnectedNetworkRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/handoffs/': {
+      id: '/app/handoffs/'
+      path: '/handoffs'
+      fullPath: '/app/handoffs/'
+      preLoaderRoute: typeof AppHandoffsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/handoffs/$handoffId': {
+      id: '/app/handoffs/$handoffId'
+      path: '/handoffs/$handoffId'
+      fullPath: '/app/handoffs/$handoffId'
+      preLoaderRoute: typeof AppHandoffsHandoffIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/settings/accounts': {
@@ -347,6 +385,7 @@ interface AppRouteChildren {
   AppPauseRoute: typeof AppPauseRoute
   AppIndexRoute: typeof AppIndexRoute
   AppConnectedNetworkRoute: typeof AppConnectedNetworkRoute
+  AppHandoffsHandoffIdRoute: typeof AppHandoffsHandoffIdRoute
   AppSettingsAccountsRoute: typeof AppSettingsAccountsRoute
   AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
   AppSettingsBrandRoute: typeof AppSettingsBrandRoute
@@ -354,6 +393,7 @@ interface AppRouteChildren {
   AppSettingsPublishingRoute: typeof AppSettingsPublishingRoute
   AppSettingsTeamRoute: typeof AppSettingsTeamRoute
   AppVenuesVenueIdRoute: typeof AppVenuesVenueIdRoute
+  AppHandoffsIndexRoute: typeof AppHandoffsIndexRoute
   AppVenuesIndexRoute: typeof AppVenuesIndexRoute
 }
 
@@ -364,6 +404,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPauseRoute: AppPauseRoute,
   AppIndexRoute: AppIndexRoute,
   AppConnectedNetworkRoute: AppConnectedNetworkRoute,
+  AppHandoffsHandoffIdRoute: AppHandoffsHandoffIdRoute,
   AppSettingsAccountsRoute: AppSettingsAccountsRoute,
   AppSettingsAgentsRoute: AppSettingsAgentsRoute,
   AppSettingsBrandRoute: AppSettingsBrandRoute,
@@ -371,6 +412,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsPublishingRoute: AppSettingsPublishingRoute,
   AppSettingsTeamRoute: AppSettingsTeamRoute,
   AppVenuesVenueIdRoute: AppVenuesVenueIdRoute,
+  AppHandoffsIndexRoute: AppHandoffsIndexRoute,
   AppVenuesIndexRoute: AppVenuesIndexRoute,
 }
 

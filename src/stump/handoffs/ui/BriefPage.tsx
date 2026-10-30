@@ -1,0 +1,187 @@
+import { Link } from '@tanstack/react-router'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { HydrationUnit } from '../../../base/hydration/unit'
+import { me, runAction } from '../../ui/api.ts'
+import { Chip, Disc, Outcome, useLoaded } from '../../ui/kit.tsx'
+import type { IconName } from '../../ui/icons.tsx'
+import { handoffStyles } from './styles.ts'
+import { briefTitle, dayOf, dueLine, LAPSE_AT, ruleLines, say, STATE, type Handoff } from './words.ts'
+
+const key = () => crypto.randomUUID()
+
+/** Runs one action at a time and keeps its outcome in plain words that name what a refusal names. */
+function useAct() {
+  const [busy, setBusy] = useState(false), [message, setMessage] = useState<{ text: string; error: boolean } | null>(null)
+  async function act<T>(work: () => Promise<T>, done: string): Promise<T | undefined> {
+    setBusy(true); setMessage(null)
+    try { const value = await work(); setMessage({ text: done, error: false }); return value }
+    catch (cause) { setMessage({ text: say(cause), error: true }); return undefined }
+    finally { setBusy(false) }
+  }
+  return { busy, message, act, setMessage }
+}
+
+/** The disclosure's shield, drawn like the kit's line icons (the kit has no shield). */
+const Shield = () => <span className="st-disc" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" focusable="false">
+  <path d="M12 3.5 5 6.2v5.3c0 4.3 2.9 7.6 7 9 4.1-1.4 7-4.7 7-9V6.2z" /><path d="m9 12 2.2 2.2L15.5 10" /></svg></span>
+
+/** One side panel: a heading with its disc at 1440, a row that opens at 390. */
+function Side({ icon, title, children }: { icon: IconName | 'shield'; title: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false), id = `ho-${title.toLowerCase().replace(/\W+/g, '-')}`
+  const disc = icon === 'shield' ? <Shield /> : <Disc icon={icon} />
+  return <section className={`st-ho-card${open ? ' open' : ''}`} aria-labelledby={id}>
+    <button className="st-ho-toggle" type="button" aria-expanded={open} aria-controls={`${id}-body`} onClick={() => setOpen(!open)}>
+      {disc}{title}<span className="st-ho-chevron" aria-hidden="true">›</span></button>
+    <h2 className="st-panel-title" id={id}>{disc}{title}</h2>
+    <div className="st-ho-body" id={`${id}-body`}>{children}</div>
+  </section>
+}
+
+/** A hand-off's brief (SPEC §4.2): the draft or talking points first, then the rules with their sources, why it fits, the facts and the disclosure. */
+export function BriefPage({ handoffId }: { handoffId: string }) {
+  const { data, error, refresh } = useLoaded(async () => {
+    const [who, handoff] = await Promise.all([me(), runAction<Handoff>('stump.handoffs.manage', { action: 'get', handoff_id: handoffId })])
+    return { who, handoff }
+  })
+  const handoff = data?.handoff
+  return <HydrationUnit>
+    <style>{handoffStyles}</style>
+    <section className="st-page st-handoffs" aria-labelledby="brief-title">
+      <Link className="st-back" to="/app/handoffs">← Hand-offs</Link>
+      {error ? <p className="st-error" role="alert">{error}</p> : null}
+      {handoff ? <>
+        <header className="st-ho-head">
+          <h1 id="brief-title">{briefTitle(handoff)}</h1>
+          <p className="st-ho-sub">
+            <span>{handoff.state === 'posted' ? `Posted ${dayOf(handoff.posted_at)}` : dueLine(handoff.due_at)} · {handoff.person_name}</span>
+            {handoff.state !== 'open' ? <Chip tone={STATE[handoff.state]!.tone} tick={STATE[handoff.state]!.tick}>{STATE[handoff.state]!.label}</Chip> : null}
+          </p>
+        </header>
+        <Notice handoff={handoff} mine={handoff.person_id === data.who.person.id} onChanged={refresh} />
+        <div className="st-ho-grid">
+          <Work handoff={handoff} mine={handoff.person_id === data.who.person.id} editor={['owner', 'admin', 'editor'].includes(data.who.person.role)} onChanged={refresh} />
+          <div className="st-ho-side">
+            <Side icon="ledger" title="Rules">
+              {ruleLines(handoff.rules as never).map(line => <div className="st-ho-rule" key={line.key}>
+                <span>{line.text}</span>
+                <span className="st-ho-rule-source">{line.rule.sourced && line.rule.source_url
+                  ? <><a href={line.rule.source_url} target="_blank" rel="noreferrer noopener">source</a> · read {dayOf(`${line.rule.read_at}T12:00:00Z`)}</>
+                  : <Chip tone="held">unsourced</Chip>}</span>
+              </div>)}
+            </Side>
+            {handoff.why ? <Side icon="check" title="Why it fits"><p>{handoff.why}</p></Side> : null}
+            <Side icon="ledger" title="Facts">
+              {handoff.facts.length ? handoff.facts.map(fact => <p className="st-ho-fact" key={fact.claim_id}>{fact.text}{proofWords(fact.proof) ? <span className="st-ho-proof"> ({proofWords(fact.proof)})</span> : null}</p>)
+                : <p className="st-ho-proof">No current claims with proof for this product.</p>}
+            </Side>
+            <Side icon="shield" title="Disclosure"><p>{handoff.disclosure_line}</p></Side>
+          </div>
+        </div>
+      </> : null}
+    </section>
+  </HydrationUnit>
+}
+
+const proofWords = (proof: unknown): string | null => {
+  if (typeof proof === 'string') return proof.replace(/^https?:\/\/(www\.)?/, '')
+  if (proof && typeof proof === 'object') { const value = proof as { text?: string; document?: string; url?: string }; return value.text ?? value.document ?? value.url?.replace(/^https?:\/\/(www\.)?/, '') ?? null }
+  return null
+}
+
+/** What the person needs to know before the draft: join first, a hold and its review date, or that it is posted. */
+function Notice({ handoff, mine, onChanged }: { handoff: Handoff; mine: boolean; onChanged(): void }) {
+  const { busy, message, act } = useAct()
+  if (handoff.state === 'join_first') return <div className="st-ho-notice" role="note">
+    <h2>Join {handoff.venue.name} first</h2>
+    <ol>{handoff.join_steps.map(step => <li key={step}>{step}</li>)}</ol>
+  </div>
+  if (handoff.state === 'held' && handoff.hold) return <div className="st-ho-notice held" role="note">
+    <h2>Held</h2>
+    <p>{handoff.hold.kind === 'rule' ? handoff.hold.reason : `${handoff.hold.by_name ?? 'Someone'}${handoff.hold.agent ? ` (${handoff.hold.agent.name})` : ''}: ${handoff.hold.reason}`}</p>
+    {handoff.hold.review_at ? <p>{LAPSE_AT[handoff.lapse ?? 'expire']} {dueLine(handoff.hold.review_at).replace(/^Due /, '')}.</p> : null}
+    {handoff.hold.next_open_at ? <p>{handoff.venue.name} next has room {dayOf(handoff.hold.next_open_at)}.</p> : null}
+    {handoff.hold.kind === 'person' ? <div className="st-actions">
+      <button className="st-button" type="button" disabled={busy} onClick={() => void act(() => runAction('stump.handoffs.manage', { action: 'release', handoff_id: handoff.id, idempotency_key: key(), expected_revision: handoff.revision }), 'Back in the queue.').then(done => { if (done) onChanged() })}>Release</button>
+    </div> : null}
+    <Outcome message={message} />
+  </div>
+  if (handoff.state === 'posted') return <div className="st-ho-notice" role="note">
+    <h2>Posted</h2>
+    <p><a href={handoff.url!} target="_blank" rel="noreferrer noopener">{handoff.url!.replace(/^https?:\/\/(www\.)?/, '')}</a> · {handoff.confirmation === 'network' ? 'checked with the network' : `confirmed by ${mine ? 'you' : handoff.person_name}`} · on the <a href="/app/ledger">ledger</a></p>
+  </div>
+  if (handoff.state === 'skipped' || handoff.state === 'expired') {
+    const last = [...handoff.history].reverse().find(entry => entry.to === handoff.state)
+    return <div className="st-ho-notice" role="note"><h2>{STATE[handoff.state]!.label}</h2><p>{String(last?.detail.reason ?? '')}</p></div>
+  }
+  return null
+}
+
+/** The draft (or talking points and the person's own words), copy and open, then paste the link back. */
+function Work({ handoff, mine, editor, onChanged }: { handoff: Handoff; mine: boolean; editor: boolean; onChanged(): void }) {
+  const [draft, setDraft] = useState(handoff.draft_text ?? ''), [own, setOwn] = useState(''), [url, setUrl] = useState(''), [attest, setAttest] = useState(false)
+  const [skipping, setSkipping] = useState(false), [reason, setReason] = useState('')
+  const { busy, message, act, setMessage } = useAct()
+  useEffect(() => { setDraft(handoff.draft_text ?? '') }, [handoff.draft_text])
+  const open = handoff.state === 'open', working = ['open', 'join_first', 'held'].includes(handoff.state) && (mine || editor)
+  const first = (handoff.person_name ?? '').split(/\s+/)[0] || 'their'
+  const thread = handoff.thread_url ?? handoff.venue.url
+  const copyText = handoff.draft_text === null ? own : draft
+
+  async function save() {
+    if (draft === (handoff.draft_text ?? '') || !draft.trim()) return
+    const done = await act(() => runAction('stump.handoffs.manage', { action: 'edit', handoff_id: handoff.id, draft_text: draft, idempotency_key: key(), expected_revision: handoff.revision }), 'Saved')
+    if (done) onChanged()
+  }
+  async function copy() {
+    try { await navigator.clipboard.writeText(copyText); setMessage({ text: 'Copied', error: false }) }
+    catch { setMessage({ text: 'Select the text and copy it.', error: true }) }
+  }
+  async function recordLink(event?: FormEvent) {
+    event?.preventDefault()
+    if (!url.trim()) { setMessage({ text: 'Paste the link to your post first.', error: true }); return }
+    const done = await act(() => runAction('stump.handoffs.check_link', { action: 'record', handoff_id: handoff.id, url: url.trim(), idempotency_key: key(),
+      ...(handoff.draft_text === null && own.trim() ? { own_words: own.trim() } : {}), ...(handoff.attestation_required ? { attest_own_words: attest } : {}) }), 'Recorded. It is on the ledger.')
+    if (done) onChanged()
+  }
+  async function skip(event: FormEvent) {
+    event.preventDefault()
+    const done = await act(() => runAction('stump.handoffs.manage', { action: 'skip', handoff_id: handoff.id, reason: reason.trim(), idempotency_key: key(), expected_revision: handoff.revision }), 'Skipped.')
+    if (done) { setSkipping(false); onChanged() }
+  }
+
+  return <section className="st-ho-card" aria-labelledby="draft-title">
+    {handoff.draft_text !== null ? <>
+      <h2 className="st-panel-title" id="draft-title"><Disc icon="pencil" />Draft</h2>
+      <p className="st-ho-voice">In {first}'s voice</p>
+      <textarea className="st-ho-draft" aria-labelledby="draft-title" value={draft} readOnly={!working} onChange={event => setDraft(event.target.value)} onBlur={() => void save()} />
+    </> : <>
+      <h2 className="st-panel-title" id="draft-title"><Disc icon="pencil" />Talking points</h2>
+      <p className="st-ho-voice">{handoff.attestation_required ? 'Say it in your own words; Stump writes no text for you here.' : `${handoff.venue.name} takes no AI-written text.`}</p>
+      <ul className="st-ho-points">{handoff.talking_points.map(point => <li key={point}>{point}</li>)}</ul>
+      <label className="st-field">Your own words
+        <textarea className="st-ho-draft" value={own} readOnly={!working} onChange={event => setOwn(event.target.value)} placeholder="Write what you will post." style={{ minHeight: 160 }} /></label>
+    </>}
+    {working ? <>
+      <div className="st-ho-buttons">
+        <button className="st-button primary" type="button" onClick={() => void copy()} disabled={!copyText}>Copy text</button>
+        {thread ? <a className="st-button outline" href={thread} target="_blank" rel="noreferrer noopener">Open thread ↗</a> : null}
+      </div>
+      {open && mine ? <form className="st-ho-link" onSubmit={recordLink}>
+        <input type="url" inputMode="url" aria-label="Paste the link" placeholder="Paste the link" value={url} onChange={event => setUrl(event.target.value)} />
+        <button className="st-button primary" type="submit" disabled={busy}>Record the link</button>
+        {!skipping ? <button className="st-ho-quiet" type="button" onClick={() => setSkipping(true)}>Skip</button> : null}
+      </form> : null}
+      {open && mine && handoff.attestation_required ? <label className="st-ho-attest"><input type="checkbox" checked={attest} onChange={event => setAttest(event.target.checked)} />These are my own words.</label> : null}
+      {!(open && mine) && !skipping ? <div className="st-ho-link"><button className="st-ho-quiet" type="button" onClick={() => setSkipping(true)}>Skip</button></div> : null}
+      {skipping ? <form className="st-ho-skip" onSubmit={skip}>
+        <label className="st-field">Why skip it<input value={reason} required maxLength={500} onChange={event => setReason(event.target.value)} /></label>
+        <div className="st-actions"><button className="st-button" type="submit" disabled={busy}>Skip</button><button className="st-ho-quiet" type="button" onClick={() => setSkipping(false)}>Keep it</button></div>
+      </form> : null}
+      <Outcome message={message} />
+      {open && mine ? <div className="st-ho-bar">
+        <button className="st-button primary" type="button" onClick={() => void copy()} disabled={!copyText}>Copy text</button>
+        <button className="st-button primary" type="button" disabled={busy} onClick={() => void recordLink()}>Record the link</button>
+      </div> : null}
+    </> : <Outcome message={message} />}
+  </section>
+}
