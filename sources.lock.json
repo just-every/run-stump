@@ -1772,7 +1772,7 @@
       "executable": false
     },
     "src/stump/lib/discovery/http.ts": {
-      "sha256": "4bf776aa21a2b1b7b8ca2741dba45c819a82a625879bc67fb0df27da61c19f0e",
+      "sha256": "4fe2a0e36785ea44c1037927e1d23c67e6c31d847e47b27f5cffc058a9b1f6f9",
       "executable": false
     },
     "src/stump/lib/discovery/index.ts": {
@@ -1796,15 +1796,15 @@
       "executable": false
     },
     "src/stump/lib/discovery/screen.ts": {
-      "sha256": "79b4a5814688550604aeb3dbec46e7ee9cba73d1b9d20f552289a133107c3403",
+      "sha256": "e8761281cfb71973a233b9aabea8ce553bdc095e0942e9b3847d5f9303d100f6",
       "executable": false
     },
     "src/stump/lib/discovery/slack.ts": {
-      "sha256": "07b995a9eb5b3b88bb96d79ef69c8a7cdc97d1110d6446e66ccda7cae4211b02",
+      "sha256": "0c851c069ad7afaa9b52554e1401631c09395ab6250884389c799afac07450cf",
       "executable": false
     },
     "src/stump/lib/discovery/terms.ts": {
-      "sha256": "bb7476bb807911914c5ece32a80ad0c5a6d9f9dfb10e5b45260b889634ee5f47",
+      "sha256": "6ae19cc2493d3571b3e0b524bb814e81f663932d70f9323194b9e991bf62e688",
       "executable": false
     },
     "src/stump/lib/discovery/text.ts": {
@@ -1824,7 +1824,7 @@
       "executable": false
     },
     "src/stump/lib/discovery/webhook.ts": {
-      "sha256": "65d7d3e110e794695e01af680ac687d95ce0f9b300daacf40bf1796bbb8c2447",
+      "sha256": "dcdef846e823d53d9700ab2e08cf1bf86714c31aa9d4a39e7b4c8d00c9e4566b",
       "executable": false
     },
     "src/stump/lib/discovery/xml.ts": {
