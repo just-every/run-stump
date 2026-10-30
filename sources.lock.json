@@ -3500,7 +3500,7 @@
       "executable": false
     },
     "src/stump/accounts/connect.ts": {
-      "sha256": "77bee89a030e445c187a5e2bbf3e9f48a199e948b19c84b94f269aac5c2e24be",
+      "sha256": "00fa7db365514799b8e630edb4a96e702559f2a542194948f3754c2634170bb3",
       "executable": false
     },
     "src/stump/accounts/handle.ts": {

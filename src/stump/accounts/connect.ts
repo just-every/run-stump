@@ -118,7 +118,7 @@ export async function startConnection(ctx: ActionContext, input: StartInput) {
     pending = { network, origin: instance.origin, redirect_uri: redirectUri, verifier: pkce.verifier }
     consentUrl = buildAuthorizeUrl(instance.origin, { clientId: app.clientId, redirectUri, state, codeChallenge: pkce.challenge })
   } else if (network === 'bluesky') {
-    // On reconnect, the account's handle and its server (a reconnect may follow a move to another server, so the server is only a hint).
+    // A reconnect names the account by its own DID; its stored server is only a hint, since an account may move to another server.
     const identifier = (input.account?.network_user_id ?? input.handle ?? input.account?.handle ?? '').trim().replace(/^@/, '')
     if (!identifier) refuse('invalid_arguments', { field: 'handle' })
     const identity = await blueskyIdentity(ctx, identifier, input.service === undefined ? null : namedServer(ctx, input.service), input.account?.instance ?? null)
