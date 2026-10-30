@@ -5,7 +5,6 @@ import { readAccount } from '../accounts/store.ts'
 import { aiHost } from '../drafting/ai.ts'
 import { checkReply, countInbox, listInbox, NO_DM, planReply, pollCeiling, pollInbox, replyClasses, runReply } from '../inbox/index.ts'
 import { EDITORS, READERS } from '../people/roles.ts'
-import { wholeUsd } from '../publish/schedule.ts'
 
 // stump.inbox.read and stump.inbox.reply: the company's X mentions and replies,
 // read at the company's read price and stored once, and answers to the people
@@ -37,7 +36,7 @@ export const inboxTools: StumpTool[] = [{
       async classify(args, ctx) {
         await account(ctx, args)
         const ceiling = pollCeiling(await xPrices(ctx.db))
-        return [{ class: 'standard' as const, facts: { measure: 1 } }, ...(ceiling > 0 ? [{ class: 'money' as const, facts: { measure: wholeUsd(ceiling), currency: 'USD', counterparty: 'known' as const } }] : [])]
+        return [{ class: 'standard' as const, facts: { measure: 1 } }, ...(ceiling > 0 ? [{ class: 'money' as const, facts: { measure: ceiling / 1e6, currency: 'usd', counterparty: 'x' } }] : [])]
       },
       async summary(args, ctx) {
         const row = await account(ctx, args), ceiling = pollCeiling(await xPrices(ctx.db))

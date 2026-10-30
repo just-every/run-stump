@@ -19,7 +19,7 @@ import { quoteXPost } from '../lib/x/index.ts'
 import { readPerson } from '../people/store.ts'
 import { readItem, type FullItemRow } from '../publish/items.ts'
 import { agentRuleBroken } from '../publish/rules.ts'
-import { blockingFlags, commit, mover, prepare, sendNow, wholeUsd } from '../publish/schedule.ts'
+import { blockingFlags, commit, mover, prepare, sendNow } from '../publish/schedule.ts'
 import { ANSWERED, readInboxItem, type InboxRow } from './store.ts'
 
 export const REPLY_TOOL = 'stump.inbox.reply'
@@ -112,7 +112,7 @@ function sameCall(ctx: ActionContext, earlier: FullItemRow, text: string | null)
 export function replyClasses(plan: ReplyPlan, aiHost: string) {
   return [
     { class: 'external' as const, facts: { measure: 1, counterparty: 'known' as const, ...(plan.generate ? { provider: aiHost } : {}) } },
-    ...(plan.charge_micro > 0 ? [{ class: 'money' as const, facts: { measure: wholeUsd(plan.charge_micro), currency: 'USD', counterparty: 'known' as const } }] : []),
+    ...(plan.charge_micro > 0 ? [{ class: 'money' as const, facts: { measure: plan.charge_micro / 1e6, currency: 'usd', counterparty: 'x' } }] : []),
     ...(plan.gated ? [{ class: 'gated' as const, facts: { measure: 1, provider: plan.account.network, step: X_AI_STEP } }] : []),
   ]
 }

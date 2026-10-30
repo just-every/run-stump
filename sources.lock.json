@@ -396,7 +396,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "f0e0158fba51deb5a37fee0ce352901f49fd30d75efc7d0d8ba1b3c5c2da3088",
+      "sha256": "87de05bbb65fa669c2be64da89e8b060c18c597d698aa474182168e2c3b2dec0",
       "executable": false
     },
     "AGENTS.md": {
@@ -3676,7 +3676,7 @@
       "executable": false
     },
     "src/stump/inbox/reply.ts": {
-      "sha256": "36cac5b8affacbf6c85150ba997dd503a319649ec473c71b535b4fbc6f192899",
+      "sha256": "a174adcf8bc3201e240f6ae9c1281425be45705873d85b478b28dd4e65360aa2",
       "executable": false
     },
     "src/stump/inbox/store.ts": {
@@ -4324,7 +4324,7 @@
       "executable": false
     },
     "src/stump/tools/inbox.ts": {
-      "sha256": "95d69341d823b0044a3286efb283dc98684c9a232eabf4bf2229598ddb341bc9",
+      "sha256": "48d5938b65456f3ac9ca4b4c14db33912b94b0919de354167e4ebd327f221573",
       "executable": false
     },
     "src/stump/tools/index.ts": {
@@ -4580,7 +4580,7 @@
       "executable": false
     },
     "tests/stump/inbox.test.mjs": {
-      "sha256": "356feca5478e51e794f841bb821cd6e523b36aac5c3bff240d691ad3f95e23b5",
+      "sha256": "39d19c3d3e36a9e77f3672820685624db339fb7656256510783f5d834186db15",
       "executable": false
     },
     "tests/stump/instance.mjs": {

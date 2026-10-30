@@ -84,7 +84,7 @@ test('the company reads its X mentions once at its read price, answers only peop
 
   // An agent reads the inbox: policy weighs the most a read can cost, and the answer carries what it did cost.
   const polled = await app.mcp(agent.token, 'stump.inbox.read', { action: 'poll', account_id: account.id })
-  assert.deepEqual(polled.result._meta['com.runeditrun/decision'].classes.find(entry => entry.class === 'money').facts, { measure: 1, currency: 'USD', counterparty: 'known' })
+  assert.deepEqual(polled.result._meta['com.runeditrun/decision'].classes.find(entry => entry.class === 'money').facts, { measure: 1, currency: 'usd', counterparty: 'x' })
   // Three mentions and the stranger's thread post at $0.005 a post read, and the company's own post they answered at $0.001.
   assert.deepEqual([polled.result.structuredContent.reads, polled.result.structuredContent.charge_usd, polled.result.structuredContent.added], [5, 0.021, 5])
   const again = ok(await inbox('stump.inbox.read', { action: 'poll', account_id: account.id }))
