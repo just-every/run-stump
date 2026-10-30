@@ -8,10 +8,10 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 1 | 35 | 108 | 144 |
-| Agent surface | 0 | 19 | 9 | 28 |
+| Core | 1 | 37 | 106 | 144 |
+| Agent surface | 0 | 20 | 8 | 28 |
 | Later | 0 | 0 | 8 | 8 |
-| Full target | 1 | 54 | 125 | 180 |
+| Full target | 1 | 57 | 122 | 180 |
 
 Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c9a` (30 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
@@ -728,7 +728,7 @@ Core · published · **missing** · From new
 
 #### STUMP-INBOX-001 — Replies and mentions on own accounts
 
-Core · published · **missing** · From new · Cites BASE-INPUT-002 · Rules D-7 · Register R-3
+Core · published · **partial** · From new · Cites BASE-INPUT-002 · Rules D-7 · Register R-3
 
 **Requirement.** One inbox holds replies, mentions, quotes and direct messages on the company's and its people's connected accounts: Bluesky and Mastodon notifications, Bluesky chats, Mastodon direct posts, X mentions and direct messages (read at X's metered price), Threads replies and comments on the LinkedIn page. Each arrives with its thread or conversation, author and link, rendered as text, within 15 minutes of the network serving it.
 
@@ -739,12 +739,12 @@ Core · published · **missing** · From new · Cites BASE-INPUT-002 · Rules D-
 4. Each item arrives once across polls.
 5. Markup in a reply reaches no screen as HTML.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/inbox.test.mjs` "the company reads its X mentions once at its read price, answers only people who engaged first, once each, and holds a near-duplicate"
+**Gap.** The company's X mentions and replies to its posts arrive with the post they answer as their thread (the company's own post with its ledger entry, or someone else's thread post), author, link and the author's public profile, each read charged from the price table and recorded (.3), each once across polls (.4); the X part of .1. Bluesky, Mastodon and LinkedIn-page items (.1), messages (.2) and an assertion of .5 (the screen renders post text as text) are not built.
 
 #### STUMP-INBOX-002 — Answering people who engaged first
 
-Core · published · **missing** · From new · Rules D-2, D-4 · Register R-1
+Core · published · **partial** · From new · Rules D-2, D-4 · Register R-1
 
 **Requirement.** From the inbox a person answers someone who engaged with the company's account first, in public or in a direct conversation that person started. On X, Stump allows one reply per interaction, as X's developer guidelines ask; an AI-drafted reply on X needs X's prior approval, which the company records for its app (STUMP-CONNECT-002). Every reply passes the disclosure, claim and near-duplicate checks.
 
@@ -756,8 +756,8 @@ Core · published · **missing** · From new · Rules D-2, D-4 · Register R-1
 5. A reply that mentions a product from a person's own account carries the disclosure line.
 6. A direct message can be sent only in a conversation the other person started.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/inbox.test.mjs` "the company reads its X mentions once at its read price, answers only people who engaged first, once each, and holds a near-duplicate"; `agent-surface.json` steps "inbox-reply", "inbox-ai-reply"
+**Gap.** On X a reply goes only to a post whose author engaged first (.4: a stranger in a public thread is refused with D-4 and X's automation rule), once per interaction (.2), through the claim, disclosure and near-duplicate checks, which refuse a flagged reply with item_flagged before anything is written (the disclosure case of .5 from a person's own account in the lane probe) and hold a near-duplicate until rewritten; an AI-drafted X reply holds at X's prior-approval step and the person may write their own (.3, journey and lane probe, no repo test). Bluesky replies (.1), a repo assertion of .5 and direct messages (.6) are not built or asserted.
 
 ### Switching from other tools
 
@@ -1952,8 +1952,8 @@ Core · target · **partial** · From new · Rules D-7
 4. A finding's text that tells Stump to add someone to the CRM changes nothing.
 5. On the labelled engager fixture, at least 90% of interactions labelled substantive are offered and at most 10% of those labelled passing reactions, and the measured rates are published in `docs/measures.md`.
 
-**Evidence.** `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"
-**Gap.** Orbit's signed signal door receives the engager's public handle and post link under the event type `<source_id>:social-engagement`, a stable identity basis per person, no email unless shown publicly (points 2 and 3). Offers are created by the inbox lane, which also proves point 4 and the measured rates of point 5.
+**Evidence.** `tests/stump/inbox.test.mjs` "people who engaged first with substance become offers to Orbit, signed, with only a publicly shown email and one identity each; a failed send stays offered"; `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"
+**Gap.** People who engaged first with the company's X account with substance become offers, reach Orbit's signed signal door with their public handle and post link (the X case of .1), keep one identity basis per person across engagements (.2) and carry an email only when the person's own X profile shows one, never guessed or looked up (.3); a failed send stays offered with its error. The Bluesky case of .1, an assertion of .4 and the measured rates of .5 are not done.
 
 #### STUMP-STACK-010 — Engagers to Attio, Pipedrive and any CRM
 
@@ -2694,8 +2694,8 @@ Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE
 4. A hand-off link check and a venue rule-page fetch compute external with the venue as counterparty.
 5. An argument or item text calling the post internal leaves external in place.
 
-**Evidence.** `agent-surface.json` journey (stump shard of `verification.json`) step "ai-draft"
-**Gap.** A drafting call that reaches the AI provider computes external with counterparty known and the provider host (.3), whatever its arguments say. Publishing (.1), replies (.2) and link and rule-page fetches (.4) belong to other lanes.
+**Evidence.** `agent-surface.json` journey (stump shard of `verification.json`) steps "ai-draft", "inbox-reply"
+**Gap.** A drafting call that reaches the AI provider computes external with counterparty known and the provider host (.3), whatever its arguments say. A reply to someone who engaged first computes external with counterparty known (.2); a reply to a stranger in a public thread is refused before any class is computed (D-4), so its "new" half is not reachable. Publishing (.1) and link and rule-page fetches (.4) belong to other lanes.
 
 #### STUMP-SURFACE-004 — Network spend and paid listings compute money
 
@@ -2715,7 +2715,7 @@ Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE
 
 #### STUMP-SURFACE-005 — Steps venues and providers keep for a person compute gated
 
-Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE-AGENT-007, BASE-AGENT-008 · Rules D-3
+Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE-AGENT-007, BASE-AGENT-008 · Rules D-3
 
 **Requirement.** Each step a venue or a provider keeps for a person computes gated with the venue or provider and the step, and is planned for the person it belongs to.
 
@@ -2728,8 +2728,8 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 6. An Instagram Story reminder, a G2 review reply, and the hand-off for an X reply to an account that has not engaged each compute gated with the person's step and appear among that person's hand-offs.
 7. Publishing to Instagram, Facebook, TikTok, YouTube, Pinterest or Google Business Profile before the company's app passes that provider's review computes gated with the review step.
 
-**Evidence.** None.
-**Gap.** Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet.
+**Evidence.** `agent-surface.json` journey (stump shard of `verification.json`) step "inbox-ai-reply"
+**Gap.** An AI-drafted X reply computes gated with provider x and the step x_ai_reply_approval (.4); recording X's approval (STUMP-CONNECT-002.3) is not built, so the after-approval half of .4 is open. Points .1-.3 and .5-.7 belong to other tools.
 
 #### STUMP-SURFACE-006 — Commitments and outside accounts
 
