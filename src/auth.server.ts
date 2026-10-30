@@ -10,6 +10,7 @@ import { operatorMail } from './mail.server.mjs'
 import { createBusinessSettings } from './modules/business-settings/index.ts'
 import { stumpRolePolicy } from './stump/people/policy.ts'
 import branding from './branding.json'
+import { postedAddress, rememberSent, stumpSignIn } from './signin-page'
 
 // The edition's declared theme (public/rer-theme.css), as Base frames link it.
 const theme = { href: '/rer-theme.css', productName: branding.name, accentColor: branding.primaryColor }
@@ -83,9 +84,12 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
   const page = await createSignInHandler(operatorAuth(env), {
    defaultReturnTo: '/setup',
   })(request)
-  if (page) return fontDocumentResponse(page)
+  if (page) return fontDocumentResponse(await stumpSignIn(request, page))
  }
- if (url.pathname.startsWith('/auth/')) return fontDocumentResponse(await createAuthHandler(operatorAuth(env))(request))
+ if (url.pathname.startsWith('/auth/')) {
+  const email = await postedAddress(request)
+  return fontDocumentResponse(rememberSent(await createAuthHandler(operatorAuth(env))(request), email, request))
+ }
  if (url.pathname === '/setup' || url.pathname === '/app' || url.pathname.startsWith('/app/')) {
   const setup = await firstRunResponse(request, env, operatorAuth(env), { theme })
   // Once the owner confirms on Base's /setup, Stump's own setup steps follow (src/routes/app.setup.tsx).

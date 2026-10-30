@@ -29,6 +29,20 @@ export function PanelTitle({ icon, children, id }: { icon?: IconName; children: 
   return <h2 className="st-panel-title" id={id}>{icon ? <Disc icon={icon} /> : null}{children}</h2>
 }
 
+/**
+ * A file field as one outline pill ("Choose the Buffer export") with the chosen file's name beside it: one border, no
+ * browser "Choose File / No file chosen" control. The input itself stays in the form, so the form reads it as before.
+ */
+export function FilePick({ name, label, accept, required = true }: { name: string; label: string; accept?: string; required?: boolean }) {
+  const [chosen, setChosen] = useState<string | null>(null)
+  return <label className="st-file">
+    <input className="st-sr" type="file" name={name} accept={accept} required={required} onChange={event => setChosen(event.target.files?.[0]?.name ?? null)} />
+    <span className="st-button outline" aria-hidden="true">{label}</span>
+    <span className="st-sr">{label}</span>
+    {chosen ? <span className="st-file-name">{chosen}</span> : null}
+  </label>
+}
+
 /** Two initials from a display name, for the initials disc. */
 export const initialsOf = (name: string) => name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]!.toUpperCase()).join('') || '?'
 export function Initials({ name }: { name: string }) {

@@ -76,6 +76,9 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-main { flex: 1; background: var(--stump-column); min-width: 0; padding: 40px 48px 64px; }
 .st-page { max-width: 1120px; }
 .st-page h1 { font-size: var(--stump-size-title); line-height: 38px; letter-spacing: -0.02em; margin: 0 0 8px; font-weight: 800; color: var(--stump-ink); }
+/* SPEC §4.1: 32 px from the title to the content, whether or not a subline follows (the subline sits 8 px under it and keeps the 32). */
+.st-page > h1:not(.st-sr) { margin-bottom: 32px; }
+.st-page > h1:has(+ :is(.st-lead, .st-sub)) { margin-bottom: 8px; }
 .st-lead { color: var(--stump-muted); font-size: 16px; margin: 0 0 32px; max-width: 60ch; }
 .st-page h2 { font-size: var(--stump-size-section); line-height: 26px; margin: 40px 0 12px; font-weight: 600; color: var(--stump-ink); }
 
@@ -164,6 +167,13 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 /* Save as you go (L15): a quiet "✓ Saved" beside what saved */
 .st-saved-mark { display: inline-flex; align-items: center; gap: 4px; min-height: 20px; font-size: var(--stump-size-small); color: var(--stump-emerald-text); font-weight: 500; }
 .st-saved-mark:empty { min-height: 0; }
+.st-agents-note { margin: 12px 0 0; }
+/* The file field (kit FilePick): one outline pill and the chosen file's name beside it */
+.st-file { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; position: relative; cursor: pointer; }
+.st-file .st-button { pointer-events: none; }
+.st-file:focus-within .st-button { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
+.st-file:hover .st-button { background: var(--stump-sunk); }
+.st-file-name { font-size: var(--stump-size-small); color: var(--stump-body); overflow-wrap: anywhere; min-width: 0; }
 /* A row's "⋯" More actions menu (kit MoreMenu) */
 .st-more-menu { position: relative; display: inline-flex; flex: none; }
 .st-more-menu .st-menu { top: calc(100% + 4px); min-width: 200px; }
@@ -241,6 +251,8 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-tip.end [role="tooltip"] { left: auto; right: 0; transform: none; }
 .st-tip:hover [role="tooltip"] { display: block; animation: st-tip-in .1s ease-out .3s both; }
 .st-tip:focus-within [role="tooltip"] { display: block; animation: st-tip-in .1s ease-out both; }
+/* A control whose menu is open says so with the menu; its tooltip steps aside. */
+.st-tip:has([aria-expanded="true"]) [role="tooltip"] { display: none; }
 @keyframes st-tip-in { from { opacity: 0; } to { opacity: 1; } }
 .st-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
@@ -336,6 +348,11 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-kv dd { margin: 0; overflow-wrap: anywhere; }
 .st-counts { display: flex; gap: calc(var(--stump-space) * 3); flex-wrap: wrap; margin: var(--stump-space) 0 calc(var(--stump-space) * 2); }
 .st-counts strong { display: block; font-size: var(--stump-size-section); }
+/* A venue's page (src/stump/venues/ui/VenuePage.tsx): section discs on Rules, Routes and Members, and its address and why as quiet lines */
+.st-venue .st-card > .st-panel-title { margin: 0 0 16px; }
+.st-venue-about { display: grid; gap: 6px; padding: 4px 4px 0; }
+.st-venue-about p { margin: 0; }
+.st-venue-about a { color: var(--stump-emerald-text); }
 @media (max-width: 760px) {
   .st-table th.st-cell, .st-table td.st-cell { display: none; }
   .st-rowline { display: block; font-size: var(--stump-size-small); color: var(--stump-muted); margin-top: 2px; }
@@ -439,6 +456,12 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-drafting .st-profile { display: grid; gap: 2px; }
 .st-drafting .st-profile .st-inline { display: grid; grid-template-columns: 56px minmax(0, 1fr); }
 .st-drafting .st-profile .st-inline input { padding: 2px 8px; min-height: 32px; }
+/* Fix claim selects the claim in its variant; Update the proof is the quiet way to Brand */
+.st-drafting button.st-pill { border: 0; font: inherit; font-size: var(--stump-size-small); line-height: 20px; cursor: pointer; }
+.st-drafting button.st-pill:focus-visible, .st-drafting .st-quiet-link:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
+.st-drafting .st-check-list li.danger span.st-fix { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
+.st-drafting .st-quiet-link { color: var(--stump-muted); font-size: var(--stump-size-small); text-decoration: underline; text-underline-offset: 3px; }
+.st-drafting .st-when-short { display: none; }
 @media (max-width: 760px) {
   .st-drafting .st-compose { grid-template-columns: 1fr; }
   .st-drafting .st-checks-toggle { display: flex; align-items: center; gap: 10px; font: inherit; width: 100%; background: none; border: 0; padding: 0; color: var(--stump-text); text-align: left; min-height: 44px; }
@@ -456,6 +479,14 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-drafting .st-kv { grid-template-columns: 1fr; gap: 4px; }
   .st-drafting .st-kv > :last-child { border-left: 0; padding-left: 0; min-height: 0; }
   .st-drafting .st-textarea.large { font-size: 18px; }
+}
+@media (max-width: 600px) {
+  /* The time never cuts: beside the action when both fit, else on its own row under it. */
+  .st-drafting .st-bar { flex-wrap: wrap; row-gap: 8px; }
+  .st-drafting .st-bar .st-when { flex: 1 1 176px; min-width: 176px; }
+  .st-drafting .st-when-long { display: none; }
+  .st-drafting .st-when-short { display: inline; }
+  .st-drafting .st-when-pill svg:last-child { display: none; }
 }
 
 /* First-run setup (src/routes/app.setup.tsx, SPEC §4.2): the paper page, the stump seated above one white card, four numbered steps. */
@@ -480,6 +511,9 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-setup-pills { display: flex; flex-wrap: wrap; gap: 12px; }
 .st-setup-pill { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: var(--stump-pill); background: var(--stump-emerald-tint); color: var(--stump-ink); font: 500 15px/20px var(--stump-font); text-decoration: none; white-space: nowrap; }
 .st-setup-pill:hover { background: #DCE9DE; }
+/* A pill with a quiet second line under its label ("Markdown or CSV") */
+.st-setup-pill.st-setup-pill-two { flex-direction: column; align-items: flex-start; justify-content: center; padding: 6px 18px; line-height: 18px; }
+.st-setup-pill-two span { font-size: 13px; font-weight: 400; color: var(--stump-muted); }
 .st-setup-done { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--stump-body); font-size: 15px; }
 .st-setup-foot { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 8px; }
 .st-setup-foot .st-button.large { min-width: 224px; }
@@ -497,13 +531,14 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-setup-steps h2 { font-size: 20px; margin-top: 7px; }
   .st-setup-foot .st-button.large { width: 100%; }
   .st-setup-pill { white-space: normal; padding: 10px 16px; }
+  .st-setup-pill.st-setup-pill-two { padding: 6px 16px; }
 }
 
 /* Venues with none yet (SPEC §4.2 "Empty state, Venues"): the plate and its block centred in the column */
 .st-venues-empty { min-height: calc(100vh - 72px - 40px - 46px - 64px); display: flex; flex-direction: column; justify-content: center; }
 .st-venues-empty .st-empty { padding: 24px 0 48px; }
 .st-venues-empty .st-empty img { width: 240px; margin-bottom: 24px; }
-.st-venues-empty .st-empty p { font-size: 17px; }
+.st-venues-empty .st-empty p { font-size: 17px; max-width: 640px; }
 @media (max-width: 760px) {
   .st-venues-empty { min-height: calc(100vh - 56px - 24px - 32px - 48px); }
   .st-venues-empty .st-empty img { width: 200px; }
@@ -528,7 +563,7 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-today .st-today-grid { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 24px; align-items: start; }
 .st-today .st-today-main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .st-today .st-panel { margin: 0; min-width: 0; }
-.st-today .st-today-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
+.st-today .st-today-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
 .st-today .st-today-pair.single { grid-template-columns: minmax(0, 1fr); }
 .st-today .st-today-focal { font-size: 21px; line-height: 28px; font-weight: 600; color: var(--stump-ink); margin: 0 0 6px; overflow-wrap: anywhere; }
 .st-today .st-today-who { font-size: var(--stump-size-body); line-height: 22px; color: var(--stump-body); margin: 0 0 20px; }
@@ -549,11 +584,15 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-today .st-today-out { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; color: var(--stump-body); text-decoration: none; }
 .st-today a.st-today-out:hover .st-today-out-line { text-decoration: underline; }
 .st-today .st-today-out-line { flex: 1 1 auto; min-width: 0; font-size: var(--stump-size-body); line-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.st-today .st-today-all { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; font-weight: 600; }
+.st-today .st-today-all { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; padding: 0; border: 0; background: none; font: 600 15px/20px var(--stump-font); color: var(--stump-emerald-text); cursor: pointer; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+.st-today .st-today-line a { color: var(--stump-emerald-text); }
+.st-today .st-today-count { display: flex; align-items: center; gap: 20px; color: inherit; text-decoration: none; border-radius: 12px; }
+.st-today .st-today-count:hover { text-decoration: underline; text-underline-offset: 4px; }
+.st-today .st-today-count:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
 .st-today .st-today-week ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .st-today .st-today-week li { display: flex; align-items: center; gap: 20px; font-size: 17px; color: var(--stump-ink); }
 .st-today .st-today-week .st-panel-title .st-disc { display: none; }
-.st-today .st-today-out:focus-visible, .st-today .st-today-finding-title:focus-visible, .st-today .st-today-all:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; border-radius: 6px; }
+.st-today .st-today-out:focus-visible, .st-today .st-today-finding-title:focus-visible, .st-today .st-today-all:focus-visible, .st-today .st-today-line a:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; border-radius: 6px; }
 @media (max-width: 1100px) {
   .st-today .st-today-pair { grid-template-columns: minmax(0, 1fr); }
 }
@@ -567,6 +606,7 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-today .st-today-week .st-panel-title .st-disc { display: inline-flex; }
   .st-today .st-today-week ul { display: flex; flex-wrap: wrap; gap: 12px 28px; }
   .st-today .st-today-week li { gap: 12px; font-size: 16px; white-space: nowrap; }
+  .st-today .st-today-count { gap: 12px; }
   .st-today .st-today-week .st-disc.big { width: 44px; height: 44px; font-size: 18px; }
 }
 `

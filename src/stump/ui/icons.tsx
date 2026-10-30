@@ -24,6 +24,8 @@ const paths = {
   speech: <><path d="M12 4.5c4.7 0 8.5 3 8.5 6.8s-3.8 6.7-8.5 6.7c-.9 0-1.8-.1-2.6-.3L5 19.5l.9-3.6C4.4 14.7 3.5 13.1 3.5 11.3c0-3.8 3.8-6.8 8.5-6.8z" /></>,
   send: <><path d="M20.5 3.5 10.5 13.5" /><path d="M20.5 3.5 14 20.5l-3.5-7-7-3.5z" /></>,
   chart: <><path d="M4.5 19.5h15" /><path d="M7.5 16v-5M12 16V7.5M16.5 16v-3" strokeWidth="2.25" /></>,
+  list: <><path d="M9.5 7h10M9.5 12h10M9.5 17h10" /><path d="M4.5 7h1M4.5 12h1M4.5 17h1" strokeWidth="2.5" /></>,
+  people: <><circle cx="9" cy="8" r="3.5" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><path d="M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .8 3 3 3 6" /></>,
 } as const
 
 export type IconName = keyof typeof paths

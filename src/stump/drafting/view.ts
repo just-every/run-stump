@@ -42,6 +42,36 @@ export function claimSpan(sentence: string, found: string[] | undefined): string
   }
   return null
 }
+const NUMBER = /[$€£]?\d+(?:[.,]\d+)*\s?(?:%|x\b|×)?/gi
+const plainNumber = (value: string) => value.replace(/\s+/g, '').toLowerCase()
+/** A number's kind, so "50%" is weighed against "30%" and never against a version like "3.2". */
+const unitOf = (value: string) => /%$/.test(value.trim()) ? '%' : /(x|×)$/i.test(value.trim()) ? 'x' : /^[$€£]/.test(value.trim()) ? '$' : ''
+/**
+ * The claim a mismatch flag is about, as the person wrote it ("50% faster"), not
+ * the whole sentence. The check's own findings name the numbers the draft used;
+ * without them (a stored flag), it is the first number the proof does not back.
+ */
+export function spanOf(flag: Flag, claims: ClaimFinding[] = []): string | null {
+  if (flag.code !== 'claim_number_mismatch') return null
+  const sentence = String(flag.text ?? '')
+  const found = claims.find(claim => claim.status === 'number_mismatch' && claim.text === sentence)?.found
+  if (found?.length) return claimSpan(sentence, found)
+  const expected = new Set((flag.expected ?? []).map(plainNumber)), units = new Set((flag.expected ?? []).map(unitOf))
+  const numbers = (sentence.match(NUMBER) ?? []).map(number => number.trim())
+  const kin = numbers.filter(number => units.has(unitOf(number)))
+  const used = (kin.length ? kin : numbers).filter(number => !expected.has(plainNumber(number)))
+  return claimSpan(sentence, used.length ? used : kin.length ? kin : numbers)
+}
+
+/** Where a flag's claim sits in a variant's text, to mark it: [start, end), or null when the text no longer holds it. */
+export function spanAt(text: string, flag: Flag, claims: ClaimFinding[] = []): [number, number] | null {
+  const span = spanOf(flag, claims)
+  if (!span) return null
+  const from = typeof flag.start === 'number' ? Math.max(0, flag.start - 1) : 0
+  const at = text.indexOf(span, from) >= 0 ? text.indexOf(span, from) : text.indexOf(span)
+  return at < 0 ? null : [at, at + span.length]
+}
+
 /** One line for a flag, in the person's words; `span` names the claim itself where the check found it. */
 export function flagLine(flag: Flag, span?: string | null): string {
   switch (flag.code) {

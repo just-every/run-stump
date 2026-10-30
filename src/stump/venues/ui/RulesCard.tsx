@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { runAction } from '../../ui/api.ts'
-import { Outcome, Tip, pageName, useRun } from '../../ui/kit.tsx'
+import { Disc, Outcome, Tip, pageName, useRun } from '../../ui/kit.tsx'
 import { readOn } from './labels.ts'
 import type { Rule, RuleKey, Venue } from './types.ts'
 
@@ -40,7 +40,7 @@ const key = () => crypto.randomUUID()
 export function RulesCard({ venue, editor, onSaved }: { venue: Venue; editor: boolean; onSaved(): void }) {
   const [editing, setEditing] = useState<RuleKey | null>(null)
   return <section className="st-card" aria-labelledby="rules-title">
-    <h2 id="rules-title">Rules</h2>
+    <h2 className="st-panel-title" id="rules-title"><Disc icon="list" />Rules</h2>
     {KEYS.map(name => {
       const rule = venue.rules[name]
       return <div key={name}>

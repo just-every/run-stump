@@ -4,6 +4,7 @@
    tokens dress Base's no-JavaScript documents (sign-in and first-run setup) as
    Stump: the paper ground with the pastel stump over one white card. They use
    only the classes and elements Base renders, so Base's pages stay unedited. */
+@import url('/fonts/fonts.css');
 :root {
   --rer-font-body: Gantari, Arial, sans-serif;
   --rer-font-heading: Gantari, Arial, sans-serif;
@@ -59,10 +60,42 @@ html.rer-themed main button.secondary { background: #FFFFFF; color: #1C1B18; bor
 html.rer-themed main button:focus-visible, html.rer-themed main .action:focus-visible, html.rer-themed main a:focus-visible { outline: 2px solid #0B8A60; outline-offset: 2px; }
 html.rer-themed main .notice { border: 0; border-radius: 14px; background: #E7F0E8; color: #08724F; padding: 12px 16px; }
 html.rer-themed main .secondary-link a { color: #08724F; }
+html.rer-themed main:not(:has(form[action="/setup"])) > p.sent { text-align: center; }
+html.rer-themed main p.sent strong { color: #1C1B18; font-weight: 600; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { html.rer-themed main button, html.rer-themed main .action { transition: none; transform: none; } }
 @media (max-width: 480px) {
   html.rer-themed body { padding: 24px 16px; }
   html.rer-themed body::before { width: 160px; height: 101px; }
   html.rer-themed body > main { padding: 24px 20px; }
   html.rer-themed main h1 { font-size: 26px; }
+}
+
+/* Base's Agents page (/agents, its approvals and audit), opened from Settings › Agents: the Stump lockup over the
+   paper ground, white cards, Gantari and pill buttons. Scoped to that page's own frame (a skip link, then its header). */
+body:has(> a.skip + header) { background: #F9F3E4 url('/art/grain.png') repeat; color: #1C1B18; font: 16px/1.55 Gantari, Arial, sans-serif; }
+body:has(> a.skip + header) > header { padding-block: 24px 8px; }
+body:has(> a.skip + header) > header > a:first-child { gap: 10px; color: #1C1B18; text-decoration: none; font: 800 24px/1 Gantari, Arial, sans-serif; letter-spacing: -0.02em; }
+body:has(> a.skip + header) > header > a:first-child::before { content: ""; flex: none; width: 40px; height: 40px; background: url('/brand/stump-mark.svg') center / contain no-repeat; }
+body:has(> a.skip + header) > header nav a { min-height: 40px; padding: 0 16px; border-radius: 999px; color: #1C1B18; text-decoration: none; font-weight: 600; }
+body:has(> a.skip + header) > header nav a[aria-current="page"] { background: #E7F0E8; }
+body:has(> a.skip + header) main h1 { font: 800 32px/38px Gantari, Arial, sans-serif; letter-spacing: -0.02em; }
+body:has(> a.skip + header) main h2 { font: 600 19px/26px Gantari, Arial, sans-serif; }
+body:has(> a.skip + header) main section { border: 0; border-radius: 18px; padding: 28px; box-shadow: 0 1px 2px rgba(28,27,24,.05), 0 14px 32px -14px rgba(92,70,30,.22); }
+body:has(> a.skip + header) main a { color: #08724F; }
+body:has(> a.skip + header) main .meta, body:has(> a.skip + header) main .muted { color: #66625A; }
+body:has(> a.skip + header) main select, body:has(> a.skip + header) main input:not([type=checkbox]):not([type=radio]):not([type=hidden]), body:has(> a.skip + header) main textarea {
+  max-width: 480px; border: 1px solid #D9DDE2; border-radius: 10px; background: #FFFFFF; color: #1C1B18;
+}
+body:has(> a.skip + header) main textarea { max-width: none; }
+body:has(> a.skip + header) main button { min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: #1C1B18; color: #FFFFFF; font: 600 15px/20px Gantari, Arial, sans-serif; }
+body:has(> a.skip + header) main button:hover { background: #2E2C28; }
+body:has(> a.skip + header) main button.secondary { background: #FFFFFF; color: #1C1B18; border: 1px solid #D9D5CB; }
+body:has(> a.skip + header) :focus-visible { outline: 2px solid #0B8A60; outline-offset: 2px; }
+body:has(> a.skip + header) main .notice { border: 0; border-radius: 14px; background: #E7F0E8; color: #08724F; }
+body:has(> a.skip + header) main th, body:has(> a.skip + header) main td, body:has(> a.skip + header) main .stack > li { border-color: #E6EAEE; }
+@media (max-width: 600px) {
+  body:has(> a.skip + header) > header > a:first-child { font-size: 20px; }
+  body:has(> a.skip + header) > header > a:first-child::before { width: 32px; height: 32px; }
+  body:has(> a.skip + header) main h1 { font-size: 26px; line-height: 32px; }
+  body:has(> a.skip + header) main section { padding: 20px 16px; }
 }

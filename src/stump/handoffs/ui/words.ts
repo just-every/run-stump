@@ -29,7 +29,7 @@ export function shortWhen(handoff: Handoff, now = Date.now()): string {
 export function dueLine(iso: string | null): string {
   if (!iso) return ''
   const date = new Date(iso)
-  return `Due ${new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(date)} · ${new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date)}`
+  return `Due ${new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(date)} · ${new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZoneName: 'shortGeneric' }).format(date)}`
 }
 export const dayOf = (iso: string | null) => iso ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(iso)) : ''
 

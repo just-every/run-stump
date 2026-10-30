@@ -7,16 +7,20 @@ import { MoreMenu, Outcome, accountWord, useLoaded, useRun } from '../stump/ui/k
 import { flagLine, type Flag } from '../stump/drafting/view.ts'
 import { listeningStyles } from '../stump/watches/styles.ts'
 import type { BlockedAuthor, FindingList, FindingView, PollView, WatchList, WatchView } from '../stump/watches/ui-types.ts'
+import { JOB_WORDS, chipsFor, jobOf } from '../stump/watches/finding-view.ts'
 
 export const Route = createFileRoute('/app/listening')({
-  validateSearch: (search: Record<string, unknown>): { watch?: string; finding?: string } => ({
+  // `act` opens the focal finding's job at once (Today's "Draft a reply" lands here).
+  validateSearch: (search: Record<string, unknown>): { watch?: string; finding?: string; act?: true } => ({
     ...(typeof search.watch === 'string' ? { watch: search.watch } : {}), ...(typeof search.finding === 'string' ? { finding: search.finding } : {}),
+    ...(search.act === true || search.act === 'true' ? { act: true as const } : {}),
   }),
   component: Listening,
 })
 
 const key = () => crypto.randomUUID()
 const KINDS: Record<string, string> = { hn: 'Hacker News', rss: 'RSS', bluesky: 'Bluesky', mastodon: 'Mastodon' }
+const NEW_WATCH = '+new'
 const kindsOf = (watch: WatchView) => [...new Set(watch.sources.map(source => KINDS[source.kind]))].join(', ') || 'No sources yet'
 
 /** A refusal in its own words where the door gave them, else the app's plain words. */
@@ -68,9 +72,11 @@ function Listening() {
       <div className="st-listen-grid">
         <div className="st-card" aria-label="Your watches">
           <h2>Your watches</h2>
-          <select className="st-pick" aria-label="Watch" value={selected?.id ?? ''} onChange={event => choose(event.target.value)}>
+          {/* At phone width the watches are one picker; New watch is its last choice, below the focal finding in weight. */}
+          {items.length ? <select className="st-pick" aria-label="Watch" value={editing === 'new' ? NEW_WATCH : selected?.id ?? ''} onChange={event => event.target.value === NEW_WATCH ? setEditing('new') : choose(event.target.value)}>
             {items.map(watch => <option key={watch.id} value={watch.id}>{watch.name}</option>)}
-          </select>
+            {mayEdit ? <option value={NEW_WATCH}>+ New watch</option> : null}
+          </select> : null}
           <ul className="st-watches st-watches-list">
             {items.map(watch => <li key={watch.id}>
               <button type="button" className="st-watch" aria-current={watch.id === selected?.id} onClick={() => choose(watch.id)}>
@@ -80,12 +86,12 @@ function Listening() {
             </li>)}
           </ul>
           {watches.data && !items.length ? <p className="st-empty">No watches yet. A watch follows Hacker News, feeds, Bluesky and Mastodon for threads you could answer.</p> : null}
-          {mayEdit ? <button className="st-button primary" type="button" onClick={() => setEditing('new')}>+ New watch</button> : null}
+          {mayEdit ? <button className={items.length ? 'st-button primary st-new-watch' : 'st-button primary'} type="button" onClick={() => setEditing('new')}>+ New watch</button> : null}
         </div>
         <div className="st-card" aria-label={editing ? 'Watch' : 'Top findings'}>
           {editing === 'new' ? <Editor role={role} onDone={async id => { setEditing(null); await reload(); choose(id) }} onCancel={() => setEditing(null)} /> : null}
           {editing === 'edit' && selected ? <Editor role={role} watch={selected} blocked={watches.data?.list.blocked_authors ?? []} onDone={async () => { setEditing(null); await reload() }} onCancel={() => setEditing(null)} /> : null}
-          {!editing ? <Findings watch={selected} data={findings.data?.watch.id === selected?.id ? findings.data : null} error={findings.error} focus={search.finding} may={mayEdit}
+          {!editing ? <Findings watch={selected} data={findings.data?.watch.id === selected?.id ? findings.data : null} error={findings.error} focus={search.finding} act={search.act === true} may={mayEdit}
             context={{ me: watches.data?.me.person.id ?? '', role, products: watches.data?.products ?? [], accounts: watches.data?.accounts ?? [] }}
             onFocus={id => void navigate({ search: { ...(selected ? { watch: selected.id } : {}), finding: id } })}
             onEdit={() => setEditing('edit')} onChange={reload} /> : null}
@@ -99,7 +105,7 @@ interface Account { id: string; network: string; handle: string; display_name: s
 /** What a finding's action needs: who is acting, the products and the accounts that can reply. */
 interface Context { me: string; role: string; products: Array<{ id: string; name: string }>; accounts: Account[] }
 
-function Findings({ watch, data, error, focus, may, context, onFocus, onEdit, onChange }: { watch: WatchView | null; data: FindingList | null; error: string | null; focus?: string; may: boolean; context: Context; onFocus(id: string): void; onEdit(): void; onChange(): Promise<void> }) {
+function Findings({ watch, data, error, focus, act, may, context, onFocus, onEdit, onChange }: { watch: WatchView | null; data: FindingList | null; error: string | null; focus?: string; act: boolean; may: boolean; context: Context; onFocus(id: string): void; onEdit(): void; onChange(): Promise<void> }) {
   const { busy, message, run } = useRun()
   if (!watch) return <><h2>Top findings</h2><p className="st-empty">Create a watch to see the threads worth answering.</p></>
   async function checkNow() {
@@ -111,37 +117,20 @@ function Findings({ watch, data, error, focus, may, context, onFocus, onEdit, on
   return <>
     <div className="st-card-head">
       <h2>Top findings</h2>
-      {may ? <div className="st-actions">
-        <button className="st-button" type="button" disabled={busy} onClick={() => void checkNow()}>Check now</button>
-        <button className="st-button" type="button" onClick={onEdit}>Edit watch</button>
-      </div> : null}
+      {/* Checking now and editing the watch are the header's one ⋯ menu, below the focal finding in weight. */}
+      {may ? <MoreMenu items={[{ label: busy ? 'Checking…' : 'Check now', run: () => checkNow() }, { label: 'Edit watch', run: onEdit }]} /> : null}
     </div>
-    <p className="st-meta" style={{ margin: '0 0 16px' }}>{watch.name} · {kindsOf(watch)} · {watch.muted ? 'muted, alerts are off' : `next check ${until(watch.next_poll_at)}`}</p>
+    <p className="st-meta st-listen-next">{watch.muted ? 'Muted, alerts are off' : `Next check ${until(watch.next_poll_at)}`}</p>
     <Outcome message={message} />
     {failing ? <div className="st-banner error" role="status">The last check failed {ago(failing.at)}: {failing.message}. Earlier findings are kept.</div> : null}
     {error ? <p className="st-error">{error}</p> : null}
     {data && !data.items.length ? <p className="st-empty">No findings yet. Matches from the last 30 days and anything new will show here.</p> : null}
     {!data && !error ? <p className="st-empty">Loading findings.</p> : null}
     <ol className="st-findings">
-      {data?.items.map((finding, index) => <Finding key={finding.id} finding={finding} rank={index + 1} watch={watch} focal={focus ? finding.id === focus : index === 0} may={may} context={context}
+      {data?.items.map((finding, index) => <Finding key={finding.id} finding={finding} rank={index + 1} watch={watch} focal={focus ? finding.id === focus : index === 0} act={act} may={may} context={context}
         onFocus={() => onFocus(finding.id)} onChange={onChange} />)}
     </ol>
   </>
-}
-
-/** The reasons worth a chip (H16): a question, a fit with a product or venue, freshness, a product or competitor named. Matching the watch's terms and coming from the backfill are every finding's default, so they show nothing. */
-function chipsFor(finding: FindingView, watch: WatchView, products: Context['products']): Array<{ label: string; title: string }> {
-  const chips: Array<{ label: string; title: string }> = []
-  const product = products.find(item => watch.product_ids.includes(item.id))
-  for (const reason of finding.reason_details) {
-    if (reason.factor === 'question' && reason.points > 0) chips.push({ label: reason.points >= reason.max ? 'asks a question' : 'asks for help', title: reason.label })
-    else if (reason.factor === 'matched_terms' && reason.points > 0 && product) chips.push({ label: `fits ${product.name}`, title: reason.label })
-    else if (reason.factor === 'venue_fit' && !/no venue fit/.test(reason.label) && reason.points >= reason.max / 2 && finding.venue) chips.push({ label: `fits ${finding.venue.name}`, title: reason.label })
-    else if (reason.factor === 'freshness' && reason.points >= reason.max * 0.6) chips.push({ label: 'fresh', title: reason.label })
-  }
-  for (const mention of finding.mentions.slice(0, 2)) chips.push({ label: `names ${mention.kind === 'product' ? mention.product : mention.matched}`, title: mention.kind === 'product' ? 'One of your products' : 'A competitor you track' })
-  const rank = (label: string) => /^asks/.test(label) ? 0 : /^fits/.test(label) ? 1 : label === 'fresh' ? 2 : 3
-  return chips.filter((chip, index) => chips.findIndex(other => other.label === chip.label) === index).sort((a, b) => rank(a.label) - rank(b.label)).slice(0, 3)
 }
 
 /** A title cut at a word, never inside one. */
@@ -153,37 +142,36 @@ function wordClip(text: string, max = 110): string {
   return `${(space > max * 0.5 ? head.slice(0, space) : head).replace(/[\s,.;:–—-]+$/, '')}…`
 }
 
-/** The one job a finding's route allows, as its primary action: reply from an account, or hand it to the member who posts there. */
-const jobOf = (finding: FindingView) => finding.routes.includes('publish') ? 'reply' as const
-  : finding.venue && finding.routes.includes('handoff_draft') ? 'handoff_draft' as const
-  : finding.venue && finding.routes.includes('handoff_brief') ? 'handoff_brief' as const : null
-const JOB_WORDS = { reply: 'Draft a reply', handoff_draft: 'Hand off with draft', handoff_brief: 'Hand off with brief' } as const
-
-function Finding({ finding, rank, watch, focal, may, context, onFocus, onChange }: { finding: FindingView; rank: number; watch: WatchView; focal: boolean; may: boolean; context: Context; onFocus(): void; onChange(): Promise<void> }) {
+function Finding({ finding, rank, watch, focal, act, may, context, onFocus, onChange }: { finding: FindingView; rank: number; watch: WatchView; focal: boolean; act: boolean; may: boolean; context: Context; onFocus(): void; onChange(): Promise<void> }) {
   const { run } = useRun()
-  const [working, setWorking] = useState(false)
   const job = context.role === 'viewer' ? null : jobOf(finding)
+  const [working, setWorking] = useState(focal && act && !!job)
   const chips = chipsFor(finding, watch, context.products)
   const title = wordClip(finding.title || finding.text)
+  const source = KINDS[finding.source] ?? finding.source
+  // A row past the first reads as a title, one meta line and its first chip (H16); the thread opens from its ⋯ menu.
+  const shown = focal ? chips : chips.slice(0, 1), more = chips.length - shown.length
   return <li className={focal ? 'st-finding focal' : 'st-finding'} id={`finding-${finding.id}`}>
     <span className="st-numeral" aria-hidden="true">{rank}</span>
     <div className="st-finding-body">
       <h3>{focal ? title : <button type="button" className="st-finding-title" onClick={onFocus}>{title}</button>}</h3>
-      <div className="st-meta">{KINDS[finding.source] ?? finding.source} · {ago(finding.published_at)}{finding.author ? ` · ${finding.author}` : ''}{finding.points !== null && finding.source === 'hn' ? ` · ${finding.points} points` : ''}</div>
-      {chips.length ? <ul className="st-chips" aria-label="Why it ranks here">
-        {chips.map(chip => <li className="st-chip" key={chip.label} title={chip.title}>{chip.label}</li>)}
+      <div className="st-meta">{focal ? <>{source} · {ago(finding.published_at)}{finding.author ? ` · ${finding.author}` : ''}{finding.points !== null && finding.source === 'hn' ? ` · ${finding.points} points` : ''}</> : `${source} · ${ago(finding.published_at)}`}</div>
+      {shown.length ? <ul className="st-chips" aria-label="Why it ranks here">
+        {shown.map(chip => <li className="st-chip" key={chip.label} title={chip.title}>{chip.label}</li>)}
+        {more > 0 ? <li className="st-meta st-chip-more" title={chips.slice(1).map(chip => chip.label).join(', ')}>+{more}</li> : null}
       </ul> : null}
-      <div className="st-finding-actions">
-        {focal && job && !working ? <button type="button" className="st-button primary" onClick={() => setWorking(true)}>{JOB_WORDS[job]} <span aria-hidden="true">→</span></button> : null}
+      {focal ? <div className="st-finding-actions">
+        {job && !working ? <button type="button" className="st-button primary" onClick={() => setWorking(true)}>{JOB_WORDS[job]} <span aria-hidden="true">→</span></button> : null}
         <a className="st-open-link" href={finding.url} target="_blank" rel="noopener noreferrer">Open thread ↗</a>
-      </div>
+      </div> : null}
       {focal && working && job === 'reply' ? <ReplyForm finding={finding} context={context} onClose={() => setWorking(false)} /> : null}
       {focal && working && job && job !== 'reply' ? <HandOffForm finding={finding} watch={watch} context={context} onClose={() => setWorking(false)} /> : null}
     </div>
-    {may ? <MoreMenu items={[
-      { label: watch.muted ? 'Unmute watch' : 'Mute watch', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'mute', watch_id: watch.id, muted: !watch.muted, idempotency_key: key() })); await onChange() } },
-      ...(finding.author ? [{ label: 'Block author', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'block_author', watch_id: watch.id, handle: finding.author, source: finding.source, idempotency_key: key() })); await onChange() } }] : []),
-      ...(finding.routes.includes('dismiss') ? [{ label: 'Dismiss', run: async () => { await run(() => runAction('stump.findings.work', { action: 'dismiss', finding_id: finding.id, idempotency_key: key() })); await onChange() } }] : []),
+    {may || !focal ? <MoreMenu items={[
+      ...(focal ? [] : [{ label: 'Open thread ↗', run: () => { window.open(finding.url, '_blank', 'noopener,noreferrer') } }]),
+      ...(may ? [{ label: watch.muted ? 'Unmute watch' : 'Mute watch', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'mute', watch_id: watch.id, muted: !watch.muted, idempotency_key: key() })); await onChange() } }] : []),
+      ...(may && finding.author ? [{ label: 'Block author', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'block_author', watch_id: watch.id, handle: finding.author, source: finding.source, idempotency_key: key() })); await onChange() } }] : []),
+      ...(may && finding.routes.includes('dismiss') ? [{ label: 'Dismiss', run: async () => { await run(() => runAction('stump.findings.work', { action: 'dismiss', finding_id: finding.id, idempotency_key: key() })); await onChange() } }] : []),
     ]} /> : <span />}
   </li>
 }

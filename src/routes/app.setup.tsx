@@ -101,7 +101,7 @@ function SetupPage() {
               <h2>Bring your venues</h2>
               {data?.venues ? <p className="st-setup-done"><span className="st-tick" aria-hidden="true"><Icon name="check" /></span>{data.venues} {data.venues === 1 ? 'venue' : 'venues'}</p> : null}
               <div className="st-setup-pills">
-                <a className="st-setup-pill" href="/app/venues?import=1">Import a venue list (Markdown or CSV)</a>
+                <a className="st-setup-pill st-setup-pill-two" href="/app/venues?import=1">Import a venue list<span>Markdown or CSV</span></a>
                 <a className="st-setup-pill" href="/app/settings/import">Switch from Buffer</a>
               </div>
             </div>

@@ -20,8 +20,7 @@ function AgentsPage() {
   const live = data?.items.filter(item => !item.revoked_at) ?? []
   return <HydrationUnit>
     <section className="st-page" aria-labelledby="agents-title">
-      <h1 id="agents-title">Agents</h1>
-      <p className="st-lead">An agent you connect here acts for you, with exactly your role. The company policy, Pause and every agent's audit are on the <a href="/agents">Agents page</a>.</p>
+      <h1 id="agents-title" className="st-sr">Agents</h1>
       {error ? <p className="st-error">{error}</p> : null}
       <form className="st-panel" onSubmit={submit} aria-labelledby="connect-title">
         <div className="st-panel-head"><h2 className="st-panel-title" id="connect-title">Connect an agent</h2></div>
@@ -29,6 +28,7 @@ function AgentsPage() {
           <label className="st-field">Agent name<input name="name" required maxLength={80} placeholder="Release writer" autoComplete="off" /></label>
           <div><button className="st-button primary" type="submit" disabled={busy}><Icon name="key" />Create credential</button></div>
         </div>
+        <p className="st-meta st-agents-note">It acts for you, with exactly your role. Policy, Pause and audit are on the <a href="/agents">Agents page</a>.</p>
         <Outcome message={message} />
         {issued ? <div className="st-panel side">
           <p className="st-name">Give this token to {issued.name}.</p>

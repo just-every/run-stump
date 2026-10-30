@@ -24,8 +24,7 @@ function TeamPage() {
   const label = (value: string) => value.charAt(0).toUpperCase() + words(value).slice(1)
   return <HydrationUnit>
     <section className="st-page" aria-labelledby="team-title">
-      <h1 id="team-title">Team</h1>
-      <p className="st-lead">Everyone who works in Stump, with their role and their connection to the company.</p>
+      <h1 id="team-title" className="st-sr">Team</h1>
       {error ? <p className="st-error">{error}</p> : null}
       {note ? <p className="st-note" role="status">{note}</p> : null}
       <div className="st-panel">

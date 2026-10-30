@@ -55,8 +55,7 @@ function PublishingPage() {
   }
   return <HydrationUnit>
     <section className="st-page" aria-labelledby="publishing-title">
-      <h1 id="publishing-title">Publishing</h1>
-      <p className="st-lead">Pause everything for an incident, set up each network's app, and keep each account's queue.</p>
+      <h1 id="publishing-title" className="st-sr">Publishing</h1>
       {error ? <p className="st-error">{error}</p> : null}
       <div className="st-status">
         <div>

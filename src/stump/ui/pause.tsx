@@ -64,7 +64,7 @@ export function ResumeOutcome({ resumed }: { resumed: Resumed }) {
   const out = resumed.will_post.length, held = resumed.held_overdue.length
   return <div aria-live="polite">
     <CountRow count={out} label={out === 1 ? 'post will go out' : 'will go out'} meta={out ? times(resumed.will_post) : 'Nothing was waiting.'} />
-    <CountRow count={held} held label={held === 1 ? 'overdue stays held' : 'overdue stay held'} meta={held ? 'Their time passed while paused. Reschedule or drop them.' : 'None passed its time while paused.'} />
+    {held ? <CountRow count={held} held label={held === 1 ? 'overdue stays held' : 'overdue stay held'} meta="Their time passed while paused. Reschedule or drop them." /> : null}
   </div>
 }
 
@@ -142,8 +142,8 @@ export function PauseControl({ role, personId }: { role: string | undefined; per
       <p className="st-popover-title" id="st-resume-title">{resumed ? 'Publishing resumed' : 'Resume publishing'}</p>
       {resumed ? <ResumeOutcome resumed={resumed} /> : preview ? <div aria-live="polite">
         <CountRow count={preview.out.length} label={preview.out.length === 1 ? 'post will go out' : 'will go out'} meta={preview.out.length ? times(preview.out) : 'Nothing is waiting.'} />
-        <CountRow count={preview.overdue.length} held label={preview.overdue.length === 1 ? 'overdue stays held' : 'overdue stay held'}
-          meta={preview.overdue.length ? `Was due ${times(preview.overdue)}. Reschedule or drop it.` : 'None passed its time.'} />
+        {preview.overdue.length ? <CountRow count={preview.overdue.length} held label={preview.overdue.length === 1 ? 'overdue stays held' : 'overdue stay held'}
+          meta={`Was due ${times(preview.overdue)}. Reschedule or drop it.`} /> : null}
       </div> : <div className="st-resume-wait" />}
       <Outcome message={message} />
       <div className="st-actions">
