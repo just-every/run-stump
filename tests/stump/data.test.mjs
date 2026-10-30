@@ -99,8 +99,15 @@ test('erasing a person: an engager leaves findings, the inbox and offers, a jour
   const watch = await act('stump.watches.manage', { action: 'create', name: 'Synthwell', terms: { any: ['synthwell'] }, sources: [{ kind: 'hn' }] })
   const findings = async () => (await act('stump.findings.work', { action: 'list', watch_id: watch.id })).items.map(finding => finding.author).sort()
   assert.deepEqual(await findings(), ['synthetic-alice', 'synthetic-bob'])
-  // The engager offer the inbox writes (migration 0500).
-  await app.db.prepare(`INSERT INTO stump_stack_offers(id,seed,kind,network,handle,post_url,occurred_at,created_at) VALUES('o1','orbit','engager','x','synthetic-alice','https://x.com/synthetic-alice/status/9',1,1)`).run()
+  // The engager offer the inbox writes (migration 0500), already sent to Orbit.
+  await app.db.prepare(`INSERT INTO stump_stack_offers(id,seed,kind,network,handle,post_url,occurred_at,created_at,state,sent_at,outcome) VALUES('o1','orbit','engager','x','synthetic-alice','https://x.com/synthetic-alice/status/9',1,1,'sent',2,?)`)
+    .bind(JSON.stringify({ ok: true, status: 201, detail: { orbit_signal_id: 'synthetic-signal-1', event_id: 'stump-engager-o1' } })).run()
+  // An agent reads the findings with a key before the erasure.
+  const rules = [{ id: 'all', class: '*', do: 'autonomous' }]
+  assert.equal((await app.json('owner', '/agents/api/policy', { document: { schema: 'rer-agent-policy/1', catalogue: 'rer-agent-classes/1', spend: { none: true }, rules } }, 'PUT')).status, 200)
+  const agent = (await app.json('owner', '/app/api/agent-credentials', { name: 'Synthetic reader' })).body
+  const read = () => app.mcp(agent.token, 'stump.findings.work', { action: 'list', watch_id: watch.id, idempotency_key: 'synthetic-read-1' })
+  assert.match(JSON.stringify((await read()).result.structuredContent), /synthetic-alice/)
   // What the inbox read from the company's X account: the engager's mention, and someone else's.
   for (const [id, handle] of [['i1', 'Synthetic-Alice'], ['i2', 'synthetic-bob']]) await app.db.prepare(`INSERT INTO stump_inbox_items(id,account_id,network,network_id,kind,url,text,author_handle,engaged_first,offer_id,received_at)
     VALUES(?,'a1','x',?,'mention',?,'@synthwellhq thanks',?,1,?,1)`).bind(id, id, `https://x.com/${handle}/status/${id}`, handle, id === 'i1' ? 'o1' : null).run()
@@ -124,13 +131,72 @@ test('erasing a person: an engager leaves findings, the inbox and offers, a jour
   assert.deepEqual([(await app.db.prepare('SELECT id FROM stump_inbox_items ORDER BY id').all()).results.map(row => row.id), erased.removed.inbox_items], [['i2'], 1], 'the engager leaves the inbox')
   const kept = await act('stump.ledger.search', { action: 'get', entry_id: held.id })
   assert.deepEqual([kept.text, kept.legal_hold.reason], [held.text, 'Dispute on file'])
+  assert.deepEqual(erased.sent_to_seeds, [{ offer_id: 'o1', seed: 'orbit', sent_at: new Date(2).toISOString(), event_id: 'stump-engager-o1', signal_id: 'synthetic-signal-1', outcome: 'manual' }], 'what Orbit already holds is listed')
+  // The engager stays erased: the agent's earlier read answers current records, and later polls and a backfill do not collect them again.
+  assert.doesNotMatch(JSON.stringify((await read()).result), /synthetic-alice/)
+  assert.equal((await act('stump.watches.manage', { action: 'poll', watch_id: watch.id })).added, 0)
+  assert.equal((await act('stump.watches.manage', { action: 'backfill', watch_id: watch.id })).added, 0)
+  assert.deepEqual(await findings(), ['synthetic-bob'])
+
+  // The journalist arrives from an outreach list too: their venue, and a pitch entry aimed at it.
+  const outreach = `---
+date: "2026-10-19"
+---
+## Synthwell
+
+### journalist-jordanreed-1 — Pitch
+- seed: Synthwell
+- platform: Email
+- status: editorial
+- post_type: pitch
+- venue_id: journalist-jordanreed
+- why: Jordan Reed covers clinic software
+- notes: Jordan prefers mornings
+
+#### Draft
+
+\`\`\`
+Hi Jordan, recurring bookings for small clinics shipped today.
+\`\`\`
+
+## Venue directory
+
+### journalist-jordanreed — Jordan Reed
+- url: https://example.com/staff/jordan-reed
+- platform: Email
+- status: editorial
+- audience: Jordan Reed's readers
+- seeds: ["Synthwell"]
+`
+  const listDoor = async (verb, body) => { const response = await app.request('owner', `/api/operator/import/${verb}?source=outreach-md`, { method: 'POST', body: JSON.stringify(body) }); return { status: response.status, body: await response.json() } }
+  const uploadList = async () => {
+    const bytes = Buffer.from(outreach), sha = value => createHash('sha256').update(value).digest('hex')
+    const upload = await listDoor('uploads', { name: 'outreach.md', bundleSha256: sha(bytes), totalBytes: bytes.length, totalChunks: 1, index: 0, chunkSha256: sha(bytes), base64: bytes.toString('base64') })
+    assert.equal(upload.status, 200, JSON.stringify(upload.body))
+    return listDoor('plan', { uploadId: upload.body.uploadId })
+  }
+  const listed = await uploadList()
+  assert.equal(listed.status, 200, JSON.stringify(listed.body))
+  for (let round = 0; round < 50; round++) if ((await listDoor('apply', { planId: listed.body.planId, reviewedFingerprint: listed.body.fingerprint })).body.job?.state === 'completed') break
+  assert.equal((await act('stump.drafts.revise', { action: 'list', q: 'Jordan' })).total, 1)
 
   const contact = await act('stump.press.contacts', { action: 'create', kind: 'journalist', name: 'Jordan Reed', contact_route: { kind: 'email', value: 'synthetic-stump-reporter@example.com', source_url: 'https://example.com/staff', read_at: '2026-10-30' } })
-  const pitch = await act('stump.drafts.write', { action: 'create', format: 'pitch', person_id: owner.id, recipient: { contact_id: contact.id }, subject: 'For Jordan Reed', text: 'Hi Jordan Reed, recurring bookings shipped today.' })
+  const pitch = await act('stump.drafts.write', { action: 'create', format: 'pitch', person_id: owner.id, recipient: { contact_id: contact.id }, subject: 'JORDAN REED: recurring bookings', text: 'Hi Jordan, recurring bookings shipped today.', prompt: 'Pitch Jordan Reed on recurring bookings' })
+  await act('stump.drafts.revise', { action: 'save', item_id: pitch.id, parts: ['Hi jordan reed,', 'Recurring bookings shipped today.'] })
   const journalist = await act('stump.data.erase', { action: 'erase', subject: { kind: 'journalist', contact_id: contact.id } })
   assert.equal(journalist.removed.press_contacts, 1)
   assert.equal((await app.action('owner', 'stump.press.contacts', { action: 'get', contact_id: contact.id })).body.code, 'not_found')
   const anonymised = await act('stump.drafts.revise', { action: 'get', item_id: pitch.id })
   assert.match(anonymised.recipient.erased, /^erasure:/)
-  assert.ok(!JSON.stringify(anonymised).includes('Jordan Reed'), 'the pitch keeps no trace of the name')
+  const revisions = await act('stump.drafts.revise', { action: 'diff', item_id: pitch.id, from: 1, to: 2 })
+  assert.doesNotMatch(JSON.stringify([anonymised, revisions]), /jordan|reed/i, 'the pitch and its revisions keep no form of the name')
+  assert.equal((await act('stump.drafts.revise', { action: 'list', q: 'Jordan' })).total, 0)
+  // Nothing Stump keeps names them, the import's copies and the uploaded list included, and the same list is refused again.
+  const tables = (await app.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all()).results.map(row => row.name)
+  const cells = value => typeof value === 'string' ? [value, ...(/^[A-Za-z0-9+/=]{24,}$/.test(value) ? [Buffer.from(value, 'base64').toString('utf8')] : [])]
+    : value instanceof ArrayBuffer || ArrayBuffer.isView(value) ? [Buffer.from(value instanceof ArrayBuffer ? value : value.buffer).toString('utf8')] : []
+  const naming = []
+  for (const table of tables) for (const row of (await app.db.prepare(`SELECT * FROM "${table}"`).all()).results) if (Object.values(row).flatMap(cells).some(text => /jordan/i.test(text))) naming.push(table)
+  assert.deepEqual([...new Set(naming)], [])
+  assert.equal((await uploadList()).body.error, 'source_erased')
 })

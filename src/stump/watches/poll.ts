@@ -2,6 +2,7 @@ import { refuse } from '../actions/refusals.ts'
 import type { StumpEnv } from '../env.ts'
 import { stumpFetch } from '../net/fetch.ts'
 import { canonicalUrl, describeError, scoreFinding, screenFindings, type Finding, type DropReason } from '../lib/discovery/index.ts'
+import { erasedAmong } from '../data/tombstones.ts'
 import { sendImmediateAlerts } from './alerts.ts'
 import { blockedAuthors, blockRefs } from './blocks.ts'
 import { loadProducts, mentionsOf, rankContext, teamHandles } from './context.ts'
@@ -103,7 +104,9 @@ export async function pollWatch(ctx: PollContext, watch: WatchRow, options: { ma
       continue
     }
     const stored = await storedKeys(db, watch.id, run.findings.map(item => canonicalUrl(item.url)))
-    const screened = screenFindings(run.findings, { terms: watch.terms, filters: filtersFor(source), team_handles: team, blocked_authors: blocked, known_urls: stored })
+    // An erased person's post, or anything they wrote on this source, is never stored again (STUMP-DATA-002).
+    const erased = await erasedAmong(db, run.findings)
+    const screened = screenFindings(run.findings, { terms: watch.terms, filters: filtersFor(source), team_handles: team, blocked_authors: blocked, known_urls: stored, erased })
     const dropped: Partial<Record<DropReason, number>> = {}
     for (const item of screened.dropped) dropped[item.reason] = (dropped[item.reason] ?? 0) + 1
     const added = await store(ctx, watch, source.key, screened.kept, { products, rank, backfill }, fresh)

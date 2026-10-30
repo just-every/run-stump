@@ -51,6 +51,9 @@ export interface UndoContext {
 }
 export interface ToolDefinition {
   name: string; title: string; description: string; scope: string; readOnly: boolean
+  /** A tool that both reads and writes: true when this call's arguments only read. Such a call
+   * claims no idempotency key, keeps no result and runs again against current records each time. */
+  readsFor?(args: Record<string, unknown>): boolean
   inputSchema: JsonSchemaObject; outputSchema: JsonSchema; classes: ClassId[]; clauses: string[]
   /** Always enforce current native authority. On completed replay, use the
    * recorded effect facts instead of requiring consumed preparation state. */

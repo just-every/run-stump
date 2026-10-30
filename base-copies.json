@@ -504,11 +504,12 @@
         "src/modules/agent-door/policy/decide.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/policy/SHA256SUMS": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/policy/PROVENANCE.md": "2135c394939f4a737adabdc8003b0e667b31ac5a",
-        "src/modules/agent-door/counting.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
+        "src/modules/agent-door/counting.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/types.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
       },
       "acknowledged": {
         "src/modules/agent-door/pipeline.ts": {
-          "sha256": "ab8e2b0680e248545c0013759feb49ba3bb11f0fff70d048c7c5447345503af5",
+          "sha256": "f432b7f1a65796331a21729590232881ebc6a41c788bf995644f255badb651ea",
           "mode": "100644"
         },
         "src/modules/agent-door/execution.ts": {
@@ -541,6 +542,10 @@
         },
         "src/modules/agent-door/counting.ts": {
           "sha256": "3b9db7f2113c36ab0d825129f73a4e94adbd7a706b48e52ac28445377ea5c3c7",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/types.ts": {
+          "sha256": "4489956327fa798284ca5c3da31da447b8761fc385a8bdfcfd3c35991cb38f30",
           "mode": "100644"
         }
       }

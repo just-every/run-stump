@@ -15,14 +15,17 @@ export interface RuleSource { rule: string; source: string; read_at?: string }
 /**
  * The one hook for product rules that stand outside the company policy (D-1 to
  * D-8): it records the refusal with its rule and source, apart from policy
- * decisions, and answers act_refused for people and agents alike.
+ * decisions, and answers act_refused for people and agents alike. `shown` are
+ * fields the answer carries but the record does not: a person outside the
+ * company (their handle, their post's address) is named to the caller and never
+ * kept in the refusal record, which holds ids only.
  */
 export async function refuseAct(ctx: Pick<ActionContext, 'db' | 'person' | 'agent' | 'door' | 'operationId' | 'now'>, tool: string, action: string,
-  rule: RuleSource, fields: Record<string, unknown> = {}): Promise<never> {
+  rule: RuleSource, fields: Record<string, unknown> = {}, shown: Record<string, unknown> = {}): Promise<never> {
   await ctx.db.prepare(`INSERT INTO stump_refusals(id,operation_id,tool,action,rule,source,person_id,agent_id,door,detail,at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(operation_id) DO NOTHING`)
     .bind(crypto.randomUUID(), ctx.operationId, tool, action, rule.rule, rule.source, ctx.person.id, ctx.agent?.id ?? null, ctx.door, JSON.stringify(fields), ctx.now()).run()
-  return refuse('act_refused', { ...fields, rule: rule.rule, source: rule.source, ...(rule.read_at ? { read_at: rule.read_at } : {}) })
+  return refuse('act_refused', { ...fields, ...shown, rule: rule.rule, source: rule.source, ...(rule.read_at ? { read_at: rule.read_at } : {}) })
 }
 
 // The pages D-4 cites (STUMP-TRUTH-003), read on 30 Oct 2026; see CHANGELOG.md.

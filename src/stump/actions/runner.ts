@@ -100,6 +100,9 @@ export function doorTool(tool: StumpTool, context: (ctx: ToolContext) => Promise
   return {
     name: tool.name, title: tool.title, description: tool.description, scope: tool.scope, clauses: tool.clauses, classes: tool.classes,
     readOnly: actions.every(action => action.read), inputSchema: toolSchema(tool), outputSchema: { type: 'object' },
+    // A read action of a tool that also writes reads current records on every call, with or without a key.
+    ...(actions.some(action => action.read) && !actions.every(action => action.read)
+      ? { readsFor: (args: Args) => { const name = String(args.action ?? ''); return Object.hasOwn(tool.actions, name) && tool.actions[name]!.read === true } } : {}),
     async classify(args, toolContext) { const { ctx, action } = await resolved(args, toolContext); return action.classify(args, ctx) },
     async summary(args, toolContext) {
       const { ctx, action } = await resolved(args, toolContext)

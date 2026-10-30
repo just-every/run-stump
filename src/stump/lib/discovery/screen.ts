@@ -20,7 +20,7 @@ export interface SourceFilters {
   bluesky?: { langs?: string[] }
 }
 
-export type DropReason = 'filter' | 'team' | 'blocked' | 'terms' | 'duplicate'
+export type DropReason = 'erased' | 'filter' | 'team' | 'blocked' | 'terms' | 'duplicate'
 
 export interface Dropped {
   finding: Finding
@@ -38,6 +38,8 @@ export interface ScreenSpec {
   blocked_authors?: HandleRef[]
   /** Canonical URLs of findings already stored; a finding with one of these is a duplicate. */
   known_urls?: Iterable<string>
+  /** Findings of a person the company erased (their post, or anything they wrote on that source). */
+  erased?: ReadonlySet<Finding>
 }
 
 export interface ScreenResult {
@@ -120,6 +122,10 @@ export function screenFindings(findings: Finding[], spec: ScreenSpec): ScreenRes
   const kept: Finding[] = []
   const dropped: Dropped[] = []
   for (const f of findings) {
+    if (spec.erased?.has(f)) {
+      dropped.push({ finding: f, reason: 'erased' })
+      continue
+    }
     if (!passesFilters(f, spec.filters)) {
       dropped.push({ finding: f, reason: 'filter' })
       continue

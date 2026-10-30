@@ -70,7 +70,7 @@ export async function planReply(ctx: ActionContext, args: Args, stage: 'classify
   if (account.state !== 'connected') refuse('account_not_connected', { account_id: account.id, state: account.state, reconnect_url: account.reconnect_url })
   const speaker = speakerOf(ctx, account)
   if (inbox.engaged_first !== 1) {
-    await refuseAct(ctx, REPLY_TOOL, 'reply', UNENGAGED, { act: 'x_unengaged_reply', inbox_item_id: inbox.id, author: inbox.author_handle, url: inbox.url, route: 'handoff' })
+    await refuseAct(ctx, REPLY_TOOL, 'reply', UNENGAGED, { act: 'x_unengaged_reply', inbox_item_id: inbox.id, route: 'handoff' }, { author: inbox.author_handle, url: inbox.url })
   }
   const earlier = inbox.reply_item_id ? await readItem(ctx.db, inbox.reply_item_id) : null
   // The agent door classifies an approved call again when it hands back its receipt, after the reply went out:
