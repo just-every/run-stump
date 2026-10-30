@@ -1,4 +1,5 @@
 import { blueskyFor } from '../accounts/clients.ts'
+import { shownHandle } from '../accounts/handle.ts'
 import { needsReconnect } from '../accounts/store.ts'
 import { parseAtUri, type BlobRef, type BlueskyClient, type ImageDraft, type NetworkError as BlueskyError, type PostDraft, type StrongRef, type ThreadItem, type ThreadPosted } from '../lib/bluesky/index.ts'
 import { postedParts, partKey, recordCall, savePart, textsOf } from './parts.ts'
@@ -103,7 +104,7 @@ export const blueskyPublisher: Publisher = {
     if (!target) return { ok: false, message: `Bluesky could not find ${url}.` }
     const back = await opened.client.getPost(target.parent.uri)
     if (!back.ok) return { ok: false, message: back.error.message }
-    if (back.value.repo !== opened.client.auth().did) return { ok: false, message: `${url} is not a post of ${ctx.account.handle}.` }
+    if (back.value.repo !== opened.client.auth().did) return { ok: false, message: `${url} is not a post of ${shownHandle(ctx.account)}.` }
     return { ok: true, url: back.value.webUrl, network_id: back.value.uri, text: back.value.text }
   },
 }
@@ -114,8 +115,10 @@ async function fault(ctx: PublishContext, e: BlueskyError, postedCount: number, 
     return { state: 'held', kind: 'reconnect', next_attempt_at: null, error: error(e) }
   }
   if (e.kind === 'rate_limited') return { state: 'held', kind: 'rate_limit', next_attempt_at: e.retryAtMs ?? null, error: error(e) }
+  // Earlier parts that are up make the item partly posted; resuming writes the rest under the same
+  // record keys, so a part that did land is read back, never posted twice (STUMP-PUBLISH-004.4).
+  if (postedCount > 0 && first) return { state: 'partly_posted', ...first, posted_parts: postedCount, error: error(e) }
   // The library already looked under the post's record key; an outcome it still cannot tell stays unknown.
   if (e.outcomeUnknown) return { state: 'uncertain', error: error(e) }
-  if (postedCount > 0 && first) return { state: 'partly_posted', ...first, posted_parts: postedCount, error: error(e) }
   return { state: 'failed', error: error(e) }
 }

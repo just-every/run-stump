@@ -6,6 +6,7 @@ import type { StumpEnv } from '../env.ts'
 import { stumpFetch } from '../net/fetch.ts'
 import { appKeys, callbackUrl } from './apps.ts'
 import { needsReconnect, openCredentials, saveCredentials, type AccountRow, type Credentials } from './store.ts'
+import { shownHandle } from './handle.ts'
 
 // A ready network client for one connected account: credentials opened,
 // refreshed where the network expires them, and stored again when they change.
@@ -31,9 +32,9 @@ export function blueskyOAuthClient(env: Pick<StumpEnv, 'AUTH_ORIGIN'>): OAuthCli
 }
 
 async function credentials(env: StumpEnv, row: AccountRow): Promise<Credentials | NotReady> {
-  if (row.state !== 'connected') return { ok: false, code: row.state === 'disconnected' ? 'not_connected' : 'reconnect', message: `${row.handle} is ${row.state}.` }
+  if (row.state !== 'connected') return { ok: false, code: row.state === 'disconnected' ? 'not_connected' : 'reconnect', message: `${shownHandle(row)} is ${row.state}.` }
   const opened = await openCredentials(env, row)
-  return opened ?? { ok: false, code: 'not_connected', message: `${row.handle} has no credentials.` }
+  return opened ?? { ok: false, code: 'not_connected', message: `${shownHandle(row)} has no credentials.` }
 }
 const notReady = (value: Credentials | NotReady): value is NotReady => 'ok' in value
 

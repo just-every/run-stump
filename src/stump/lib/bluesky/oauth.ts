@@ -15,7 +15,7 @@ import { createClientAssertion, generateKeyPair, randomToken, sha256b64url, type
 import { dpopSend, type NonceBox } from './dpop-send.ts';
 import { fail, invalidResponse, ok, type Result } from './errors.ts';
 import { send, type HttpDeps } from './http.ts';
-import { resolveIdentity } from './identity.ts';
+import { resolveIdentity, type ResolvedIdentity } from './identity.ts';
 import type { AuthServerRef, DpopKeyPair, OAuthAuth } from './types.ts';
 
 export const DEFAULT_SCOPE = 'atproto transition:generic';
@@ -162,6 +162,8 @@ export interface StartOAuthInput {
   /** Server that answers resolveHandle for the handle step (the person's PDS, or an AppView). */
   handleResolverUrl: string;
   plcDirectory?: string;
+  /** An identity already verified (for example against the server the person named); skips resolution. */
+  identity?: ResolvedIdentity;
 }
 
 /**
@@ -172,7 +174,7 @@ export interface StartOAuthInput {
 export async function startOAuth(deps: HttpDeps, client: OAuthClientConfig, input: StartOAuthInput): Promise<Result<{ authorizeUrl: string; pending: PendingOAuth }>> {
   const idOptions: { handleResolverUrl: string; plcDirectory?: string } = { handleResolverUrl: input.handleResolverUrl };
   if (input.plcDirectory) idOptions.plcDirectory = input.plcDirectory;
-  const identity = await resolveIdentity(deps, input.identifier, idOptions);
+  const identity = input.identity ? ok(input.identity) : await resolveIdentity(deps, input.identifier, idOptions);
   if (!identity.ok) return fail(identity.error);
   const meta = await discoverOAuth(deps, identity.value.pdsUrl);
   if (!meta.ok) return fail(meta.error);

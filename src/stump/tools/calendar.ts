@@ -1,5 +1,6 @@
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
+import { shownHandle } from '../accounts/handle.ts'
 import { readAccount, type AccountRow } from '../accounts/store.ts'
 import { CONTRIBUTORS, EDITORS, EVERYONE } from '../people/roles.ts'
 import { moveItem, pauseFor, type ItemState } from '../items/state.ts'
@@ -37,7 +38,7 @@ async function scopeOf(args: Args, ctx: ActionContext): Promise<Scope & { label:
   if (typeof args.account_id !== 'string') refuse('invalid_arguments', { field: 'account_id' })
   const account = await ctx.db.prepare('SELECT id,network,handle FROM stump_accounts WHERE id=?').bind(args.account_id).first<{ id: string; network: string; handle: string }>()
   if (!account) refuse('not_found', { account_id: args.account_id })
-  return { scope: 'account', account_id: account.id, label: `${account.network} ${account.handle}` }
+  return { scope: 'account', account_id: account.id, label: `${account.network} ${shownHandle(account)}` }
 }
 const key = (target: Scope) => target.scope === 'all' ? 'all' : `account:${target.account_id}`
 const live = (service: string, measure = 1) => [{ class: 'live' as const, facts: { measure, service } }]

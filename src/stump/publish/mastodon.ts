@@ -1,4 +1,5 @@
 import { mastodonFor } from '../accounts/clients.ts'
+import { shownHandle } from '../accounts/handle.ts'
 import { needsReconnect } from '../accounts/store.ts'
 import type { MastodonClient, NetworkError as MastodonError, StatusDraft, ThreadItem, ThreadPosted, Visibility } from '../lib/mastodon/index.ts'
 import { stumpFetch } from '../net/fetch.ts'
@@ -76,7 +77,22 @@ export const mastodonPublisher: Publisher = {
     const threadItems: ThreadItem[] = sent.map((draft, index) => ({ key: partKey(item, index), draft: index === 0 && parent ? { ...draft, inReplyToId: parent } as StatusDraft : draft }))
     const prior = await postedParts(ctx, item)
     let done: ThreadPosted[] = prior.map(part => ({ key: partKey(item, part.part), status: { id: part.network_id, url: part.url, uri: String(part.ref?.uri ?? part.url) } }))
-    for (;;) {
+    /** The account's own status holding part index, by its exact text under the part before it (D-5). */
+    const lookUp = async (index: number) => {
+      const draft = sent[index]!, inReplyTo = index === 0 ? parent : done[index - 1]?.status.id ?? null
+      const found = await client.findPostedStatus({ accountId: account.value.id, text: draft.text, spoilerText: draft.spoilerText ?? '', inReplyToId: inReplyTo, sinceMs: item.scheduled_at - 60_000 })
+      await recordCall(ctx, { network: 'mastodon', item_id: item.id, act: 'read' })
+      if (!found.ok || !found.value) return null
+      await savePart(ctx, item, { part: index, network_id: found.value.id, url: found.value.url, ref: { uri: found.value.uri }, text: null })
+      return { key: threadItems[index]!.key, status: found.value }
+    }
+    // Resuming: the part that stopped may have landed after all, so the instance is read before it is sent again.
+    while (done.length && done.length < threadItems.length) {
+      const landed = await lookUp(done.length)
+      if (!landed) break
+      done = [...done, landed]
+    }
+    while (done.length < threadItems.length) {
       const outcome = await client.publishThread(threadItems, done)
       for (const posted of outcome.posted.slice(done.length)) {
         await recordCall(ctx, { network: 'mastodon', item_id: item.id, act: 'post' })
@@ -87,14 +103,10 @@ export const mastodonPublisher: Publisher = {
       const failure = outcome.failure
       if (failure.error.outcomeUnknown) {
         // The answer was lost: look for the status by its exact text before deciding anything (D-5).
-        const draft = sent[failure.index]!, inReplyTo = failure.index === 0 ? parent : done[failure.index - 1]?.status.id ?? null
-        const found = await client.findPostedStatus({ accountId: account.value.id, text: draft.text, spoilerText: draft.spoilerText ?? '', inReplyToId: inReplyTo, sinceMs: item.scheduled_at - 60_000 })
-        if (found.ok && found.value) {
-          await savePart(ctx, item, { part: failure.index, network_id: found.value.id, url: found.value.url, ref: { uri: found.value.uri }, text: null })
-          done = [...done, { key: failure.key, status: found.value }]
-          continue
-        }
-        return { state: 'uncertain', error: error(failure.error) }
+        const landed = await lookUp(failure.index)
+        if (landed) { done = [...done, landed]; continue }
+        // A lost first status is uncertain; a lost later part leaves the earlier ones up, partly posted (STUMP-PUBLISH-004.4).
+        if (!done.length) return { state: 'uncertain', error: error(failure.error) }
       }
       return fault(ctx, failure.error, done.length, done[0] ? { url: done[0].status.url, network_id: done[0].status.id } : null)
     }
@@ -123,7 +135,7 @@ export async function mastodonReadBack(url: string, ctx: PublishContext) {
   if (!back.ok) return { ok: false as const, message: back.error.message }
   if (back.value.accountId && opened.credentials.network === 'mastodon') {
     const me = await opened.client.account()
-    if (me.ok && me.value.id !== back.value.accountId) return { ok: false as const, message: `${url} is not a post of ${ctx.account.handle}.` }
+    if (me.ok && me.value.id !== back.value.accountId) return { ok: false as const, message: `${url} is not a post of ${shownHandle(ctx.account)}.` }
   }
   return { ok: true as const, url: back.value.url, network_id: back.value.id, text: back.value.sourceText ?? back.value.plainText }
 }
@@ -134,7 +146,7 @@ async function fault(ctx: PublishContext, e: MastodonError, postedCount: number,
     return { state: 'held', kind: 'reconnect', next_attempt_at: null, error: error(e) }
   }
   if (e.kind === 'rate_limited') return { state: 'held', kind: 'rate_limit', next_attempt_at: e.retryAtMs ?? null, error: error(e) }
-  if (e.outcomeUnknown) return { state: 'uncertain', error: error(e) }
   if (postedCount > 0 && first) return { state: 'partly_posted', ...first, posted_parts: postedCount, error: error(e) }
+  if (e.outcomeUnknown) return { state: 'uncertain', error: error(e) }
   return { state: 'failed', error: error(e) }
 }

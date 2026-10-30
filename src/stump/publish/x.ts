@@ -1,4 +1,5 @@
 import { xFor } from '../accounts/clients.ts'
+import { shownHandle } from '../accounts/handle.ts'
 import { needsReconnect } from '../accounts/store.ts'
 import { findOwnXPostByText, getXPost, publishXThread, quoteXThread, uploadXMedia, validateXPost, type XError, type XPostInput } from '../lib/x/index.ts'
 import { partKey, postedParts, recordCall, savePart, textsOf } from './parts.ts'
@@ -49,7 +50,24 @@ export const xPublisher: Publisher = {
     const parts = inputs(item, ctx.account.post_limit ?? 280, mediaIds)
     const replyTo = item.reply_to ? replyId(item.reply_to.url) ?? undefined : undefined
     let posted = (await postedParts(ctx, item)).map(part => ({ id: part.network_id, url: part.url }))
-    for (;;) {
+    /** The account's own post holding part index's text, read from X's timeline (D-5). */
+    const lookUp = async (index: number) => {
+      const found = await findOwnXPostByText(x, { userId, text: parts[index]!.text, since: new Date(item.scheduled_at - 60_000).toISOString() }, ctx.prices)
+      if (found.ok) await recordCall(ctx, { network: 'x', item_id: item.id, act: found.value.charge.act, units: found.value.charge.units, usd_micro: found.value.charge.usd_micro })
+      if (!found.ok || !found.value.match) return null
+      // A post another item already holds is not this one: X refused this one as its duplicate.
+      const elsewhere = await ctx.db.prepare('SELECT 1 FROM stump_item_parts WHERE network_id=? AND item_id<>? LIMIT 1').bind(found.value.match.id, item.id).first()
+      if (elsewhere) return null
+      await savePart(ctx, item, { part: index, network_id: found.value.match.id, url: found.value.match.url, ref: null, text: found.value.match.text })
+      return { id: found.value.match.id, url: found.value.match.url }
+    }
+    // Resuming: the part that stopped may have landed after all, so X is read before it is sent again.
+    while (posted.length && posted.length < parts.length) {
+      const landed = await lookUp(posted.length)
+      if (!landed) break
+      posted = [...posted, landed]
+    }
+    while (posted.length < parts.length) {
       const result = await publishXThread(x, {
         parts, ...(replyTo ? { replyToId: replyTo } : {}), posted,
         onPosted: async (part, charge) => {
@@ -62,18 +80,11 @@ export const xPublisher: Publisher = {
       const e = result.error!, index = result.failedIndex ?? posted.length
       if (e.kind === 'unknown_outcome' || e.kind === 'duplicate_content') {
         // A lost answer, or X calling it a duplicate, may hide this very post: read the timeline first (D-5).
-        const found = await findOwnXPostByText(x, { userId, text: parts[index]!.text, since: new Date(item.scheduled_at - 60_000).toISOString() }, ctx.prices)
-        if (found.ok) await recordCall(ctx, { network: 'x', item_id: item.id, act: found.value.charge.act, units: found.value.charge.units, usd_micro: found.value.charge.usd_micro })
-        // A post another item already holds is not this one: X refused this one as its duplicate.
-        const elsewhere = found.ok && found.value.match
-          ? await ctx.db.prepare('SELECT 1 FROM stump_item_parts WHERE network_id=? AND item_id<>? LIMIT 1').bind(found.value.match.id, item.id).first() : null
-        if (found.ok && found.value.match && !elsewhere) {
-          await savePart(ctx, item, { part: index, network_id: found.value.match.id, url: found.value.match.url, ref: null, text: found.value.match.text })
-          posted = [...posted, { id: found.value.match.id, url: found.value.match.url }]
-          if (posted.length === parts.length) break
-          continue
-        }
-        if (e.kind === 'unknown_outcome') return { state: 'uncertain', error: error(e) }
+        const landed = await lookUp(index)
+        if (landed) { posted = [...posted, landed]; continue }
+        // A lost first post is uncertain; a lost later part leaves the earlier ones up, partly posted,
+        // and resuming reads X again before it sends that part (STUMP-PUBLISH-004.4).
+        if (e.kind === 'unknown_outcome' && !posted.length) return { state: 'uncertain', error: error(e) }
       }
       return fault(ctx, e, posted.length, posted[0] ? { url: posted[0].url, network_id: posted[0].id } : null)
     }
@@ -96,7 +107,7 @@ export const xPublisher: Publisher = {
     const back = await getXPost(opened.client, id, ctx.prices, { owned: true })
     if (!back.ok) return { ok: false, message: back.error.message }
     await recordCall(ctx, { network: 'x', item_id: null, act: back.value.charge.act, units: back.value.charge.units, usd_micro: back.value.charge.usd_micro })
-    if (opened.credentials.network === 'x' && back.value.authorId && back.value.authorId !== opened.credentials.user_id) return { ok: false, message: `${url} is not a post of ${ctx.account.handle}.` }
+    if (opened.credentials.network === 'x' && back.value.authorId && back.value.authorId !== opened.credentials.user_id) return { ok: false, message: `${url} is not a post of ${shownHandle(ctx.account)}.` }
     return { ok: true, url: back.value.url, network_id: back.value.id, text: back.value.text }
   },
 }

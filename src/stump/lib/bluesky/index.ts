@@ -13,7 +13,7 @@ export type { BlueskyClient, BlueskyClientConfig, CreatePostOptions, FindOptions
 export { createSession, refreshSession, deleteSession, decodeJwt, passwordKindOf, pdsFromDidDoc } from './session.ts';
 export type { CreateSessionInput, SessionResult } from './session.ts';
 
-export { resolveHandle, resolveIdentity, fetchDidDocument, PLC_DIRECTORY } from './identity.ts';
+export { resolveHandle, resolveIdentity, resolveIdentityAtServer, fetchDidDocument, PLC_DIRECTORY } from './identity.ts';
 export type { DidDocument, ResolvedIdentity } from './identity.ts';
 
 export { buildFacets, detectMentions, detectLinks, detectTags, normalizeFacets, sliceBytes, graphemeLength, utf8Length, looksLikeHandle } from './richtext.ts';

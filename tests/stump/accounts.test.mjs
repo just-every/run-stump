@@ -39,18 +39,23 @@ test('the company connects its X account through its own app, owned by the compa
   const consent = new URL(started.body.result.consent_url)
   assert.equal(consent.origin + consent.pathname, 'https://x.com/i/oauth2/authorize'); assert.equal(consent.searchParams.get('code_challenge_method'), 'S256')
   const state = consent.searchParams.get('state')
-  // A consent belongs to the person who asked for it.
-  const stolen = await app.action('editor', 'stump.accounts.connect', { action: 'complete', state, code: 'synthetic-code' })
-  assert.equal(stolen.body.code, 'consent_not_yours')
-  const done = await app.action('owner', 'stump.accounts.connect', { action: 'complete', state, code: 'synthetic-code' })
-  assert.equal(done.status, 200)
-  const account = done.body.result.account
-  assert.equal(account.handle, '@synthetic_co'); assert.equal(account.owner.kind, 'company'); assert.equal(account.state, 'connected')
+  // X sends the person's browser back to the callback; the server finishes the consent, and only for the person who asked for it.
+  const callback = `/app/connected/x?${new URLSearchParams({ state, code: 'synthetic-code' })}`
+  const stolen = await app.request('editor', callback)
+  assert.equal(stolen.status, 303); assert.equal(new URL(stolen.headers.get('location'), app.origin).searchParams.get('refused'), 'consent_not_yours')
+  const back = await app.request('owner', callback)
+  assert.equal(back.status, 303)
+  const landed = new URL(back.headers.get('location'), app.origin)
+  assert.equal(landed.pathname, '/app/connected/x'); assert.ok(!landed.searchParams.has('code'))
+  const shown = await app.action('owner', 'stump.accounts.connect', { action: 'list', connection_id: landed.searchParams.get('connection') })
+  assert.equal(shown.body.result.connection.outcome.ok, true)
+  const account = shown.body.result.items.find(item => item.id === shown.body.result.connection.outcome.account_id)
+  assert.equal(account.handle, 'synthetic_co'); assert.equal(account.owner.kind, 'company'); assert.equal(account.state, 'connected')
   assert.equal(account.connected_by, (await app.owner()).id); assert.ok(Date.parse(account.connected_at))
   assert.equal((await app.action('owner', 'stump.accounts.connect', { action: 'complete', state, code: 'synthetic-code' })).body.code, 'consent_used')
 
   const listed = JSON.stringify((await app.action('editor', 'stump.accounts.connect', { action: 'list', include_unconnected: true })).body)
-  assert.ok(listed.includes('@synthetic_co') && ![...x.issued].some(token => listed.includes(token)) && !/token|secret|password/i.test(listed))
+  assert.ok(listed.includes('synthetic_co') && ![...x.issued].some(token => listed.includes(token)) && !/token|secret|password/i.test(listed))
 
   const off = await app.action('owner', 'stump.accounts.connect', { action: 'disconnect', account_id: account.id })
   assert.equal(off.body.result.account.state, 'disconnected'); assert.equal(off.body.result.revoked, 'revoked'); assert.equal(x.revoked.size, 1)

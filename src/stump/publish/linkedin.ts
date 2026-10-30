@@ -97,7 +97,8 @@ async function fault(ctx: PublishContext, e: LinkedInError): Promise<PublishOutc
     await needsReconnect(ctx.db, ctx.env, ctx.account, e.kind === 'auth_expired' ? 'expired' : 'revoked', ctx.now())
     return { state: 'held', kind: 'reconnect', next_attempt_at: null, error: error(e) }
   }
-  if (e.kind === 'rate_limited') return { state: 'held', kind: 'day_limit', next_attempt_at: e.resetAt ? Date.parse(e.resetAt) : null, error: error(e) }
+  // LinkedIn's day throttle names no reset time; its day ends at 00:00 UTC (STUMP-PUBLISH-005.3).
+  if (e.kind === 'rate_limited') return { state: 'held', kind: 'day_limit', next_attempt_at: Date.parse(e.resetAt ?? linkedInDayWindow(ctx.now()).resetsAt), error: error(e) }
   if (e.mayHaveApplied) return { state: 'uncertain', error: error(e) }
   return { state: 'failed', error: error(e) }
 }

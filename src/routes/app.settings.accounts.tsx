@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
 import { Outcome, useLoaded, useRun } from '../stump/ui/kit.tsx'
+import { shownHandle } from '../stump/accounts/handle.ts'
 import type { Team } from '../stump/ui/types.ts'
 
 export const Route = createFileRoute('/app/settings/accounts')({ component: AccountsPage })
@@ -13,7 +14,7 @@ const key = () => crypto.randomUUID()
 interface Account {
   id: string; network: string; handle: string; display_name: string | null; owner: { kind: 'person' | 'company'; person_id: string | null }
   connected_by: string | null; connected_at: string | null; state: 'connected' | 'expired' | 'revoked' | 'disconnected'; reconnect_url: string | null
-  instance: string | null; automated_label: boolean; operator_bio: string | null
+  instance: string | null; automated_label: boolean; operator_bio: string | true | null
 }
 interface App { network: string; state: 'not_needed' | 'not_created' | 'connected' }
 interface Started { connection_id: string; consent_url?: string; needs?: 'app_password'; handle?: string | null }
@@ -71,19 +72,21 @@ function AccountRow({ account, owner, connectedBy, open, mine, onToggle, onChang
   }
   async function disconnect() {
     const done = await run(() => runAction<Disconnected>('stump.accounts.connect', { action: 'disconnect', account_id: account.id, idempotency_key: key() }))
-    if (done) onChange(`${account.handle} disconnected.${done.unscheduled.length ? ` ${done.unscheduled.length} scheduled ${done.unscheduled.length === 1 ? 'item is' : 'items are'} back in draft.` : ''}`)
+    if (done) onChange(`${shownHandle(account)} disconnected.${done.unscheduled.length ? ` ${done.unscheduled.length} scheduled ${done.unscheduled.length === 1 ? 'item is' : 'items are'} back in draft.` : ''}`)
   }
+  // The bio's text when typed; otherwise what was recorded before, which may be just the fact.
+  const bio = (typed: string): string | boolean => typed || (account.operator_bio === true ? true : '')
   async function label(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const saved = await run(() => runAction('stump.accounts.connect', { action: 'record_label', account_id: account.id, automated_label: form.get('label') === 'on',
-      operator_bio: String(form.get('bio') ?? ''), idempotency_key: key() }), () => 'Saved')
-    if (saved) onChange(`${account.handle}: X's Automated label recorded.`)
+      operator_bio: bio(String(form.get('bio') ?? '').trim()), idempotency_key: key() }), () => 'Saved')
+    if (saved) onChange(`${shownHandle(account)}: X's Automated label recorded.`)
   }
   return <li className="st-row st-stack">
     <button className="st-row-toggle" type="button" aria-expanded={open} onClick={onToggle}>
       <span className="st-row-main">
-        <span className="st-name st-handle">{account.handle}</span>
+        <span className="st-name st-handle">{shownHandle(account)}</span>
         <span className="st-meta">{NAMES[account.network] ?? account.network} · {owner}</span>
       </span>
       <span className="st-state"><span className={state.dot} aria-hidden="true" />{state.text}</span>
@@ -91,7 +94,7 @@ function AccountRow({ account, owner, connectedBy, open, mine, onToggle, onChang
     </button>
     {open ? <div className="st-panel">
       {account.instance ? <div className="st-meta">Server: {account.instance}</div> : null}
-      {account.network === 'x' ? <div className="st-meta">{account.automated_label ? `Automated label recorded · operator: ${account.operator_bio}` : 'No Automated label recorded. Agents cannot publish here until it is.'}</div> : null}
+      {account.network === 'x' ? <div className="st-meta">{account.automated_label ? `Automated label recorded · ${account.operator_bio === true ? 'operator named in the bio' : `operator: ${account.operator_bio ?? ''}`}` : 'No Automated label recorded. Agents cannot publish here until it is.'}</div> : null}
       {mine ? <div className="st-actions st-spaced">
         {account.state !== 'connected' ? <button className="st-button primary" type="button" disabled={busy} onClick={() => void reconnect()}>Reconnect</button> : null}
         {account.state !== 'disconnected' ? confirming
@@ -100,7 +103,7 @@ function AccountRow({ account, owner, connectedBy, open, mine, onToggle, onChang
       </div> : <p className="st-meta">Only {account.owner.kind === 'company' ? 'owners and admins' : 'its owner'} can change this account.</p>}
       {mine && account.network === 'x' && account.state === 'connected' ? <form className="st-spaced" onSubmit={label} aria-label="X's Automated label">
         <div className="st-form">
-          <label className="st-field">Operator named in the bio<input name="bio" maxLength={500} defaultValue={account.operator_bio ?? ''} /></label>
+          <label className="st-field">Operator named in the bio<input name="bio" maxLength={500} defaultValue={typeof account.operator_bio === 'string' ? account.operator_bio : ''} /></label>
           <label className="st-field st-check"><input type="checkbox" name="label" defaultChecked={account.automated_label} />The account carries X's Automated label</label>
         </div>
         <div className="st-actions st-spaced"><button className="st-button" type="submit" disabled={busy}>Record</button></div>

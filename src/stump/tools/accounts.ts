@@ -3,6 +3,7 @@ import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
 import { NETWORKS, type Network } from '../accounts/apps.ts'
 import { completeConnection, disconnectAccount, mayManage, startConnection } from '../accounts/connect.ts'
 import { digest } from '../accounts/seal.ts'
+import { shownHandle } from '../accounts/handle.ts'
 import { accountView, readAccount, type AccountRow } from '../accounts/store.ts'
 import { EVERYONE } from '../people/roles.ts'
 
@@ -68,19 +69,25 @@ export const accountTools: StumpTool[] = [{
     },
     list: {
       roles: EVERYONE, read: true,
-      properties: { include_unconnected: { type: 'boolean' } },
+      properties: { include_unconnected: { type: 'boolean' }, connection_id: id },
       classify: () => [security('network_connections', 0)],
       async run(args, ctx) {
         const rows = (await ctx.db.prepare(`SELECT * FROM stump_accounts ${args.include_unconnected === true ? '' : "WHERE state<>'disconnected'"} ORDER BY owner_kind='person',network,handle`).all<AccountRow>()).results
         const items = rows.map(accountView)
-        return { items, total: items.length }
+        // What one of the caller's own consents answered when the network sent them back.
+        const connection = typeof args.connection_id === 'string'
+          ? await ctx.db.prepare('SELECT id,network,account_id,completed_at,outcome FROM stump_connections WHERE id=? AND person_id=?').bind(args.connection_id, ctx.person.id)
+            .first<{ id: string; network: Network; account_id: string | null; completed_at: number | null; outcome: string | null }>() : null
+        return { items, total: items.length,
+          ...(connection ? { connection: { id: connection.id, network: connection.network, account_id: connection.account_id, completed: connection.completed_at !== null,
+            outcome: connection.outcome ? JSON.parse(connection.outcome) as Record<string, unknown> : null } } : {}) }
       },
     },
     disconnect: {
       roles: CONNECTORS,
       properties: { account_id: id }, required: ['account_id'],
       async classify(args, ctx) { const row = await managed(ctx, args); return [security('network_connection'), accounts(row.network)] },
-      async summary(args, ctx) { const row = await account(ctx, args); return { target: { id: row.id, name: `Disconnect ${row.network} ${row.handle}` } } },
+      async summary(args, ctx) { const row = await account(ctx, args); return { target: { id: row.id, name: `Disconnect ${row.network} ${shownHandle(row)}` } } },
       target: args => ({ kind: 'account', id: String(args.account_id) }),
       async run(args, ctx) { return disconnectAccount(ctx, await managed(ctx, args)) },
     },
@@ -88,7 +95,7 @@ export const accountTools: StumpTool[] = [{
       roles: CONNECTORS,
       properties: { account_id: id }, required: ['account_id'],
       async classify(args, ctx) { const row = await managed(ctx, args); return [security('network_connection'), gated(row.network, 'consent'), accounts(row.network)] },
-      async summary(args, ctx) { const row = await account(ctx, args); return { target: { id: row.id, name: `Reconnect ${row.network} ${row.handle}` } } },
+      async summary(args, ctx) { const row = await account(ctx, args); return { target: { id: row.id, name: `Reconnect ${row.network} ${shownHandle(row)}` } } },
       target: args => ({ kind: 'account', id: String(args.account_id) }),
       async run(args, ctx) {
         // Only its owner reconnects a personal account; a company account, its admins (STUMP-CONNECT-001.3).
@@ -98,18 +105,22 @@ export const accountTools: StumpTool[] = [{
     },
     record_label: {
       roles: CONNECTORS,
-      properties: { account_id: id, automated_label: { type: 'boolean' }, operator_bio: { type: 'string', maxLength: 500 } },
+      // operator_bio: the bio's text naming the operator, or true when the bio names the operator.
+      properties: { account_id: id, automated_label: { type: 'boolean' }, operator_bio: { anyOf: [{ type: 'boolean' }, { type: 'string', maxLength: 500 }] } },
       required: ['account_id', 'automated_label'],
       classify: () => [security('automated_label')],
-      async summary(args, ctx) { const row = await account(ctx, args); return { target: { id: row.id, name: `Record X's Automated label on ${row.handle}` } } },
+      async summary(args, ctx) { const row = await account(ctx, args); return { target: { id: row.id, name: `Record X's Automated label on ${shownHandle(row)}` } } },
       target: args => ({ kind: 'account', id: String(args.account_id) }),
       async run(args, ctx) {
         const row = await managed(ctx, args)
         if (row.network !== 'x') refuse('invalid_arguments', { field: 'account_id', reason: 'X\'s Automated label belongs to X accounts.' })
         const bio = typeof args.operator_bio === 'string' ? args.operator_bio.trim() : ''
-        if (args.automated_label === true && !bio) refuse('invalid_arguments', { field: 'operator_bio', reason: 'Name the operator as the account\'s bio does.' })
-        await ctx.db.prepare('UPDATE stump_accounts SET automated_label=?,operator_bio=?,updated_at=?,revision=revision+1 WHERE id=?')
-          .bind(args.automated_label === true ? 1 : 0, bio || null, ctx.now(), row.id).run()
+        const named = args.operator_bio === true || bio !== ''
+        // D-4: the label counts only with the operator named in the bio.
+        if (args.automated_label === true && !named) refuse('invalid_arguments', { field: 'operator_bio', reason: 'Name the operator in the account\'s bio, then record its text or true.' })
+        const text = bio || (args.operator_bio === true ? row.operator_bio : null)
+        await ctx.db.prepare('UPDATE stump_accounts SET automated_label=?,operator_bio=?,operator_named=?,updated_at=?,revision=revision+1 WHERE id=?')
+          .bind(args.automated_label === true ? 1 : 0, text, named ? 1 : 0, ctx.now(), row.id).run()
         return { account: accountView((await readAccount(ctx.db, row.id))!) }
       },
     },

@@ -1,4 +1,4 @@
-import { completeOAuth, createBlueskyClient, createSession, discoverOAuth, resolveIdentity, startOAuth, type BlueskyAuth, type PendingOAuth } from '../lib/bluesky/index.ts'
+import { completeOAuth, createBlueskyClient, createSession, discoverOAuth, resolveIdentity, resolveIdentityAtServer, startOAuth, type BlueskyAuth, type PendingOAuth } from '../lib/bluesky/index.ts'
 import { buildLinkedInAuthorizeUrl, exchangeLinkedInCode, getLinkedInMember } from '../lib/linkedin/index.ts'
 import { buildAuthorizeUrl, createMastodonClient, createPkce, exchangeCode, normalizeInstance, randomToken, registerApp, revokeToken, type RegisteredApp } from '../lib/mastodon/index.ts'
 import { buildXAuthorizeUrl, createPkcePair, exchangeXCode, getXMe, revokeXToken } from '../lib/x/index.ts'
@@ -71,15 +71,20 @@ export async function startConnection(ctx: ActionContext, input: StartInput) {
   } else if (network === 'bluesky') {
     const identifier = (input.handle ?? input.account?.handle ?? '').trim().replace(/^@/, '')
     if (!identifier) refuse('invalid_arguments', { field: 'handle' })
-    const service = (input.service ?? input.account?.instance ?? DEFAULT_BLUESKY_SERVICE).replace(/\/+$/, '')
-    const identity = await resolveIdentity({ fetch }, identifier, { handleResolverUrl: service })
+    // A server the person names (or the account's own PDS on reconnect) answers for its accounts:
+    // the handle resolves there and the DID document is the one it serves, checked both ways, so a
+    // PDS with its own PLC needs no public directory. With no server named, the public PLC applies.
+    const named = (input.service ?? input.account?.instance)?.replace(/\/+$/, '')
+    const identity = named
+      ? await resolveIdentityAtServer({ fetch }, named, identifier)
+      : await resolveIdentity({ fetch }, identifier, { handleResolverUrl: DEFAULT_BLUESKY_SERVICE })
     if (!identity.ok) networkError('bluesky', identity.error)
     const offered = await discoverOAuth({ fetch }, identity.value.pdsUrl)
     if (!offered.ok) networkError('bluesky', offered.error)
     if (offered.value === null) {
       pending = { network, method: 'app_password', did: identity.value.did, handle: identity.value.handle, pds_url: identity.value.pdsUrl }
     } else {
-      const started = await startOAuth({ fetch }, blueskyOAuthClient(ctx.env), { identifier: identity.value.did, handleResolverUrl: service })
+      const started = await startOAuth({ fetch }, blueskyOAuthClient(ctx.env), { identifier: identity.value.did, handleResolverUrl: named ?? DEFAULT_BLUESKY_SERVICE, identity: identity.value })
       if (!started.ok) networkError('bluesky', started.error)
       // The library made its own state; Stump's binds the consent to this person.
       pending = { network, method: 'oauth', oauth: started.value.pending }
@@ -181,7 +186,7 @@ async function exchange(ctx: ActionContext, connection: ConnectionRow, pending: 
     if (!account.ok) networkError('mastodon', account.error)
     if (!instance.ok) networkError('mastodon', instance.error)
     return {
-      networkUserId: `${pending.origin}|${account.value.id}`, handle: account.value.handle, displayName: account.value.displayName, instance: pending.origin,
+      networkUserId: `${pending.origin}|${account.value.id}`, handle: account.value.handle.replace(/^@/, ''), displayName: account.value.displayName, instance: pending.origin,
       credentials: { network: 'mastodon', origin: pending.origin, redirect_uri: pending.redirect_uri, access_token: token.value.accessToken }, expiresAt: null,
       bot: account.value.bot, botRules: instance.value.botFlagRules, postLimit: instance.value.maxCharacters,
       revoke: async () => { await revokeToken({ fetch }, pending.origin, { clientId: app.clientId, clientSecret: app.clientSecret, token: token.value.accessToken }) },
@@ -200,7 +205,7 @@ async function exchange(ctx: ActionContext, connection: ConnectionRow, pending: 
     const me = await getXMe({ fetch, accessToken: tokens.value.accessToken })
     if (!me.ok) networkError('x', me.error)
     return {
-      networkUserId: me.value.id, handle: `@${me.value.username}`, displayName: me.value.name, instance: null, expiresAt: Date.parse(tokens.value.expiresAt),
+      networkUserId: me.value.id, handle: me.value.username, displayName: me.value.name, instance: null, expiresAt: Date.parse(tokens.value.expiresAt),
       credentials: { network: 'x', tokens: tokens.value, user_id: me.value.id, username: me.value.username },
       // X lets longer posts through only for subscribed accounts; everyone else has the weighted 280.
       postLimit: me.value.verifiedType && me.value.verifiedType !== 'none' ? 25_000 : 280,
@@ -227,7 +232,7 @@ async function bluesky(ctx: ActionContext, pdsUrl: string, auth: BlueskyAuth): P
   const profile = await client.profile()
   if (!profile.ok) networkError('bluesky', profile.error)
   return {
-    networkUserId: profile.value.did, handle: `@${profile.value.handle}`, displayName: profile.value.displayName, instance: pdsUrl,
+    networkUserId: profile.value.did, handle: profile.value.handle, displayName: profile.value.displayName, instance: pdsUrl,
     get credentials() { return { network: 'bluesky' as const, pds_url: pdsUrl, auth } },
     expiresAt: auth.kind === 'password' ? auth.refreshExpiresAtMs : auth.expiresAtMs, postLimit: 300,
     revoke: async () => { await client.disconnect() },

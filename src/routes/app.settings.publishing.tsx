@@ -4,6 +4,7 @@ import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
 import { Outcome, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
 import type { PauseState, Resumed, Team } from '../stump/ui/types.ts'
+import { shownHandle } from '../stump/accounts/handle.ts'
 
 export const Route = createFileRoute('/app/settings/publishing')({ component: PublishingPage })
 
@@ -37,7 +38,7 @@ function PublishingPage() {
   const role = data?.me.person.role ?? 'viewer'
   const may = ['owner', 'admin', 'editor'].includes(role), admin = ['owner', 'admin'].includes(role)
   const name = (id: string) => data?.team.items.find(person => person.id === id)?.display_name ?? 'Someone who left'
-  const handle = (id: string | null) => data?.accounts.find(account => account.id === id)?.handle ?? 'An account'
+  const handle = (id: string | null) => { const found = data?.accounts.find(account => account.id === id); return found ? shownHandle(found) : 'An account' }
   async function pause() {
     setResumed(null)
     await run(() => runAction('stump.calendar.pause', { action: 'pause', scope: 'all', idempotency_key: key() }), () => 'Paused. Nothing posts until you resume.')
@@ -74,12 +75,12 @@ function PublishingPage() {
         <ul className="st-list">{data.accounts.map(account => {
           const scope = paused.find(item => item.account_id === account.id)
           return <li className="st-row" key={account.id}>
-            <div className="st-row-main"><div className="st-name">{account.handle}</div>
+            <div className="st-row-main"><div className="st-name">{shownHandle(account)}</div>
               <div className="st-meta">{NAMES[account.network]} · {scope ? `paused by ${name(scope.person_id)}, ${when(scope.at)}` : 'publishing'}</div></div>
             {may ? scope
               ? <button className="st-button" type="button" disabled={busy} onClick={() => void resume('account', account.id)}>Resume</button>
               : <button className="st-button" type="button" disabled={busy}
-                onClick={() => void run(() => runAction('stump.calendar.pause', { action: 'pause', scope: 'account', account_id: account.id, idempotency_key: key() }), () => `${account.handle} paused.`).then(refresh)}>Pause</button> : null}
+                onClick={() => void run(() => runAction('stump.calendar.pause', { action: 'pause', scope: 'account', account_id: account.id, idempotency_key: key() }), () => `${shownHandle(account)} paused.`).then(refresh)}>Pause</button> : null}
           </li>
         })}</ul>
       </> : null}
@@ -175,7 +176,7 @@ function SlotRow({ account, slots, onSaved }: { account: Account; slots: Slots |
   const summary = first ? `${first.days.length === 5 && !first.days.some(day => day === 'sat' || day === 'sun') ? 'Weekdays' : first.days.map(day => DAY_NAMES[day]).join(', ')} ${first.times.join(', ')} · ${slots?.time_zone}` : 'No queue slots yet'
   return <li className="st-row st-stack">
     <button className="st-row-toggle" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
-      <span className="st-row-main"><span className="st-name st-handle">{account.handle}</span><span className="st-meta">{NAMES[account.network]} · {summary}</span></span>
+      <span className="st-row-main"><span className="st-name st-handle">{shownHandle(account)}</span><span className="st-meta">{NAMES[account.network]} · {summary}</span></span>
       <span className="st-state">{next ? `next open ${when(next.at)}` : ''}</span>
       <span className="st-chevron" aria-hidden="true">›</span>
     </button>

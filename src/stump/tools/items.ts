@@ -1,6 +1,7 @@
 import { ToolRefusal } from '../../modules/agent-door/index.ts'
 import { refuse, refuseAct } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
+import { shownHandle } from '../accounts/handle.ts'
 import { readAccount } from '../accounts/store.ts'
 import { moveItem, pauseFor } from '../items/state.ts'
 import { CONTRIBUTORS, EDITORS } from '../people/roles.ts'
@@ -24,7 +25,7 @@ const money = (plans: Plan[]) => {
   return micro > 0 ? { amount: { value: micro / 1e6, currency: 'USD' }, payee: 'X' } : {}
 }
 const summary = (plans: Plan[], verb: string) => ({
-  target: { name: `${verb} ${plans.length === 1 ? `on ${plans[0]!.account.network} ${plans[0]!.account.handle}` : `${plans.length} posts`}` },
+  target: { name: `${verb} ${plans.length === 1 ? `on ${plans[0]!.account.network} ${shownHandle(plans[0]!.account)}` : `${plans.length} posts`}` },
   items: plans.map(plan => plan.item.id), ...money(plans),
 })
 
