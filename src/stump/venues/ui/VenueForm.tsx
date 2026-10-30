@@ -5,6 +5,7 @@ import { DETAIL_LABELS, KIND_FIELDS, STATUS_LABELS, type KindId } from '../kinds
 import type { Venue } from './types.ts'
 
 const PRIORITIES = ['top', 'high', 'medium', 'low']
+const detailText = (value: unknown) => Array.isArray(value) ? value.join(', ') : String(value ?? '')
 const key = () => crypto.randomUUID()
 
 function details(kind: KindId, form: FormData) {
@@ -12,7 +13,7 @@ function details(kind: KindId, form: FormData) {
   for (const [name, type] of Object.entries(KIND_FIELDS[kind].details)) {
     const raw = String(form.get(`detail.${name}`) ?? '').trim()
     if (!raw) continue
-    out[name] = type === 'integer' || type === 'number' ? Number(raw) : raw
+    out[name] = type === 'integer' || type === 'number' ? Number(raw) : type === 'list' ? raw.split(',').map(item => item.trim()).filter(Boolean) : raw
   }
   return out
 }
@@ -47,8 +48,9 @@ export function VenueForm({ venue, onDone, onCancel, onImport }: { venue?: Venue
       <label className="st-field">Priority<select name="priority" defaultValue={venue?.priority ?? ''}><option value="">None</option>{PRIORITIES.map(item => <option key={item} value={item}>{item[0]!.toUpperCase() + item.slice(1)}</option>)}</select></label>
       <label className="st-field">Platform<input name="platform" maxLength={80} defaultValue={venue?.platform ?? ''} placeholder="Reddit, Discourse, Substack…" /></label>
       {Object.entries(fields.details).map(([name, type]) => <label className="st-field" key={`${kind}.${name}`}>{DETAIL_LABELS[name] ?? name}{(fields.required as readonly string[]).includes(name) ? '' : ' (optional)'}
-        <input name={`detail.${name}`} type={type === 'date' ? 'date' : type === 'text' ? 'text' : 'number'} min={type === 'text' || type === 'date' ? undefined : 0}
-          step={type === 'number' ? 'any' : undefined} required={(fields.required as readonly string[]).includes(name)} defaultValue={String((venue?.kind === kind ? venue.details[name] : null) ?? '')} />
+        <input name={`detail.${name}`} type={type === 'date' ? 'date' : type === 'url' ? 'url' : type === 'integer' || type === 'number' ? 'number' : 'text'} min={type === 'integer' || type === 'number' ? 0 : undefined}
+          step={type === 'number' ? 'any' : undefined} required={(fields.required as readonly string[]).includes(name)} placeholder={type === 'list' ? 'Separate with commas' : type === 'url' ? 'https://' : undefined}
+          defaultValue={detailText(venue?.kind === kind ? venue.details[name] : null)} />
       </label>)}
       <label className="st-field">Who reads it<input name="audience" maxLength={2000} defaultValue={venue?.audience ?? ''} /></label>
       <label className="st-field">Why it matters<input name="why" maxLength={2000} defaultValue={venue?.why ?? ''} /></label>

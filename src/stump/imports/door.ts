@@ -11,7 +11,7 @@ import type { StumpEnv } from '../env.ts'
 import { REJECTED_KIND } from '../lib/imports/index.ts'
 import { resolvePerson } from '../people/store.ts'
 import { rowChanges, type PlanRow } from '../venues/import/changes.ts'
-import { keptAfterUndo } from '../venues/import/kept.ts'
+import { keptAfterUndo, releaseKept } from '../venues/import/kept.ts'
 import { VENUE_DESTINATION, venueListSource } from '../venues/import/source.ts'
 import { venueListTargets } from '../venues/import/targets.ts'
 
@@ -102,8 +102,11 @@ export async function importDoorResponse(request: Request, original: StumpEnv): 
   const response = await kit(action, body)
   if (!response.ok || action !== 'undo') return response
   // Undo keeps what was edited since, and what something else now uses; it says which.
-  const result = await response.json() as Record<string, unknown>, job = result.job as { id?: string } | undefined
-  result.kept = job?.id ? await keptAfterUndo(env.DB, job.id) : []
+  const result = await response.json() as Record<string, unknown>, job = result.job as { id?: string; state?: string } | undefined
+  const kept = job?.id ? await keptAfterUndo(env.DB, job.id) : []
+  // A finished Undo hands what it kept back to Stump: a later import of the list meets it as already in the register.
+  if (job?.state === 'undone') await releaseKept(env.DB, kept)
+  result.kept = kept
   return Response.json(result, { status: response.status, headers })
 
   /** A source's waiting and applied imports, so a review closed without a choice can be found again. */

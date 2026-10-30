@@ -37,6 +37,8 @@ export function placeKey(url: string | null, name: string): string {
   return `name:${foldName(name)}`
 }
 
+const webAddress = (value: string) => { try { return /^https?:$/.test(new URL(value).protocol) } catch { return false } }
+
 /** A kind's details, each key present (null when unset), checked against its type. */
 export function kindDetails(kind: VenueKind, url: string | null, input: Record<string, unknown>): Record<string, unknown> {
   const fields: { url: boolean; details: Record<string, string>; required: readonly string[] } = KIND_FIELDS[kind], out: Record<string, unknown> = {}
@@ -44,11 +46,13 @@ export function kindDetails(kind: VenueKind, url: string | null, input: Record<s
   for (const [key, type] of Object.entries(fields.details)) {
     const value = input[key] ?? null
     const valid = value === null || (type === 'text' ? typeof value === 'string' && value.length <= 300
+      : type === 'url' ? typeof value === 'string' && value.length <= 2048 && (!value.trim() || webAddress(value.trim()))
+      : type === 'list' ? Array.isArray(value) && value.length <= 20 && value.every(item => typeof item === 'string' && item.trim().length > 0 && item.length <= 80)
       : type === 'integer' ? Number.isSafeInteger(value) && (value as number) >= 0
         : type === 'number' ? typeof value === 'number' && Number.isFinite(value) && value >= 0
           : typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value))
-    if (!valid) refuse('invalid_arguments', { field: `details.${key}` })
-    out[key] = typeof value === 'string' ? value.trim() || null : value
+    if (!valid) refuse('invalid_arguments', { field: `details.${key}`, ...(type === 'url' ? { reason: 'Give an http(s) address.' } : type === 'list' ? { reason: 'Give up to 20 short words or phrases.' } : {}) })
+    out[key] = typeof value === 'string' ? value.trim() || null : Array.isArray(value) ? (value.length ? value.map(item => String(item).trim()) : null) : value
   }
   // A subreddit's name comes from its address when not given: reddit.com/r/<name>.
   if (kind === 'subreddit' && !out.subreddit && url) {

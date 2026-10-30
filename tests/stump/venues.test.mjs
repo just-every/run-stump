@@ -22,10 +22,13 @@ test('the register keeps one venue per place, and its rules decide the routes an
   assert.equal(journalist.result.structuredContent.details.publication, 'Synthetic Times')
   const newsletter = (await manage('owner', { action: 'create', kind: 'newsletter', name: 'Synthetic Weekly', url: 'https://synthetic-stump-2.example/news', status: 'editorial' })).body.result
 
-  for (const [kind, extra, field] of [['slack', { workspace: 'Synthetic', channel: '#demos' }, 'channel'], ['podcast', { details: { host: 'Synthetic Host' } }, 'host'], ['directory', { details: { price_usd: 49 } }, 'price_usd']]) {
+  for (const [kind, extra, field] of [['slack', { workspace: 'Synthetic', channel: '#demos' }, 'channel'], ['podcast', { details: { host: 'Synthetic Host' }, guest_intake_url: 'https://synthetic-stump-podcast.example/guests', topics: ['clinics', 'scheduling'] }, 'topics'], ['directory', { details: { price_usd: 49 } }, 'price_usd']]) {
     const venue = (await manage('owner', { action: 'create', kind, name: `Synthetic ${kind}`, url: `https://synthetic-stump-${kind}.example/`, status: 'candidate', ...extra })).body.result
     assert.equal(venue.kind, kind); assert.ok(Object.hasOwn(venue.details, field) && venue.details[field] !== null, kind)
   }
+  // What a person gives is kept or refused by name, never dropped.
+  const unknown = await app.mcp(token, 'stump.venues.manage', { action: 'create', kind: 'podcast', name: 'Synthetic Show', url: 'https://synthetic-stump-show.example/', pitch_deck: 'x' })
+  assert.deepEqual([unknown.error?.code, unknown.error?.field], ['invalid_arguments', 'pitch_deck'])
   const listed = (await manage('owner', { action: 'list', status: 'editorial' })).body.result
   assert.deepEqual(listed.items.map(venue => venue.name).sort(), ['Synthetic Reporter', 'Synthetic Weekly'])
   assert.equal(listed.total, listed.items.length)
@@ -200,6 +203,15 @@ test('a venue list imports from Markdown and CSV: a dry run, apply, a rerun that
   const kept = undone.body.kept.filter(item => item.kind === 'venue').map(item => item.id).sort()
   assert.deepEqual((await ours()).map(venue => venue.id).sort(), kept)
   assert.ok(kept.includes(forum.id) && kept.includes(reddit.id) && !kept.includes(spam.id))
+  // The same list again after that Undo: what it kept stays as it is, and the rest comes back.
+  const again = await plan('outreach-md', list('ready'))
+  assert.equal(again.status, 200, JSON.stringify(again.body))
+  await apply('outreach-md', again.body)
+  const back = await ours()
+  assert.deepEqual(back.filter(venue => kept.includes(venue.id)).map(venue => venue.status).sort(), ['candidate', 'ready'])
+  assert.ok(back.some(venue => venue.status === 'excluded' && venue.name === spam.name))
+  assert.deepEqual((await manage('owner', { action: 'get', venue_id: reddit.id })).body.result.items.map(item => [item.id, item.state]), [[held.id, 'held']])
+  assert.equal((await door('undo', 'outreach-md', { planId: again.body.planId })).body.job.state, 'undone')
 
   const fromCsv = await plan('venues-csv', csv)
   assert.deepEqual([fromCsv.body.summary.venues, fromCsv.body.summary.entries, fromCsv.body.summary.excluded], [2, 1, 1])

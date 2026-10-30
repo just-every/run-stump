@@ -31,7 +31,10 @@ async function known(db: D1Database) {
     .all<{ id: string; name: string; url_key: string; rules: string; status: string; archived: number; namespace: string | null }>()).results
   for (const row of venueRows) venues.set(row.url_key, { id: row.id, name: row.name, namespace: row.namespace, rules: row.rules, status: row.status, archived: row.archived })
   for (const row of (await db.prepare('SELECT item_id,target_id,namespace FROM stump_item_imports').all<{ item_id: string; target_id: string; namespace: string }>()).results) items.set(row.target_id, { id: row.item_id, namespace: row.namespace, name: row.target_id })
-  return { products, venues, items }
+  // Entries an Undo kept and released: Stump's own items now, under the id the import gave them.
+  const released = new Set((await db.prepare("SELECT id FROM stump_items WHERE length(id)=28 AND substr(id,4,1)='_' AND id NOT IN (SELECT item_id FROM stump_item_imports)")
+    .all<{ id: string }>()).results.map(row => row.id))
+  return { products, venues, items, released }
 }
 
 /** The import's rules, as the register stores them: each {value, source_url, read_at, sourced}. */
@@ -99,6 +102,7 @@ export async function venueListSource(db: D1Database, namespace: VenueSource, ow
     const p = record.payload as Record<string, Json>
     const existing = state.items.get(record.sourceId)
     if (existing && existing.namespace !== namespace) return { effects: [], unmapped: [{ reason: `This entry was already imported from ${existing.namespace}.` }] }
+    if (!existing && state.released.has(nativeId(record.sourceId))) return { effects: [], unmapped: [{ reason: `Already in Stump (${nativeId(record.sourceId)}), kept by an earlier Undo; it is kept as it is.` }] }
     const venue = venueRef(String(p.venue_key)), product = productRef(String(p.product_name))
     const options: Record<string, Json> = {}
     for (const key of ['title', 'alternates', 'extra_copy', 'own_words_required', 'post_type', 'listed_status', 'priority', 'post_url', 'community_url', 'rules_urls',

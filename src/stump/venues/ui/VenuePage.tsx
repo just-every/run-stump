@@ -160,13 +160,13 @@ function DetailsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
   const howTo = Object.entries(venue.how_to_post).filter(([, value]) => value).map(([name, value]) => name === 'text' ? String(value) : `${name}: ${String(value)}`).join(' · ')
   const rows: Array<[string, string | null]> = [
     ['Address', venue.url], ['Platform', venue.platform], ['Priority', venue.priority],
-    ...Object.entries(venue.details).filter(([, value]) => value !== null && value !== '').map(([name, value]) => [DETAIL_LABELS[name] ?? name, String(value)] as [string, string]),
+    ...Object.entries(venue.details).filter(([, value]) => value !== null && value !== '').map(([name, value]) => [DETAIL_LABELS[name] ?? name, Array.isArray(value) ? value.join(', ') : String(value)] as [string, string]),
     ['Who reads it', venue.audience], ['Why it matters', venue.why], ['What readers get', venue.reader_value], ['How to post', howTo || null],
     ['Reception', venue.reception], ['Notes', venue.notes],
   ]
   return <section className="st-card" aria-labelledby="details-title">
     <h2 id="details-title">About this venue</h2>
-    <dl className="st-kv">{rows.filter(([, value]) => value).map(([label, value]) => <div key={label} style={{ display: 'contents' }}><dt>{label}</dt><dd>{label === 'Address' ? <a href={value!} target="_blank" rel="noreferrer noopener">{value}</a> : value}</dd></div>)}</dl>
+    <dl className="st-kv">{rows.filter(([, value]) => value).map(([label, value]) => <div key={label} style={{ display: 'contents' }}><dt>{label}</dt><dd>{label === 'Address' || label === DETAIL_LABELS.guest_intake_url ? <a href={value!} target="_blank" rel="noreferrer noopener">{value}</a> : value}</dd></div>)}</dl>
     {venue.products.length ? <>
       <h3 style={{ fontSize: 'var(--stump-size-body)', margin: '16px 0 4px' }}>Products</h3>
       <ul className="st-list">{venue.products.map(product => <li className="st-row" key={product.product_id}><div className="st-row-main"><div className="st-name">{product.name ?? 'Product'}</div>

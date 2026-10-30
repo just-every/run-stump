@@ -135,10 +135,13 @@ export const venueListTargets: D1TargetAdapter = {
   },
   remove(_destination, kind, id) {
     const native = nativeId(id), { side } = shape(kind)
+    // Only a record the import still holds: one an earlier Undo kept and released is Stump's own and is never removed by an import.
+    const held = ` AND EXISTS(SELECT 1 FROM ${side} WHERE target_id=?)`
+    const del = (text: string) => sql(text + held, native, id)
     const rows = kind === 'venue'
-      ? [sql('DELETE FROM stump_venue_products WHERE venue_id=?', native), sql('DELETE FROM stump_venue_history WHERE venue_id=?', native), sql('DELETE FROM stump_venues WHERE id=?', native)]
-      : kind === 'product' ? [sql('DELETE FROM stump_products WHERE id=?', native)]
-        : [sql('DELETE FROM stump_item_revisions WHERE item_id=?', native), sql('DELETE FROM stump_item_history WHERE item_id=?', native), sql('DELETE FROM stump_items WHERE id=?', native)]
+      ? [del('DELETE FROM stump_venue_products WHERE venue_id=?'), del('DELETE FROM stump_venue_history WHERE venue_id=?'), del('DELETE FROM stump_venues WHERE id=?')]
+      : kind === 'product' ? [del('DELETE FROM stump_products WHERE id=?')]
+        : [del('DELETE FROM stump_item_revisions WHERE item_id=?'), del('DELETE FROM stump_item_history WHERE item_id=?'), del('DELETE FROM stump_items WHERE id=?')]
     return [...rows, sql(`DELETE FROM ${side} WHERE target_id=?`, id)]
   },
   async list(db, destination) {

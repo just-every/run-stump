@@ -114,7 +114,9 @@ export interface VenueHold { rule: RuleKey; reason: string; source_url: string |
 
 const threadOf = (item: ItemAtVenue) => {
   const reply = item.reply_to ? (JSON.parse(item.reply_to) as { url?: string }).url : undefined
-  return reply ?? (JSON.parse(item.options) as { thread_url?: string }).thread_url ?? null
+  // A post's thread is its thread_url, or the post address an imported entry is aimed at.
+  const options = JSON.parse(item.options) as { thread_url?: string | null; post_url?: string | null }
+  return reply ?? options.thread_url ?? options.post_url ?? null
 }
 /** The thread a URL sits in: a Reddit-style post id where there is one, else the canonical address itself. */
 function threadKey(url: string): { host: string; post: string | null; path: string } | null {

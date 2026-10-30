@@ -17,7 +17,7 @@ const optionalText = (max: number) => ({ type: ['string', 'null'], maxLength: ma
 export const venueId = { type: 'string', minLength: 1, maxLength: 80 }
 // A product link reads product_id and fit; any other key a caller sends with it is ignored.
 const product = { type: 'object', required: ['product_id'], properties: { product_id: text(80), fit: { type: ['integer', 'null'], minimum: 0, maximum: 100 } } }
-const DETAIL_TYPES = { text: optionalText(300), integer: { type: ['integer', 'null'], minimum: 0 }, number: { type: ['number', 'null'], minimum: 0 }, date: { type: ['string', 'null'], pattern: '^\\d{4}-\\d{2}-\\d{2}$' } }
+const DETAIL_TYPES = { text: optionalText(300), url: optionalText(2048), list: { type: ['array', 'null'], maxItems: 20, items: text(80) }, integer: { type: ['integer', 'null'], minimum: 0 }, number: { type: ['number', 'null'], minimum: 0 }, date: { type: ['string', 'null'], pattern: '^\\d{4}-\\d{2}-\\d{2}$' } }
 /** Every kind's own fields, also accepted at the top level of a create or update (a Slack venue's channel, a journalist's publication). */
 const DETAIL_FIELDS: Record<string, unknown> = {}
 for (const kind of Object.values(KIND_FIELDS)) for (const [key, type] of Object.entries(kind.details)) DETAIL_FIELDS[key] = DETAIL_TYPES[type]
@@ -37,6 +37,12 @@ const written = (value: unknown) => JSON.stringify(typeof value === 'string' ? (
 const standard = (measure = 1) => [{ class: 'standard' as const, facts: { measure } }]
 const clean = (value: unknown) => typeof value === 'string' ? value.trim() || null : null
 const mover = (ctx: ActionContext) => ({ db: ctx.db, person: ctx.person, agent: ctx.agent, now: ctx.now })
+/** An argument the action does not declare is refused by name, never dropped: what a person gave is kept or they are told. */
+const DOOR_KEYS = new Set(['action', 'idempotency_key', 'expected_revision'])
+function onlyDeclared(args: Args, properties: Record<string, unknown>) {
+  const kind = typeof args.kind === 'string' ? args.kind : 'venue'
+  for (const key of Object.keys(args)) if (!DOOR_KEYS.has(key) && !Object.hasOwn(properties, key)) refuse('invalid_arguments', { field: key, reason: `A ${kind} has no ${key}.` })
+}
 
 /** The venue as both doors answer it, with its routes, products and next open date now. */
 export async function answer(ctx: Pick<ActionContext, 'db' | 'now'>, rows: VenueRow[]): Promise<PublicVenue[]> {
@@ -163,7 +169,7 @@ export const manageActions: Record<string, StumpAction> = {
     roles: EDITORS, properties: FIELDS, required: ['kind', 'name'],
     classify: () => standard(),
     summary: args => ({ target: { name: String(args.name) } }),
-    run: (args, ctx) => insertVenue(ctx, args, (args.status as string | undefined) ?? 'candidate'),
+    run: (args, ctx) => { onlyDeclared(args, FIELDS); return insertVenue(ctx, args, (args.status as string | undefined) ?? 'candidate') },
   },
   propose: {
     // Anyone who drafts may propose a candidate; an excluded or known place is named instead of proposed again.
@@ -172,6 +178,7 @@ export const manageActions: Record<string, StumpAction> = {
     classify: () => standard(),
     summary: args => ({ target: { name: String(args.name ?? args.url) } }),
     async run(args, ctx) {
+      onlyDeclared(args, manageActions.propose!.properties!)
       const url = clean(args.url)
       if (!url) refuse('invalid_arguments', { field: 'url' })
       let name = clean(args.name)
@@ -195,6 +202,7 @@ export const manageActions: Record<string, StumpAction> = {
     roles: EDITORS, properties: { venue_id: venueId, ...FIELDS }, required: ['venue_id'],
     classify: () => standard(), summary, target, revision,
     async run(args, ctx) {
+      onlyDeclared(args, manageActions.update!.properties!)
       const venue = await venueOrRefuse(ctx.db, args.venue_id)
       const fields = fieldsOf(args, venue)
       if (fields.url_key !== venue.url_key) await samePlace(ctx, fields.url_key, venue.id)
