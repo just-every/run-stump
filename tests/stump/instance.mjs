@@ -18,7 +18,8 @@ const { Agent } = require('undici')
 const root = new URL('../../', import.meta.url).pathname
 const secret = () => randomBytes(32).toString('hex')
 
-export async function stump() {
+/** `outbound(request)` answers the requests a test's own network fakes handle (anything else is refused); `db` is the installation's D1 for seeding what other lanes write. */
+export async function stump({ outbound } = {}) {
   const socket = createServer(); await new Promise(resolve => socket.listen(0, '127.0.0.1', resolve))
   const port = socket.address().port; await new Promise(resolve => socket.close(resolve))
   const directory = await mkdtemp(join(tmpdir(), 'stump-test-'))
@@ -26,6 +27,7 @@ export async function stump() {
   const cert = await readFile(join(directory, 'cert.pem'), 'utf8'), origin = `https://127.0.0.1:${port}`, mail = []
   const setupToken = secret()
   const server = join(root, 'dist/server')
+  let db
   const worker = new Miniflare(convertV4MiniflareOptions({
     https: true, httpsKey: await readFile(join(directory, 'key.pem'), 'utf8'), httpsCert: cert, host: '127.0.0.1', port,
     modules: [{ type: 'ESModule', path: join(server, 'index.js') }, ...(await readdir(join(server, 'assets'))).filter(name => name.endsWith('.js')).map(name => ({ type: 'ESModule', path: join(server, 'assets', name) }))],
@@ -35,13 +37,15 @@ export async function stump() {
       MAIL_PROVIDER: 'sendgrid', MAIL_API_KEY: 'synthetic-stump-1', MAIL_FROM: 'synthetic-stump-2@example.com' },
     log: new Log(LogLevel.ERROR),
     async outboundService(request) {
+      const handled = await outbound?.(request)
+      if (handled) return handled
       if (request.url !== 'https://api.sendgrid.com/v3/mail/send') return new Response('Undeclared network request', { status: 502 })
       mail.push(await request.json())
       return new Response(null, { status: 202, headers: { 'x-message-id': `synthetic-stump-${mail.length}` } })
     },
   }))
   try {
-    const db = await worker.getD1Database('DB')
+    db = await worker.getD1Database('DB')
     for (const name of (await readdir(join(root, 'migrations/core'))).filter(file => file.endsWith('.sql')).sort()) {
       await db.batch(unstable_splitSqlQuery(await readFile(join(root, 'migrations/core', name), 'utf8')).map(sql => db.prepare(sql)))
     }
@@ -87,6 +91,6 @@ export async function stump() {
     })()
     return ownerReady.then(async () => (await json('owner', '/app/api/me')).body.person)
   }
-  return { origin, request, json, signIn, action, mcp, owner, sentTo, email: label => `synthetic-stump-${label}-${randomUUID().slice(0, 8)}@example.com`,
+  return { origin, db, request, json, signIn, action, mcp, owner, sentTo, email: label => `synthetic-stump-${label}-${randomUUID().slice(0, 8)}@example.com`,
     async stop() { await dispatcher.close(); await worker.dispose(); await rm(directory, { recursive: true, force: true }) } }
 }

@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppLedgerRouteImport } from './routes/app.ledger'
 import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
+import { Route as AppSettingsConnectionsRouteImport } from './routes/app.settings.connections'
 import { Route as AppSettingsPublishingRouteImport } from './routes/app.settings.publishing'
 import { Route as AppSettingsTeamRouteImport } from './routes/app.settings.team'
 
@@ -25,9 +27,19 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLedgerRoute = AppLedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsAgentsRoute = AppSettingsAgentsRouteImport.update({
   id: '/settings/agents',
   path: '/settings/agents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsConnectionsRoute = AppSettingsConnectionsRouteImport.update({
+  id: '/settings/connections',
+  path: '/settings/connections',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsPublishingRoute = AppSettingsPublishingRouteImport.update({
@@ -43,22 +55,28 @@ const AppSettingsTeamRoute = AppSettingsTeamRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
+  '/app/ledger': typeof AppLedgerRoute
   '/app/': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/connections': typeof AppSettingsConnectionsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
 }
 export interface FileRoutesByTo {
+  '/app/ledger': typeof AppLedgerRoute
   '/app': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/connections': typeof AppSettingsConnectionsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/app': typeof AppRouteWithChildren
+  '/app/ledger': typeof AppLedgerRoute
   '/app/': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/connections': typeof AppSettingsConnectionsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
 }
@@ -66,21 +84,27 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/app'
+    | '/app/ledger'
     | '/app/'
     | '/app/settings/agents'
+    | '/app/settings/connections'
     | '/app/settings/publishing'
     | '/app/settings/team'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/app/ledger'
     | '/app'
     | '/app/settings/agents'
+    | '/app/settings/connections'
     | '/app/settings/publishing'
     | '/app/settings/team'
   id:
     | '__root__'
     | '/app'
+    | '/app/ledger'
     | '/app/'
     | '/app/settings/agents'
+    | '/app/settings/connections'
     | '/app/settings/publishing'
     | '/app/settings/team'
   fileRoutesById: FileRoutesById
@@ -105,11 +129,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ledger': {
+      id: '/app/ledger'
+      path: '/ledger'
+      fullPath: '/app/ledger'
+      preLoaderRoute: typeof AppLedgerRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/settings/agents': {
       id: '/app/settings/agents'
       path: '/settings/agents'
       fullPath: '/app/settings/agents'
       preLoaderRoute: typeof AppSettingsAgentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings/connections': {
+      id: '/app/settings/connections'
+      path: '/settings/connections'
+      fullPath: '/app/settings/connections'
+      preLoaderRoute: typeof AppSettingsConnectionsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/settings/publishing': {
@@ -130,15 +168,19 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppLedgerRoute: typeof AppLedgerRoute
   AppIndexRoute: typeof AppIndexRoute
   AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
+  AppSettingsConnectionsRoute: typeof AppSettingsConnectionsRoute
   AppSettingsPublishingRoute: typeof AppSettingsPublishingRoute
   AppSettingsTeamRoute: typeof AppSettingsTeamRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppLedgerRoute: AppLedgerRoute,
   AppIndexRoute: AppIndexRoute,
   AppSettingsAgentsRoute: AppSettingsAgentsRoute,
+  AppSettingsConnectionsRoute: AppSettingsConnectionsRoute,
   AppSettingsPublishingRoute: AppSettingsPublishingRoute,
   AppSettingsTeamRoute: AppSettingsTeamRoute,
 }

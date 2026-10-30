@@ -2666,9 +2666,9 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Published | 0 | 1 | 49 | 50 |
-| Target and push further | 0 | 16 | 114 | 130 |
-| All | 0 | 17 | 163 | 180 |
+| Published | 0 | 3 | 47 | 50 |
+| Target and push further | 0 | 20 | 110 | 130 |
+| All | 0 | 23 | 157 | 180 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -2680,8 +2680,8 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 | `STUMP-HANDOFF-001` | A brief and a draft for a named member | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-HANDOFF-002` | The posted link, recorded and checked | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-HANDOFF-003` | Held, skipped and expired hand-offs | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-LEDGER-001` | Every post and reply on the record | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-LEDGER-002` | Ledger search and history | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
+| `STUMP-LEDGER-001` | Every post and reply on the record | published | partial | `tests/stump/ledger-stack.test.mjs` "the ledger is searched with combined filters, corrected into versions, marked removed and exported as the rows on screen" | Points 3 to 6 hold through the person door, MCP and export: a correction adds a version and keeps the first, failed and uncertain entries read as such, a removal keeps the entry with its reason, "<agent> for <person>" reads in the ledger and the export. Points 1 and 2 wait for the publishing and hand-off recorders that write entries. |
+| `STUMP-LEDGER-002` | Ledger search and history | published | partial | `tests/stump/ledger-stack.test.mjs` "the ledger is searched with combined filters, corrected into versions, marked removed and exported as the rows on screen" | Points 2 to 5 hold: combined filters with counts, venue and person histories newest first with removals marked, and a filtered CSV of exactly the matching rows. The screen is `src/routes/app.ledger.tsx`. The 50,000-entry search time of point 1 is measured outside the test suite, not by a committed test. |
 | `STUMP-LEDGER-003` | Post results from each network | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-WATCH-001` | Hacker News search | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-WATCH-002` | RSS and Atom feeds | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
@@ -2783,18 +2783,18 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 | `STUMP-PITCH-002` | Pitches sent through Orbit | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-PITCH-003` | Coverage and embargoes | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-PITCH-004` | Source-request services | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-LINK-001` | Tracked links and UTM tags | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
+| `STUMP-LINK-001` | Tracked links and UTM tags | target | partial | `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded" | `tagOwnLinks` in `src/stump/links/` tags own domains only, keeps the author's parameters, and a rule change affects only the next text (points 2 and 3, and point 1 through the preview action). The posting paths do not call it yet, so a posted Bluesky link is not yet tagged by Stump. |
 | `STUMP-LINK-002` | Short links on the company's domain | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-LINK-004` | Link-in-bio page | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-LINK-003` | Signups by post through Vane | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-LEDGER-004` | Reports and scheduled reports | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-STACK-001` | Penny releases as a source | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-STACK-008` | Releases from GitHub and changelog feeds | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-STACK-002` | Engagers and signals to Orbit | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
+| `STUMP-STACK-002` | Engagers and signals to Orbit | target | partial | `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded" | Orbit's signed signal door receives the engager's public handle and post link under the event type `<source_id>:social-engagement`, a stable identity basis per person, no email unless shown publicly (points 2 and 3). Offers are created by the inbox lane, which also proves point 4 and the measured rates of point 5. |
 | `STUMP-STACK-010` | Engagers to Attio, Pipedrive and any CRM | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-STACK-003` | Newsletter drafts to Mango | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-STACK-009` | Newsletter drafts to beehiiv, Kit and Ghost | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-STACK-004` | Annotations to Vane | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
+| `STUMP-STACK-004` | Annotations to Vane | target | partial | `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded" | `annotateLedgerEntry` sends one annotation of kind campaign on the post's day with its link through Vane's annotation door and records the outcome (point 1). The posting path does not call it yet; launches and deleted posts (points 2 and 3) are not built. |
 | `STUMP-STACK-005` | Notices by email, Slack and push | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-STACK-006` | API, webhooks, Zapier and Make | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-STACK-007` | HubSpot and Google Analytics for companies that keep them | target | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
@@ -2824,7 +2824,7 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 | `STUMP-SURFACE-006` | Commitments and outside accounts | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |
 | `STUMP-SURFACE-007` | Access and security | target | partial | `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify); `tests/stump/team.test.mjs` "the owner cannot be removed or demoted until ownership is transferred, and the transfer is recorded", "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked" | Inviting computes access that widens, and self-widening returns self_escalation through both doors, before the role check; delegation, grants, sign-off paths and security settings are not built. |
 | `STUMP-SURFACE-008` | Destructive and live | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |
-| `STUMP-SURFACE-015` | Personal data computes sensitive | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |
+| `STUMP-SURFACE-015` | Personal data computes sensitive | target | partial | `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"; `agent-surface.json` step "stack-offers" | Sending an engager to Orbit and reading the offers list compute sensitive with the data kind "public handles and post links" and the number of people (point 1). Points 2 to 5 belong to other tools. |
 | `STUMP-SURFACE-009` | Saved items under company policy | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |
 | `STUMP-SURFACE-010` | Product refusals under every policy | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |
 | `STUMP-SURFACE-011` | Events and handoffs across the stack | target | missing | | Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet. |

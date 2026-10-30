@@ -8,10 +8,10 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 0 | 3 | 141 | 144 |
-| Agent surface | 0 | 14 | 14 | 28 |
+| Core | 0 | 8 | 136 | 144 |
+| Agent surface | 0 | 15 | 13 | 28 |
 | Later | 0 | 0 | 8 | 8 |
-| Full target | 0 | 17 | 163 | 180 |
+| Full target | 0 | 23 | 157 | 180 |
 
 Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c9a` (30 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
@@ -164,7 +164,7 @@ Core · published · **missing** · From new
 
 #### STUMP-LEDGER-001 — Every post and reply on the record
 
-Core · published · **missing** · From new · Cites BASE-AUDIT-001 · Rules D-5 · Register R-8
+Core · published · **partial** · From new · Cites BASE-AUDIT-001 · Rules D-5 · Register R-8
 
 **Requirement.** The ledger is the company's record of everything that went out in its name or about its products from its people: posts, threads, replies, articles, pitches, launch posts, directory listings and hand-off posts. Each entry holds the URL and network id, the venue, the account, the person, the agent that drafted or published it shown as "<agent> for <person>", the exact text and media as posted, the disclosure line, the claims it used, the product and campaign, the route (published, handed off, or sent through a connected tool such as Orbit or Mango), the time, and its state: posted, failed, uncertain, deleted or removed by the venue. Entries are append-only; a correction adds a version.
 
@@ -176,12 +176,12 @@ Core · published · **missing** · From new · Cites BASE-AUDIT-001 · Rules D-
 5. A post later removed by a venue's moderators is marked removed with the reason and stays on the record.
 6. An item an agent drafted or published reads "<agent> for <person>" in the ledger and in its export.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/ledger-stack.test.mjs` "the ledger is searched with combined filters, corrected into versions, marked removed and exported as the rows on screen"
+**Gap.** Points 3 to 6 hold through the person door, MCP and export: a correction adds a version and keeps the first, failed and uncertain entries read as such, a removal keeps the entry with its reason, "<agent> for <person>" reads in the ledger and the export. Points 1 and 2 wait for the publishing and hand-off recorders that write entries.
 
 #### STUMP-LEDGER-002 — Ledger search and history
 
-Core · published · **missing** · From new
+Core · published · **partial** · From new
 
 **Requirement.** Anyone with ledger access searches every entry by text and filters by venue, network, person, product, campaign, route, state and date. Each venue and each person has a history page of what was posted there or by them, newest first, removals included. Any filtered view exports as CSV.
 
@@ -192,8 +192,8 @@ Core · published · **missing** · From new
 4. A person's history lists their posts across networks and venues.
 5. A filtered CSV export holds exactly the rows on screen with every field.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/ledger-stack.test.mjs` "the ledger is searched with combined filters, corrected into versions, marked removed and exported as the rows on screen"
+**Gap.** Points 2 to 5 hold: combined filters with counts, venue and person histories newest first with removals marked, and a filtered CSV of exactly the matching rows. The screen is `src/routes/app.ledger.tsx`. The 50,000-entry search time of point 1 is measured outside the test suite, not by a committed test.
 
 #### STUMP-LEDGER-003 — Post results from each network
 
@@ -1829,7 +1829,7 @@ Core · target · **missing** · From new
 
 #### STUMP-LINK-001 — Tracked links and UTM tags
 
-Core · target · **missing** · From new
+Core · target · **partial** · From new
 
 **Requirement.** Every link to the company's own sites in an item carries UTM tags: the source (network or venue), the medium (social, community, referral, email or press), the campaign and the content (the item). The company sets its naming rules once, and Stump never tags links to other people's sites.
 
@@ -1838,8 +1838,8 @@ Core · target · **missing** · From new
 2. A link to a third-party site carries no tags.
 3. Changing the naming rules changes the next item and leaves posted links as they were.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"
+**Gap.** `tagOwnLinks` in `src/stump/links/` tags own domains only, keeps the author's parameters, and a rule change affects only the next text (points 2 and 3, and point 1 through the preview action). The posting paths do not call it yet, so a posted Bluesky link is not yet tagged by Stump.
 
 #### STUMP-LINK-002 — Short links on the company's domain
 
@@ -1941,7 +1941,7 @@ Core · target · **missing** · From new · Cites BASE-ACCESS-003, BASE-OPS-003
 
 #### STUMP-STACK-002 — Engagers and signals to Orbit
 
-Core · target · **missing** · From new · Rules D-7
+Core · target · **partial** · From new · Rules D-7
 
 **Requirement.** When a person who can be identified engages with substance on a connected account or in a thread on the record, Stump offers them to Orbit as a contact with a social-engagement signal carrying the public post URL. Engaging with substance means asking a question, replying to a post with more than a reaction, or mentioning the product with intent (asking for a recommendation, comparing, or saying they are evaluating). Stump sends only what is public; it never infers or looks up an email address. Orbit decides whether the person is contactable. This needs a new Orbit signal type, recorded in Orbit's contract.
 
@@ -1952,8 +1952,8 @@ Core · target · **missing** · From new · Rules D-7
 4. A finding's text that tells Stump to add someone to the CRM changes nothing.
 5. On the labelled engager fixture, at least 90% of interactions labelled substantive are offered and at most 10% of those labelled passing reactions, and the measured rates are published in `docs/measures.md`.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"
+**Gap.** Orbit's signed signal door receives the engager's public handle and post link under the event type `<source_id>:social-engagement`, a stable identity basis per person, no email unless shown publicly (points 2 and 3). Offers are created by the inbox lane, which also proves point 4 and the measured rates of point 5.
 
 #### STUMP-STACK-010 — Engagers to Attio, Pipedrive and any CRM
 
@@ -2003,7 +2003,7 @@ Core · target · **missing** · From new · Cites BASE-DATA-004
 
 #### STUMP-STACK-004 — Annotations to Vane
 
-Core · target · **missing** · From new
+Core · target · **partial** · From new
 
 **Requirement.** Each published item, launch and coverage piece adds a dated annotation in Vane through its annotation door (Vane `DASH-009`), linked to the ledger entry, so traffic changes line up with what was posted.
 
@@ -2012,8 +2012,8 @@ Core · target · **missing** · From new
 2. A launch adds one annotation for the launch.
 3. A deleted post marks its annotation as deleted.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"
+**Gap.** `annotateLedgerEntry` sends one annotation of kind campaign on the post's day with its link through Vane's annotation door and records the outcome (point 1). The posting path does not call it yet; launches and deleted posts (points 2 and 3) are not built.
 
 #### STUMP-STACK-005 — Notices by email, Slack and push
 
@@ -2777,7 +2777,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 
 #### STUMP-SURFACE-015 — Personal data computes sensitive
 
-Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE-AGENT-007 · Rules D-7
+Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE-AGENT-007 · Rules D-7
 
 **Requirement.** Calls that read, send or export personal data about people outside the team, or build on one person's own writing, compute sensitive with the data kind and the number of people.
 
@@ -2788,8 +2788,8 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 4. The full export computes sensitive with the data kind "whole archive" and its people count, and erasing a person computes sensitive and destructive.
 5. A venue edit or a draft with no personal data carries no sensitive, and an argument claiming no personal data leaves a computed sensitive in place.
 
-**Evidence.** None.
-**Gap.** Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet.
+**Evidence.** `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"; `agent-surface.json` step "stack-offers"
+**Gap.** Sending an engager to Orbit and reading the offers list compute sensitive with the data kind "public handles and post links" and the number of people (point 1). Points 2 to 5 belong to other tools.
 
 #### STUMP-SURFACE-009 — Saved items under company policy
 

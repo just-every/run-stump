@@ -5,7 +5,11 @@
   "capabilities": ["tools", "policy", "pause", "audit", "idempotency"],
   "tools": [
     { "name": "stump.calendar.pause", "scope": "stump:calendar", "readOnly": false, "classes": ["live"], "clauses": ["STUMP-PLAN-007"] },
+    { "name": "stump.ledger.correct", "scope": "stump:ledger", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001"] },
     { "name": "stump.ledger.search", "scope": "stump:ledger", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001", "STUMP-LEDGER-002"] },
+    { "name": "stump.links.manage", "scope": "stump:links", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-LINK-001"] },
+    { "name": "stump.stack.connect", "scope": "stump:stack", "readOnly": false, "classes": ["security"], "clauses": ["STUMP-STACK-002", "STUMP-STACK-004"], "sponsorEscalation": false },
+    { "name": "stump.stack.send", "scope": "stump:stack", "readOnly": false, "classes": ["standard", "sensitive"], "clauses": ["STUMP-STACK-002", "STUMP-STACK-004", "STUMP-SURFACE-015"] },
     { "name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001"] }
   ],
   "notTools": [
@@ -44,9 +48,34 @@
       "tool": "stump.ledger.search",
       "args": { "action": "search" },
       "expect": [{ "class": "standard" }]
+    },
+    {
+      "id": "link-rules",
+      "tool": "stump.links.manage",
+      "args": { "action": "set_rules", "own_domains": ["example.com"], "mediums": { "published": "social", "handoff": "community" } },
+      "expect": [{ "class": "standard" }]
+    },
+    {
+      "id": "connect-orbit",
+      "tool": "stump.stack.connect",
+      "args": { "action": "connect", "seed": "orbit", "origin": "https://orbit.invalid", "source_id": "stump", "secret": { "$fixture": "orbitSecret", "pointer": "" } },
+      "expect": [{ "class": "security", "facts": { "measure": 1, "setting": "orbit connection" } }]
+    },
+    {
+      "id": "stack-offers",
+      "tool": "stump.stack.send",
+      "args": { "action": "offers" },
+      "expect": [{ "class": "standard" }, { "class": "sensitive", "facts": { "kind": "public handles and post links" } }]
+    },
+    {
+      "id": "ledger-corrections",
+      "tool": "stump.ledger.correct",
+      "args": { "action": "corrections" },
+      "expect": [{ "class": "standard" }]
     }
   ],
   "verification": {
+    "owner": { "bindings": { "INSTALLATION_KEY": "sessionSecret" } },
     "fixtures": { "module": "tests/agent/fixtures.mjs" }
   }
 }

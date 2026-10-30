@@ -2,6 +2,8 @@ import { toolSchema } from '../actions/runner.ts'
 import type { StumpTool } from '../actions/types.ts'
 import { calendarTools } from './calendar.ts'
 import { ledgerTools } from './ledger.ts'
+import { linksTools } from './links.ts'
+import { stackTools } from './stack.ts'
 import { teamTools } from './team.ts'
 
 // Every Stump tool, one line per area (src/stump/README.md). The person door
@@ -9,6 +11,8 @@ import { teamTools } from './team.ts'
 export const stumpTools: readonly StumpTool[] = [
   ...calendarTools,
   ...ledgerTools,
+  ...linksTools,
+  ...stackTools,
   ...teamTools,
 ]
 
