@@ -3632,7 +3632,7 @@
       "executable": false
     },
     "src/stump/lib/claims/check.ts": {
-      "sha256": "e5168ea2bf9f1aeee0f56c7e5731b2074280ad6c6778c6769f6ac61e4aebd39d",
+      "sha256": "5e9e78a63326d5a30ee0a53513fd16703860d335ab4c0fc3c391504cbfb08042",
       "executable": false
     },
     "src/stump/lib/claims/disclosure.ts": {
@@ -3640,7 +3640,7 @@
       "executable": false
     },
     "src/stump/lib/claims/extract.ts": {
-      "sha256": "fc9e5464961a75fbb518f08126b0b5e320eac22d00cbe4bbfe66e771dd679244",
+      "sha256": "8789da9f1f358096da54e5add49d2e8c14225978dbc375b555dc96d2ad539327",
       "executable": false
     },
     "src/stump/lib/claims/index.ts": {
