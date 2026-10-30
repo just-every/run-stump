@@ -10,3 +10,4 @@ dist/
 *.tsbuildinfo
 
 .rer/local/
+.rer/docs-search/

@@ -450,6 +450,32 @@
           "mode": "100644"
         }
       }
+    },
+    {
+      "path": "src/modules/docs-search",
+      "originPath": "modules/site/docs-search",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "files": {
+        "src/modules/docs-search/client.ts": "9d1c3d573c5cab0ef24e1a629f58733126cdb56c90190ec7e21cfa33bf882519",
+        "src/modules/docs-search/search.css": "44ce24bd0708975375a8f46bda17dc6a4750019c338cdc18d9e591c1fdabb8e4",
+        "src/modules/docs-search/SearchField.tsx": "f9bbdac81b7072be60f2e8d3d4e184328d48f09524a61d1022a6c9768d3acb15"
+      },
+      "modes": {
+        "src/modules/docs-search/client.ts": "100644",
+        "src/modules/docs-search/search.css": "100644",
+        "src/modules/docs-search/SearchField.tsx": "100644"
+      },
+      "originFiles": [
+        "modules/site/docs-search/SearchField.tsx",
+        "modules/site/docs-search/artifacts.mjs",
+        "modules/site/docs-search/client.ts",
+        "modules/site/docs-search/index-build.mjs",
+        "modules/site/docs-search/retrieve.ts",
+        "modules/site/docs-search/search.css",
+        "modules/site/docs-search/sections.ts",
+        "modules/site/docs-search/types.ts",
+        "modules/site/docs-search/worker.ts"
+      ]
     }
   ]
 }

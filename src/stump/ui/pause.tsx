@@ -82,11 +82,23 @@ export function PauseControl({ role }: { role: string | undefined }) {
   const ref = useDismiss(open, close)
   if (!data || !mayPause(role)) return null
   if (!all && !resumed) {
-    return <Tip label="Pause publishing" side="below">
-      <button type="button" className="st-pause" disabled={busy} onClick={() => void run(pauseAll).then(done => { if (done) pauseChanged() })}>
-        <span className="st-pause-icon"><Icon name="pause" /></span><span className="st-pause-label">Pause publishing</span>
-      </button>
-    </Tip>
+    // A refused pause opens an alert under the pill with the reason, so a press never fails silently.
+    const pause = () => void run(pauseAll).then(done => { if (done) { close(); pauseChanged() } else setOpen(true) })
+    return <div className="st-pop-anchor" ref={ref}>
+      <Tip label="Pause publishing" side="below">
+        <button type="button" className="st-pause" disabled={busy} onClick={pause}>
+          <span className="st-pause-icon"><Icon name="pause" /></span><span className="st-pause-label">Pause publishing</span>
+        </button>
+      </Tip>
+      {open && message?.error ? <div className="st-popover" role="alert" aria-labelledby="st-pause-failed-title">
+        <p className="st-popover-title" id="st-pause-failed-title">Publishing was not paused</p>
+        <Outcome message={message} />
+        <div className="st-actions">
+          <button type="button" className="st-button primary" disabled={busy} onClick={pause}>Try again</button>
+          <button type="button" className="st-button quiet" onClick={close}>Close</button>
+        </div>
+      </div> : null}
+    </div>
   }
   return <div className="st-pop-anchor" ref={ref}>
     <button type="button" className={all ? 'st-pause paused' : 'st-pause'} aria-expanded={open} aria-controls="st-resume" onClick={() => open ? close() : setOpen(true)}>

@@ -26,7 +26,11 @@ export const commandAdapter = createCommandAdapter(lifecycle, {
  setup: { manifestFile: 'rer-setup.json' }, browserModule: 'scripts/installer/ui/seed.mjs',
  // The run site (rer build --site, rer deploy --site, RER_SITE): pages from
  // edition identity and Run data, written to an ignored folder; its domain is in deploy-site.json.
- site: { entry: 'src/site/pages.ts', output: 'dist/site', declaration: 'deploy-site.json' },
+ // Docs search is Base's: the docsSearch island enhances each search field, and
+ // `rer deploy --site` embeds the docs corpus and serves /docs/search.
+ site: { entry: 'src/site/pages.ts', output: 'dist/site', declaration: 'deploy-site.json',
+  clients: { docsSearch: 'src/modules/docs-search/client.ts' },
+  runtime: { type: 'docs-search', module: 'docs-search', bindings: ['ASSETS', 'AI'], endpoint: '/docs/search', corpus: '.rer/docs-search/corpus.json' } },
  // Local dev identity: the local-only Worker entry, the build output rer build
  // scans for the dev layer.
  devIdentity: { entry: 'src/server.dev.ts', output: ['dist'] },

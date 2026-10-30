@@ -4,7 +4,10 @@
 // Markdown shows as text. Headings get GitHub-style ids and the page's h2s and
 // h3s become "On this page". A broken link, a missing file, a code block
 // without a language or a build machine path fails the build with every
-// problem listed at once.
+// problem listed at once. Each page's search sections are read from the
+// rendered HTML the way Base's docs search reads a rendered tree
+// (modules/site/docs-search/sections.ts): the text before the first heading
+// under the page title, then every h2 and h3 with all its blocks.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Marked } from 'marked';
@@ -31,8 +34,8 @@ function slugger() {
 }
 
 function render(markdown) {
-  const slug = slugger(), toc = [], ids = [], links = [], problems = [], sections = [];
-  let current = null, first = true;
+  const slug = slugger(), toc = [], ids = [], links = [], problems = [];
+  let first = true;
   const marked = new Marked({
     gfm: true,
     renderer: {
@@ -43,14 +46,12 @@ function render(markdown) {
         first = false;
         const id = slug(label);
         ids.push(id);
-        if (depth === 2 || depth === 3) { toc.push({ depth, id, text: label }); current = { anchor: id, titlePath: [label], text: '' }; sections.push(current); }
+        if (depth === 2 || depth === 3) toc.push({ depth, id, text: label });
         return `<h${depth} id="${id}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
       },
       paragraph({ tokens }) {
         first = false;
-        const html = this.parser.parseInline(tokens);
-        if (current) current.text += `${collapse(decodeHtml(this.parser.parseInline(tokens, this.parser.textRenderer)))} `;
-        return `<p>${html}</p>\n`;
+        return `<p>${this.parser.parseInline(tokens)}</p>\n`;
       },
       code({ text: code, lang }) {
         first = false;
@@ -70,7 +71,34 @@ function render(markdown) {
   const html = marked.parse(markdown, { async: false })
     .replace(/<table>/g, '<div class="docs-table" role="region" tabindex="0" aria-label="Table"><table>')
     .replace(/<\/table>/g, '</table></div>');
-  return { html, toc, ids, links, problems, sections };
+  return { html, toc, ids, links, problems };
+}
+
+/** The id the docs article gives its h1 (src/site/docs/Docs.tsx); search links a page's opening text to it. */
+export const TITLE_ID = 'docs-title';
+const blockText = html => collapse(decodeHtml(html.replace(/<div class="docs-code-head">[\s\S]*?<\/div>/g, '').replace(/<[^>]+>/g, ' ')));
+
+/** Search sections from a rendered page: one per heading, paragraphs and list items separated by blank lines, empty sections left out. */
+function searchSections(html, title) {
+  const sections = [];
+  let parent = '', current = { anchor: TITLE_ID, titlePath: [title], text: '' };
+  const finish = () => { if (current.text.trim()) sections.push({ ...current, text: current.text.trim() }); };
+  const heading = /<h([23]) id="([^"]+)">([\s\S]*?)<\/h\1>/g;
+  let at = 0, match;
+  const add = chunk => {
+    for (const block of chunk.split(/<\/(?:p|li|tr|pre|blockquote|h[4-6])>/)) { const words = blockText(block); if (words) current.text += `${words}\n\n`; }
+  };
+  while ((match = heading.exec(html))) {
+    add(html.slice(at, match.index));
+    finish();
+    const label = blockText(match[3]);
+    if (match[1] === '2') parent = label;
+    current = { anchor: match[2], titlePath: [title, ...(match[1] === '3' && parent ? [parent] : []), label], text: '' };
+    at = heading.lastIndex;
+  }
+  add(html.slice(at));
+  finish();
+  return sections;
 }
 
 /** Reads docs/site.json and every page it lists from `root` (the checkout the site builds from), renders them and checks every link between them. */
@@ -114,8 +142,8 @@ export function buildDocs(root = process.cwd()) {
   return {
     sections,
     pages: pages.map(page => {
-      const { html, toc, sections: searchSections } = rendered.get(page.slug);
-      return { ...page, html, toc, searchSections: searchSections.map(section => ({ ...section, titlePath: [page.title, ...section.titlePath], text: section.text.trim() })) };
+      const { html, toc } = rendered.get(page.slug);
+      return { ...page, html, toc, searchSections: searchSections(html, page.title) };
     }),
   };
 }

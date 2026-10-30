@@ -18,26 +18,30 @@ import run from './run.json'
 
 const DESCRIPTION = 'Stump turns your changelog into posts for the communities worth showing up in, then shows which posts brought signups.'
 
-export function sitePages({ contract, hosting, styles = [] }: Partial<SiteContext> = {}): SiteBuild {
+export function sitePages({ contract, hosting, styles = [], clients = {} }: Partial<SiteContext> = {}): SiteBuild {
   const data: RunData = { ...run, pricing: runPricing }
   const docs = buildDocs()
-  const page = (path: string, title: string, description: string, element: ReturnType<typeof createElement>) =>
-    ({ path, html: siteDocument({ title, description, path, styles, body: renderToStaticMarkup(element) }) })
+  const page = (path: string, title: string, description: string, element: ReturnType<typeof createElement>, scripts: string[] = []) =>
+    ({ path, html: siteDocument({ title, description, path, styles, scripts, body: renderToStaticMarkup(element) }) })
+  // Every docs page carries Base's search field; its island turns the field on.
+  const search = clients.docsSearch ? [clients.docsSearch] : []
   const pages = docs.pages
   // Base's /run, /contract, /docs/hosting and 404 pages wear the homepage header too.
   const homepage = { html: renderToStaticMarkup(createElement(Header)), styles }
   return {
     pages: [
       page('/', 'Stump · Be heard in your own voice', DESCRIPTION, createElement(Landing)),
-      page('/docs', 'Docs · Stump', docsLead, createElement(DocsIndex, { sections: docs.sections })),
+      page('/docs', 'Docs · Stump', docsLead, createElement(DocsIndex, { sections: docs.sections }), search),
       ...pages.map((entry, index) => page(`/docs/${entry.slug}`, `${entry.title} · Stump docs`, entry.summary,
-        createElement(DocsArticle, { page: entry, sections: docs.sections, previous: pages[index - 1], next: pages[index + 1] }))),
+        createElement(DocsArticle, { page: entry, sections: docs.sections, previous: pages[index - 1], next: pages[index + 1] }), search)),
       { path: '/run', html: runPageHtml(identity, data, contract, homepage) },
       // rer supplies hosting (null when the seed does not deploy to Workers); a caller without it gets no hosting page.
       ...(hosting !== undefined ? [{ path: '/docs/hosting', html: hostingPageHtml(identity, data, hosting, contract, homepage) }] : []),
       ...(contract ? [{ path: '/contract', html: contractPageHtml(identity, data, contract, homepage) }] : []),
       { path: '/404', html: siteNotFoundHtml(identity, data, contract, homepage) },
     ],
+    // The corpus `rer deploy --site` embeds: each docs page's sections, from this render's headings.
+    searchPages: pages.map(entry => ({ href: `/docs/${entry.slug}`, searchSections: entry.searchSections })),
     assets: ['rer-theme.css', 'fonts', 'brand', 'art', 'favicon.svg', 'favicon-32.png', 'apple-touch-icon.png'],
   }
 }

@@ -1,4 +1,5 @@
-import type { DocsPage, DocsPageMeta, DocsSection, DocsTocEntry } from '../../../scripts/site/docs.mjs'
+import { TITLE_ID, type DocsPage, type DocsPageMeta, type DocsSection, type DocsTocEntry } from '../../../scripts/site/docs.mjs'
+import { SearchField } from '../../modules/docs-search/SearchField'
 import { Footer } from '../shell/Footer'
 import { Header } from '../shell/Header'
 import { links } from '../shell/links'
@@ -22,16 +23,26 @@ function NavList({ sections, current, prefix }: { sections: DocsSection[]; curre
   </>
 }
 
+// Base's docs search (SPEC §5, H2): "Search docs" at the top of the nav. The
+// field answers from /docs/search, which `rer deploy --site` embeds and serves.
 function Sidebar({ sections, current }: { sections: DocsSection[]; current?: string }) {
-  return <nav className="docs-sidebar" aria-label="Docs"><NavList sections={sections} current={current} prefix="docs-side" /></nav>
+  return <nav className="docs-sidebar" aria-label="Docs"><SearchField id="docs-search" /><NavList sections={sections} current={current} prefix="docs-side" /></nav>
 }
 
-/** Below 900 px the nav is one outline pill that opens the whole list. */
+/** Below 900 px the nav is one outline pill that opens the whole list, with a round search button beside it. */
 function Menu({ sections, current, label }: { sections: DocsSection[]; current?: string; label: string }) {
-  return <nav className="docs-menu" aria-label="Docs menu">
-    <details><summary><span>Docs · {label}</span><Chevron /></summary><div className="docs-menu-list"><NavList sections={sections} current={current} prefix="docs-menu" /></div></details>
-  </nav>
+  return <div className="docs-bar">
+    <nav className="docs-menu" aria-label="Docs menu">
+      <details><summary><span>Docs · {label}</span><Chevron /></summary><div className="docs-menu-list"><NavList sections={sections} current={current} prefix="docs-menu" /></div></details>
+    </nav>
+    <details className="docs-find">
+      <summary aria-label="Search docs"><Magnifier /><span className="docs-find-tip" role="tooltip">Search docs</span></summary>
+      <div className="docs-find-panel"><SearchField id="docs-search-phone" /></div>
+    </details>
+  </div>
 }
+
+const Magnifier = () => <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.75" /><path d="m15.75 15.75 4 4" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" /></svg>
 
 const Chevron = () => <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" /></svg>
 
@@ -63,10 +74,10 @@ export function DocsArticle({ page, sections, previous, next }: { page: DocsPage
       <Sidebar sections={sections} current={page.slug} />
       <main id="main" className="docs-main">
         <Menu sections={sections} current={page.slug} label={page.title} />
-        <article className="docs-article" aria-labelledby="docs-title">
+        <article className="docs-article" aria-labelledby={TITLE_ID}>
           <header className="docs-head">
             <p className="docs-eyebrow">{page.section}</p>
-            <h1 id="docs-title" className="docs-title">{page.title}</h1>
+            <h1 id={TITLE_ID} className="docs-title">{page.title}</h1>
             {toc ? <details className="docs-toc-compact"><summary>On this page<Chevron /></summary><TocList toc={page.toc} /></details> : null}
             <Sprout />
           </header>
@@ -86,6 +97,7 @@ export function DocsIndex({ sections }: { sections: DocsSection[] }) {
     <div className="site-wrap docs-shell docs-shell--no-toc">
       <Sidebar sections={sections} />
       <main id="main" className="docs-main">
+        <Menu sections={sections} label="All docs" />
         <header className="docs-head">
           <p className="docs-eyebrow">Stump</p>
           <h1 className="docs-title">Docs</h1>

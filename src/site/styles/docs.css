@@ -96,3 +96,38 @@
   .docs-pager { grid-template-columns: 1fr; }
   .docs-pager-card--next { text-align: left; }
 }
+
+/* Base's docs search (modules/docs-search/search.css) in the landing's palette: a white field with a
+   magnifier at the top of the nav, results in a white card under it. On a phone it opens from the
+   round search button beside the "Docs · <page>" pill. */
+.docs-search { --ink-soft: var(--muted); --rule: var(--outline); --paper: var(--white); margin: 0 0 18px; }
+.docs-search-field { gap: 10px; min-height: 46px; padding: 0 12px; border-radius: 12px; background: rgba(255,255,255,.72); }
+.docs-search-field::before { content: ""; flex: none; width: 20px; height: 20px; background: var(--muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='6.25' fill='none' stroke='black' stroke-width='1.75'/%3E%3Cpath d='m15.75 15.75 4 4' stroke='black' stroke-width='1.75' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='6.25' fill='none' stroke='black' stroke-width='1.75'/%3E%3Cpath d='m15.75 15.75 4 4' stroke='black' stroke-width='1.75' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+/* The sidebar scrolls, so focus draws inside the field rather than as an outline it would clip. */
+.docs-search-field:focus-within { outline: none; border-color: var(--emerald); box-shadow: inset 0 0 0 1px var(--emerald); background: var(--white); }
+.docs-search input { font-size: 16px; }
+.docs-search-panel { margin-top: 8px; padding: 6px; background: var(--white); border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+.docs-search-status { padding: 6px 8px; }
+.docs-search-results li { border-bottom: 0; }
+.docs-search-results a { padding: 8px; border-radius: 8px; }
+.docs-search-results a:is(:hover, [aria-selected="true"]) { outline: 0; background: var(--emerald-tint); }
+.docs-search-result-title { color: var(--ink); font-size: 14px; font-weight: 600; }
+.docs-bar { display: none; }
+.docs-find summary { position: relative; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--outline); border-radius: 50%; background: var(--white); color: var(--ink); cursor: pointer; list-style: none; }
+.docs-find summary::-webkit-details-marker { display: none; }
+.docs-find summary svg { width: 20px; height: 20px; }
+.docs-find[open] summary { border-color: var(--emerald); color: var(--emerald-text); }
+.docs-find-tip { position: absolute; top: calc(100% + 8px); right: 0; z-index: 6; white-space: nowrap; padding: 4px 8px; border-radius: 6px; background: var(--ink); color: var(--white); font-size: 13px; line-height: 18px; opacity: 0; pointer-events: none; transition: opacity .1s; }
+.docs-find summary:hover .docs-find-tip { opacity: 1; transition-delay: .3s; }
+.docs-find[open] .docs-find-tip { display: none; }
+.docs-find-panel { position: absolute; left: 0; right: 0; top: 52px; z-index: 5; padding: 12px; background: var(--white); border-radius: 14px; box-shadow: var(--card-shadow); }
+.docs-find-panel .docs-search { margin: 0; }
+.docs-find-panel .docs-search-panel { box-shadow: none; padding: 0; }
+@media (max-width: 899px) {
+  .docs-bar { position: relative; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 16px; }
+  .docs-bar .docs-menu { flex: 1 1 0; min-width: 0; margin: 0; }
+  .docs-bar .docs-menu details[open] .docs-menu-list { margin-right: -52px; }
+  .docs-search-results a { min-height: 44px; }
+}
