@@ -161,8 +161,7 @@ export async function importDoorResponse(request: Request, original: StumpEnv): 
     let response: Response, catchup = false
     if (given.catchup === undefined && head_id) {
       response = await kit('plan', JSON.stringify({ ...given, catchup: true })); catchup = true
-      // A head whose snapshot an erasure withdrew cannot be caught up to: the file is planned as a new baseline instead.
-      if (['catchup_requires_baseline', 'snapshot_withdrawn'].includes(await errorOf(response) ?? '')) { response = await kit('plan', body); catchup = false }
+      if (await errorOf(response) === 'catchup_requires_baseline') { response = await kit('plan', body); catchup = false }
     } else response = await kit('plan', body)
     if (!response.ok) return response
     const result = await response.json() as Preview & Record<string, unknown>, d = result.differences
