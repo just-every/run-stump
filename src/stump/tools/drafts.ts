@@ -30,7 +30,7 @@ const writeFields = {
   poll: { type: 'object', required: ['options'], properties: { options: { type: 'array', minItems: 2, maxItems: 4, items: { type: 'string', minLength: 1, maxLength: 25 } }, duration_minutes: { type: 'integer', minimum: 5, maximum: 10080 } } },
   content_warning: { type: 'string', minLength: 1, maxLength: 500 }, visibility: { enum: ['public', 'unlisted', 'private'] }, recommends: { type: 'boolean' },
 }
-const targetSchema = { type: 'object', additionalProperties: false, properties: { format: writeFields.format, person_id: id, product_id: id, account_id: id, venue_id: id, network } }
+const targetSchema = { type: 'object', additionalProperties: false, properties: { format: writeFields.format, person_id: id, product_id: id, account_id: id, venue_id: id, network, voice_id: id } }
 
 /** Results as JSON carries them: the MCP door accepts only plain JSON values, so absent fields are dropped, not undefined. */
 const plain = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -78,7 +78,8 @@ export const draftTools: StumpTool[] = [{
       },
     },
     from_source: {
-      roles: CONTRIBUTORS, properties: { source_url: url, targets: { type: 'array', minItems: 1, maxItems: 10, items: targetSchema }, prompt: writeFields.prompt, campaign: writeFields.campaign },
+      // The call's person, product and voice apply to every target that does not name its own.
+      roles: CONTRIBUTORS, properties: { source_url: url, targets: { type: 'array', minItems: 1, maxItems: 10, items: targetSchema }, person_id: id, product_id: id, voice_id: id, prompt: writeFields.prompt, campaign: writeFields.campaign },
       required: ['source_url', 'targets'],
       async classify(args, ctx) { await screen(ctx, args, 'from_source'); return draftingClasses(ctx.env, (args.targets as unknown[]).length, (args.targets as unknown[]).length) },
       summary: args => ({ target: { name: `Draft ${(args.targets as unknown[]).length} items from ${String(args.source_url)}` } }),
@@ -242,7 +243,11 @@ export const draftTools: StumpTool[] = [{
     count: {
       roles: EVERYONE, read: true, properties: { text: body, networks: { type: 'array', minItems: 1, maxItems: 8, items: { enum: [...COUNTED] } } }, required: ['text', 'networks'],
       classify: () => standard(0),
-      run: async args => plain({ counts: (args.networks as Network[]).map(item => countText({ network: item }, String(args.text))) }),
+      // Each network's count keyed by network; the limit, unit and fit of each are in details (STUMP-DRAFT-001.1).
+      async run(args) {
+        const details = Object.fromEntries((args.networks as Network[]).map(item => [item, countText({ network: item }, String(args.text))]))
+        return plain({ counts: Object.fromEntries(Object.entries(details).map(([item, count]) => [item, count.count])), details })
+      },
     },
     back: {
       roles: CONTRIBUTORS, properties: { item_id: id, claim_id: id, text: body }, required: ['item_id', 'claim_id'],

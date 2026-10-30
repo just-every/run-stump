@@ -18,8 +18,9 @@ const bare = (value: string) => value.replace(/^https?:\/\/(www\.)?/, '').replac
 const proofText = (proof: unknown) => {
   if (typeof proof === 'string') return bare(proof)
   if (!proof || typeof proof !== 'object') return ''
-  const { text, document, number, url, date } = proof as Record<string, string | number | undefined>
-  return [text ?? document, number, text || document ? null : url ? bare(String(url)) : null, date].filter(item => item !== undefined && item !== null && item !== '').join(' · ')
+  const { text, document, number, unit, url, date } = proof as Record<string, string | number | undefined>
+  const amount = number === undefined ? undefined : unit === undefined ? number : /^[$€£¥]$/u.test(String(unit)) ? `${unit}${number}` : /^(%|x|×)$/iu.test(String(unit)) ? `${number}${unit}` : `${number} ${unit}`
+  return [text ?? document, amount, text || document ? null : url ? bare(String(url)) : null, date].filter(item => item !== undefined && item !== null && item !== '').join(' · ')
 }
 
 /** The Settings tabs: the settings screens that exist, so no tab opens a missing page. */

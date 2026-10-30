@@ -7,7 +7,7 @@ import { bannedAct, screenDraftRequest } from '../lib/claims/index.ts'
 import { NETWORK_LIMITS, splitThread } from '../lib/text/index.ts'
 import { readPerson, type StumpPerson } from '../people/store.ts'
 import { aiHost, draftWithAi, readSource, type Drafted, type Source } from './ai.ts'
-import { counted, loadBrand, readAccount, type Account } from './check.ts'
+import { counted, loadBrand, namesCompany, readAccount, type Account } from './check.ts'
 import { insertItems, mayWrite, type NewItem } from './items.ts'
 import { contactRecord, libClaim, parse, today, voiceRecord, type Row, type VoiceRecord } from './records.ts'
 
@@ -50,6 +50,39 @@ async function voiceFor(ctx: ActionContext, person: StumpPerson, voiceId: unknow
   return voice
 }
 
+/** The items a drafting call writes: the call itself, the author of a master, or each target of from_source with the call's person, product and voice as defaults. */
+export function requestsOf(args: Args, action: string, self: string): Args[] {
+  if (action === 'master') return [{ ...args, person_id: args.person_id ?? self }]
+  if (action !== 'from_source') return [args]
+  const defaults = Object.fromEntries(['person_id', 'product_id', 'voice_id'].filter(key => args[key] !== undefined).map(key => [key, args[key]]))
+  return ((args.targets as Args[] | undefined) ?? []).map(entry => ({ ...defaults, ...entry }))
+}
+
+/** Whom an item speaks for, as target() decides it: the named person, a personal account's owner, or the person drafting. */
+async function speakerId(ctx: ActionContext, entry: Args) {
+  if (entry.person_id !== undefined) return entry.person_id
+  const account = entry.account_id !== undefined ? await readAccount(ctx.db, String(entry.account_id)) : null
+  return account?.owner_kind === 'person' ? account.owner_person_id : ctx.person.id
+}
+
+type Speaker = Pick<StumpPerson, 'id' | 'connection' | 'role'>
+
+/**
+ * A founder or employee may post generated text about the company; anyone else posts their own words (D-8).
+ * The owner who set Stump up speaks for the company until their connection is recorded; anyone else without one is an outside voice.
+ */
+const outsideVoice = (person: { connection: string | null; role: string }) => person.connection ? !['founder', 'employee'].includes(person.connection) : person.role !== 'owner'
+
+/** Generated text for an outside voice that names the company or a product is an endorsement Stump does not write (D-8, STUMP-SURFACE-010.1). */
+async function refuseEndorsement(ctx: ActionContext, action: string, person: Speaker, because: string) {
+  await refuseAct(ctx, TOOL, action, { rule: 'D-8', source: 'STUMP-SURFACE-010' }, { person_id: person.id, connection: person.connection, because, offer: 'talking_points' })
+}
+
+/** After the source is read: an outside voice's draft from a source that names the company is refused the same way (D-8). */
+export async function screenSource(ctx: ActionContext, action: string, person: Speaker, source: Source | null) {
+  if (source && outsideVoice(person) && namesCompany(await loadBrand(ctx.db), `${source.title ?? ''}\n${source.text}`)) await refuseEndorsement(ctx, action, person, 'source_names_company')
+}
+
 /**
  * The refusals a drafting request meets before anything else, the same for a
  * person and an agent under every company policy: a review, testimonial or vote
@@ -63,11 +96,17 @@ export async function screen(ctx: ActionContext, args: Args, action: string) {
     await refuseAct(ctx, TOOL, action, { rule: 'D-4', source: act.source_url, read_at: act.read_at }, { act: act.id, text: finding.text })
   }
   const generate = args.generate === true || action === 'from_source'
-  if (args.person_id !== undefined) {
-    const person = await speaker(ctx, args.person_id, action)
-    if (args.voice_id !== undefined) await voiceFor(ctx, person, args.voice_id, action)
-    if (generate && args.recommends === true && !['founder', 'employee'].includes(person.connection ?? '')) {
-      await refuseAct(ctx, TOOL, action, { rule: 'D-8', source: 'STUMP-SURFACE-010' }, { person_id: person.id, connection: person.connection })
+  const prompt = typeof args.prompt === 'string' ? args.prompt : ''
+  const brand = generate ? await loadBrand(ctx.db) : null
+  for (const entry of requestsOf(args, action, ctx.person.id)) {
+    const personId = await speakerId(ctx, entry)
+    if (personId === undefined || personId === null) continue
+    const person = await speaker(ctx, personId, action)
+    if (entry.voice_id !== undefined) await voiceFor(ctx, person, entry.voice_id, action)
+    // Generated text for an outside voice that names the company is an endorsement, whatever the call says it is (D-8).
+    if (brand && outsideVoice(person)) {
+      const because = entry.recommends === true ? 'recommends' : entry.product_id !== undefined ? 'product' : namesCompany(brand, prompt) ? 'prompt_names_company' : null
+      if (because) await refuseEndorsement(ctx, action, person, because)
     }
   }
   const venues = action === 'from_source' ? ((args.targets as Args[] | undefined) ?? []).map(target => target.venue_id).filter(Boolean) : args.venue_id !== undefined ? [args.venue_id] : []
@@ -79,7 +118,7 @@ export async function screen(ctx: ActionContext, args: Args, action: string) {
   }
 }
 
-interface Target { format: Format; person_id: string; product_id: string | null; account: Account | null; network: string | null; venue_id: string | null }
+interface Target { format: Format; person_id: string; speaker: Speaker; product_id: string | null; account: Account | null; network: string | null; venue_id: string | null }
 
 async function target(ctx: ActionContext, args: Args, action: string, fallbackPerson: string): Promise<Target> {
   const format = (args.format as Format | undefined) ?? 'post'
@@ -95,7 +134,7 @@ async function target(ctx: ActionContext, args: Args, action: string, fallbackPe
   if (account && args.network !== undefined && args.network !== account.network) refuse('invalid_arguments', { field: 'network', reason: `The account is on ${account.network}.` })
   if (args.product_id !== undefined && !await ctx.db.prepare('SELECT 1 FROM stump_products WHERE id=?').bind(String(args.product_id)).first()) refuse('not_found', { product_id: String(args.product_id) })
   if (args.venue_id !== undefined) await venueRow(ctx, args.venue_id)
-  return { format, person_id: person.id, product_id: (args.product_id as string | undefined) ?? null, account, network: account?.network ?? (args.network as string | undefined) ?? null, venue_id: (args.venue_id as string | undefined) ?? null }
+  return { format, person_id: person.id, speaker: person, product_id: (args.product_id as string | undefined) ?? null, account, network: account?.network ?? (args.network as string | undefined) ?? null, venue_id: (args.venue_id as string | undefined) ?? null }
 }
 
 /** A long text becomes a thread at sentence boundaries, each part counted the network's way (STUMP-DRAFT-001.2). */
@@ -141,6 +180,7 @@ export async function createItem(ctx: ActionContext, args: Args) {
   if (item.format === 'reply' && typeof (args.reply_to as { url?: unknown } | undefined)?.url !== 'string') refuse('invalid_arguments', { field: 'reply_to', reason: 'A reply names the post it answers.' })
   const recipient = item.format === 'pitch' ? await contactFor(ctx, args.recipient ?? {}) : null
   const source = args.generate === true && typeof args.source_url === 'string' ? await readSource(ctx.env, args.source_url, ctx.now()) : null
+  await screenSource(ctx, 'create', item.speaker, source)
   let drafted: { text: string | null; parts: string[] | null; subject?: string | null; ai?: Drafted['ai'] }
   if (args.generate === true) drafted = linked(await aiDraft(ctx, args, item, source), source)
   else {
@@ -166,9 +206,10 @@ const options = (args: Args) => Object.fromEntries(['poll', 'content_warning', '
 
 /** One source drafted for every target, each through the provider; one failure leaves no draft at all (STUMP-DRAFT-002). */
 export async function draftFromSource(ctx: ActionContext, args: Args) {
-  const targets = args.targets as Args[]
+  const targets = requestsOf(args, 'from_source', ctx.person.id)
   const planned = await Promise.all(targets.map(entry => target(ctx, entry, 'from_source', ctx.person.id)))
   const source = await readSource(ctx.env, String(args.source_url), ctx.now())
+  for (const item of planned) await screenSource(ctx, 'from_source', item.speaker, source)
   const drafts: NewItem[] = []
   for (const [index, item] of planned.entries()) {
     const entry = { ...args, ...targets[index] }
@@ -191,7 +232,8 @@ export async function createMaster(ctx: ActionContext, args: Args) {
   let text = typeof args.text === 'string' ? args.text : null, ai: Drafted['ai'] | undefined, source: Source | null = null
   if (args.generate === true) {
     source = typeof args.source_url === 'string' ? await readSource(ctx.env, args.source_url, ctx.now()) : null
-    const drafted = linked(await aiDraft(ctx, args, { format: 'post', person_id: author.id, product_id: (args.product_id as string | undefined) ?? null, account: null, network: null, venue_id: null }, source), source) as Drafted
+    await screenSource(ctx, 'master', author, source)
+    const drafted = linked(await aiDraft(ctx, args, { format: 'post', person_id: author.id, speaker: author, product_id: (args.product_id as string | undefined) ?? null, account: null, network: null, venue_id: null }, source), source) as Drafted
     text = drafted.text
     ai = drafted.ai
   }

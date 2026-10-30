@@ -2,7 +2,7 @@
 // STUMP-TRUTH-002, -003.5, -004). It reads only the item's text and the records
 // it names, so a person and an agent submitting the same item get the same
 // result, and stores its outcome in the item's flags as {code, blocking, ...facts}.
-import { bannedAct, checkClaims, checkDisclosure, claimsUsed, screenDraftForVenue, type ClaimFinding, type MentionSet } from '../lib/claims/index.ts'
+import { bannedAct, checkClaims, checkDisclosure, claimsUsed, extractMentions, screenDraftForVenue, type ClaimFinding, type MentionSet } from '../lib/claims/index.ts'
 import { countText, nearDuplicates, type Network, type TextCount } from '../lib/text/index.ts'
 import type { StumpPerson } from '../people/store.ts'
 import { claimRecord, itemText, libClaim, parse, productProfile, productRecord, today, type ClaimRecord, type Flag, type ProductRecord, type Row } from './records.ts'
@@ -66,6 +66,13 @@ export const venueDisclosureLine = (venue: { rules: Venue['rules'] } | null) => 
 /** Every company and product name the brand profile knows: what makes "we" and "our" a disclosure. */
 export const brandTerms = (brand: Brand) => [...new Set([...brand.company_names, ...brand.products.flatMap(product => [product.name, ...product.other_names])].filter(Boolean))]
 
+/** The text names the company or one of its products, by name, other name or URL. */
+export function namesCompany(brand: Brand, text: string) {
+  if (!text.trim()) return false
+  const found = extractMentions(text, { products: brand.products.map(productProfile), company_names: brand.company_names })
+  return found.products.length > 0 || found.company.length > 0
+}
+
 const QUEUED = "('ready','scheduled','posting','posted','partly_posted','paused','uncertain')"
 
 /** Items queued or posted, and ledger entries, inside the company's window: what a new item must not nearly repeat. */
@@ -113,7 +120,12 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   // Claims, avoided words and mentions (STUMP-BRAND-001.2-.3, STUMP-BRAND-004).
   const claimCheck = checkClaims({ text, claims: brand.claims.map(libClaim), products: brand.products.map(productProfile), company_names: brand.company_names,
     ...(draft.product_id ? { product_id: draft.product_id } : {}), today: today(now) })
-  for (const flag of claimCheck.flags) flags.push({ ...flag, blocking: true })
+  // One flag per place in the text: two products avoiding the same word flag it once.
+  const avoided = new Set<string>()
+  for (const flag of claimCheck.flags) {
+    if (flag.code === 'avoid_word') { if (avoided.has(`${flag.start}:${flag.end}`)) continue; avoided.add(`${flag.start}:${flag.end}`) }
+    flags.push({ ...flag, blocking: true })
+  }
 
   // Network limits, counted the network's way (STUMP-DRAFT-001.1-.2).
   const counts = countDraft({ network, text: draft.text, parts: draft.parts })

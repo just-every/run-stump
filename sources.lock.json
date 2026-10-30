@@ -2168,7 +2168,7 @@
       "executable": false
     },
     "src/routes/app.settings.brand.tsx": {
-      "sha256": "d6c9702e7d74cedc7b0c6c0578e6c1d6154a907f7d78e81c6c24fecc652b3184",
+      "sha256": "ec2d0481ab2dc3c374a721523fbd27fd1482828e32025134a3e9994a45f65a9a",
       "executable": false
     },
     "src/routes/app.settings.publishing.tsx": {
@@ -2228,7 +2228,7 @@
       "executable": false
     },
     "src/stump/drafting/check.ts": {
-      "sha256": "42c1e2042897ecc48524a6e07e5855761beec8979dc07c8f2f57e6f3c970e067",
+      "sha256": "d91e7d885a011f77ba446ce3718fe1f5e203b7a9d7b36260e3df34c1a3244058",
       "executable": false
     },
     "src/stump/drafting/diff.ts": {
@@ -2244,7 +2244,7 @@
       "executable": false
     },
     "src/stump/drafting/records.ts": {
-      "sha256": "713fabfae8f89fc47dbd3f45e4c7d7d484aee0985c7701c7abfab379a30854c1",
+      "sha256": "7501a09b6c836cfd0203a83837aef9c547060906bd313ee14f3c174dd409b363",
       "executable": false
     },
     "src/stump/drafting/view.ts": {
@@ -2252,7 +2252,7 @@
       "executable": false
     },
     "src/stump/drafting/write.ts": {
-      "sha256": "34983154f1035be363ca01647edcf229bd07b9116700fc15a3117861e40a71a7",
+      "sha256": "9839cea118e0ce7978f45c70dddebec819a86d75bd4a068213df78fc39503e33",
       "executable": false
     },
     "src/stump/env.ts": {
@@ -2756,7 +2756,7 @@
       "executable": false
     },
     "src/stump/tools/brand.ts": {
-      "sha256": "16a5e83c27265966674c2b2c49d06171ad4079d03e8a1dbe691f27fc6e4ead3f",
+      "sha256": "92bc3033fd31d9bf36c2ca91aab52b586bc7e8ac0268050747dee2764ac3a08f",
       "executable": false
     },
     "src/stump/tools/calendar.ts": {
@@ -2764,7 +2764,7 @@
       "executable": false
     },
     "src/stump/tools/drafts.ts": {
-      "sha256": "fc28b5d36473fefa8ec8e5bf8fb0929499d29f323c44085247931e84433141b8",
+      "sha256": "8652007a3b96c16dc8fca69e2e0f6b8f4f4616f801437e8f7ba9e81630f21ec5",
       "executable": false
     },
     "src/stump/tools/index.ts": {

@@ -27,7 +27,7 @@ export const productProfile = (product: ProductRecord): ProductProfile => ({
 })
 
 export interface ClaimRecord {
-  id: string; product_id: string | null; kind: Claim['kind']; text: string; proof: string | ClaimProof | null; owner_id: string; review_on: string | null
+  id: string; product_id: string | null; kind: Claim['kind']; text: string; proof: string | (ClaimProof & { unit?: string }) | null; owner_id: string; review_on: string | null
   reason: string | null; competitor: string | null; source_url: string | null; source_date: string | null; aliases: string[]; revision: number
 }
 export const claimRecord = (row: Row): ClaimRecord => ({
@@ -35,10 +35,20 @@ export const claimRecord = (row: Row): ClaimRecord => ({
   owner_id: String(row.owner_id), review_on: text(row.review_on), reason: text(row.reason), competitor: text(row.competitor), source_url: text(row.source_url),
   source_date: text(row.source_date), aliases: parse(row.aliases, []), revision: Number(row.revision),
 })
+/** A stored proof as the claim check reads it: a number with its unit apart becomes one value ($30, 30%, 2x, 40 hours). */
+export function libProof(proof: string | (ClaimProof & { unit?: string }) | null | undefined): string | ClaimProof | undefined {
+  if (proof === null || proof === undefined || typeof proof === 'string') return proof ?? undefined
+  const { unit, ...rest } = proof
+  if (unit === undefined || rest.number === undefined) return rest
+  const value = String(rest.number).trim(), mark = unit.trim()
+  const number = /^[$€£¥]$/u.test(mark) ? `${mark}${value}` : /^(%|x|×)$/iu.test(mark) ? `${value}${mark}` : `${value} ${mark}`
+  return { ...rest, number }
+}
+
 /** A claim as the claim check reads it. */
 export const libClaim = (claim: ClaimRecord): Claim => ({
   id: claim.id, kind: claim.kind, text: claim.text, aliases: claim.aliases, owner_id: claim.owner_id,
-  ...(claim.product_id ? { product_id: claim.product_id } : {}), ...(claim.proof !== null ? { proof: claim.proof } : {}),
+  ...(claim.product_id ? { product_id: claim.product_id } : {}), ...(claim.proof !== null ? { proof: libProof(claim.proof) } : {}),
   ...(claim.review_on ? { review_on: claim.review_on } : {}), ...(claim.reason ? { reason: claim.reason } : {}),
   ...(claim.competitor ? { competitor: claim.competitor } : {}), ...(claim.source_url ? { source_url: claim.source_url } : {}),
   ...(claim.source_date ? { source_date: claim.source_date } : {}),
