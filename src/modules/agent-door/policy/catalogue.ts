@@ -19,6 +19,6 @@ export const classIds:readonly ClassId[]=classes.map(entry=>entry.id)
 export const isClass=(value:unknown):value is ClassId=>classIds.includes(value as ClassId)
 export const classDefinition=(id:ClassId)=>classes.find(entry=>entry.id===id)!
 export interface ClassFacts {
- measure:number; currency?:string; counterparty?:'internal'|'known'|'new'|'public'; direction?:'widens'|'narrows'
+ measure:number; currency?:string; counterparty?:'internal'|'known'|'new'|'public'|(string&{}); direction?:'widens'|'narrows'
  provider?:string; step?:string; setting?:string; kind?:string; service?:string
 }

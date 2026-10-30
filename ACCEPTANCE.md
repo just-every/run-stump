@@ -2711,7 +2711,7 @@ Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE
 5. Under a company spend cap, the call that would cross it returns `budget_exhausted` before any effect.
 
 **Evidence.** `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `agent-surface.json` journey (stump shard of `verification.json`) steps x-queue and x-schedule
-**Gap.** Point 1 holds for an X URL post: money computes in USD from the company's price table and the ledger records $0.20. Base reads a money measure as whole currency units and takes integers only, so the measure is the charge rounded up to whole dollars and the exact charge is the approval summary's amount (`src/stump/publish/schedule.ts`). Point 4 (an updated price on the next call) is built, not yet asserted in a repo test; .2, .3 and .5 belong to later lanes.
+**Gap.** Point 1 holds for an X URL post: money computes `{measure: 0.2, currency: "usd", counterparty: "x"}` from the company's price table, once per call, and the ledger records $0.20 (`src/stump/publish/schedule.ts`). Stump's agent door copy is adapted so a money measure and limit is currency units to the millionth, currency codes match ignoring case and the provider paid can be the counterparty (`base-copies.json`; `src/modules/agent-door/policy/PROVENANCE.md`). Point 4 (an updated price on the next call) is built, not yet asserted in a repo test; .2, .3 and .5 belong to later lanes.
 
 #### STUMP-SURFACE-005 — Steps venues and providers keep for a person compute gated
 

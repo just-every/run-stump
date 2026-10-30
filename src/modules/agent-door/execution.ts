@@ -1,7 +1,7 @@
 import type { ClassAndFacts, CallResult, NativeTarget, Principal, Runtime, ToolContext, ToolDefinition, UndoContext, ApprovalDisplaySummary } from './types.ts'
 import { validateSchema } from './json-schema.ts'
 import { ToolRefusal } from './errors.ts'
-import { canonical } from './policy/document.ts'
+import { canonical, counterpartyOk, currencyOk, measureOk } from './policy/document.ts'
 import { preparedBy } from './people.ts'
 import { classDefinition } from './policy/catalogue.ts'
 import { removeUsage } from './counting.ts'
@@ -26,7 +26,7 @@ export function context(rt: Runtime, principal: Principal, door: ToolContext['do
 }
 export async function classify(tool: ToolDefinition, args: Record<string, unknown>, ctx: ToolContext, completed?: readonly ClassAndFacts[]): Promise<ClassAndFacts[]> {
   const classes = await tool.classify(args, ctx, completed && Object.freeze(structuredClone(completed)))
-  if (!Array.isArray(classes) || !classes.length || new Set(classes.map(item => item.class)).size !== classes.length || classes.some(item => !tool.classes.includes(item.class) || !item.facts || !Number.isSafeInteger(item.facts.measure) || item.facts.measure < 0 || classDefinition(item.class).facts.some(field => typeof item.facts[field as keyof typeof item.facts] !== 'string') || (item.facts.currency !== undefined && !/^[A-Z]{3}$/.test(item.facts.currency)) || (item.facts.counterparty !== undefined && !['internal','known','new','public'].includes(item.facts.counterparty)) || (item.facts.direction !== undefined && !['widens','narrows'].includes(item.facts.direction)))) throw new Error('classification_invalid')
+  if (!Array.isArray(classes) || !classes.length || new Set(classes.map(item => item.class)).size !== classes.length || classes.some(item => !tool.classes.includes(item.class) || !item.facts || !measureOk(item.class, item.facts.measure) || classDefinition(item.class).facts.some(field => typeof item.facts[field as keyof typeof item.facts] !== 'string') || (item.facts.currency !== undefined && !currencyOk(item.facts.currency)) || (item.facts.counterparty !== undefined && !counterpartyOk(item.facts.counterparty)) || (item.facts.direction !== undefined && !['widens','narrows'].includes(item.facts.direction)))) throw new Error('classification_invalid')
   return classes
 }
 export const digest = async (value: unknown) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical(value)))), byte => byte.toString(16).padStart(2, '0')).join('')

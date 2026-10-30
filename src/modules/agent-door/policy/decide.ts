@@ -1,5 +1,5 @@
 import {classIds,type ClassFacts,type ClassId} from './catalogue.ts'
-import {answered,durationSeconds,monetary,scopeFields,type ApproverRef,type Disposition,type PolicyDocument,type Rule,type Threshold} from './document.ts'
+import {answered,durationSeconds,micros,monetary,sameCurrency,scopeFields,type ApproverRef,type Disposition,type PolicyDocument,type Rule,type Threshold} from './document.ts'
 export interface PolicyCall {seed:string;specialist:string|null;agent:string;classes:Array<{class:ClassId;facts:ClassFacts}>}
 export interface Decision {
  result:Disposition|'unset';revision:number|null;classes:Array<{class:ClassId;rule:string|null;do:Disposition|'unset'}>
@@ -11,8 +11,9 @@ export function scopeMatches(rule:Rule,call:Pick<PolicyCall,'seed'|'specialist'|
   && (['counterparty','direction'] as const).every(key=>rule[key]===undefined||rule[key]===facts[key])
 }
 function within(max:Threshold,measure:number,cls:ClassId,facts:ClassFacts) {
+ if(monetary(cls)){const amount=micros(measure);return typeof max==='object'&&amount!==null&&sameCurrency(facts.currency,max.currency)&&amount<=micros(max.amount)!}
  if(!Number.isSafeInteger(measure)||measure<0)return false
- return typeof max==='number'?!monetary(cls)&&measure<=max:monetary(cls)&&facts.currency===max.currency&&measure<=max.amount
+ return typeof max==='number'&&measure<=max
 }
 export function decide(input:{document:PolicyDocument|null;revision:number|null;call:PolicyCall;usageToday:(rule:Rule,cls:ClassId)=>number}):Decision {
  const {document,revision,call,usageToday}=input

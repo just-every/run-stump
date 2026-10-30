@@ -93,17 +93,7 @@ export async function prepare(ctx: ActionContext, action: string, input: { item_
   return { item: row, account, due, at, zone, charge_micro: publisher.quote?.(due, env.prices) ?? 0, posts: due.format === 'thread' ? due.parts?.length ?? 0 : 1 }
 }
 
-/**
- * Base (0.2.91, src/modules/agent-door/execution.ts classify) takes a money
- * measure only as a whole number of an upper-case ISO currency, with the
- * counterparty one of internal, known, new or public. So the price of the call
- * from the company's table, in millionths of a dollar, goes to policy as whole
- * US dollars rounded up (a policy limit is never crossed unseen), X is a known
- * counterparty, and the exact price travels in the approval summary's amount.
- */
-export const wholeUsd = (micro: number) => Math.ceil(micro / 1e6)
-
-/** The exact charge in US dollars, for the approver to read beside policy's whole-dollar measure. */
+/** The charge in US dollars as the approval summary's amount, paid to X. */
 export const money = (micro: number) => micro > 0 ? { amount: { value: micro / 1e6, currency: 'USD' }, payee: 'X' } : {}
 
 /** The people a post on these accounts reaches: each account's follower count as the network last reported it, once per account. */
@@ -114,12 +104,14 @@ export function audience(accounts: Array<Pick<AccountRow, 'id' | 'follower_count
 /**
  * The classes sending posts computes (V1 "Agent door"): external to the public,
  * measured by the followers of the accounts it goes to; money for what X charges
- * for this one call, priced once from the company's table; and variants held for a person.
+ * for this one call in US dollars, priced once from the company's table (only X
+ * charges per post, so X is the counterparty); and variants held for a person.
+ * The agent door's adapted policy copy takes a money measure to the millionth.
  */
 export function publishClasses(followers: number, micro: number, held = 0) {
   return [
     { class: 'external' as const, facts: { measure: followers, counterparty: 'public' as const } },
-    ...(micro > 0 ? [{ class: 'money' as const, facts: { measure: wholeUsd(micro), currency: 'USD', counterparty: 'known' as const } }] : []),
+    ...(micro > 0 ? [{ class: 'money' as const, facts: { measure: micro / 1e6, currency: 'usd', counterparty: 'x' } }] : []),
     ...(held > 0 ? [{ class: 'gated' as const, facts: { measure: held, provider: 'stump', step: 'rewrite_flagged_variant' } }] : []),
   ]
 }

@@ -1,5 +1,5 @@
 import { decide, scopeMatches } from './policy/decide.ts'
-import type { Rule, PolicyDocument } from './policy/document.ts'
+import { sameCurrency, type Rule, type PolicyDocument } from './policy/document.ts'
 import type { ClassId } from './policy/catalogue.ts'
 import type { ClassAndFacts, DecisionMeta, NativeTarget, Principal, Runtime } from './types.ts'
 import { preparedBy } from './people.ts'
@@ -59,7 +59,7 @@ export async function usage(rt: Runtime, document: PolicyDocument, principal: Pr
     const key = `${rule.id}:${cls}`
     if (key in sums) continue
     sums[key] = rows.reduce((sum, row) => sum + (JSON.parse(row.classes) as ClassAndFacts[]).filter(item => item.class === cls && scopeMatches(rule, row, item.facts)
-      && (typeof rule.max_per_day !== 'object' || item.facts.currency === rule.max_per_day.currency)).reduce((total, item) => total + item.facts.measure, 0), 0)
+      && (typeof rule.max_per_day !== 'object' || sameCurrency(item.facts.currency, rule.max_per_day.currency))).reduce((total, item) => total + item.facts.measure, 0), 0)
   }
   // Principal is explicitly part of the decision context; the scope test above uses each counted call.
   void principal

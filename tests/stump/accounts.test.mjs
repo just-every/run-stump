@@ -108,7 +108,7 @@ test('an agent posts to the company X account within the owner\'s dollar limit: 
   assert.equal(decision.disposition, 'autonomous')
   // The public the post reaches is the account's followers; X's price for this one call is counted once.
   assert.deepEqual(decision.classes.find(entry => entry.class === 'external').facts, { measure: 2400, counterparty: 'public' })
-  assert.deepEqual(decision.classes.filter(entry => entry.class === 'money').map(entry => entry.facts), [{ measure: 1, currency: 'USD', counterparty: 'known' }])
+  assert.deepEqual(decision.classes.filter(entry => entry.class === 'money').map(entry => entry.facts), [{ measure: 0.2, currency: 'usd', counterparty: 'x' }])
   const posted = sent.result.structuredContent
   assert.equal(posted.outcome, 'posted'); assert.equal(x.posts.size, 1)
   const [id] = x.posts.keys()
