@@ -4296,7 +4296,7 @@
       "executable": false
     },
     "src/stump/today/sections.ts": {
-      "sha256": "61ba0b984a2cf6b4cc3e5fb5358fc71cbfcad40e587c03922f07a9bc27b725d9",
+      "sha256": "a27f26a9932e5deccb6dd0b2c2427c2a9db08cdb19c33070a84aea4081e2a75b",
       "executable": false
     },
     "src/stump/today/TodayPage.tsx": {

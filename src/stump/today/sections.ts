@@ -119,8 +119,8 @@ export function goingOut(items: ItemRecord[], accounts: Map<string, Account>, da
     })
 }
 
-/** The few findings most worth a look across every watch, best first. */
-export function worthAnswering(lists: FindingView[][], limit = 3): FindingView[] {
+/** The finding most worth a look across every watch, as the plate shows one. */
+export function worthAnswering(lists: FindingView[][], limit = 1): FindingView[] {
   return lists.flat().sort((a, b) => b.relevance - a.relevance || at(b.published_at) - at(a.published_at)).slice(0, limit)
 }
 
