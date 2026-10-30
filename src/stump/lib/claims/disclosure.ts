@@ -4,9 +4,18 @@
 // product, anywhere but the company's own accounts, must disclose the connection:
 //   - with the venue's disclosure line or one of the person's own disclosure lines
 //     (kind "line"), or
-//   - in the text's own words (kind "own_words"): "I built", "I work at", "I'm the
-//     founder of", "full disclosure", "we shipped", "our product". Plain "we" and
-//     "our" count when the same sentence names the company or a product.
+//   - in the text's own words (kind "own_words"), when the words themselves make the
+//     connection clear:
+//       "I built", "I founded", "full disclosure", "disclosure:", "affiliated with",
+//       "our product", "my own product" count wherever they appear;
+//       a first-person act counts only with the company or a product (or "it", "this",
+//       "the product") as its object: "I work at Acme", "I made Orbit", "we launched
+//       it", "I'm building Orbit" (not "I work at Stripe and use Orbit", "I made it to
+//       level 5", "I wrote about Orbit", "I started using Orbit");
+//       a role counts with its object ("founder of Orbit", "an engineer at Acme") or as
+//       "I'm the founder" in a sentence naming the company or a product (not "I'm a
+//       developer and Orbit is great");
+//       plain "we" and "our" count when the same sentence names the company or a product.
 // A bio or profile line never counts: this function reads the item's text only, and
 // the caller never passes a bio. Where a network hides the end of a post behind "see
 // more", the disclosure must end above the cut.
@@ -51,27 +60,51 @@ export interface DetectDisclosureOptions {
 
 const APOS = "['\u2019]"
 
-const STRONG: RegExp[] = [
-  new RegExp(`\\bi(?:${APOS}m| am)? (?:the |a |one of the )?(?:co-?)?(?:founder|maker|creator|author|maintainer|developer|engineer|ceo|cto|cofounder)s?\\b`, 'giu'),
-  new RegExp(`\\bi (?:built|made|created|wrote|founded|co-?founded|started|designed|launched|shipped|help(?:ed)? build|work (?:at|for|on)|am building|${APOS}m building)\\b`, 'giu'),
-  new RegExp(`\\bwe(?: (?:just|recently|finally))? (?:shipped|built|made|launched|released|created|wrote|developed|designed|announced|open-?sourced|founded|started|run|maintain|are building|${APOS}re building|${APOS}ve (?:shipped|built|launched|released))\\b`, 'giu'),
+/** Unambiguous wherever they appear. */
+const ALWAYS: RegExp[] = [
+  /\bi (?:built|founded|co-?founded)\b/giu,
+  /\bwe (?:(?:just|recently|finally) )?(?:built|founded|co-?founded)\b/giu,
   /\bfull disclosure\b/giu,
   /\bdisclosure\s*[:\-\u2014]/giu,
   /\b(?:disclaimer|disclosure):\s*i\b/giu,
   /\baffiliated with\b/giu,
-  /\bmy (?:company|startup|employer|team'?s? product|own product)\b/giu,
+  /\bmy (?:own (?:product|company|startup|app)|(?:company|team|startup)'?s (?:product|app|tool))\b/giu,
   /\bour (?:product|company|startup|team|customers|users|app|platform)\b/giu,
 ]
-const WEAK = new RegExp(`\\b(?:we|we${APOS}re|we${APOS}ve|we${APOS}ll|we${APOS}d|our|ours)\\b`, 'giu')
 
-function termRegex(terms: readonly string[]): RegExp | undefined {
+const I_ACTS = `i (?:made|created|wrote|designed|launched|started|shipped|maintain|develop|developed|co-?created|help(?:ed)? (?:build|make|run)|am building|${APOS}m building|work(?:ed)? (?:at|for|on)|am (?:with|at)|${APOS}m (?:with|at))`
+const WE_ACTS = `we(?: (?:just|recently|finally))? (?:shipped|made|launched|released|created|wrote|developed|designed|announced|open-?sourced|started|maintain|develop|are building|${APOS}re building|${APOS}ve (?:shipped|built|launched|released|made))`
+const ROLE = '(?:co-?)?founders?|ceo|cto|coo|cpo|maintainers?|creators?|authors?|makers?|developers?|engineers?|designers?|employees?|(?:product )?managers?|(?:a )?member of the team'
+const DEFINITE_ROLE = '(?:co-?)?founders?|ceo|cto|coo|cpo|maintainers?|creators?'
+// "made it" is an idiom ("we made it!"), so after "made" only "this" or "the product" is an object.
+const PRONOUN_OBJECT = '(?:(?<!\\bmade\\s+)it|this|the (?:product|app|tool|company|startup|project))'
+
+function termAlternation(terms: readonly string[]): string | undefined {
   const parts = terms
     .map((t) => t.trim())
     .filter(Boolean)
     .map((t) => t.split(/\s+/).map(escapeRegExp).join('\\s+'))
-  if (parts.length === 0) return undefined
-  return new RegExp(`(?<![\\p{L}\\p{N}_])(?:${parts.join('|')})(?![\\p{L}\\p{N}_])`, 'iu')
+  return parts.length > 0 ? `(?:${parts.join('|')})` : undefined
 }
+
+/** Patterns that need their object to be the company, a product, or "it" / "this" / "the product". */
+function objectPatterns(term: string | undefined): RegExp[] {
+  const end = '(?![\\p{L}\\p{N}_])'
+  // "it" or "this" as a whole object ("I made this.", "we launched it today"), never "I made it to level 5".
+  const pronoun = `${PRONOUN_OBJECT}(?=\\s*(?:[.!,;:)\\u2014-]|$|\\s+(?:today|yesterday|last|this|in|over|with|from|for|because|so|and)\\b))`
+  const object = term ? `(?:(?:the\\s+)?${term}${end}|${pronoun})` : pronoun
+  const out = [
+    new RegExp(`\\b${I_ACTS}\\s+${object}`, 'giu'),
+    new RegExp(`\\b${WE_ACTS}\\s+${object}`, 'giu'),
+    new RegExp(`\\b(?:${ROLE})\\s+(?:of|at|behind|on)\\s+${object}`, 'giu'),
+  ]
+  return out
+}
+
+const I_AM_THE_ROLE = new RegExp(`\\bi(?:${APOS}m| am) (?:the |one of the )?(?:${DEFINITE_ROLE})\\b`, 'giu')
+/** Text quoted from a bio or profile ("bio: founder of Acme") is a bio line, which never counts. */
+const BIO_SEGMENT = /\b(?:bio|profile|about me)\s*[:\u2014-]\s*[^\n)]*/giu
+const WEAK = new RegExp(`\\b(?:we|we${APOS}re|we${APOS}ve|we${APOS}ll|we${APOS}d|our|ours)\\b`, 'giu')
 
 export function detectDisclosure(text: string, options: DetectDisclosureOptions = {}): DisclosureResult {
   const matches: DisclosureMatch[] = []
@@ -86,24 +119,28 @@ export function detectDisclosure(text: string, options: DetectDisclosureOptions 
     }
   }
 
-  for (const re of STRONG) {
-    for (const m of text.matchAll(re)) {
-      const start = m.index ?? 0
+  const termAlt = termAlternation(options.terms ?? [])
+  const pushAll = (re: RegExp, within: string, offset: number) => {
+    for (const m of within.matchAll(re)) {
+      const start = offset + (m.index ?? 0)
       matches.push({ kind: 'own_words', text: m[0], start, end: start + m[0].length })
     }
   }
+  for (const re of [...ALWAYS, ...objectPatterns(termAlt)]) pushAll(re, text, 0)
 
-  const term = termRegex(options.terms ?? [])
-  if (term) {
+  if (termAlt) {
+    const term = new RegExp(`(?<![\\p{L}\\p{N}_])${termAlt}(?![\\p{L}\\p{N}_])`, 'iu')
     for (const span of sentenceSpans(text)) {
       if (!term.test(span.text)) continue
-      for (const m of span.text.matchAll(WEAK)) {
-        const start = span.start + (m.index ?? 0)
-        matches.push({ kind: 'own_words', text: m[0], start, end: start + m[0].length })
-      }
+      pushAll(WEAK, span.text, span.start)
+      pushAll(I_AM_THE_ROLE, span.text, span.start)
     }
   }
 
+  const bios = [...text.matchAll(BIO_SEGMENT)].map((m) => [m.index ?? 0, (m.index ?? 0) + m[0].length] as const)
+  const kept = matches.filter((m) => !bios.some(([s, e]) => m.start >= s && m.end <= e))
+  matches.length = 0
+  matches.push(...kept)
   matches.sort((a, b) => a.start - b.start || b.end - a.end)
   const kind = matches.some((m) => m.kind === 'line') ? 'line' : matches.length > 0 ? 'own_words' : null
   const above =

@@ -256,7 +256,11 @@ export function matchActionRequest(request: ActRequest): BannedAct[] {
   return [...new Set(acts)].map(bannedAct)
 }
 
-export type AutomationTrigger = 'keyword' | 'hashtag' | 'search' | 'mention' | 'reply_to_company' | 'schedule' | 'new_post' | string
+/**
+ * What starts an automation. On X only the triggers in X_REPLY_TRIGGERS start a reply:
+ * each one is an account that engaged with the company first.
+ */
+export type AutomationTrigger = 'mention' | 'reply_to_company' | 'reply_to_own_post' | 'engaged_account' | 'keyword' | 'hashtag' | 'search' | 'schedule' | 'new_post' | string
 export type AutomationAction = 'reply' | 'like' | 'repost' | 'quote' | 'comment' | 'share' | 'follow' | 'dm' | 'submit' | string
 
 export interface AutomationSpec {
@@ -265,14 +269,25 @@ export interface AutomationSpec {
   action: AutomationAction
 }
 
-/** An automation that would perform a banned act, e.g. reply on X whenever a keyword appears. */
+/** The only triggers an automated reply on X may start from: the account engaged first. */
+export const X_REPLY_TRIGGERS: ReadonlySet<string> = new Set(['mention', 'reply_to_company', 'reply_to_own_post', 'engaged_account'])
+const X_REPLY_ACTIONS = new Set(['reply', 'mention', 'comment', 'quote_reply'])
+const SEARCH_LIKE = /keyword|search|query|hashtag|phrase|new_post/
+
+/**
+ * An automation that would perform a banned act. On X a reply, mention or comment is
+ * refused unless its trigger is on the allow-list: a search-like trigger (anything about
+ * keywords, searches, queries, hashtags or phrases) is a keyword-triggered reply, and
+ * any other trigger is a reply to an account that has not engaged first.
+ */
 export function matchAutomation(spec: AutomationSpec): BannedAct[] {
   const network = norm(spec.network)
   const trigger = norm(spec.trigger)
   const action = norm(spec.action)
   const acts: BannedActId[] = []
-  const searchLike = trigger === 'keyword' || trigger === 'hashtag' || trigger === 'search' || trigger === 'new_post'
-  if (network === 'x' && searchLike && (action === 'reply' || action === 'mention' || action === 'comment')) acts.push('x_keyword_reply')
+  if (network === 'x' && X_REPLY_ACTIONS.has(action) && !X_REPLY_TRIGGERS.has(trigger)) {
+    acts.push(SEARCH_LIKE.test(trigger) ? 'x_keyword_reply' : 'x_unengaged_reply')
+  }
   for (const a of matchActionRequest({ action: spec.action, network: spec.network })) acts.push(a.id)
   return [...new Set(acts)].map(bannedAct)
 }
@@ -322,24 +337,49 @@ export function screenDraftForVenue(text: string, venuePlatform: string): TextFi
   return findVoteRequests(text).map((m) => ({ act, ...m }))
 }
 
-const REVIEW_NOUN = '(?:reviews?|testimonials?|ratings?|endorsements?)'
-const WRITE_VERB = '(?:write|draft|generate|compose|create|produce|make|give\\s+me|come\\s+up\\s+with|fake|invent)'
-const REVIEW_REQUEST = new RegExp(`\\b${WRITE_VERB}\\b[^.!?\\n]{0,60}\\b${REVIEW_NOUN}\\b`, 'iu')
-const REPLY_TO_REVIEW = /\b(?:repl(?:y|ies|ying)|respon(?:d|se|ses|ding)|answer(?:ing)?|reacting)\s+(?:to|for)\b[^.!?\n]{0,30}\b(?:reviews?|testimonials?)\b/iu
-const AS_SOMEONE = /\b(?:as|like|pretending\s+to\s+be|posing\s+as|from\s+the\s+perspective\s+of|on\s+behalf\s+of|in\s+the\s+voice\s+of)\s+(?:an?\s+|the\s+|one\s+of\s+our\s+)?(?:happy\s+|satisfied\s+|real\s+|verified\s+)?(?:customers?|users?|clients?|buyers?|reviewers?|people)\b|\bfrom\s+(?:an?\s+|the\s+)?(?:happy\s+|satisfied\s+)?(?:customers?|users?|clients?)\b|\b(?:[1-5]|five|four)[-\s]?stars?\b|\bfor\s+(?:my\s+|our\s+)?(?:friends?|employees|team|staff|customers|users|family)\s+to\s+(?:post|leave|submit|write)\b|\bto\s+(?:post|leave|submit)\s+(?:on|at)\s+(?:g2|capterra|trustpilot|google|yelp|amazon|app\s*store|play\s*store)\b/iu
+// A request whose object is a review, testimonial or rating to be written: the verb, then
+// up to five words that do not start another object ("a post about", "an email asking"),
+// then the noun. "Write a customer review", "Generate 10 positive reviews", "Write a
+// testimonial quote from Sarah" and "Leave 5-star reviews on G2" are refused. What a
+// business may draft is exempt: a review request or invitation ("Write a review request",
+// "an email asking customers to leave a review") and a reply to a review.
+const REVIEW_NOUN = '(?:reviews?|testimonials?|ratings?|endorsements?|stars?)'
+const WRITE_VERB = '(?:write|draft|generate|compose|create|produce|make|give\\s+me|come\\s+up\\s+with|fake|invent|post|leave)'
+const NOT_THE_OBJECT =
+  '(?:about|on|of|for|to|from|with|that|which|asking|ask|inviting|invite|requesting|request|encouraging|reminding|thanking|celebrating|summari[sz]ing|highlighting|sharing|announcing|featuring|quoting|citing|using|answering|replying|responding|' +
+  'post|posts|tweet|tweets|thread|threads|email|emails|article|blog|message|messages|newsletter|announcement|caption|summary|update|page|section|reply|replies|response|responses|invitation|reminder|note|card|sms|text|dm|link)'
+const REVIEW_OBJECT = new RegExp(
+  `\\b${WRITE_VERB}\\b\\s+(?:(?!${NOT_THE_OBJECT}\\b)[\\p{L}\\p{N}'\u2019-]+[\\s,]+){0,5}?${REVIEW_NOUN}\\b`,
+  'giu',
+)
+/** "review request", "rating invite", "reviews page": the noun names what is asked for or shown, not what is written. */
+const ASKING_NOUN = /^\s*(?:requests?|invit(?:e|es|ation|ations)|asks?|reminders?|prompts?|replies|reply|responses?|page|section|widget|summary)\b/iu
+/** "ask our customers to leave", "get users to post": someone else writes the review. */
+const ASKING_BEFORE = /\b(?:ask|asks|asking|invite|invites|inviting|encourage|encourages|encouraging|remind|reminds|reminding|request|requesting|get|getting|tell|telling|let)\b[^.!?\n]{0,40}\bto\s*$/iu
 const BUY_ENGAGEMENT = /\b(?:buy|purchase|pay\s+for|get\s+(?:me\s+)?(?:some\s+)?(?:\d[\d,]*\s+)?(?:fake|cheap))\b[^.!?\n]{0,40}\b(?:followers|likes|upvotes|votes|reposts|retweets|views|engagement)\b/iu
+
+/** Review, testimonial or rating writing that a request asks for (D-4: Stump never writes or rates a review). */
+function findReviewWriting(request: string): Array<{ text: string; start: number; end: number }> {
+  const out: Array<{ text: string; start: number; end: number }> = []
+  for (const m of request.matchAll(REVIEW_OBJECT)) {
+    const start = m.index ?? 0
+    const end = start + m[0].length
+    if (ASKING_NOUN.test(request.slice(end))) continue
+    if (ASKING_BEFORE.test(request.slice(Math.max(0, start - 60), start))) continue
+    out.push({ text: m[0], start, end })
+  }
+  return out
+}
 
 /**
  * Screen a drafting request (the instruction a person or agent gives) for the acts the
- * drafting refuses: a review or testimonial for someone else to post, a request for
- * votes, bought engagement. Replying to a review is not refused.
+ * drafting refuses: a review, testimonial or rating written for anyone, a request for
+ * votes, bought engagement. A review request to customers and a reply to a review are
+ * not refused.
  */
 export function screenDraftRequest(request: string): TextFinding[] {
   const out: TextFinding[] = []
-  if (REVIEW_REQUEST.test(request) && !REPLY_TO_REVIEW.test(request) && AS_SOMEONE.test(request)) {
-    const m = REVIEW_REQUEST.exec(request) as RegExpExecArray
-    out.push({ act: 'fake_review', text: m[0], start: m.index, end: m.index + m[0].length })
-  }
+  for (const m of findReviewWriting(request)) out.push({ act: 'fake_review', ...m })
   for (const m of findVoteRequests(request)) {
     const forPlatform = /product\s*hunt|\bph\b/i.test(request) ? 'producthunt_vote_request' : 'hn_vote_request'
     out.push({ act: forPlatform, ...m })

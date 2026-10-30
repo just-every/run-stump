@@ -37,7 +37,7 @@ export interface ClaimFinding {
   status: ClaimStatus
   /** The claim the sentence matched; absent for `unmatched`. */
   claim_id?: string
-  /** The sentence in the draft. */
+  /** The sentence, or the clause of a sentence, in the draft. */
   text: string
   start: number
   end: number
