@@ -1747,6 +1747,126 @@
       "sha256": "f3a66736c3243874ce1e06589e7a4da30c64fa1f91363701a1720cc897131f36",
       "executable": false
     },
+    "src/stump/lib/bluesky/client.ts": {
+      "sha256": "dd70c804df948cc96584375ce23190063c895e23801fbcbbacaf895688dacd32",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/dpop-send.ts": {
+      "sha256": "ae66db859d54e2710edd62acc426d9f3881f9ea76e88a5879ebb752112fc775f",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/dpop.ts": {
+      "sha256": "166522e9db600b1a2f34626b5a23f2063c4516ed11e20f5cb7a381272f0b52de",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/errors.ts": {
+      "sha256": "abd5ef20936c9346d1a8d90f540847310e37a30271876d9c480a81130db167d9",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/http.ts": {
+      "sha256": "ba722a6887f753aa2af04cbcbf44d1143ce1922b0bf1ac8358c891368bef2286",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/identity.ts": {
+      "sha256": "3642ad91a9a4086461516fca82bcd59a34d3b85bc200e5a67b2f97e0d0f5fd0e",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/index.ts": {
+      "sha256": "6846d56d63029649348cee4ad5a331abe539e2f3c77773073ad8ef3ecc953284",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/oauth.ts": {
+      "sha256": "17cd0d72c227d61403cb84e04eb02700384836e9cd21af5434d89f4f5e0c7f50",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/post.ts": {
+      "sha256": "fab66542a685923589b08f3aac5cd0b5bd84af12d423ec78ede1cdf0c99906a4",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/records.ts": {
+      "sha256": "9519d325bed36aa913fe498f8aab5343ba77dcaac1648daec018076cb364c36f",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/richtext.ts": {
+      "sha256": "b8d63ef0589687d803a5bd355fc365c3a01017d1d168b38560d2463dccfab745",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/session.ts": {
+      "sha256": "23b3c4cbeb4aac1797ae75e0769defb248ea0f13dd36dc77515819cd41b460fc",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/thread.ts": {
+      "sha256": "30b9c3921565a2d49f49c70fe3bc2a0c5960e522afd0152e5b6461945242c941",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/tid.ts": {
+      "sha256": "4321a36df2bd4af1cbae21af9fa1d459adeec3b40f5efde7dd47acc99b726ae1",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/types.ts": {
+      "sha256": "c928d8bf5c16eb3d995e7ad125d4166219897355a8e3ddac5b74c43d2c215f6f",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/video.ts": {
+      "sha256": "67f52f25891ae416b876913dd6415ea555b6c7d66eb75d45486e18a3dff200fa",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/xrpc.ts": {
+      "sha256": "92962e58582d0536e7342cc7f7fd6e5a0de7cdebfdf6513a6d9084a68f083e96",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/account.ts": {
+      "sha256": "7ce77c6c51f65ded182c5f194188b795bcb2170edc0d9088f8816571572d3097",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/client.ts": {
+      "sha256": "3cd6a56fe6605a04a43951ca2ea2a0360211bcb0d310cf6bd5497b7bb4c99361",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/errors.ts": {
+      "sha256": "fc793b85ad708d53da301af7151dfd7091c222a644c526f85307da0d3b0150cb",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/http.ts": {
+      "sha256": "1c65fda1b64cd1aeb08d8901c71427b88d5a5385c171e620b581860d47c7d1c7",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/index.ts": {
+      "sha256": "0dfee749d4d7bc8d1209018f79b9fa1a07f9de95eae0866ef7c8731d7e6ece9d",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/instance.ts": {
+      "sha256": "7dd31c50349da9bf7292233789169108eff8b8273344aa1e4d02db49748296cf",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/media-check.ts": {
+      "sha256": "aa4ec9b4713186383832d857b50d6b76d182e981e89f59f50c0f37bd3fb45914",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/media.ts": {
+      "sha256": "495011e70a32d16fecf6525620ec7cf4b0ec8d2a4c02ded5a6def453792529b0",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/oauth.ts": {
+      "sha256": "6ca160fbad88e47ea50523a78cf8b7c0984e709e868291f7e879247fd7c72ad0",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/statuses.ts": {
+      "sha256": "9b3fab61f7a5adf4f76539de0ab81e21215e088f50a219d3c2a58ec5513a3e31",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/text.ts": {
+      "sha256": "bbca4791c859af12f5e5069a29a5bab358df923f8be18111eb95304272305ceb",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/thread.ts": {
+      "sha256": "a8d0b86b7c8d2f1fd291946eb066d48115a67a144de7aaf746aed22312441656",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/types.ts": {
+      "sha256": "cc1664b8d194cc62461cdc20d9c4e0a97d175af675aae91e35191da7d8e9fa9a",
+      "executable": false
+    },
     "tests/incremental-typecheck.test.mjs": {
       "sha256": "a11d6b89e7219137540c7052683c5f4d9ba7ddf16f66d34c1f56ae34029c0a95",
       "executable": false
