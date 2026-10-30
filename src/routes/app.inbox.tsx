@@ -172,7 +172,7 @@ function Item({ item, account, mayAct, onBack, onChange }: { item: InboxView; ac
           : <li className="ok">Claims, disclosure and repeats check out{account.network === 'x' && checked.charge_usd ? ` · X charges ${usd(checked.charge_usd)}` : ''}</li>}
       </ul> : null}
       <div className="st-inbox-foot">
-        <span className="st-meta">{text.length ? `${[...new Intl.Segmenter().segment(text)].length} characters` : 'Only people who engaged first are answered, once each.'}</span>
+        <span className="st-meta">{text.length ? `${[...new Intl.Segmenter().segment(text)].length} characters` : ''}</span>
         <button type="button" className="st-inbox-link" disabled={busy} onClick={() => void send(true)}>Draft with AI</button>
       </div>
     </div> : null}
