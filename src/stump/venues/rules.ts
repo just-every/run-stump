@@ -112,11 +112,12 @@ export const generatedTextBanned = (venue: VenueRow) => !routesFor(venue).routes
 export interface ItemAtVenue { id: string; state: ItemState; format: string; account_id: string | null; text: string | null; parts: string | null; reply_to: string | null; options: string; routes: string; flags: string; hold: string | null }
 export interface VenueHold { rule: RuleKey; reason: string; source_url: string | null }
 
-const threadOf = (item: ItemAtVenue) => {
+const threadOf = (venue: VenueRow, item: ItemAtVenue) => {
   const reply = item.reply_to ? (JSON.parse(item.reply_to) as { url?: string }).url : undefined
-  // A post's thread is its thread_url, or the post address an imported entry is aimed at.
+  // A post's thread is its thread_url, or the post an imported entry is aimed at; the venue's own address is no thread.
   const options = JSON.parse(item.options) as { thread_url?: string | null; post_url?: string | null }
-  return reply ?? options.thread_url ?? options.post_url ?? null
+  const post = options.post_url && normalizeVenueUrl(options.post_url) !== venue.url_key ? options.post_url : null
+  return reply ?? options.thread_url ?? post ?? null
 }
 /** The thread a URL sits in: a Reddit-style post id where there is one, else the canonical address itself. */
 function threadKey(url: string): { host: string; post: string | null; path: string } | null {
@@ -143,7 +144,7 @@ export function holdFor(venue: VenueRow, item: ItemAtVenue): VenueHold | null {
   const rules = rulesOf(venue), name = venue.name
   const hold = (rule: RuleKey, reason: string): VenueHold => ({ rule, reason, source_url: rules[rule]?.source_url ?? null })
   if (said(rules.self_promotion, 'thread')) {
-    const rule = rules.self_promotion!, aimed = threadOf(item)
+    const rule = rules.self_promotion!, aimed = threadOf(venue, item)
     const where = rule.thread_url ?? rule.detail ?? 'its promotion thread'
     // With the thread's address recorded, anything outside that thread is held; without it, anything not in a thread at all.
     if (rule.thread_url ? !aimed || !inThread(rule.thread_url, aimed) : !aimed) return hold('self_promotion', `${name} allows self-promotion only in ${where}.`)
