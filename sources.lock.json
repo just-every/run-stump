@@ -3716,7 +3716,7 @@
       "executable": false
     },
     "src/stump/inbox/store.ts": {
-      "sha256": "3ca94eeeffe23f9f8fe646d449a8932df4945d3a950011f7d4dced01567316e0",
+      "sha256": "584346fe0e1e8d566617497a6f92b103075ce6357e8e2d2a3071e24eafc5c870",
       "executable": false
     },
     "src/stump/inbox/styles.ts": {
@@ -4272,7 +4272,7 @@
       "executable": false
     },
     "src/stump/publish/schedule.ts": {
-      "sha256": "e491a1a4c388ff6633c76d25e035756ce4421b40651c44569a4e642820769960",
+      "sha256": "e887c4676e2693408c21a02e56bd681c8a98e7c4e9cab9bdfa69c4f9e39526d2",
       "executable": false
     },
     "src/stump/publish/slots.ts": {
@@ -4632,7 +4632,7 @@
       "executable": false
     },
     "tests/stump/inbox.test.mjs": {
-      "sha256": "118152cf5c8b39249b085472a9d79a7fa22b353d5907cb14e4074557c8f81446",
+      "sha256": "74dbe08d7da20cdd5b3294117ae3d08efa73094dedc5047936b3397ea12e842c",
       "executable": false
     },
     "tests/stump/instance.mjs": {

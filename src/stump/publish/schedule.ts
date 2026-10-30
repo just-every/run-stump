@@ -3,7 +3,7 @@ import type { ActionContext } from '../actions/types.ts'
 import { xPrices } from '../accounts/apps.ts'
 import { readAccount, type AccountRow } from '../accounts/store.ts'
 import { heldForImport, moveItem, pauseFor, type ItemState, type Mover } from '../items/state.ts'
-import { ANSWERED } from '../inbox/store.ts'
+import { ANSWERED, ownPostIds } from '../inbox/store.ts'
 import { recordOutcome } from '../ledger/record.ts'
 import { EDITORS } from '../people/roles.ts'
 import { itemView, readItem, type FullItemRow } from './items.ts'
@@ -82,8 +82,9 @@ async function engagedFirst(ctx: ActionContext, action: string, row: FullItemRow
   const url = (JSON.parse(row.reply_to) as { url: string }).url, id = xStatusId(url)
   // An address that names no X post is the publisher's check to refuse.
   if (!id) return
-  const own = await ctx.db.prepare('SELECT 1 FROM stump_item_parts WHERE account_id=? AND network_id=? UNION ALL SELECT 1 FROM stump_items WHERE account_id=? AND network_id=? LIMIT 1')
-    .bind(account.id, id, account.id, id).first()
+  // The account's own post: one Stump posted or recorded on the ledger, or one X showed as the account's when the inbox read a reply to it.
+  const own = (await ownPostIds(ctx.db, account.id, [id])).has(id) || await ctx.db.prepare(`SELECT 1 FROM stump_items WHERE account_id=? AND network_id=?
+    UNION ALL SELECT 1 FROM stump_inbox_items WHERE account_id=? AND parent_network_id=? AND parent_own=1 LIMIT 1`).bind(account.id, id, account.id, id).first()
   if (own) return
   const inbox = await ctx.db.prepare('SELECT id,engaged_first FROM stump_inbox_items WHERE account_id=? AND network_id=?').bind(account.id, id)
     .first<{ id: string; engaged_first: number }>()

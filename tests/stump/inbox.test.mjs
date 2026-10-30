@@ -120,11 +120,6 @@ test('the company reads its X mentions once at its read price, answers only peop
   assert.deepEqual([entry.url, entry.text, entry.route, entry.state, entry.confirmation, entry.charge_usd], [replied.url, text, 'published', 'posted', 'network', 0.015])
   const second = await inbox('stump.inbox.reply', { action: 'reply', inbox_item_id: linh.id, account_id: account.id, text: 'One more thing about patterns.' })
   assert.deepEqual([second.body.code, second.body.act, second.body.reply_item_id], ['act_refused', 'x_one_reply_per_interaction', replied.item_id])
-  // A reply written in the composer and published from the schedule answers the same interaction, so it is refused too.
-  const me = (await app.json('owner', '/app/api/me')).body.person
-  const written = ok(await inbox('stump.drafts.write', { action: 'create', format: 'reply', person_id: me.id, account_id: account.id, network: 'x', text: 'Patterns also cover monthly visits.', reply_to: { url: linh.url } }))
-  const published = await inbox('stump.items.schedule', { action: 'publish', item_id: written.id })
-  assert.deepEqual([published.body.code, published.body.act, published.body.reply_item_id, x.created.length], ['act_refused', 'x_one_reply_per_interaction', replied.item_id, 1])
 
   // The same words to the next person are held, naming the reply they repeat; only a rewrite sends it.
   const repeat = ok(await inbox('stump.inbox.reply', { action: 'reply', inbox_item_id: bo.id, account_id: account.id, text: text.replace('Yes. ', 'Yes! ') }))
@@ -132,6 +127,16 @@ test('the company reads its X mentions once at its read price, answers only peop
   assert.ok(repeat.hold.matches.some(match => match.id === replied.item_id || match.id === replied.ledger_id))
   const rewritten = ok(await inbox('stump.inbox.reply', { action: 'reply', inbox_item_id: bo.id, account_id: account.id, text: 'Thanks for pointing Ana our way.' }))
   assert.deepEqual([rewritten.item_id, rewritten.state, x.created.length], [repeat.item_id, 'posted', 2])
+
+  // A reply written in the composer and published from the schedule answers its interaction too: a second one is refused from every door.
+  const me = (await app.json('owner', '/app/api/me')).body.person, kit = of(PEOPLE.kit.username)
+  const composed = text => inbox('stump.drafts.write', { action: 'create', format: 'reply', person_id: me.id, account_id: account.id, network: 'x', text, reply_to: { url: kit.url } }).then(ok)
+  const first = ok(await inbox('stump.items.schedule', { action: 'publish', item_id: (await composed('Glad it helps, Kit.')).id }))
+  assert.deepEqual([first.item.state, x.created.length, x.created[2].reply.in_reply_to_tweet_id], ['posted', 3, kit.network_id])
+  const twice = await inbox('stump.items.schedule', { action: 'publish', item_id: (await composed('Patterns also cover monthly visits.')).id })
+  const viaInbox = await inbox('stump.inbox.reply', { action: 'reply', inbox_item_id: kit.id, account_id: account.id, text: 'One more thing, Kit.' })
+  assert.deepEqual([twice.body.act, twice.body.reply_item_id, viaInbox.body.act, viaInbox.body.reply_item_id, x.created.length],
+    ['x_one_reply_per_interaction', first.item.id, 'x_one_reply_per_interaction', first.item.id, 3])
 })
 
 test('people who engaged first with substance become offers to Orbit, signed, with only a publicly shown email and one identity each; a failed send stays offered', async () => {
