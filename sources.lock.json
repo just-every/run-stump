@@ -392,7 +392,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "36ce09993a52fa47bce18cb98e661cfe3949c8e1f094735b1c0ac6f10407881a",
+      "sha256": "56caf53bbfedecb78d9808a579ea91044388e12ad6ddbf73da6adf97b2795045",
       "executable": false
     },
     "agent-surface.json": {
@@ -420,7 +420,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "c0e518c094b94f6c24aa20e130011efcb3ebc34981427db1731c8892c06afddf",
+      "sha256": "daee61018f84b314eba093bcd52bf4dc34cf7286b4c05e9415d968d7223c34e5",
       "executable": false
     },
     "deploy-demo.json": {
@@ -536,7 +536,7 @@
       "executable": false
     },
     "migrations/core/0020_stump_team.sql": {
-      "sha256": "e23c8ec40a7da126725eabf34e894f5f90181e349595c5b397523f2d4e3dd792",
+      "sha256": "1805a3f9062584eef66153c7901f260036ea54a943e3f2fab9b4bccdbdffa64c",
       "executable": false
     },
     "migrations/core/0021_stump_brand.sql": {
@@ -2164,7 +2164,7 @@
       "executable": false
     },
     "src/routes/app.settings.team.tsx": {
-      "sha256": "cdb0943de6bf39b992a3721d91a3b8909ef9f9b25dca477ac4e52d26dd1c12a9",
+      "sha256": "74ffebb33fa203178a9e3e8d5613a31f75f7bda62fb75804124ac571d341708f",
       "executable": false
     },
     "src/routes/app.tsx": {
@@ -2196,11 +2196,11 @@
       "executable": false
     },
     "src/stump/actions/runner.ts": {
-      "sha256": "2a9803bb33773f4ec87fc94e42b9ed9c18d27f7758e8b6b542b1ef1af8f32858",
+      "sha256": "10596f39f98a384c94ba667bfa1525b385e2bfe93ee72500f6620488dbcd9f00",
       "executable": false
     },
     "src/stump/actions/types.ts": {
-      "sha256": "17b680fdf51c0419f4ff849cfafd282b90d1975d2b87a3a18de026f37eaaee66",
+      "sha256": "2eefa7bd415e335ead949d8319a0e2750fcc0ca537fc05f46467f364d65d5433",
       "executable": false
     },
     "src/stump/agent-door/credentials.ts": {
@@ -2236,7 +2236,7 @@
       "executable": false
     },
     "src/stump/people/invite.ts": {
-      "sha256": "5d755fc195fd61194eca4736bd7f449f9438616dda29d029beba3e348dd52c5a",
+      "sha256": "fe6473ca9c7e04efa1fb15658e7831000821f596470bb52729c90f8bcd51a932",
       "executable": false
     },
     "src/stump/people/policy.ts": {
@@ -2248,7 +2248,7 @@
       "executable": false
     },
     "src/stump/people/store.ts": {
-      "sha256": "641d7e9a11b0d73ca99f874ebfd121072d4d22f76902996b8665f9165d52499a",
+      "sha256": "6ca161ce42f0a7c413436c38c76d43c59a920b6b0a7e022cdd1a171caeff900f",
       "executable": false
     },
     "src/stump/publish/publishers.ts": {
@@ -2280,7 +2280,7 @@
       "executable": false
     },
     "src/stump/tools/team.ts": {
-      "sha256": "32eda29ced6074d5bf37157342fd7464e3796c512b86755af1875e983bcfd12a",
+      "sha256": "14d88da8cb47a94e68236767387b96c9f9baff60c97759495a29180da1c2e0ac",
       "executable": false
     },
     "src/stump/ui/api.ts": {
@@ -2300,7 +2300,7 @@
       "executable": false
     },
     "src/stump/ui/types.ts": {
-      "sha256": "9f403277e90d55fe4b6cafe238b33ae00211149f3471c4d6e91dcbbd156b64fb",
+      "sha256": "75091c133f7ab84efc279a66a4511ec13b6fe40cd4ba32612c062de136d24a30",
       "executable": false
     },
     "tests/agent/fixtures.mjs": {
@@ -2320,7 +2320,7 @@
       "executable": false
     },
     "tests/stump/team.test.mjs": {
-      "sha256": "ef66ebc92d67d1bd22f9171f75dd7358957b24046ef3826d2d70e41a19a75048",
+      "sha256": "8658d0d27579a42e54abe5219204517b401e097763662e823810ea1f35631d57",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {
