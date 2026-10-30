@@ -18,6 +18,10 @@ When adding data move-in, mount the shared door and build `/app/import` before
 publishing that workflow; do not add a separate importer. Follow Base's
 [door adoption guide](https://github.com/runeditrun/base/blob/main/modules/import-kit/src/door/ADOPTING.md).
 
+## Stump's source
+
+Stump's own code is under `src/stump/`. Read [src/stump/README.md](src/stump/README.md) before adding a tool, an action, a screen, a nav entry, a migration or an agent-surface entry: every action is declared once and runs through the person door (`/app/api/actions/<tool>`) and the MCP door (`/mcp`) alike.
+
 ## Launch for review
 
 When asked to launch, run or review this app, run this from the checkout root

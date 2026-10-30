@@ -10,6 +10,9 @@
       "binding": "DB"
     }
   ],
+  "crons": [
+    "* * * * *"
+  ],
   "originVar": "AUTH_ORIGIN",
   "publicOriginSetting": "PUBLIC_ORIGIN",
   "vars": {

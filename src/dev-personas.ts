@@ -1,10 +1,7 @@
 import type { DevPersona } from './modules/operator-auth/dev/index.mjs'
 
-// Local dev personas: real operators at <as>@dev.localhost, created only by
-// local dev sign-in and suspended in exports. Only src/server.dev.ts uses them.
+// Local dev personas. Stump has none: a person exists only through an accepted
+// invitation (D-1), and invited emails appear in dev sign-in once invited.
 export function devPersonas(): DevPersona[] {
- return [
-  { as: 'admin', role: 'admin', displayName: 'Dev admin' },
-  { as: 'member', role: 'member', displayName: 'Dev member' },
- ]
+ return []
 }

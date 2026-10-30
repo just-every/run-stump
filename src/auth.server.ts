@@ -7,6 +7,8 @@ import { fontDocumentResponse } from './base/font-response'
 import { themeFrame } from './base/theme-frame'
 import { createOperatorAuth, createAuthHandler, createSignInHandler, type AuthConfig } from './modules/operator-auth/index.mjs'
 import { operatorMail } from './mail.server.mjs'
+import { createBusinessSettings } from './modules/business-settings/index.ts'
+import { stumpRolePolicy } from './stump/people/policy.ts'
 import branding from './branding.json'
 
 // The edition's declared theme (public/rer-theme.css), as Base frames link it.
@@ -40,12 +42,26 @@ export interface Bindings {
  MAIL_FROM?: string
  MAIL_API_KEY?: string
  MAIL_ACCOUNT_ID?: string
+ /** Signed Business pairing and owner-claim trust; absent on an independent installation. */
+ RER_BUSINESS_TRUST?: string
+ RER_OWNER_CLAIM_ISSUER?: string
+ RER_OWNER_CLAIM_INSTALLATION_ID?: string
+ RER_OWNER_CLAIM_APP_ORIGIN?: string
+ RER_OWNER_CLAIM_PUBLIC_KEYS?: string
+ /** Local runtimes only (.dev.vars): the origin every outbound network request goes to. Build and deploy refuse it. */
+ STUMP_NETWORK_EDGE?: string
 }
 
 export const runtimeBindings = (env: Bindings): Bindings => env.RER_DEV_ORIGIN && env.AUTH_LOCAL === 'true' ? { ...env, AUTH_ORIGIN: env.RER_DEV_ORIGIN } : env
 export const authConfig = (env: Bindings): AuthConfig => ({ dependencies: true, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true', OWNER_EMAIL: env.OWNER_EMAIL, SESSION_SECRET: env.SESSION_SECRET, INSTALLATION_KEY: env.INSTALLATION_KEY, INSTALLATION_KEY_PREVIOUS: env.INSTALLATION_KEY_PREVIOUS, SETUP_TOKEN: env.SETUP_TOKEN, MAIL_FROM: env.MAIL_FROM, branding: { productName: branding.name, accentColor: branding.primaryColor, signInPath: '/signin', theme: theme.href } })
 export function operatorAuth(env: Bindings) {
- return createOperatorAuth({ db: env.DB, config: authConfig(env), mailSender: operatorMail(env), clientIp: request => request.headers.get('CF-Connecting-IP') ?? '' })
+ return createOperatorAuth({ db: env.DB, config: authConfig(env), rolePolicy: stumpRolePolicy(env.DB), businessSettings: businessSettings(env), mailSender: operatorMail(env), clientIp: request => request.headers.get('CF-Connecting-IP') ?? '' })
+}
+
+// Signed Business settings: the owner binding and team roster a paired installation receives.
+export function businessSettings(env: Bindings) {
+ const auth = createOperatorAuth({ db: env.DB, config: authConfig(env), mailSender: operatorMail(env), clientIp: request => request.headers.get('CF-Connecting-IP') ?? '' })
+ return createBusinessSettings({ db: env.DB, trust: env.RER_BUSINESS_TRUST, business: { settings: 1, values: ['display_name', 'owner_name', 'brand_color', 'logo', 'timezone'], team: { roles: { admin: 'admin', member: 'member' } } }, team: auth.businessTeam })
 }
 
 const privateHeaders = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff', 'x-robots-tag': 'noindex, nofollow' }
@@ -73,11 +89,6 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
  if (url.pathname === '/setup' || url.pathname === '/app' || url.pathname.startsWith('/app/')) {
   const setup = await firstRunResponse(request, env, operatorAuth(env), { theme })
   if (setup) return setup
- }
- if (url.pathname === '/app') {
-  const session = await operatorAuth(env).getSession(request)
-  if (!session) return new Response(null, { status: 303, headers: { ...privateHeaders, location: '/signin' } })
-  return html(`<h1 data-rer-name>${escape(branding.name)}</h1><p>Signed in as ${escape(session.operator.displayName)}</p>`)
  }
  return null
 }

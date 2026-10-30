@@ -6,6 +6,7 @@ import { defineConfig, normalizePath } from 'vite'
 import { demoSockets } from './src/modules/demo/vite.mjs'
 import { archiveOutputGuard } from '@runeditrun/rer/archive-output'
 import { excludeLocalVariables } from '@runeditrun/rer/local-variables-output'
+import { refuseLocalOnly } from './scripts/stump/local-only.mjs'
 
 // Only `vite dev` loads the local-only entry and the checkout's dev key; a build
 // keeps src/server.ts and never sees either (rer build checks its output).
@@ -17,4 +18,4 @@ const serve = { main: './src/server.dev.ts', vars: { ...local('RER_DEV_ORIGIN'),
 // key, installer state), export archives, settings or local data.
 const server = { fs: { allow: ['src', 'public', 'node_modules', 'deploy-site.json'], deny: ['**/.rer/**', '**/.seed/**', normalizePath(process.cwd() + '/exports') + '/**', '**/*.rer'] } }
 
-export default defineConfig(({ command, isPreview }) => ({ server, plugins: [seedIcons(),demoSockets(), cloudflare({ inspectorPort: false, viteEnvironment: { name: 'ssr' }, persistState: { path: process.env.RER_STATE_DIR ?? '.wrangler/state' }, ...(command === 'serve' && !isPreview ? { config: serve } : process.env.RER_DEV_ORIGIN ? { config: { vars: local('RER_DEV_ORIGIN') } } : {}) }), tanstackStart(), react(), excludeLocalVariables(), archiveOutputGuard()] }))
+export default defineConfig(({ command, isPreview }) => ({ server, plugins: [seedIcons(),demoSockets(), cloudflare({ inspectorPort: false, viteEnvironment: { name: 'ssr' }, persistState: { path: process.env.RER_STATE_DIR ?? '.wrangler/state' }, ...(command === 'serve' && !isPreview ? { config: serve } : process.env.RER_DEV_ORIGIN ? { config: { vars: local('RER_DEV_ORIGIN') } } : {}) }), tanstackStart(), react(), excludeLocalVariables(), archiveOutputGuard(), refuseLocalOnly()] }))

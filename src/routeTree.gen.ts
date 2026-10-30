@@ -9,27 +9,145 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
+import { Route as AppSettingsPublishingRouteImport } from './routes/app.settings.publishing'
+import { Route as AppSettingsTeamRouteImport } from './routes/app.settings.team'
 
-export interface FileRoutesByFullPath {}
-export interface FileRoutesByTo {}
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsAgentsRoute = AppSettingsAgentsRouteImport.update({
+  id: '/settings/agents',
+  path: '/settings/agents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsPublishingRoute = AppSettingsPublishingRouteImport.update({
+  id: '/settings/publishing',
+  path: '/settings/publishing',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsTeamRoute = AppSettingsTeamRouteImport.update({
+  id: '/settings/team',
+  path: '/settings/team',
+  getParentRoute: () => AppRoute,
+} as any)
+
+export interface FileRoutesByFullPath {
+  '/app': typeof AppRouteWithChildren
+  '/app/': typeof AppIndexRoute
+  '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/publishing': typeof AppSettingsPublishingRoute
+  '/app/settings/team': typeof AppSettingsTeamRoute
+}
+export interface FileRoutesByTo {
+  '/app': typeof AppIndexRoute
+  '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/publishing': typeof AppSettingsPublishingRoute
+  '/app/settings/team': typeof AppSettingsTeamRoute
+}
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/app': typeof AppRouteWithChildren
+  '/app/': typeof AppIndexRoute
+  '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/publishing': typeof AppSettingsPublishingRoute
+  '/app/settings/team': typeof AppSettingsTeamRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: never
+  fullPaths:
+    | '/app'
+    | '/app/'
+    | '/app/settings/agents'
+    | '/app/settings/publishing'
+    | '/app/settings/team'
   fileRoutesByTo: FileRoutesByTo
-  to: never
-  id: '__root__'
+  to:
+    | '/app'
+    | '/app/settings/agents'
+    | '/app/settings/publishing'
+    | '/app/settings/team'
+  id:
+    | '__root__'
+    | '/app'
+    | '/app/'
+    | '/app/settings/agents'
+    | '/app/settings/publishing'
+    | '/app/settings/team'
   fileRoutesById: FileRoutesById
 }
-export interface RootRouteChildren {}
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {}
+export interface RootRouteChildren {
+  AppRoute: typeof AppRouteWithChildren
 }
 
-const rootRouteChildren: RootRouteChildren = {}
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings/agents': {
+      id: '/app/settings/agents'
+      path: '/settings/agents'
+      fullPath: '/app/settings/agents'
+      preLoaderRoute: typeof AppSettingsAgentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings/publishing': {
+      id: '/app/settings/publishing'
+      path: '/settings/publishing'
+      fullPath: '/app/settings/publishing'
+      preLoaderRoute: typeof AppSettingsPublishingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings/team': {
+      id: '/app/settings/team'
+      path: '/settings/team'
+      fullPath: '/app/settings/team'
+      preLoaderRoute: typeof AppSettingsTeamRouteImport
+      parentRoute: typeof AppRoute
+    }
+  }
+}
+
+interface AppRouteChildren {
+  AppIndexRoute: typeof AppIndexRoute
+  AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
+  AppSettingsPublishingRoute: typeof AppSettingsPublishingRoute
+  AppSettingsTeamRoute: typeof AppSettingsTeamRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppIndexRoute: AppIndexRoute,
+  AppSettingsAgentsRoute: AppSettingsAgentsRoute,
+  AppSettingsPublishingRoute: AppSettingsPublishingRoute,
+  AppSettingsTeamRoute: AppSettingsTeamRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  AppRoute: AppRouteWithChildren,
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()

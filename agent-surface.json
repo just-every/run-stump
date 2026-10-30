@@ -1,0 +1,52 @@
+{
+  "schema": "rer-agent-surface/1",
+  "seed": "stump",
+  "specialist": "earned-channels-marketer",
+  "capabilities": ["tools", "policy", "pause", "audit", "idempotency"],
+  "tools": [
+    { "name": "stump.calendar.pause", "scope": "stump:calendar", "readOnly": false, "classes": ["live"], "clauses": ["STUMP-PLAN-007"] },
+    { "name": "stump.ledger.search", "scope": "stump:ledger", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001", "STUMP-LEDGER-002"] },
+    { "name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001", "STUMP-TRUTH-001"] }
+  ],
+  "notTools": [
+    { "clauses": ["STUMP-VENUE-004", "STUMP-IMPORT-001"], "reason": "import-door" },
+    { "clauses": ["STUMP-INBOX-005"], "reason": "screen" },
+    { "clauses": ["STUMP-MOBILE-001", "STUMP-MOBILE-002", "STUMP-DRAFT-013"], "reason": "device" }
+  ],
+  "resources": [],
+  "escalations": [
+    { "id": "self-invite", "tool": "stump.team.manage", "args": { "action": "invite", "email": { "$sponsor": "email" }, "display_name": "Synthetic sponsor", "role": "admin", "connection": "employee" } }
+  ],
+  "spend": { "none": true },
+  "witness": { "tool": "stump.ledger.search", "args": { "action": "search" } },
+  "journey": [
+    {
+      "id": "invite",
+      "tool": "stump.team.manage",
+      "args": { "action": "invite", "email": { "$fixture": "invitee", "pointer": "" }, "display_name": "Synthetic contractor", "role": "contributor", "connection": "contractor" },
+      "expect": [{ "class": "access", "facts": { "measure": 1, "direction": "widens" } }],
+      "inject": { "classes": ["standard"], "risk": "none", "internal": true }
+    },
+    {
+      "id": "pause",
+      "tool": "stump.calendar.pause",
+      "args": { "action": "pause", "scope": "all" },
+      "expect": [{ "class": "live", "facts": { "measure": 1, "service": "all publishing" } }]
+    },
+    {
+      "id": "resume",
+      "tool": "stump.calendar.pause",
+      "args": { "action": "resume", "scope": "all" },
+      "expect": [{ "class": "live", "facts": { "measure": 1, "service": "all publishing" } }]
+    },
+    {
+      "id": "ledger",
+      "tool": "stump.ledger.search",
+      "args": { "action": "search" },
+      "expect": [{ "class": "standard" }]
+    }
+  ],
+  "verification": {
+    "fixtures": { "module": "tests/agent/fixtures.mjs" }
+  }
+}
