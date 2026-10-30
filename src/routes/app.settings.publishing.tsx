@@ -172,7 +172,7 @@ function AccountRow({ account, slots, scope, may, busy: pausing, name, onPause, 
   const meta = [NAMES[account.network] ?? account.network, scope ? `paused by ${name(scope.person_id)}, ${when(scope.at)}` : connected ? 'publishing' : account.state.replace(/_/g, ' '), connected ? slotWords : null].filter(Boolean).join(' · ')
   return <li className="st-row st-stack">
     <div className="st-pub-account">
-      {connected ? <button className="st-row-toggle" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+      {connected && may ? <button className="st-row-toggle" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
         <span className="st-row-main"><span className="st-name st-handle">{shownHandle(account)}</span><span className="st-meta">{meta}</span></span>
         <span className="st-chevron" aria-hidden="true"><Icon name="chevronRight" /></span>
       </button> : <div className="st-row-main"><div className="st-name st-handle">{shownHandle(account)}</div><div className="st-meta">{meta}</div></div>}

@@ -5,7 +5,7 @@ import { stump } from './instance.mjs'
 
 // X's OAuth 2.0 token, users and posts endpoints and Vane's annotation door at the network edge, in their published shapes.
 const USER = { id: '1500000000000000001', username: 'synthetic_co', name: 'Synthetic Co', public_metrics: { followers_count: 2400, following_count: 3, tweet_count: 9, listed_count: 0 } }
-const x = { issued: new Set(), revoked: new Set(), posts: new Map(), deleted: [], refuse: false, next: 1900000000000000001n }
+const x = { issued: new Set(), revoked: new Set(), posts: new Map(), deleted: [], refuse: false, limit: false, next: 1900000000000000001n, user: USER, users: new Map() }
 const VANE = 'https://vane.synthetic-stump.example', annotations = []
 async function network(request) {
   const url = new URL(request.url)
@@ -14,15 +14,18 @@ async function network(request) {
   if (url.pathname === '/2/oauth2/token') {
     const form = new URLSearchParams(await request.text())
     if (!request.headers.get('authorization')?.startsWith('Basic ') || !form.get('code_verifier')) return Response.json({ error: 'invalid_request' }, { status: 400 })
-    const token = randomBytes(16).toString('hex'); x.issued.add(token)
+    // Each token belongs to the X user who consented when it was issued.
+    const token = randomBytes(16).toString('hex'); x.issued.add(token); x.users.set(token, x.user)
     return Response.json({ token_type: 'bearer', expires_in: 7200, access_token: token, refresh_token: randomBytes(16).toString('hex'), scope: 'tweet.read tweet.write users.read offline.access media.write' })
   }
   if (url.pathname === '/2/oauth2/revoke') { x.revoked.add(new URLSearchParams(await request.text()).get('token')); return Response.json({ revoked: true }) }
   if (!x.issued.has(request.headers.get('authorization')?.slice(7))) return Response.json({ title: 'Unauthorized', status: 401 }, { status: 401 })
-  if (url.pathname === '/2/users/me') return Response.json({ data: USER })
+  if (url.pathname === '/2/users/me') return Response.json({ data: x.users.get(request.headers.get('authorization').slice(7)) })
   if (url.pathname === '/2/tweets' && request.method === 'POST') {
     // X refuses an access token the account's person revoked with a 401.
     if (x.refuse) return Response.json({ title: 'Unauthorized', type: 'about:blank', status: 401, detail: 'Unauthorized' }, { status: 401 })
+    // X's rate limit answers 429 with the window's reset time.
+    if (x.limit) return Response.json({ title: 'Too Many Requests', type: 'about:blank', status: 429, detail: 'Too Many Requests' }, { status: 429, headers: { 'x-rate-limit-reset': String(Math.floor(Date.now() / 1000) + 900) } })
     const { text } = await request.json(), id = String(x.next++)
     x.posts.set(id, { id, text, author_id: USER.id, created_at: new Date().toISOString(), edit_history_tweet_ids: [id] })
     return Response.json({ data: { id, text, edit_history_tweet_ids: [id] } }, { status: 201 })
@@ -160,4 +163,36 @@ test('removing a post the company\'s account made deletes it at the network and 
   const removed = (await app.action('owner', 'stump.ledger.correct', { action: 'mark_removed', entry_id: entry.id, reason: 'Posted before the feature shipped' })).body.result
   assert.deepEqual([removed.state, removed.removal.reason, removed.removal.network_delete.outcome], ['removed', 'Posted before the feature shipped', 'deleted'])
   assert.ok(x.deleted.includes(posted.network_id)); assert.ok(!x.posts.has(posted.network_id))
+})
+
+test('removing a person disconnects their own X account at X and returns their posts waiting on a rate limit to draft', async () => {
+  await app.owner()
+  const email = app.email('leaver')
+  const leaver = (await app.action('owner', 'stump.team.manage', { action: 'invite', email, display_name: 'Synthetic Leaver', role: 'editor', connection: 'employee' })).body.result
+  assert.equal(await app.signIn('leaver', email), 303)
+  x.user = { ...USER, id: '1500000000000000002', username: 'synthetic_leaver', name: 'Synthetic Leaver' }
+  const started = await app.action('leaver', 'stump.accounts.connect', { action: 'start', network: 'x', owner: 'me' })
+  const back = await app.request('leaver', `/app/connected/x?${new URLSearchParams({ state: new URL(started.body.result.consent_url).searchParams.get('state'), code: 'synthetic-code' })}`)
+  x.user = USER
+  const shown = (await app.action('leaver', 'stump.accounts.connect', { action: 'list', connection_id: new URL(back.headers.get('location'), app.origin).searchParams.get('connection') })).body.result
+  const account = shown.items.find(item => item.id === shown.connection.outcome.account_id)
+  assert.deepEqual([account.owner.kind, account.handle], ['person', 'synthetic_leaver'])
+
+  const item = (await app.action('leaver', 'stump.drafts.write', { action: 'create', format: 'post', person_id: leaver.id, account_id: account.id, network: 'x', text: 'Booking a whole term at once is live.' })).body.result
+  x.limit = true
+  const sent = await app.action('leaver', 'stump.items.schedule', { action: 'publish', item_id: item.id, account_id: account.id })
+  x.limit = false
+  assert.deepEqual([sent.body.result.item.state, sent.body.result.item.hold.kind], ['held', 'rate_limit'])
+
+  const revoked = x.revoked.size, posts = x.posts.size
+  const removed = (await app.action('owner', 'stump.team.manage', { action: 'remove', person_id: leaver.id })).body.result
+  assert.ok(removed.unscheduled_items.includes(item.id))
+  assert.deepEqual(removed.disconnected_accounts.map(entry => [entry.account_id, entry.revoked]), [[account.id, 'revoked']])
+  assert.equal(x.revoked.size, revoked + 1)
+  const after = (await app.action('owner', 'stump.drafts.revise', { action: 'get', item_id: item.id })).body.result
+  assert.deepEqual([after.state, after.hold], ['draft', null])
+  const listed = (await app.action('owner', 'stump.accounts.connect', { action: 'list', include_unconnected: true })).body.result.items.find(entry => entry.id === account.id)
+  assert.deepEqual([listed.state, listed.owner.kind], ['disconnected', 'person'])
+  assert.equal((await app.action('owner', 'stump.items.schedule', { action: 'publish', item_id: item.id, account_id: account.id })).status >= 400, true)
+  assert.equal(x.posts.size, posts)
 })

@@ -2,7 +2,7 @@ import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
 import { shownHandle } from '../accounts/handle.ts'
 import { readAccount, type AccountRow } from '../accounts/store.ts'
-import { CONTRIBUTORS, EDITORS, EVERYONE } from '../people/roles.ts'
+import { EDITORS, EVERYONE } from '../people/roles.ts'
 import { moveItem, pauseFor, type ItemState } from '../items/state.ts'
 import { readItem } from '../publish/items.ts'
 import { commit, item as readSchedulable, money, mover, prepare, publishClasses, remaining, scheduleClasses } from '../publish/schedule.ts'
@@ -115,8 +115,11 @@ export const calendarTools: StumpTool[] = [{
       roles: EVERYONE, read: true,
       classify: () => live('publishing', 0),
       async run(_args, ctx) {
-        const paused = (await ctx.db.prepare('SELECT scope,account_id,person_id,agent_id,paused_at FROM stump_pause ORDER BY paused_at').all<{ scope: string; account_id: string | null; person_id: string; agent_id: string | null; paused_at: number }>()).results
-        const history = (await ctx.db.prepare('SELECT action,scope,account_id,person_id,agent_id,at FROM stump_pause_history ORDER BY at DESC,id LIMIT 200').all<{ action: string; scope: string; account_id: string | null; person_id: string; agent_id: string | null; at: number }>()).results
+        // A poster sees only the Pause over all publishing and over their own accounts (STUMP-TEAM-001.2).
+        const own = ctx.person.role === 'poster' ? " WHERE scope='all' OR account_id IN (SELECT id FROM stump_accounts WHERE owner_kind='person' AND owner_person_id=?)" : ''
+        const bound = own ? [ctx.person.id] : []
+        const paused = (await ctx.db.prepare(`SELECT scope,account_id,person_id,agent_id,paused_at FROM stump_pause${own} ORDER BY paused_at`).bind(...bound).all<{ scope: string; account_id: string | null; person_id: string; agent_id: string | null; paused_at: number }>()).results
+        const history = (await ctx.db.prepare(`SELECT action,scope,account_id,person_id,agent_id,at FROM stump_pause_history${own} ORDER BY at DESC,id LIMIT 200`).bind(...bound).all<{ action: string; scope: string; account_id: string | null; person_id: string; agent_id: string | null; at: number }>()).results
         return {
           paused: paused.map(row => ({ scope: row.scope, account_id: row.account_id, person_id: row.person_id, agent_id: row.agent_id, at: iso(row.paused_at) })),
           history: history.map(row => ({ action: row.action, scope: row.scope, account_id: row.account_id, person_id: row.person_id, agent_id: row.agent_id, at: iso(row.at) })),
@@ -130,7 +133,7 @@ export const calendarTools: StumpTool[] = [{
   scope: 'stump:calendar', classes: ['standard', 'live', 'external', 'money'], clauses: ['STUMP-PLAN-002', 'STUMP-PLAN-007', 'STUMP-IMPORT-001', 'STUMP-SURFACE-004'],
   actions: {
     set_slots: {
-      roles: CONTRIBUTORS,
+      roles: EDITORS,
       properties: { account_id: accountId, time_zone: { type: 'string', minLength: 1, maxLength: 64 },
         slots: { type: 'array', maxItems: 20, items: { type: 'object', required: ['days', 'times'], additionalProperties: false,
           properties: { days: { type: 'array', minItems: 1, maxItems: 7, items: { enum: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] } },
@@ -150,12 +153,13 @@ export const calendarTools: StumpTool[] = [{
       classify: () => [{ class: 'standard', facts: { measure: 0 } }],
       async run(args, ctx) {
         const account = await readAccount(ctx.db, String(args.account_id))
-        if (!account) refuse('not_found', { account_id: String(args.account_id) })
+        // A poster reads only their own accounts' slots (STUMP-TEAM-001.2); any other account reads as not found.
+        if (!account || ctx.person.role === 'poster' && !(account.owner_kind === 'person' && account.owner_person_id === ctx.person.id)) refuse('not_found', { account_id: String(args.account_id) })
         return slotsView(ctx.db, account.id, ctx.now())
       },
     },
     queue: {
-      roles: CONTRIBUTORS,
+      roles: EDITORS,
       properties: { item_id: accountId, account_id: accountId }, required: ['item_id', 'account_id'],
       // A queued post goes out in public at its slot and X charges for it, as any schedule does.
       async classify(args, ctx) { return [{ class: 'live', facts: { measure: 1, service: 'publishing queue' } }, ...scheduleClasses([await queued(ctx, args)])] },

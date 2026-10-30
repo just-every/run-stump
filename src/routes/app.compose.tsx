@@ -103,6 +103,19 @@ function ComposePage() {
     await refresh()
   }
 
+  // Scheduling is editors' work; a contributor marks their variants ready for sign-off (STUMP-TEAM-001, STUMP-TEAM-002.7).
+  const schedules = !!data && ['owner', 'admin', 'editor'].includes(data.who.person.role)
+  async function markReady() {
+    setNote(null)
+    try {
+      for (const variant of variants.filter(variant => variant.state === 'draft' && !blocking(variant.flags).length)) {
+        await runAction('stump.drafts.revise', { action: 'mark_ready', item_id: variant.item_id, idempotency_key: key() })
+      }
+      setNote({ text: 'Marked ready for an editor to schedule.', error: false })
+    } catch (cause) { setNote({ text: explain(cause), error: true }) }
+    await refresh()
+  }
+
   const matched = new Set(data?.checks.flatMap(check => check.claims.filter(claim => claim.status === 'matched').map(claim => claim.claim_id)) ?? [])
   const flagRows = new Map<string, { flag: Flag; item: string }>()
   // One row per thing to fix: a limit per variant, a sentence, an image or a venue rule once however many variants share it.
@@ -204,11 +217,12 @@ function ComposePage() {
           ? <span className="st-pill held st-bar-held">{variants.length === 1
             ? <><span className="st-held-long">The {networkName(held[0]!.network)} variant holds until fixed</span><span className="st-held-short" aria-hidden="true">{networkName(held[0]!.network)} held until fixed</span></>
             : <><span className="st-held-long">{variants.length === 2 ? 'Both variants hold' : `All ${variants.length} variants hold`} until fixed</span><span className="st-held-short" aria-hidden="true">{variants.length === 2 ? 'Both' : `All ${variants.length}`} held until fixed</span></>}</span>
+          : !schedules ? <button className="st-button ink" type="button" disabled={busy} onClick={() => void markReady()}>Mark ready <Icon name="arrowRight" /></button>
           : <button className="st-button ink" type="button" disabled={busy} onClick={() => void schedule('schedule_master')}>
             {alone ? 'Schedule' : held.length ? `Schedule ${variants.length - held.length} ${variants.length - held.length === 1 ? 'post' : 'posts'}` : 'Schedule all'} <Icon name="arrowRight" />
           </button>}
-        <WhenPicker value={when} onChange={setWhen} />
-        {held.length === variants.length ? null : held.length
+        {schedules ? <WhenPicker value={when} onChange={setWhen} /> : null}
+        {held.length === variants.length || !schedules ? null : held.length
           ? <span className="st-pill held">{held.length === 1 ? `${networkName(held[0]!.network)} variant holds alone` : `${held.length} variants hold`}</span>
           : <button className="st-button quiet" type="button" disabled={busy} onClick={() => void schedule('queue')}>Add to queue</button>}
       </div> : null}
