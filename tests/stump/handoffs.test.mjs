@@ -87,6 +87,17 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
   assert.equal(friend.attestation_required, true); assert.equal(friend.draft_text, null)
   const full = await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(1) + 4 * DAY).toISOString() })
   assert.equal(full.body.code, 'shared_limit'); assert.equal(full.body.venue_id, subreddit.id)
+  // Skipping records the reason and frees the place.
+  const spare = ok(await prepare('owner', { venue_id: subreddit.id, person_id: maya.id, thread_url: thread, due_at: new Date(week(3) + DAY).toISOString() }))
+  assert.equal((await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(3) + 2 * DAY).toISOString() })).body.code, 'shared_limit')
+  assert.equal(ok(await app.action('maya', 'stump.handoffs.manage', { action: 'skip', handoff_id: spare.id, reason: 'Nothing new that week.' })).history.at(-1).detail.reason, 'Nothing new that week.')
+  ok(await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(3) + 2 * DAY).toISOString() }))
+
+  // Maya's queue holds only her own, by due date; the disclosure cannot be edited out of her draft.
+  const queue = ok(await app.action('maya', 'stump.handoffs.manage', { action: 'queue' })).items.filter(item => item.state !== 'skipped')
+  assert.ok(queue.every(item => item.person_id === maya.id) && queue.every((item, index) => index === 0 || item.due_at >= queue[index - 1].due_at), JSON.stringify(queue.map(item => item.due_at)))
+  const edited = await app.action('maya', 'stump.handoffs.manage', { action: 'edit', handoff_id: handoff.id, draft_text: 'Recurring bookings landed in Brightwell maya 3.2.' })
+  assert.deepEqual([edited.body.code, edited.body.rule], ['disclosure_required', 'D-2'])
 
   // Only Maya records, with a link in the venue; Reddit is confirmed by her, with no request to reddit.com.
   const record = (who, args) => app.action(who, 'stump.handoffs.check_link', { action: 'record', ...args })

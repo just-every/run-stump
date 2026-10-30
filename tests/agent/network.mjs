@@ -3,9 +3,12 @@
 // - the company's AI provider: OpenAI-compatible chat completions with a JSON
 //   draft and its usage and cost;
 // - X API v2: the OAuth 2.0 token exchange and the account read, so the
-//   journey connects the company's X account through its own app.
+//   journey connects the company's X account through its own app;
+// - Bluesky's public AppView: a post thread by the handle in its URI, so the
+//   journey records a hand-off's link checked with the network.
 const AI = 'https://ai.synthetic-stump.example'
 const X = 'https://api.x.com'
+const APPVIEW = 'https://public.api.bsky.app'
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 
 async function ai(request, url) {
@@ -32,11 +35,19 @@ async function x(request, url) {
   return json({ title: 'Not Found', status: 404 }, 404)
 }
 
+function appview(url) {
+  const [, actor, rkey] = /^at:\/\/([^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/.exec(url.searchParams.get('uri') ?? '') ?? []
+  if (url.pathname !== '/xrpc/app.bsky.feed.getPostThread' || !actor) return json({ error: 'NotFound', message: 'Post not found' }, 400)
+  return json({ thread: { $type: 'app.bsky.feed.defs#threadViewPost', post: { uri: `at://did:plc:synthetic/app.bsky.feed.post/${rkey}`, cid: 'bafysynthetic', author: { did: 'did:plc:synthetic', handle: actor },
+    record: { $type: 'app.bsky.feed.post', text: 'Synthetic hand-off post.', createdAt: new Date().toISOString() }, indexedAt: new Date().toISOString() } } })
+}
+
 export default {
   async fetch(request) {
     const url = new URL(request.url)
     if (url.origin === AI) return ai(request, url)
     if (url.origin === X) return x(request, url)
+    if (url.origin === APPVIEW) return appview(url)
     return new Response('Not declared', { status: 404 })
   },
 }
