@@ -715,6 +715,10 @@
       "sha256": "a18e4fdd51074eb315bbac33f68cea7fabf6d36893b56fa77a09ce4786ba5603",
       "executable": false
     },
+    "migrations/core/0310_stump_accounts_reconnect_annotation.sql": {
+      "sha256": "d5bc1d1a26c81b42f2083075f588a14816edd1cedcd4582b5cdfd79165f371e1",
+      "executable": false
+    },
     "migrations/core/0400_stump_watches_polling.sql": {
       "sha256": "f1c0fd1a94d1b350c6b48275b3578a9acce295ff572c2a6719e98e9dfe9b7be8",
       "executable": false
@@ -4039,6 +4043,10 @@
       "sha256": "9b687edeca20e7270d8ef922e28f82c48275fbef78c278c98a371c6126c816f5",
       "executable": false
     },
+    "src/stump/publish/held.ts": {
+      "sha256": "7d0ef048c009c7c3a8b69faf20bfccc30d2b7992b1bf310772dc82a9255bbdd7",
+      "executable": false
+    },
     "src/stump/publish/items.ts": {
       "sha256": "50f919364958503ec593b2c76fbdb212b5c08bd48cb52cfc86d4d4fef1cee65c",
       "executable": false
@@ -4049,6 +4057,10 @@
     },
     "src/stump/publish/mastodon.ts": {
       "sha256": "123530a720d6e0cd17f9c207f077072fc3c97d058184c6d52c633903a4d8fda0",
+      "executable": false
+    },
+    "src/stump/publish/outgoing.ts": {
+      "sha256": "c4a9f11c7bc402318ccda30481c33523021ed0125435cd4a1fc62a1ba83a745f",
       "executable": false
     },
     "src/stump/publish/parts.ts": {
