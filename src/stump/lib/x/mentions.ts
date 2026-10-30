@@ -10,10 +10,18 @@
  *   users are not added (the company's four-row table has no user-read price).
  *
  * Results arrive newest first. Items come back oldest first so a poll can be stored in order.
- * Paging never skips: when the page budget runs out with more still waiting, the cursor
- * does not move past what was not read (see `nextSinceId`).
+ * GET /2/users/{id}/mentions also takes until_id (1-19 digits; since_id must be less than
+ * until_id when both are sent), which is how a backlog bigger than one poll's page budget
+ * is drained: each later poll continues downward below the oldest post already read.
+ *
+ * The caller stores one value, `nextSinceId`, and passes it back as `sinceId`. Normally it is
+ * the newest post id read. While a backlog is draining it is a drain cursor
+ * (`drain:<since>:<until>:<newest>`) holding the floor (since_id), the point to continue
+ * below (until_id) and the newest id already read; once a poll finishes the backlog it
+ * collapses to that newest id. Nothing is skipped and no post is read (or billed) twice.
  */
 import { quoteXRead } from './charge'
+import { localXError } from './errors'
 import { fieldsParam, xCall } from './http'
 import { parsePost, postFieldList, type XPostReadback } from './readback'
 import type { XChargeQuote, XContext, XPriceTable, XResult } from './types'
@@ -25,7 +33,7 @@ export interface XMention extends XPostReadback {
 
 export interface XMentionsInput {
   userId: string
-  /** Only mentions newer than this id. */
+  /** The stored cursor: the `nextSinceId` of the previous poll (a post id or a drain cursor). */
   sinceId?: string | null
   /** Pages to read per poll; defaults to 5. */
   maxPages?: number
@@ -42,8 +50,14 @@ export interface XMentionsPoll {
   charge: XChargeQuote
   /** True when more mentions were waiting than the page budget read. */
   truncated: boolean
-  /** Store this as the next `sinceId`. It does not advance while `truncated`, so nothing is skipped. */
+  /**
+   * Store this and pass it back as `sinceId`. While `truncated` it is a drain cursor, so the
+   * next poll reads the older mentions this poll had no budget for; after that it is the
+   * newest id read.
+   */
   nextSinceId: string | null
+  /** When `truncated`, the oldest id read: the next poll is sent with until_id set to it. Otherwise null. */
+  resumeUntilId: string | null
   /** Newest id seen in this poll, for display. */
   newestId: string | null
 }
@@ -66,7 +80,32 @@ export function dedupeXPosts<T extends { id: string }>(items: T[], seen: Iterabl
   return out
 }
 
+const ID = /^[0-9]{1,19}$/
+
+interface MentionsCursor {
+  sinceId: string | null
+  untilId: string | null
+  /** Newest id already read while draining; becomes the cursor once the drain finishes. */
+  highId: string | null
+}
+
+function parseMentionsCursor(value: string | null | undefined): MentionsCursor | null {
+  if (!value) return { sinceId: null, untilId: null, highId: null }
+  if (ID.test(value)) return { sinceId: value, untilId: null, highId: null }
+  const m = /^drain:([0-9]{0,19}):([0-9]{1,19}):([0-9]{1,19})$/.exec(value)
+  if (!m) return null
+  const sinceId = m[1] || null
+  if (sinceId && compareXIds(sinceId, m[2]) >= 0) return null
+  return { sinceId, untilId: m[2], highId: m[3] }
+}
+
+function drainCursor(sinceId: string | null, untilId: string, highId: string): string {
+  return `drain:${sinceId ?? ''}:${untilId}:${highId}`
+}
+
 export async function fetchXMentions(ctx: XContext, input: XMentionsInput, prices: XPriceTable): Promise<XResult<XMentionsPoll>> {
+  const cursor = parseMentionsCursor(input.sinceId)
+  if (!cursor) return { ok: false, error: localXError('bad_cursor', 'The stored X mentions cursor is not a post id or a drain cursor.') }
   const maxPages = Math.max(1, input.maxPages ?? 5)
   const pageSize = Math.min(100, Math.max(5, input.pageSize ?? 100))
   const collected: XMention[] = []
@@ -84,7 +123,8 @@ export async function fetchXMentions(ctx: XContext, input: XMentionsInput, price
       path: `/2/users/${encodeURIComponent(input.userId)}/mentions`,
       query: {
         max_results: pageSize,
-        since_id: input.sinceId || undefined,
+        since_id: cursor.sinceId ?? undefined,
+        until_id: cursor.untilId ?? undefined,
         pagination_token: token,
         [fieldsParam(ctx, 'post')]: postFieldList(ctx),
         expansions: 'author_id',
@@ -115,11 +155,25 @@ export async function fetchXMentions(ctx: XContext, input: XMentionsInput, price
 
   const items = dedupeXPosts(collected).sort((a, b) => compareXIds(a.id, b.id))
   const newestId = items.length ? items[items.length - 1].id : null
-  const nextSinceId = truncated ? input.sinceId ?? null : newestId ?? input.sinceId ?? null
+  const oldestId = items.length ? items[0].id : null
+  // The newest id read so far, across this poll and any drain it continues.
+  const highId = cursor.highId ?? newestId ?? cursor.sinceId
+  let nextSinceId: string | null
+  let resumeUntilId: string | null = null
+  if (truncated && oldestId && highId) {
+    // Continue below the oldest post read; the floor stays where it was.
+    resumeUntilId = oldestId
+    nextSinceId = drainCursor(cursor.sinceId, oldestId, highId)
+  } else if (truncated) {
+    // Nothing was read on the budgeted pages: keep the cursor exactly as it was.
+    nextSinceId = input.sinceId ?? null
+  } else {
+    nextSinceId = highId
+  }
   return {
     ok: true,
     status: lastStatus,
     rateLimit,
-    value: { items, reads, pages, charge: quoteXRead(reads, prices, false), truncated, nextSinceId, newestId },
+    value: { items, reads, pages, charge: quoteXRead(reads, prices, false), truncated, nextSinceId, resumeUntilId, newestId },
   }
 }

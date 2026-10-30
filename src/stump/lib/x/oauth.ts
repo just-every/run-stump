@@ -181,10 +181,23 @@ export interface XRefreshInput extends TokenCall {
   refreshToken: string
 }
 
-/** Gets a fresh access token. Store the returned refresh token: the old one no longer works. */
+/**
+ * Gets a fresh access token. Store the returned refresh token: the old one no longer works.
+ *
+ * Any 400 or 401 from the token endpoint on a refresh means the refresh token is spent,
+ * revoked or expired, and the person has to reconnect: X documents no refresh error body,
+ * and answers seen in the field include both `invalid_grant` and
+ * `{"error":"invalid_request","error_description":"Value passed for the token was invalid."}`.
+ * Rate limits (429), server errors and network failures keep their own classes.
+ */
 export async function refreshXTokens(input: XRefreshInput): Promise<XResult<XTokenSet>> {
   const sent = await postForm(input, X_TOKEN_PATH, { grant_type: 'refresh_token', refresh_token: input.refreshToken })
-  if (!sent.ok) return sent
+  if (!sent.ok) {
+    if (sent.error.status === 400 || sent.error.status === 401) {
+      return { ok: false, error: { ...sent.error, kind: 'auth_revoked', retry: 'never', mayHaveApplied: false } }
+    }
+    return sent
+  }
   const set = toTokenSet(sent.json, (input.now ?? Date.now)(), X_DEFAULT_SCOPES)
   if ('kind' in set) return { ok: false, error: set }
   // A refresh answer without a new refresh token keeps the old one.

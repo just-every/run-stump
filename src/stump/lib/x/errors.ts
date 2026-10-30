@@ -143,7 +143,8 @@ export function classifyXResponse(
   if (status >= 500) {
     return req.visible ? make('unknown_outcome', status, p) : make('server_error', status, p)
   }
-  // OAuth token endpoint: a refresh token that is spent, revoked or expired.
+  // OAuth token endpoint: an authorization code that is spent or expired. Refresh failures are
+  // classified in refreshXTokens, which reads any 400 or 401 there as a revoked grant.
   if (status === 400 && p.type === 'invalid_grant') return make('auth_revoked', status, p)
   if (DUPLICATE_WORDS.test(signal)) return make('duplicate_content', status, p)
   return make('invalid_request', status, p)
