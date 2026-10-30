@@ -1747,6 +1747,90 @@
       "sha256": "f3a66736c3243874ce1e06589e7a4da30c64fa1f91363701a1720cc897131f36",
       "executable": false
     },
+    "src/stump/lib/discovery/alert-types.ts": {
+      "sha256": "26911ee050c188e511328f423dbbf5230dd8c3dca900df0ba71988b50700b24e",
+      "executable": false
+    },
+    "src/stump/lib/discovery/bluesky.ts": {
+      "sha256": "08ab7daafba6c1ba8f1801e7b905a9c7be0bf9dd84a09b158abcca89fe1369dd",
+      "executable": false
+    },
+    "src/stump/lib/discovery/errors.ts": {
+      "sha256": "b54b230f73c25aa8606c8e1d72c257a44b97e07f47081df14ee190d9389bc38b",
+      "executable": false
+    },
+    "src/stump/lib/discovery/feed-poll.ts": {
+      "sha256": "5726376aed82fc652724024f1f0b4eefde2a8f56319074c5853ef3575b01db5e",
+      "executable": false
+    },
+    "src/stump/lib/discovery/feeds.ts": {
+      "sha256": "d441f29db2189e07d06fc0867b30c127e126814f7465844156687ebd0db44daf",
+      "executable": false
+    },
+    "src/stump/lib/discovery/hn.ts": {
+      "sha256": "b4c779a1d93a3f3754364ab533c422a4b4e071c1478db0d10ba8887505533f9d",
+      "executable": false
+    },
+    "src/stump/lib/discovery/http.ts": {
+      "sha256": "4bf776aa21a2b1b7b8ca2741dba45c819a82a625879bc67fb0df27da61c19f0e",
+      "executable": false
+    },
+    "src/stump/lib/discovery/index.ts": {
+      "sha256": "7514e2e503b74043964492fc8126626762c216c91325c65ede4847ff870304d9",
+      "executable": false
+    },
+    "src/stump/lib/discovery/marks.ts": {
+      "sha256": "b0360ff29fb6ea118f52a6943a38d1bd795ccaa6fba9ff1eedb1ca6c12f2f33c",
+      "executable": false
+    },
+    "src/stump/lib/discovery/mastodon.ts": {
+      "sha256": "477e45bf3ed999c998b5d6eb205f1adcd5d51a5197576f31a697cd35c2ddc660",
+      "executable": false
+    },
+    "src/stump/lib/discovery/rank-text.ts": {
+      "sha256": "1865034af8ce897f40e23d0c8f097c1b5d0efd338658640d2b628a9828eb4b44",
+      "executable": false
+    },
+    "src/stump/lib/discovery/rank.ts": {
+      "sha256": "7ac69ef6b81c795222556de72540e22898672addbe07f9c9cc5215c03bfab167",
+      "executable": false
+    },
+    "src/stump/lib/discovery/screen.ts": {
+      "sha256": "79b4a5814688550604aeb3dbec46e7ee9cba73d1b9d20f552289a133107c3403",
+      "executable": false
+    },
+    "src/stump/lib/discovery/slack.ts": {
+      "sha256": "07b995a9eb5b3b88bb96d79ef69c8a7cdc97d1110d6446e66ccda7cae4211b02",
+      "executable": false
+    },
+    "src/stump/lib/discovery/terms.ts": {
+      "sha256": "bb7476bb807911914c5ece32a80ad0c5a6d9f9dfb10e5b45260b889634ee5f47",
+      "executable": false
+    },
+    "src/stump/lib/discovery/text.ts": {
+      "sha256": "f5904edff5011694f20ba7487745628b43f60fb6d835bfaaefaa3acc703af742",
+      "executable": false
+    },
+    "src/stump/lib/discovery/transcripts.ts": {
+      "sha256": "4f8654357059fd39a27cba5c21db57675ac7f4ba8f8fe7675d164facb9b18df3",
+      "executable": false
+    },
+    "src/stump/lib/discovery/types.ts": {
+      "sha256": "97ff6f44e7696666d7fb15febd451ad6c65dc290e370e3ac0581a001b7bdeda5",
+      "executable": false
+    },
+    "src/stump/lib/discovery/url.ts": {
+      "sha256": "59e2f4cae8a40e511c7cfbd1b354f00fb48dd0ec6c2162f043c71c20ceb85e25",
+      "executable": false
+    },
+    "src/stump/lib/discovery/webhook.ts": {
+      "sha256": "65d7d3e110e794695e01af680ac687d95ce0f9b300daacf40bf1796bbb8c2447",
+      "executable": false
+    },
+    "src/stump/lib/discovery/xml.ts": {
+      "sha256": "633370e65cba5dd9ae5418e175c58ad8b9477acf21e5309d78f52147b014f5c8",
+      "executable": false
+    },
     "tests/incremental-typecheck.test.mjs": {
       "sha256": "a11d6b89e7219137540c7052683c5f4d9ba7ddf16f66d34c1f56ae34029c0a95",
       "executable": false
