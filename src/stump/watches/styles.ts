@@ -33,11 +33,11 @@ export const listeningStyles = `
 .st-more { position: relative; align-self: start; }
 .st-more-button { font: inherit; font-size: var(--stump-size-section); line-height: 1; border: 0; background: transparent; border-radius: 8px; width: 40px; height: 40px; cursor: pointer; color: var(--stump-text); }
 .st-more-button:hover { background: var(--stump-sunk); }
-.st-menu { position: absolute; right: 0; top: 44px; z-index: 5; background: var(--stump-column); border: 1px solid var(--stump-line); border-radius: 12px; padding: 6px; min-width: 170px; box-shadow: 0 8px 24px rgba(0,0,0,.08); display: grid; }
-.st-menu button { font: inherit; font-size: var(--stump-size-body); text-align: left; background: transparent; border: 0; border-radius: 8px; padding: 9px 12px; min-height: 40px; cursor: pointer; color: var(--stump-text); }
-.st-menu button:hover, .st-menu button:focus-visible { background: var(--stump-sunk); outline: none; }
-.st-banner { background: var(--stump-sunk); border-radius: var(--stump-radius); padding: calc(var(--stump-space) * 1.5) calc(var(--stump-space) * 2); margin-bottom: calc(var(--stump-space) * 2); font-size: var(--stump-size-small); }
-.st-banner.error { color: var(--stump-danger); }
+.st-more .st-menu { position: absolute; right: 0; top: 44px; z-index: 5; background: var(--stump-column); border: 1px solid var(--stump-line); border-radius: 12px; padding: 6px; min-width: 170px; box-shadow: 0 8px 24px rgba(0,0,0,.08); display: grid; }
+.st-more .st-menu button { font: inherit; font-size: var(--stump-size-body); text-align: left; background: transparent; border: 0; border-radius: 8px; padding: 9px 12px; min-height: 40px; cursor: pointer; color: var(--stump-text); }
+.st-more .st-menu button:hover, .st-more .st-menu button:focus-visible { background: var(--stump-sunk); outline: none; }
+.st-listen .st-banner { background: var(--stump-sunk); border-radius: var(--stump-radius); padding: calc(var(--stump-space) * 1.5) calc(var(--stump-space) * 2); margin-bottom: calc(var(--stump-space) * 2); font-size: var(--stump-size-small); }
+.st-listen .st-banner.error { color: var(--stump-danger); }
 .st-editor { display: grid; gap: calc(var(--stump-space) * 2.5); }
 .st-editor fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: calc(var(--stump-space) * 1.5); min-width: 0; }
 .st-editor legend { font-weight: 600; padding: 0; margin-bottom: var(--stump-space); }

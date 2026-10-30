@@ -63,9 +63,9 @@ function VenueMenu({ venue, onEdit, onChanged }: { venue: Venue; onEdit(): void;
     event.preventDefault(); const form = new FormData(event.currentTarget)
     await act('exclude', { reason: String(form.get('reason')), alternative: String(form.get('alternative')) })
   }
-  return <div className="st-menu">
-    <Tip label="More actions"><button className="st-button pill outline" type="button" aria-haspopup="menu" aria-expanded={open} aria-label="More actions" onClick={() => setOpen(!open)}>⋯</button></Tip>
-    {open ? <div role="menu">
+  return <div className="st-pop-anchor">
+    <Tip label="More actions" align="end"><button className="st-button pill outline" type="button" aria-haspopup="menu" aria-expanded={open} aria-label="More actions" onClick={() => setOpen(!open)}>⋯</button></Tip>
+    {open ? <div className="st-menu" role="menu">
       <button role="menuitem" type="button" onClick={() => { setOpen(false); onEdit() }}>Edit venue</button>
       {venue.status !== 'excluded' ? <button role="menuitem" type="button" onClick={() => { setOpen(false); setExcluding(true) }}>Exclude…</button> : null}
       <button role="menuitem" type="button" disabled={busy} onClick={() => void act(venue.archived ? 'restore' : 'archive')}>{venue.archived ? 'Restore' : 'Archive'}</button>

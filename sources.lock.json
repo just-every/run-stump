@@ -4044,7 +4044,7 @@
       "executable": false
     },
     "src/stump/ui/styles.ts": {
-      "sha256": "b284f178d1ff4f91596d70b173dfbff610cf9c8eda174db8c43091c550b41488",
+      "sha256": "14542caa7205cf57d01e833b9934f8cf8a84677ca3c4d3adc9b854484d6fcf37",
       "executable": false
     },
     "src/stump/ui/types.ts": {
@@ -4116,11 +4116,11 @@
       "executable": false
     },
     "src/stump/venues/ui/VenuePage.tsx": {
-      "sha256": "ff8af8f0928f307e74af2a9d26cfb567867a39fe839777d83be442ab7edc7376",
+      "sha256": "b176a8d389f27bfe5b85f9df9ff4847a183cac4207fa9c9da17422b22aef416f",
       "executable": false
     },
     "src/stump/venues/ui/VenuesPage.tsx": {
-      "sha256": "934d6cda511904725d065f161d80ca02334c533a533a44d780974a715a1b398c",
+      "sha256": "f1d32b5ad7001a9d42abde7416e82eb31934778989c4e35e0c7ff9dbd43f90f1",
       "executable": false
     },
     "src/stump/watches/alerts-config.ts": {
@@ -4176,7 +4176,7 @@
       "executable": false
     },
     "src/stump/watches/styles.ts": {
-      "sha256": "564e26d3f787d93f27ccbda2a266b2e6e18246b932f92558108d4f21c456dbf7",
+      "sha256": "2574d0e392bf099af29925f562b5f7f0238f3cb873fb8ceaf69e443c9c6eef7c",
       "executable": false
     },
     "src/stump/watches/ui-types.ts": {

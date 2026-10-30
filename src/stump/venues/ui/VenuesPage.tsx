@@ -75,7 +75,7 @@ export function VenuesPage() {
       </>}
       {panel === 'add' ? <VenueForm onDone={venue => { setPanel('none'); void navigate({ to: '/app/venues/$venueId', params: { venueId: venue.id } }) }} onCancel={() => setPanel('none')} onImport={owner ? () => setPanel('import') : undefined} /> : null}
       {panel === 'import' ? <ImportPanel onChanged={changed} onClose={() => setPanel('none')} /> : null}
-      {data && !empty ? data.list.items.length ? <table className="st-table">
+      {data && !empty ? data.list.items.length ? <table className="st-table st-linked">
         <thead><tr><th>Venue</th><th className="st-cell">Kind</th><th className="st-cell">Status</th><th className="st-cell">Route</th><th className="st-cell">Next open</th></tr></thead>
         <tbody>{data.list.items.map(venue => <Row key={venue.id} venue={venue} open={() => void navigate({ to: '/app/venues/$venueId', params: { venueId: venue.id } })} />)}</tbody>
       </table> : <p className="st-note">No venues match.</p> : null}
