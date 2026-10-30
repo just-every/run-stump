@@ -1776,7 +1776,7 @@
       "executable": false
     },
     "src/stump/lib/discovery/index.ts": {
-      "sha256": "7514e2e503b74043964492fc8126626762c216c91325c65ede4847ff870304d9",
+      "sha256": "4034417b2cc847108d9e5768b6e5b71058679dd163e449213050e8824f690b7d",
       "executable": false
     },
     "src/stump/lib/discovery/marks.ts": {
@@ -1788,15 +1788,15 @@
       "executable": false
     },
     "src/stump/lib/discovery/rank-text.ts": {
-      "sha256": "1865034af8ce897f40e23d0c8f097c1b5d0efd338658640d2b628a9828eb4b44",
+      "sha256": "1d7f054630ce338b3d51c2f4db84155b1f132b3ffafa91d90218175dd7d1c70f",
       "executable": false
     },
     "src/stump/lib/discovery/rank.ts": {
-      "sha256": "7ac69ef6b81c795222556de72540e22898672addbe07f9c9cc5215c03bfab167",
+      "sha256": "10268fad5e51a7ef635a360b45ccde91abbfca0316d54da3fd3f165d14aafaf4",
       "executable": false
     },
     "src/stump/lib/discovery/screen.ts": {
-      "sha256": "e8761281cfb71973a233b9aabea8ce553bdc095e0942e9b3847d5f9303d100f6",
+      "sha256": "75092386c8ac4d86657c75a20576f4a184919cc308af0cb5932b55f9d7e95686",
       "executable": false
     },
     "src/stump/lib/discovery/slack.ts": {

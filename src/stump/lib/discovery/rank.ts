@@ -4,7 +4,7 @@
  * Score 0 to 100 from five factors, each reported with the points it gave, plus a bounded
  * adjustment learned from the person's marks:
  *   matched terms 30 : distinct watch terms and product names found, in the title or text
- *   question      30 : the thread asks something, and what it asks is something the company can answer
+ *   question      30 : the thread asks for help, and what it asks is something the company can answer
  *   venue fit     15 : the venue's recorded fit (supplied by the caller)
  *   standing      10 : the author's standing where the source gives one
  *   freshness     15 : half-life decay from the post time
@@ -14,7 +14,7 @@
  * A finding's own text never changes its rank by instruction: see rank-text.ts.
  */
 import { marksAdjustment, type MarksModel } from './marks.ts'
-import { neutralise, questionSentences } from './rank-text.ts'
+import { asksForHelp, isAboutTheRanking, neutralise, questionSentences } from './rank-text.ts'
 import { compileTerms, matchTerms, type CompiledTerms, type TermLogic } from './terms.ts'
 import type { Finding, SourceKind } from './types.ts'
 
@@ -71,7 +71,7 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
   const topics = compileTerms({ any: ctx.topic_terms ?? [] })
   const title = neutralise(f.title)
   const body = neutralise(f.text)
-  const instruction_like = title.instruction_like || body.instruction_like
+  let instruction_like = title.instruction_like || body.instruction_like
   const hay = { title: title.text, text: body.text, links: f.links.join('\n') }
   const reasons: Reason[] = []
 
@@ -98,25 +98,29 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
   termPoints = Math.min(WEIGHTS.matched_terms, termPoints)
   reasons.push({ factor: 'matched_terms', label: bits.length ? bits.join('; ') : 'no watch term found in the text', points: termPoints, max: WEIGHTS.matched_terms })
 
-  // Question: 12 for asking something; +18 when the question touches a matched term, product or topic.
-  const questions = questionSentences([title.text, body.text].filter(Boolean).join('\n'))
+  // Question: 30 when a question touches a matched term, product or topic, or when it asks for help
+  // under a title that carries one ("Any recommendations?"); 12 for asking for help about something
+  // else; nothing for a rhetorical question. Questions about the post, its rank or the system
+  // reading it are requests to the ranker: they count for nothing and mark the finding.
+  const asked = questionSentences([title.text, body.text].filter(Boolean).join('\n'))
+  const questions = asked.filter((q) => !isAboutTheRanking(q))
+  if (questions.length < asked.length) instruction_like = true
+  const touches = (s: string) =>
+    matchTerms(terms, { text: s }).matched_terms.length > 0 ||
+    matchTerms(products, { text: s }).matched_terms.length > 0 ||
+    matchTerms(topics, { text: s }).matched_terms.length > 0
+  const helpSeeking = questions.filter(asksForHelp)
+  const titleCarriesTerm = m.matched_in.includes('title') || matchTerms(topics, { text: title.text }).matched_terms.length > 0
   let questionPoints = 0
   let answerable = false
-  let questionLabel = 'no question asked'
-  if (questions.length > 0) {
+  let questionLabel = questions.length > 0 ? 'asks nothing the company can answer' : 'no question asked'
+  if (questions.some(touches) || (titleCarriesTerm && helpSeeking.length > 0)) {
+    answerable = true
+    questionPoints = 30
+    questionLabel = 'asks a question the company can answer'
+  } else if (helpSeeking.length > 0) {
     questionPoints = 12
-    questionLabel = 'asks a question'
-    const touches = (s: string) =>
-      matchTerms(terms, { text: s }).matched_terms.length > 0 ||
-      matchTerms(products, { text: s }).matched_terms.length > 0 ||
-      matchTerms(topics, { text: s }).matched_terms.length > 0
-    // The question may be in a title that carries the term while the question sentence is generic ("Any recommendations?").
-    const titleCarriesTerm = m.matched_in.includes('title') || matchTerms(topics, { text: title.text }).matched_terms.length > 0
-    if (questions.some(touches) || (titleCarriesTerm && questions.length > 0)) {
-      answerable = true
-      questionPoints = 30
-      questionLabel = 'asks a question the company can answer'
-    }
+    questionLabel = 'asks for help, not about a watch term'
   }
   reasons.push({ factor: 'question', label: questionLabel, points: questionPoints, max: WEIGHTS.question })
 

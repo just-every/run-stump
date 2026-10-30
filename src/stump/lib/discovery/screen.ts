@@ -54,16 +54,30 @@ function refParts(ref: HandleRef): { source?: SourceKind; handle: string } {
   return typeof ref === 'string' ? { handle: normalizeHandle(ref) } : { source: ref.source, handle: normalizeHandle(ref.handle) }
 }
 
+/**
+ * A Mastodon author is stored as `acct@instance`. A person lists their own account the way they see
+ * it on their home instance (`@acme`), so a bare handle also matches the local part of an author
+ * whose instance is the one the finding came from.
+ */
+function localMastodonAccount(finding: Finding, author: string): string | null {
+  if (finding.source !== 'mastodon') return null
+  const at = author.lastIndexOf('@')
+  if (at <= 0) return null
+  return author.slice(at + 1) === finding.source_ref.toLowerCase() ? author.slice(0, at) : null
+}
+
 /** True when the finding's author matches any handle: by handle or name, or by the source's stable author id. */
 export function isListedAuthor(finding: Finding, refs: HandleRef[] | undefined): boolean {
   if (!refs?.length) return false
   const author = normalizeHandle(finding.author)
   const id = finding.author_id?.toLowerCase()
+  const local = localMastodonAccount(finding, author)
   for (const ref of refs) {
     const { source, handle } = refParts(ref)
     if (!handle) continue
     if (source && source !== finding.source) continue
     if ((author && author === handle) || (id && id === handle)) return true
+    if (local && !handle.includes('@') && local === handle) return true
   }
   return false
 }

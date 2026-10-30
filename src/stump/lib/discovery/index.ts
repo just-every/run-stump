@@ -33,7 +33,7 @@ export type { DropReason, Dropped, ScreenResult, ScreenSpec, SourceFilters } fro
 
 export { rankFindings, scoreFinding, qualifiesForImmediateAlert } from './rank.ts'
 export type { Factor, RankContext, Ranked, Reason } from './rank.ts'
-export { neutralise, questionSentences } from './rank-text.ts'
+export { asksForHelp, isAboutTheRanking, neutralise, questionSentences } from './rank-text.ts'
 export { learnFromMarks, marksAdjustment, emptyModel, featuresOf } from './marks.ts'
 export type { Mark, MarksAdjustment, MarksModel } from './marks.ts'
 
