@@ -18,9 +18,12 @@ const proof = { anyOf: [{ type: 'string', minLength: 1, maxLength: 2048 }, { typ
 
 // The words a product uses and avoids, as one list or a comma-separated line, under any of the names the profile is written with.
 const wordList = { anyOf: [words(50, 60), { type: 'string', minLength: 1, maxLength: 1000 }] }
-const WORD_NAMES = { use_words: ['use_words', 'use', 'use_list'], avoid_words: ['avoid_words', 'avoid', 'avoid_list'] } as const
+// Each list answers to the ways a profile names it, so a list is never dropped for its spelling.
+const namesFor = (verb: 'use' | 'avoid', past: string) =>
+  [`${verb}_words`, `${past}_words`, `words_${past}`, `words_to_${verb}`, `${verb}_list`, `${verb}_terms`, `terms_to_${verb}`, `${verb}s`, verb]
+const WORD_NAMES = { use_words: namesFor('use', 'used'), avoid_words: namesFor('avoid', 'avoided') } as const
 const productFields = { name: short, other_names: words(20, 120), description: long, audience: long, positioning: long, urls: words(10, 2048), competitors: words(20, 120),
-  use_words: wordList, use: wordList, use_list: wordList, avoid_words: wordList, avoid: wordList, avoid_list: wordList,
+  ...Object.fromEntries([...WORD_NAMES.use_words, ...WORD_NAMES.avoid_words].map(name => [name, wordList])),
   words: { type: 'object', additionalProperties: false, minProperties: 1, properties: { use: wordList, avoid: wordList } }, tone: { type: 'string', minLength: 1, maxLength: 280 } }
 const PROFILE_KEYS = ['name', 'other_names', 'description', 'audience', 'positioning', 'urls', 'competitors', 'tone'] as const
 

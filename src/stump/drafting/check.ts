@@ -122,9 +122,14 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
     ...(draft.product_id ? { product_id: draft.product_id } : {}), today: today(now) })
   // One flag per place in the text: two products avoiding the same word flag it once.
   const avoided = new Set<string>()
+  const unmatched = new Map(claimCheck.claims.filter(finding => finding.status === 'unmatched').map(finding => [`${finding.start}:${finding.end}`, finding.because ?? []]))
   for (const flag of claimCheck.flags) {
     if (flag.code === 'avoid_word') { if (avoided.has(`${flag.start}:${flag.end}`)) continue; avoided.add(`${flag.start}:${flag.end}`) }
-    flags.push({ ...flag, blocking: true })
+    if (flag.code !== 'claim_unmatched') { flags.push({ ...flag, blocking: true }); continue }
+    // An unmatched sentence stays flagged until it is backed or removed. Only one that states a number, a comparison, a superlative,
+    // compliance or a guarantee stops the item; one that only describes what the product does is flagged for a person to back.
+    const because = unmatched.get(`${flag.start}:${flag.end}`)
+    flags.push({ ...flag, because: because ?? null, blocking: !because || because.some(reason => reason !== 'capability') })
   }
 
   // Network limits, counted the network's way (STUMP-DRAFT-001.1-.2).

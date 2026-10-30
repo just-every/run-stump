@@ -261,7 +261,14 @@ export const draftTools: StumpTool[] = [{
         const claim = claimRecord(claimRow)
         // Only a current claim with proof backs a sentence (STUMP-BRAND-004.4).
         if (claim.kind === 'banned' || !isCurrentRecord(libClaim(claim)) || claimStaleness({ review_on: claim.review_on ?? undefined }, today(ctx.now())).stale) refuse('claim_not_current', { claim_id: claim.id, kind: claim.kind })
-        const unmatched = (await freshCheck(ctx, row)).claims.filter(finding => finding.status === 'unmatched')
+        const before = await freshCheck(ctx, row)
+        // The claim already covers the sentence (recorded with proof after the draft was flagged): the item is backed as it stands.
+        const covered = before.claims.filter(finding => finding.status === 'matched' && finding.claim_id === claim.id && (typeof args.text !== 'string' || finding.text === args.text))
+        if (covered.length) {
+          await ctx.db.prepare('UPDATE stump_items SET flags=?,claims_used=? WHERE id=? AND revision=?').bind(JSON.stringify(before.flags), JSON.stringify(before.claims_used), row.id, row.revision).run()
+          return { item_id: row.id, backed: { claim_id: claim.id, text: covered[0]!.text }, ...checkView(before) }
+        }
+        const unmatched = before.claims.filter(finding => finding.status === 'unmatched')
         const chosen = typeof args.text === 'string' ? unmatched.filter(finding => finding.text === args.text) : unmatched
         if (chosen.length !== 1) refuse('invalid_arguments', { field: 'text', reason: chosen.length ? 'Name the sentence to back.' : 'Nothing in the item is unmatched.', unmatched: unmatched.map(finding => finding.text) })
         // The wording joins the claim's aliases, so it matches here and in later drafts.

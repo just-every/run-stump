@@ -78,6 +78,9 @@ function ComposePage() {
   const matched = new Set(data?.checks.flatMap(check => check.claims.filter(claim => claim.status === 'matched').map(claim => claim.claim_id)) ?? [])
   const flagRows = new Map<string, Flag>()
   for (const variant of variants) for (const flag of blocking(variant.flags)) flagRows.set(flag.code === 'over_limit' ? `over:${variant.item_id}` : `${flag.code}:${String(flag.text ?? '')}`, flag)
+  // Sentences to back that do not stop the post: what the product does, with no number or comparison in it.
+  const toBack = new Map<string, Flag>()
+  for (const variant of variants) for (const flag of variant.flags) if (!flag.blocking && flag.code === 'claim_unmatched' && !flagRows.has(`${flag.code}:${String(flag.text ?? '')}`)) toBack.set(String(flag.text ?? ''), flag)
   const disclosure = data?.checks.find(check => check.disclosure.required)
   const repeats = variants.some(variant => variant.flags.some(flag => flag.code === 'near_duplicate'))
 
@@ -92,6 +95,10 @@ function ComposePage() {
       {[...flagRows.values()].map(flag => <li key={`${flag.code}-${String(flag.text ?? flag.network)}`} className="danger"><Disc icon="alert" tone="danger" /><span>
         {flagLine(flag)}
         {flag.code.startsWith('claim_') ? <Link className="st-pill" to="/app/settings/brand">Fix claim</Link> : null}
+      </span></li>)}
+      {[...toBack.values()].map(flag => <li key={`back-${String(flag.text ?? '')}`}><Disc icon="alert" /><span>
+        {flagLine(flag)}
+        <Link className="st-pill" to="/app/settings/brand">Back claim</Link>
       </span></li>)}
       {variants.length && !variants.some(variant => variant.flags.some(flag => flag.code.startsWith('disclosure_')))
         ? <li><Disc icon="check" /><span>Disclosure · {disclosure ? 'in place' : 'company accounts'}</span></li> : null}

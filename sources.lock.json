@@ -2156,7 +2156,7 @@
       "executable": false
     },
     "src/routes/app.compose.tsx": {
-      "sha256": "b519d4ef9ea779060974888ccef44f9221f5ac982db024b79b87b8d6aa761dd2",
+      "sha256": "4ae1c8601c998e3a04c8ba9ce03bbe84f5f0237578cef117e7264661941753e4",
       "executable": false
     },
     "src/routes/app.index.tsx": {
@@ -2228,7 +2228,7 @@
       "executable": false
     },
     "src/stump/drafting/check.ts": {
-      "sha256": "d91e7d885a011f77ba446ce3718fe1f5e203b7a9d7b36260e3df34c1a3244058",
+      "sha256": "218f95d956e4a62edd88193dd66fd206d8dfe6282570415eaf3c5cee4979cbe1",
       "executable": false
     },
     "src/stump/drafting/diff.ts": {
@@ -2756,7 +2756,7 @@
       "executable": false
     },
     "src/stump/tools/brand.ts": {
-      "sha256": "92bc3033fd31d9bf36c2ca91aab52b586bc7e8ac0268050747dee2764ac3a08f",
+      "sha256": "c9c60e3ebf932e292bfe1d9f060b1ccc2b2475551caed9cb6ddb6c016fedf42b",
       "executable": false
     },
     "src/stump/tools/calendar.ts": {
@@ -2764,7 +2764,7 @@
       "executable": false
     },
     "src/stump/tools/drafts.ts": {
-      "sha256": "8652007a3b96c16dc8fca69e2e0f6b8f4f4616f801437e8f7ba9e81630f21ec5",
+      "sha256": "10a61d543cac798ffa02e1af4a6aa83c81894958fc47d83ba3b3b61985518765",
       "executable": false
     },
     "src/stump/tools/index.ts": {
