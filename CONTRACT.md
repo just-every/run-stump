@@ -2666,17 +2666,17 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Published | 0 | 1 | 49 | 50 |
+| Published | 0 | 6 | 44 | 50 |
 | Target and push further | 0 | 16 | 114 | 130 |
-| All | 0 | 17 | 163 | 180 |
+| All | 0 | 22 | 158 | 180 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
-| `STUMP-VENUE-001` | Venue records | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-VENUE-002` | Venue rules and allowed routes | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-VENUE-003` | Fit, priority and shared limits | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-VENUE-004` | Venue list import | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-VENUE-006` | Membership, gates and standing | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
+| `STUMP-VENUE-001` | Venue records | published | partial | `tests/stump/venues.test.mjs` "the register keeps one venue per place, and its rules decide the routes and its gates who can post", "a venue list imports from Markdown and CSV: a dry run, apply, a rerun that changes nothing, a named conflict and Undo" | Points 1 to 6 are asserted through the person door and MCP (point 6 on a venue the import shares between two products). The register screens at `/app/venues` and `/app/venues/:id` are built; no browser test asserts them at 1440 and 390 yet. |
+| `STUMP-VENUE-002` | Venue rules and allowed routes | published | partial | `tests/stump/venues.test.mjs` "the register keeps one venue per place, and its rules decide the routes and its gates who can post", "a venue list imports from Markdown and CSV: a dry run, apply, a rerun that changes nothing, a named conflict and Undo" | Points 1, 3, 4 and 5 are asserted, and point 2's routes (a venue that bans AI text offers only the brief). Refusing a generated draft there needs the drafting lane to call `generatedTextBanned` from `src/stump/venues/rules.ts`. Point 6 is not built. |
+| `STUMP-VENUE-003` | Fit, priority and shared limits | published | partial | `tests/stump/venues.test.mjs` "the register keeps one venue per place, and its rules decide the routes and its gates who can post" | The shared limit is set and read through `stump.venues.fit`; scheduled items over it are held with the next open date, and cancelled ones stop counting at once (`src/stump/venues/limits.ts`). Points 4 and 6 at scheduling time need the scheduling path to call `sharedLimitHold`. Points 1 to 3 (fit scoring), 5 and 7 are not built. |
+| `STUMP-VENUE-004` | Venue list import | published | partial | `tests/stump/venues.test.mjs` "a venue list imports from Markdown and CSV: a dry run, apply, a rerun that changes nothing, a named conflict and Undo" | Points 1 to 6 are asserted through the import door. The import screen on `/app/venues` is built; no browser test asserts it at 1440 and 390 yet. |
+| `STUMP-VENUE-006` | Membership, gates and standing | published | partial | `tests/stump/venues.test.mjs` "the register keeps one venue per place, and its rules decide the routes and its gates who can post" | Points 1 to 4 are asserted through the person door and MCP; the hand-off queue reads `handoffEligibility` from `src/stump/venues/members.ts` when it is built. Point 5 (public karma refresh) is not built. |
 | `STUMP-HANDOFF-001` | A brief and a draft for a named member | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-HANDOFF-002` | The posted link, recorded and checked | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-HANDOFF-003` | Held, skipped and expired hand-offs | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |

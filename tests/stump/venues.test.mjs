@@ -22,6 +22,10 @@ test('the register keeps one venue per place, and its rules decide the routes an
   assert.equal(journalist.result.structuredContent.venue.details.publication, 'Synthetic Times')
   const newsletter = (await manage('owner', { action: 'create', kind: 'newsletter', name: 'Synthetic Weekly', url: 'https://synthetic-stump-2.example/news', status: 'editorial' })).body.result.venue
 
+  for (const [kind, extra, field] of [['slack', { details: { workspace: 'Synthetic', channel: '#demos' } }, 'channel'], ['podcast', { details: { host: 'Synthetic Host' } }, 'host'], ['directory', { details: { price_usd: 49 } }, 'price_usd']]) {
+    const venue = (await manage('owner', { action: 'create', kind, name: `Synthetic ${kind}`, url: `https://synthetic-stump-${kind}.example/`, status: 'candidate', ...extra })).body.result.venue
+    assert.equal(venue.kind, kind); assert.ok(Object.hasOwn(venue.details, field) && venue.details[field] !== null, kind)
+  }
   const listed = (await manage('owner', { action: 'list', status: 'editorial' })).body.result
   assert.deepEqual(listed.items.map(venue => venue.name).sort(), ['Synthetic Reporter', 'Synthetic Weekly'])
   assert.equal(listed.total, listed.items.length)
@@ -32,8 +36,11 @@ test('the register keeps one venue per place, and its rules decide the routes an
   assert.ok(!(await manage('owner', { action: 'list' })).body.result.items.some(venue => venue.id === newsletter.id))
   const proposed = await app.mcp(token, 'stump.venues.manage', { action: 'propose', url: 'https://synthetic-stump-2.example/news/' })
   assert.equal(proposed.error?.code, 'venue_excluded'); assert.equal(proposed.error?.alternative, 'The subreddit.')
-  assert.equal((await manage('owner', { action: 'list', include_excluded: true })).body.result.total, 3)
-  const stale = await manage('owner', { action: 'update', venue_id: subreddit.id, expected_revision: subreddit.revision + 5, why: 'stale' })
+  assert.equal((await manage('owner', { action: 'list', include_excluded: true })).body.result.total, 6)
+  assert.equal((await manage('owner', { action: 'archive', venue_id: subreddit.id })).body.result.venue.archived, true)
+  assert.ok(!(await manage('owner', { action: 'list' })).body.result.items.some(venue => venue.id === subreddit.id))
+  assert.equal((await manage('owner', { action: 'restore', venue_id: subreddit.id })).body.result.venue.archived, false)
+  const stale = await manage('owner', { action: 'update', venue_id: subreddit.id, expected_revision: subreddit.revision, why: 'stale' })
   assert.equal(stale.body.code, 'revision_conflict')
 
   // Members keep posting for themselves, and a rule with no source opens nothing.
