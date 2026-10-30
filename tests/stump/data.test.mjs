@@ -195,8 +195,8 @@ Hi Jordan, recurring bookings for small clinics shipped today.
   const tables = (await app.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all()).results.map(row => row.name)
   const cells = value => typeof value === 'string' ? [value, ...(/^[A-Za-z0-9+/=]{24,}$/.test(value) ? [Buffer.from(value, 'base64').toString('utf8')] : [])]
     : value instanceof ArrayBuffer || ArrayBuffer.isView(value) ? [Buffer.from(value instanceof ArrayBuffer ? value : value.buffer).toString('utf8')] : []
-  const naming = []
-  for (const table of tables) for (const row of (await app.db.prepare(`SELECT * FROM "${table}"`).all()).results) if (Object.values(row).flatMap(cells).some(text => /jordan/i.test(text))) naming.push(table)
-  assert.deepEqual([...new Set(naming)], [])
+  const holding = []
+  for (const table of tables) for (const row of (await app.db.prepare(`SELECT * FROM "${table}"`).all()).results) if (Object.values(row).flatMap(cells).some(text => /jordan/i.test(text))) holding.push(table)
+  assert.deepEqual([...new Set(holding)], [])
   assert.equal((await uploadList()).body.error, 'source_erased')
 })

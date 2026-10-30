@@ -2237,7 +2237,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company's policy decides every ca
 | `stump.handoffs.check_link` | Record and check a posted link | STUMP-HANDOFF-002 | standard (+ external) | planned |
 | `stump.handoffs.manage` | Read the hand-off queue; hold, reassign, skip or expire hand-offs | STUMP-HANDOFF-001, STUMP-HANDOFF-003 | standard | planned |
 | `stump.ledger.search` | Search the ledger and venue and person histories | STUMP-LEDGER-001, STUMP-LEDGER-002 | standard | planned |
-| `stump.ledger.correct` | Add a corrected version or mark a removal | STUMP-LEDGER-001 | standard | planned |
+| `stump.ledger.correct` | Add a corrected version or mark a removal (the company's own post is deleted at its network, unless the entry is under legal hold) | STUMP-LEDGER-001 | standard (+ destructive · external) | planned |
 | `stump.watches.manage` | Keep watches, terms, sources, filters, alert inputs and alerts | STUMP-WATCH-001, STUMP-WATCH-002, STUMP-WATCH-003, STUMP-WATCH-004, STUMP-WATCH-013, STUMP-WATCH-011, STUMP-WATCH-014, STUMP-WATCH-006, STUMP-WATCH-015, STUMP-WATCH-016, STUMP-WATCH-017, STUMP-WATCH-018, STUMP-WATCH-012 | standard (+ money · external · security) | planned |
 | `stump.findings.work` | List, rank, mark and dismiss findings, and open opportunities | STUMP-WATCH-001, STUMP-WATCH-005, STUMP-WATCH-009 | standard | planned |
 | `stump.watches.supplier` | Connect and query a licensed Reddit supplier | STUMP-WATCH-007 | security or money · external | planned |
