@@ -8,8 +8,11 @@ ALTER TABLE stump_handoffs ADD COLUMN recommends INTEGER NOT NULL DEFAULT 0 CHEC
 ALTER TABLE stump_handoffs ADD COLUMN confirmation TEXT CHECK(confirmation IS NULL OR confirmation IN ('network','person'));
 ALTER TABLE stump_handoffs ADD COLUMN posted_at INTEGER;
 ALTER TABLE stump_handoffs ADD COLUMN attested_at INTEGER;
+-- The agent-door operation that prepared it, so an approved retry of that same call does not count its own place.
+ALTER TABLE stump_handoffs ADD COLUMN operation_id TEXT;
 
 -- The scheduled tick finds what is due, held for review or waiting on a rule.
 CREATE INDEX stump_handoffs_due ON stump_handoffs(state, due_at);
+CREATE INDEX stump_handoffs_operation ON stump_handoffs(operation_id);
 -- One ledger entry per hand-off.
 CREATE UNIQUE INDEX stump_ledger_handoff ON stump_ledger(handoff_id) WHERE handoff_id IS NOT NULL;

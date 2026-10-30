@@ -8,7 +8,7 @@ import { checkDraft, loadBrand, type Brand } from '../drafting/check.ts'
 import { saveItem } from '../drafting/items.ts'
 import { createItem, draftingClasses, screen } from '../drafting/write.ts'
 import { readPerson, type StumpPerson } from '../people/store.ts'
-import { sharedLimitHold } from '../venues/limits.ts'
+import { usage } from '../venues/limits.ts'
 import { handoffEligibility, type Eligibility } from '../venues/members.ts'
 import { rulesOf, venueOrRefuse, type VenueRow } from '../venues/model.ts'
 import { routesFor } from '../venues/rules.ts'
@@ -60,9 +60,17 @@ export async function plan(ctx: ActionContext, args: Args): Promise<Plan> {
   if (!eligibility.join_first && !eligibility.eligible) {
     refuse('gate_unmet', { venue_id: venue.id, venue: venue.name, person_id: person.id, gates: eligibility.unmet.map(unmet => unmet.gate), unmet: eligibility.unmet })
   }
-  // STUMP-VENUE-003.4: the company's shared limit there, counted across people and products.
-  const full = await sharedLimitHold(ctx.db, venue, due, null)
-  if (full) refuse('shared_limit', { venue_id: venue.id, venue: venue.name, rule: 'shared_limit', limit: JSON.parse(venue.shared_limit!), reason: full.reason, next_open_at: full.next_open_at })
+  // STUMP-VENUE-003.4: the company's shared limit there, counted across people and products. A call the
+  // policy held and a person approved is read again when it runs: the hand-off it already made is its own place.
+  const use = await usage(ctx.db, venue, due)
+  if (use.limit) {
+    const own = await ctx.db.prepare('SELECT id FROM stump_handoffs WHERE operation_id=?').bind(ctx.operationId).first<{ id: string }>()
+    if (use.counted.filter(entry => !(entry.kind === 'handoff' && entry.id === own?.id)).length >= use.limit.posts) {
+      const { posts, per } = use.limit, next = await nextOpening(ctx.db, venue, due, own?.id ?? null)
+      refuse('shared_limit', { venue_id: venue.id, venue: venue.name, rule: 'shared_limit', limit: use.limit, next_open_at: next === null ? null : new Date(next).toISOString(),
+        reason: `${venue.name} takes ${posts} post${posts === 1 ? '' : 's'} a ${per} from the whole company, and this ${per} is full.` })
+    }
+  }
 
   // D-8: an outside voice recommending the product gets talking points and facts only.
   const d8 = args.recommends === true && outsideVoice(person)
@@ -120,11 +128,11 @@ export async function prepare(ctx: ActionContext, args: Args, planned: Plan): Pr
   const holdJson = hold ? ruleHoldJson(hold, now) : null
   await ctx.db.batch([
     ctx.db.prepare(`INSERT INTO stump_handoffs(id,item_id,venue_id,person_id,product_id,state,due_at,lapse,rules,facts,disclosure_line,draft_text,talking_points,own_words_required,
-      attestation_required,join_steps,next_open_at,hold,thread_url,campaign,agent,created_by,created_at,updated_at,route,recommends) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      attestation_required,join_steps,next_open_at,hold,thread_url,campaign,agent,created_by,created_at,updated_at,route,recommends,operation_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(id, itemId, venue.id, person.id, product.id, state, due, String(args.lapse), venue.rules, JSON.stringify(facts), disclosure, draft,
         JSON.stringify(draft === null ? talkingPoints(venue, product, facts, disclosure) : []), draft === null ? 1 : 0, d8 ? 1 : 0, JSON.stringify(eligibility.join_steps),
         opening, holdJson, (args.thread_url as string | undefined) ?? null, (args.campaign as string | undefined) ?? null,
-        ctx.agent ? JSON.stringify({ id: ctx.agent.id, name: ctx.agent.name }) : null, ctx.person.id, now, now, route, args.recommends === true ? 1 : 0),
+        ctx.agent ? JSON.stringify({ id: ctx.agent.id, name: ctx.agent.name }) : null, ctx.person.id, now, now, route, args.recommends === true ? 1 : 0, ctx.operationId),
     history(actor, id, 'prepared', null, state, { route, lapse: args.lapse, due_at: new Date(due).toISOString(), item_id: itemId, ...(hold ? { rule: hold.rule, reason: hold.reason } : {}),
       ...(eligibility.join_first ? { join_first: true } : {}), ...(d8 ? { rule: 'D-8' } : {}) }),
   ])
