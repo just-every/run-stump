@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppListeningRouteImport } from './routes/app.listening'
 import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
 import { Route as AppSettingsPublishingRouteImport } from './routes/app.settings.publishing'
 import { Route as AppSettingsTeamRouteImport } from './routes/app.settings.team'
@@ -25,6 +26,11 @@ const AppRoute = AppRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppListeningRoute = AppListeningRouteImport.update({
+  id: '/listening',
+  path: '/listening',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsAgentsRoute = AppSettingsAgentsRouteImport.update({
@@ -55,6 +61,7 @@ const AppVenuesVenueIdRoute = AppVenuesVenueIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
+  '/app/listening': typeof AppListeningRoute
   '/app/': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
@@ -63,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/app/venues/': typeof AppVenuesIndexRoute
 }
 export interface FileRoutesByTo {
+  '/app/listening': typeof AppListeningRoute
   '/app': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
@@ -73,6 +81,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/app': typeof AppRouteWithChildren
+  '/app/listening': typeof AppListeningRoute
   '/app/': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
@@ -84,6 +93,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/app'
+    | '/app/listening'
     | '/app/'
     | '/app/settings/agents'
     | '/app/settings/publishing'
@@ -92,6 +102,7 @@ export interface FileRouteTypes {
     | '/app/venues/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/app/listening'
     | '/app'
     | '/app/settings/agents'
     | '/app/settings/publishing'
@@ -101,6 +112,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/app'
+    | '/app/listening'
     | '/app/'
     | '/app/settings/agents'
     | '/app/settings/publishing'
@@ -127,6 +139,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/listening': {
+      id: '/app/listening'
+      path: '/listening'
+      fullPath: '/app/listening'
+      preLoaderRoute: typeof AppListeningRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/settings/agents': {
@@ -168,6 +187,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppListeningRoute: typeof AppListeningRoute
   AppIndexRoute: typeof AppIndexRoute
   AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
   AppSettingsPublishingRoute: typeof AppSettingsPublishingRoute
@@ -177,6 +197,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppListeningRoute: AppListeningRoute,
   AppIndexRoute: AppIndexRoute,
   AppSettingsAgentsRoute: AppSettingsAgentsRoute,
   AppSettingsPublishingRoute: AppSettingsPublishingRoute,

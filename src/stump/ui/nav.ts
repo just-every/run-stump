@@ -6,6 +6,7 @@ export interface NavEntry { group: 'work' | 'settings'; to: string; label: strin
 export const navigation: readonly NavEntry[] = [
   { group: 'work', to: '/app', label: 'Overview' },
   { group: 'work', to: '/app/venues', label: 'Venues' },
+  { group: 'work', to: '/app/listening', label: 'Listening' },
   { group: 'settings', to: '/app/settings/team', label: 'Team' },
   { group: 'settings', to: '/app/settings/publishing', label: 'Publishing' },
   { group: 'settings', to: '/app/settings/agents', label: 'Agents' },

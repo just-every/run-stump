@@ -2666,9 +2666,9 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Published | 0 | 6 | 44 | 50 |
+| Published | 1 | 11 | 38 | 50 |
 | Target and push further | 0 | 16 | 114 | 130 |
-| All | 0 | 22 | 158 | 180 |
+| All | 1 | 27 | 152 | 180 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -2683,12 +2683,12 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 | `STUMP-LEDGER-001` | Every post and reply on the record | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-LEDGER-002` | Ledger search and history | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-LEDGER-003` | Post results from each network | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-WATCH-001` | Hacker News search | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-WATCH-002` | RSS and Atom feeds | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-WATCH-003` | Bluesky and Mastodon search | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-WATCH-004` | Watches and alerts | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-WATCH-013` | Watch filters, exclusions and backfill | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
-| `STUMP-WATCH-005` | Relevance ranking with reasons | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
+| `STUMP-WATCH-001` | Hacker News search | published | partial | `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute" | Points 1, 2, 4 and 5 hold through MCP. For point 3 an HN finding offers the hand-off with a brief or dismissal and no reply text is generated; `stump.findings.work dismiss` removes a finding from the list for good. Preparing the hand-off itself (`stump.handoffs.prepare`) is later work. |
+| `STUMP-WATCH-002` | RSS and Atom feeds | published | done | `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute" |  |
+| `STUMP-WATCH-003` | Bluesky and Mastodon search | published | partial | `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute" | Point 3 is not built: Mastodon is followed through hashtag timelines only, and an instance's full-text search is not used or reported. |
+| `STUMP-WATCH-004` | Watches and alerts | published | partial | `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute" | Points 1, 2 (Slack), 4 and 5 hold; a replay resends the signed webhook with its event id, and Slack only when named. Email delivery of immediate alerts (point 2) and the daily or weekly digest across a daylight-saving change (point 3) are not built. |
+| `STUMP-WATCH-013` | Watch filters, exclusions and backfill | published | partial | `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute" | Point 4 holds with one company block list, by source and handle, for every watch. Point 3 has no repository proof: the team's recorded handles are read from connected accounts and venue members, whose doors other areas add. |
+| `STUMP-WATCH-005` | Relevance ranking with reasons | published | partial | `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute" | Points 1, 2 and 5 hold. Marks and learning from them (points 3 and 4) and the measured top-10 share in `docs/measures.md` (point 6) are not built. |
 | `STUMP-WATCH-011` | X search, metered | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-PUBLISH-001` | Accounts bound to a person or the company | published | missing | | Not built: no Stump code exists yet, and the seed starts from the Base foundation. |
 | `STUMP-CONNECT-001` | Connection ownership and disconnect | published | missing | | Not built: Base has no OAuth connection store module yet, and no Stump code exists. |

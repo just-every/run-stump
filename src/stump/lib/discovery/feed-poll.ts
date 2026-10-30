@@ -10,7 +10,7 @@
 import { SourceError } from './errors.ts'
 import { parseFeed, type FeedItem, type ParsedFeed } from './feeds.ts'
 import { assertOk, rateLimitRetryAt, readText, redactUrl, send, sha256Hex } from './http.ts'
-import { compileTerms, hasPositiveTerms, matchTerms, type CompiledTerms, type TermLogic } from './terms.ts'
+import { compileTerms, hasPositiveTerms, matchExcerpts, matchTerms, type CompiledTerms, type TermLogic } from './terms.ts'
 import { fetchTranscript } from './transcripts.ts'
 import { truncateGraphemes } from './text.ts'
 import { canonicalUrl, isRedditHost, parseHttpUrl } from './url.ts'
@@ -191,7 +191,12 @@ export async function pollFeed(options: FeedPollOptions): Promise<FeedPoll> {
       warnings.push(...t.warnings)
       if (t.text) {
         m = matchTerms(terms, { ...hay, transcript: t.text })
-        if (m.matched_in.includes('transcript')) finding.transcript_url = t.url ?? undefined
+        if (m.matched_in.includes('transcript')) {
+          finding.transcript_url = t.url ?? undefined
+          // The transcript is not kept, so the match is: the terms it holds and the passages around them.
+          const spoken = matchTerms(terms, { transcript: t.text })
+          finding.transcript_match = { terms: spoken.matched_terms, excerpts: matchExcerpts(terms, t.text) }
+        }
       }
     }
     if (m.matches) findings.push(finding)

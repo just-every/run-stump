@@ -3,7 +3,7 @@
  *
  * Score 0 to 100 from five factors, each reported with the points it gave, plus a bounded
  * adjustment learned from the person's marks:
- *   matched terms 30 : distinct watch terms and product names found, in the title or text
+ *   matched terms 30 : distinct watch terms and product names found, in the title, text or a podcast transcript
  *   question      30 : the thread asks for help, and what it asks is something the company can answer
  *   venue fit     15 : the venue's recorded fit (supplied by the caller)
  *   standing      10 : the author's standing where the source gives one
@@ -71,8 +71,10 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
   const topics = compileTerms({ any: ctx.topic_terms ?? [] })
   const title = neutralise(f.title)
   const body = neutralise(f.text)
-  let instruction_like = title.instruction_like || body.instruction_like
-  const hay = { title: title.text, text: body.text, links: f.links.join('\n') }
+  // What a podcast transcript matched counts as matched text, under the same neutralising.
+  const spoken = neutralise(f.transcript_match?.excerpts.join('\n') ?? '')
+  let instruction_like = title.instruction_like || body.instruction_like || spoken.instruction_like
+  const hay = { title: title.text, text: body.text, links: f.links.join('\n'), transcript: spoken.text }
   const reasons: Reason[] = []
 
   // Matched terms: 12 for any positive match, +6 in the title, +6 for a product name, +3 each for up to two more distinct terms.
@@ -83,7 +85,10 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
   const bits: string[] = []
   if (positives > 0 || m.unconstrained) {
     termPoints += 12
-    if (positives > 0) bits.push(`matched ${m.matched_terms.slice(0, 4).map((t) => `"${t}"`).join(', ')}`)
+    const named = m.matched_terms.slice(0, 4).map((t) => `"${t}"`).join(', ')
+    const inTranscript = m.matched_in.includes('transcript')
+    if (positives > 0 && inTranscript && m.matched_in.length === 1) bits.push(`matches your terms in the episode transcript: ${named}`)
+    else if (positives > 0) bits.push(`matched ${named}${inTranscript ? ', also in the episode transcript' : ''}`)
     else bits.push('every item of this source')
     if (m.matched_in.includes('title')) {
       termPoints += 6
