@@ -18,6 +18,8 @@ export interface XUser {
   verifiedType: string | null
   protected: boolean
   profileImageUrl: string | null
+  /** public_metrics.followers_count, when X answers it. */
+  followers: number | null
   charge: XChargeQuote | null
 }
 
@@ -26,7 +28,7 @@ export async function getXMe(ctx: XContext, prices?: XPriceTable): Promise<XResu
     method: 'GET',
     visible: false,
     path: '/2/users/me',
-    query: { 'user.fields': 'id,name,username,description,verified_type,protected,profile_image_url' },
+    query: { 'user.fields': 'id,name,username,description,verified_type,protected,profile_image_url,public_metrics' },
     parse: (body, status) => {
       const u = body?.data
       if (!u || typeof u.id !== 'string' || typeof u.username !== 'string') {
@@ -40,6 +42,7 @@ export async function getXMe(ctx: XContext, prices?: XPriceTable): Promise<XResu
         verifiedType: typeof u.verified_type === 'string' ? u.verified_type : null,
         protected: u.protected === true,
         profileImageUrl: typeof u.profile_image_url === 'string' ? u.profile_image_url : null,
+        followers: typeof u.public_metrics?.followers_count === 'number' ? u.public_metrics.followers_count : null,
         charge: prices ? quoteXRead(1, prices, true) : null,
       }
     },

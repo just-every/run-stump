@@ -28,7 +28,7 @@ async function x(request, url) {
   if (url.pathname === '/2/oauth2/revoke' && request.method === 'POST') return json({ revoked: true })
   const token = request.headers.get('authorization')?.slice('Bearer '.length) ?? ''
   if (!token.startsWith('conformance-')) return json({ title: 'Unauthorized', status: 401 }, 401)
-  if (url.pathname === '/2/users/me') return json({ data: { id: '1500000000000000099', username: 'synthetic_company', name: 'Synthetic Company' } })
+  if (url.pathname === '/2/users/me') return json({ data: { id: '1500000000000000099', username: 'synthetic_company', name: 'Synthetic Company', public_metrics: { followers_count: 2400, following_count: 12, tweet_count: 40, listed_count: 1 } } })
   return json({ title: 'Not Found', status: 404 }, 404)
 }
 

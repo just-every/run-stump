@@ -1,5 +1,9 @@
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args } from '../actions/types.ts'
+import { xPrices } from '../accounts/apps.ts'
+import { readAccount } from '../accounts/store.ts'
+import { publishers } from '../publish/publishers.ts'
+import type { RemoveOutcome } from '../publish/types.ts'
 import { CORRECTABLE, currentVersion, holdsCurrent, type Correctable } from './entry.ts'
 import { one } from './query.ts'
 
@@ -37,14 +41,34 @@ export async function correct(args: Args, ctx: ActionContext) {
 
 const REMOVABLE = ['posted', 'uncertain']
 
-/** A venue's moderators took the post down: the entry stays on the record, marked removed with the reason. */
+/**
+ * Where the company's own account posted the entry, Stump deletes the post at the network
+ * first; a network that refuses leaves the entry as it was, and says why.
+ */
+async function deleteAtNetwork(ctx: ActionContext, row: Record<string, unknown>): Promise<(RemoveOutcome & { at: string }) | null> {
+  if (row.route !== 'published' || typeof row.account_id !== 'string' || typeof row.network_id !== 'string') return null
+  const account = await readAccount(ctx.db, row.account_id)
+  if (account?.owner_kind !== 'company') return null
+  const publisher = publishers[account.network]
+  if (!publisher) return null
+  const answer = await publisher.remove({ network: account.network, account_id: account.id, network_id: row.network_id }, { db: ctx.db, env: ctx.env, account, prices: await xPrices(ctx.db), now: ctx.now })
+  if (answer.outcome === 'failed') refuse('network_refused', { entry_id: String(row.id), network: account.network, outcome: 'failed', message: answer.error ?? 'The network did not delete the post.' })
+  return { ...answer, at: new Date(ctx.now()).toISOString() }
+}
+
+/**
+ * The post came down: a venue's moderators took it down, or the company removes its own.
+ * The entry stays on the record, marked removed with the reason; on the company's own
+ * account the post is deleted at the network and the outcome kept with the removal.
+ */
 export async function markRemoved(args: Args, ctx: ActionContext) {
   const id = String(args.entry_id), { row, entry } = await one(ctx, id)
   if (!REMOVABLE.includes(String(row.state))) {
     if (row.state === 'removed') return entry
     refuse('conflict', { entry_id: id, state: row.state, reason: 'Only a post that went out can be marked removed.' })
   }
-  const removal = { reason: String(args.reason).trim(), ...actor(ctx), at: new Date(ctx.now()).toISOString() }
+  const deleted = await deleteAtNetwork(ctx, row)
+  const removal = { reason: String(args.reason).trim(), ...actor(ctx), at: new Date(ctx.now()).toISOString(), ...(deleted ? { network_delete: deleted } : {}) }
   await ctx.db.prepare("UPDATE stump_ledger SET state='removed',removal=?,updated_at=? WHERE id=? AND state IN ('posted','uncertain')").bind(JSON.stringify(removal), ctx.now(), id).run()
   ctx.emit('ledger.removed', `stump://ledger/${id}`, { reason: removal.reason })
   return (await one(ctx, id)).entry

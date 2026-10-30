@@ -1,8 +1,8 @@
 import { xFor } from '../accounts/clients.ts'
 import { shownHandle } from '../accounts/handle.ts'
-import { needsReconnect } from '../accounts/store.ts'
-import { findOwnXPostByText, getXPost, publishXThread, quoteXThread, uploadXMedia, validateXPost, type XError, type XPostInput } from '../lib/x/index.ts'
-import { partKey, postedParts, recordCall, savePart, textsOf } from './parts.ts'
+import { deleteXPost, findOwnXPostByText, getXPost, publishXThread, quoteXThread, uploadXMedia, validateXPost, type XError, type XPostInput } from '../lib/x/index.ts'
+import { credentialsRefused, notReady, partsToRemove, removeEach } from './held.ts'
+import { postedParts, recordCall, savePart, textsOf } from './parts.ts'
 import type { DueItem, PublishContext, PublishOutcome, Publisher } from './types.ts'
 
 // X: posts, threads as reply chains, replies, polls and media with alt text
@@ -38,7 +38,7 @@ export const xPublisher: Publisher = {
 
   async publish(item, ctx) {
     const opened = await xFor(ctx.env, ctx.db, ctx.account, ctx.now)
-    if (!opened.ok) return { state: 'held', kind: opened.code === 'app_not_set' ? 'rule' : 'reconnect', next_attempt_at: null, error: { code: opened.code, message: opened.message } }
+    if (!opened.ok) return notReady(opened)
     const x = opened.client, userId = opened.credentials.network === 'x' ? opened.credentials.user_id : ''
     const mediaIds: string[] = []
     for (const media of item.media) {
@@ -90,13 +90,15 @@ export const xPublisher: Publisher = {
     }
     // Posted only once every part reads back from X with its id and URL (D-5); each read is an owned read.
     const texts: string[] = []
+    let followers: number | null = null
     for (const part of posted) {
       const back = await getXPost(x, part.id, ctx.prices, { owned: true })
       if (back.ok) await recordCall(ctx, { network: 'x', item_id: item.id, act: back.value.charge.act, units: back.value.charge.units, usd_micro: back.value.charge.usd_micro })
       if (!back.ok) return { state: 'uncertain', error: { code: 'readback_failed', message: back.error.message } }
       texts.push(back.value.text)
+      followers ??= back.value.authorFollowers
     }
-    return { state: 'posted', url: posted[0]!.url, network_id: posted[0]!.id, posted_at: ctx.now(), text: texts.join('\n\n') }
+    return { state: 'posted', url: posted[0]!.url, network_id: posted[0]!.id, posted_at: ctx.now(), text: texts.join('\n\n'), followers }
   },
 
   async readBack(url, ctx) {
@@ -108,15 +110,25 @@ export const xPublisher: Publisher = {
     if (!back.ok) return { ok: false, message: back.error.message }
     await recordCall(ctx, { network: 'x', item_id: null, act: back.value.charge.act, units: back.value.charge.units, usd_micro: back.value.charge.usd_micro })
     if (opened.credentials.network === 'x' && back.value.authorId && back.value.authorId !== opened.credentials.user_id) return { ok: false, message: `${url} is not a post of ${shownHandle(ctx.account)}.` }
-    return { ok: true, url: back.value.url, network_id: back.value.id, text: back.value.text }
+    return { ok: true, url: back.value.url, network_id: back.value.id, text: back.value.text, followers: back.value.authorFollowers }
+  },
+
+  async remove(entry, ctx) {
+    const opened = await xFor(ctx.env, ctx.db, ctx.account, ctx.now)
+    if (!opened.ok) return { outcome: 'failed', error: opened.message }
+    return removeEach(await partsToRemove(ctx, ctx.account.id, entry.network_id), async id => {
+      const gone = await deleteXPost(opened.client, id)
+      if (gone.ok) return { outcome: 'deleted' }
+      if (gone.error.kind === 'not_found') return { outcome: 'not_found' }
+      if (gone.error.kind === 'auth_revoked') await credentialsRefused(ctx, /expired/i.test(gone.error.message) ? 'expired' : 'revoked', error(gone.error))
+      return { outcome: 'failed', error: gone.error.message }
+    })
   },
 }
 
 async function fault(ctx: PublishContext, e: XError, postedCount: number, first: { url: string; network_id: string } | null): Promise<PublishOutcome> {
-  if (e.kind === 'auth_revoked') {
-    await needsReconnect(ctx.db, ctx.env, ctx.account, 'revoked', ctx.now())
-    return { state: 'held', kind: 'reconnect', next_attempt_at: null, error: error(e) }
-  }
+  // A 401: X refused the account's access token, revoked (or expired, when X says so).
+  if (e.kind === 'auth_revoked') return credentialsRefused(ctx, /expired/i.test(e.message) ? 'expired' : 'revoked', error(e))
   // Exhausted credits wait for a person to add them; a rate limit waits for its window, never a blind retry.
   if (e.kind === 'credits_exhausted') return { state: 'held', kind: 'credits', next_attempt_at: null, error: { code: 'credits_exhausted', message: e.message } }
   if (e.kind === 'rate_limited') return { state: 'held', kind: 'rate_limit', next_attempt_at: e.resetAt ? Date.parse(e.resetAt) : null, error: error(e) }

@@ -38,11 +38,12 @@ export interface NetworkError { code: string; message: string }
  * parts that went out; held waits for its next attempt time or for a person.
  */
 export type PublishOutcome =
-  | { state: 'posted'; url: string; network_id: string; posted_at: number; text: string }
+  | { state: 'posted'; url: string; network_id: string; posted_at: number; text: string; followers?: number | null }
   | { state: 'partly_posted'; url: string; network_id: string; posted_parts: number; error: NetworkError }
   | { state: 'failed'; error: NetworkError }
   | { state: 'uncertain'; error: NetworkError }
-  | { state: 'held'; error: NetworkError; next_attempt_at: number | null; kind: 'rate_limit' | 'day_limit' | 'credits' | 'reconnect' | 'rule' }
+  /** reason, when set, is what the person who holds the item reads (for a reconnect, the reconnect step); otherwise the network's own message. */
+  | { state: 'held'; error: NetworkError; next_attempt_at: number | null; kind: 'rate_limit' | 'day_limit' | 'credits' | 'reconnect' | 'rule'; reason?: string }
 
 export interface PublishContext {
   db: D1Database
@@ -64,6 +65,15 @@ export interface Publisher {
   publish(item: DueItem, ctx: PublishContext): Promise<PublishOutcome>
   /** Reads one of the account's posts back from the network by its address, for an owner settling an uncertain item. */
   readBack?(url: string, ctx: PublishContext): Promise<ReadBack>
+  /**
+   * Deletes one of the account's own posts at the network (a thread's parts with it).
+   * not_found: the network no longer has it. Data's erasure and the ledger's
+   * mark_removed call it through publishers.ts.
+   */
+  remove(entry: RemoveEntry, ctx: PublishContext): Promise<RemoveOutcome>
 }
 
-export type ReadBack = { ok: true; url: string; network_id: string; text: string | null } | { ok: false; message: string }
+export interface RemoveEntry { network: string; account_id: string; network_id: string }
+export interface RemoveOutcome { outcome: 'deleted' | 'not_found' | 'failed'; error?: string }
+
+export type ReadBack = { ok: true; url: string; network_id: string; text: string | null; followers?: number | null } | { ok: false; message: string }

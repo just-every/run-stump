@@ -496,11 +496,46 @@
         "modules/agent-door/wire.ts"
       ],
       "adapted": {
-        "src/modules/agent-door/pipeline.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
+        "src/modules/agent-door/pipeline.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/execution.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/audit.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/policy/catalogue.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/policy/document.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/policy/decide.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/policy/SHA256SUMS": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/policy/PROVENANCE.md": "2135c394939f4a737adabdc8003b0e667b31ac5a"
       },
       "acknowledged": {
         "src/modules/agent-door/pipeline.ts": {
           "sha256": "993ed51846a540112bd1cc0cac8bf3fe20c38adcf61d5d54afccc53a286f991b",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/execution.ts": {
+          "sha256": "6e632874eb0fd9e350254cd5871d442707a768e6c9bf325591e120f9735763ff",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/audit.ts": {
+          "sha256": "40a2db4fae2acb9741cb1047ac0c057e8c09caf17c6651275cdc7c283f94225e",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/policy/catalogue.ts": {
+          "sha256": "a9558ace2ac2fba363e0996a1347b6f03fabf077175c69b4aa2db0959009b325",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/policy/document.ts": {
+          "sha256": "55437f7c538f9f43274a8d2d46c0b48c8375b0df25f6ac65fed6922bc78fc6e0",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/policy/decide.ts": {
+          "sha256": "b24bd357afe42bd6fe4fac01c11a9c2bac5cfe245bc7b7aaebdcba21002c7a09",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/policy/SHA256SUMS": {
+          "sha256": "f62e4b36154befdc655efbf44fe5259e36c9d2a6f9a922f01062103d7f09f482",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/policy/PROVENANCE.md": {
+          "sha256": "7a507d9f8b18c6ee2da2c847c927c420496af3d5265d4cb7f858dd51eee8906b",
           "mode": "100644"
         }
       }

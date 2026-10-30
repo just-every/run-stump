@@ -2,10 +2,11 @@ import {CATALOGUE,classIds,classDefinition,isClass,type ClassId} from './catalog
 export const SCHEMA='rer-agent-policy/1'
 export type Disposition='autonomous'|'review'|'approval'|'blocked'
 export type ApproverRef='sponsor'|'role:owner'|'role:editor'|`person:${string}`
+export type Counterparty='internal'|'known'|'new'|'public'|(string&{})
 export type Threshold=number|{amount:number;currency:string}
 export interface Rule {
  id:string; class:ClassId|'*'; do:Disposition; seed?:string; specialist?:string; agent?:string
- counterparty?:'internal'|'known'|'new'|'public'; direction?:'widens'|'narrows'
+ counterparty?:Counterparty; direction?:'widens'|'narrows'
  max?:Threshold; max_per_day?:Threshold; approver?:ApproverRef[]; wait?:string
 }
 export interface SpendCap {seed:string;specialist:string;agent?:string;microusd_per_day:number}
@@ -31,6 +32,15 @@ const identifier=(value:unknown,path:string)=>{
  if(typeof value!=='string'||!value.trim()||value.length>200||/[\x00-\x1f]/.test(value))invalid(path)
 }
 const natural=(value:unknown)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0
+// Adapted for Stump: money and commitment measures and thresholds are currency
+// units to the millionth (0.2 USD for a $0.20 call), compared as whole millionths;
+// a currency code matches ignoring case; a counterparty is internal, known, new,
+// public or the lower-case id of the provider paid (x).
+export const micros=(value:unknown)=>typeof value==='number'&&Number.isFinite(value)&&value>=0&&Number.isSafeInteger(Math.round(value*1e6))?Math.round(value*1e6):null
+export const currencyOk=(value:unknown)=>typeof value==='string'&&/^[A-Za-z]{3}$/.test(value)
+export const sameCurrency=(a:unknown,b:unknown)=>currencyOk(a)&&currencyOk(b)&&(a as string).toUpperCase()===(b as string).toUpperCase()
+export const counterpartyOk=(value:unknown)=>typeof value==='string'&&/^[a-z0-9][a-z0-9._-]{0,63}$/.test(value)
+export const measureOk=(cls:ClassId,value:unknown)=>monetary(cls)?micros(value)!==null:natural(value)
 export interface ValidationContext {members?:ReadonlyMap<string,string>;seeds?:readonly string[]}
 export function approverRefs(value:unknown,path:string,context:ValidationContext):asserts value is ApproverRef[] {
  if(!Array.isArray(value)||!value.length||value.length>200)invalid(path)
@@ -55,8 +65,8 @@ function threshold(value:unknown,cls:Rule['class'],path:string) {
  }
  if(cls!=='*'&&!money)invalid(path)
  const item=object(value,path);closed(item,['amount','currency'],path)
- if(!natural(item.amount))invalid(path+'.amount')
- if(typeof item.currency!=='string'||!/^[A-Z]{3}$/.test(item.currency))invalid(path+'.currency')
+ if(micros(item.amount)===null)invalid(path+'.amount')
+ if(!currencyOk(item.currency))invalid(path+'.currency')
 }
 /** Identical to delivery/contracts canonical(): sorted object keys, array order retained. */
 export function canonical(value:unknown):string {
@@ -83,7 +93,7 @@ export function validateDocument(value:unknown,context:ValidationContext={}):Pol
   if(typeof rule.do!=='string'||!['autonomous','review','approval','blocked'].includes(rule.do))invalid(path+'.do')
   for(const field of ['seed','specialist','agent'] as const)if(field in rule)identifier(rule[field],path+'.'+field)
   if(rule.seed!==undefined&&rule.seed!=='business'&&context.seeds&&!context.seeds.includes(rule.seed as string))invalid(path+'.seed')
-  if('counterparty' in rule&&(!['*','external','money','commitment'].includes(String(rule.class))||(typeof rule.counterparty!=='string'||!['internal','known','new','public'].includes(rule.counterparty))))invalid(path+'.counterparty')
+  if('counterparty' in rule&&(!['*','external','money','commitment'].includes(String(rule.class))||!counterpartyOk(rule.counterparty)))invalid(path+'.counterparty')
   if('direction' in rule&&(!['*','access'].includes(String(rule.class))||(typeof rule.direction!=='string'||!['widens','narrows'].includes(rule.direction))))invalid(path+'.direction')
   for(const field of ['max','max_per_day'] as const)if(field in rule)threshold(rule[field],rule.class as Rule['class'],path+'.'+field)
   if(rule.do==='approval'){

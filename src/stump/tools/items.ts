@@ -108,7 +108,7 @@ export const itemTools: StumpTool[] = [{
         const { row, plan } = await resumable(ctx, args)
         if (plan) return scheduleClasses([plan])
         const { left } = await rest(ctx, row, 'Resume')
-        return publishClasses(left.posts, left.charge_micro)
+        return publishClasses(left.followers, left.charge_micro)
       },
       async summary(args, ctx) {
         const { row, plan } = await resumable(ctx, args)
@@ -135,7 +135,7 @@ export const itemTools: StumpTool[] = [{
         if (args.decision !== 'retry') return [gated]
         // Sending it again posts what the network has not confirmed, and X charges for it.
         const { left } = await rest(ctx, row, 'Send again')
-        return [gated, ...publishClasses(left.posts, left.charge_micro)]
+        return [gated, ...publishClasses(left.followers, left.charge_micro)]
       },
       async summary(args, ctx) {
         const row = await item(ctx, args.item_id)

@@ -176,8 +176,8 @@ Core · published · **partial** · From new · Cites BASE-AUDIT-001 · Rules D-
 5. A post later removed by a venue's moderators is marked removed with the reason and stays on the record.
 6. An item an agent drafted or published reads "<agent> for <person>" in the ledger and in its export.
 
-**Evidence.** `tests/stump/ledger-stack.test.mjs` "the ledger is searched with combined filters, corrected into versions, marked removed and exported as the rows on screen"; `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"
-**Gap.** Points 2 to 6 hold. For a published X post the entry's text equals the text read back, and it reads "<agent> for <person>" with its URL, charge, route and network confirmation (`src/stump/ledger/record.ts`). Through the person door, MCP and export, a correction adds a version and keeps the first, failed and uncertain entries read as such, a removal keeps the entry with its reason, and "<agent> for <person>" reads in the ledger and the export. Point 1 waits for the hand-off recorder.
+**Evidence.** `tests/stump/ledger-stack.test.mjs` "the ledger is searched with combined filters, corrected into versions, marked removed and exported as the rows on screen"; `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `tests/stump/accounts.test.mjs` "removing a post the company's account made deletes it at the network and keeps the entry on the record"
+**Gap.** Points 2 to 6 hold. For a published X post the entry's text equals the text read back, and it reads "<agent> for <person>" with its URL, charge, route and network confirmation (`src/stump/ledger/record.ts`). Through the person door, MCP and export, a correction adds a version and keeps the first, failed and uncertain entries read as such, a removal keeps the entry with its reason, and "<agent> for <person>" reads in the ledger and the export. On the company's own account, marking an entry removed deletes the post at the network first (its thread's parts with it) and keeps that outcome with the removal. Point 1 waits for the hand-off recorder.
 
 #### STUMP-LEDGER-002 — Ledger search and history
 
@@ -352,7 +352,7 @@ Core · published · **partial** · From new · Cites BASE-SECRET-001, BASE-ACCE
 6. A scheduled item's export shows the account's handle and owner and no token field, and no door accepts a token or password typed in for another person.
 
 **Evidence.** `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back"; `agent-surface.json` journey steps setup-x, connect-x, finish-x and slots-x
-**Gap.** Points 2, 4 and 6 hold for the company's X account through the person door and MCP: it reads back as the company's, a consent completes only for the person who started it, and no answer carries a token. Points 1, 3 and 5 (a person's Bluesky account, an account owned by someone else, and the items a disconnect unschedules) are built in `src/stump/accounts/`; their committed proof needs drafted items and a second account.
+**Gap.** Points 2, 4 and 6 hold for the company's X account through the person door and MCP: it reads back as the company's, a consent completes only for the person who started it, and no answer carries a token. Point 3 is built for every network: a Bluesky handle already names its DID, so an account someone else owns is refused when the connection starts, before any consent screen, naming the owner; Mastodon, X and LinkedIn are refused at completion, where the account is first known (`src/stump/accounts/connect.ts`). Points 1, 3 and 5 have no repo test yet: they need a Bluesky PDS and a second person's account.
 
 #### STUMP-CONNECT-001 — Connection ownership and disconnect
 
@@ -368,8 +368,8 @@ Core · published · **partial** · From new
 5. Reconnecting restores no unscheduled item by itself; the owner re-queues the items they choose.
 6. Each connection shows its owner, who connected it and when.
 
-**Evidence.** `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back"
-**Gap.** Point 6 holds: each connection shows its owner, who connected it and when. Reconnecting is refused for anyone but the owner, and disconnecting unschedules and lists queued items (`src/stump/accounts/connect.ts`); points 1, 2, 4 and 5 also need person removal and revocation detection at the network, which are not built.
+**Evidence.** `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back"; `tests/stump/accounts.test.mjs` "X refusing the account's token marks it expired, holds its posts with the reconnect step, and only its owner's reconnect brings it back"
+**Gap.** Points 5 and 6 hold: each connection shows its owner, who connected it and when, and reconnecting restores no held item by itself. Point 4 holds in part: a token the network refuses (a 401, a revoked or expired token, a refused refresh) is detected at the next call or refresh on every network, the account reads expired with the reason and its reconnect address, and each item queued on it holds for its owner with the reconnect step; the items stay held rather than unscheduled. Reconnecting is refused for anyone but the owner (`src/stump/tools/accounts.ts`), without a repo assertion. Points 1 and 2 need person removal, which is not built.
 
 #### STUMP-PUBLISH-002 — Bluesky posts and threads
 
@@ -1838,8 +1838,8 @@ Core · target · **partial** · From new
 2. A link to a third-party site carries no tags.
 3. Changing the naming rules changes the next item and leaves posted links as they were.
 
-**Evidence.** `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"
-**Gap.** `tagOwnLinks` in `src/stump/links/` tags own domains only, keeps the author's parameters, and a rule change affects only the next text (points 2 and 3, and point 1 through the preview action). The posting paths do not call it yet, so a posted Bluesky link is not yet tagged by Stump.
+**Evidence.** `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"; `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"
+**Gap.** `tagOwnLinks` in `src/stump/links/` tags own domains only, keeps the author's parameters, and a rule change affects only the next text (points 2 and 3). The posting path tags every part of an item, and its link card, before it goes out (`src/stump/publish/outgoing.ts`): an X post goes out with its own link tagged and an outside link as written, and the ledger keeps the text read back. Point 1 names a Bluesky post, which takes the same path without a repo test against a PDS.
 
 #### STUMP-LINK-002 — Short links on the company's domain
 
@@ -2012,8 +2012,8 @@ Core · target · **partial** · From new
 2. A launch adds one annotation for the launch.
 3. A deleted post marks its annotation as deleted.
 
-**Evidence.** `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"
-**Gap.** `annotateLedgerEntry` sends one annotation of kind campaign on the post's day with its link through Vane's annotation door and records the outcome (point 1). The posting path does not call it yet; launches and deleted posts (points 2 and 3) are not built.
+**Evidence.** `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"; `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"
+**Gap.** `annotateLedgerEntry` sends one annotation of kind campaign on the post's day with its link through Vane's annotation door and records the outcome. The posting path calls it once each post is read back and on the ledger, and records Vane's answer on the entry; a failure never holds or undoes the post (point 1). Launches and deleted posts (points 2 and 3) are not built.
 
 #### STUMP-STACK-005 — Notices by email, Slack and push
 
@@ -2711,7 +2711,7 @@ Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE
 5. Under a company spend cap, the call that would cross it returns `budget_exhausted` before any effect.
 
 **Evidence.** `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `agent-surface.json` journey (stump shard of `verification.json`) steps x-queue and x-schedule
-**Gap.** Point 1 holds for an X URL post: money computes in USD from the company's price table and the ledger records $0.20. Base reads a money measure as whole currency units and takes integers only, so the measure is the charge rounded up to whole dollars and the exact charge is the approval summary's amount (`src/stump/publish/schedule.ts`). Point 4 (an updated price on the next call) is built, not yet asserted in a repo test; .2, .3 and .5 belong to later lanes.
+**Gap.** Point 1 holds for an X URL post: money computes `{measure: 0.2, currency: "usd", counterparty: "x"}` from the company's price table, once per call, and the ledger records $0.20 (`src/stump/publish/schedule.ts`). Stump's agent door copy is adapted so a money measure and limit is currency units to the millionth, currency codes match ignoring case and the provider paid can be the counterparty (`base-copies.json`; `src/modules/agent-door/policy/PROVENANCE.md`). Point 4 (an updated price on the next call) is built, not yet asserted in a repo test; .2, .3 and .5 belong to later lanes.
 
 #### STUMP-SURFACE-005 — Steps venues and providers keep for a person compute gated
 

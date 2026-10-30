@@ -1,7 +1,7 @@
 import { blueskyFor } from '../accounts/clients.ts'
 import { shownHandle } from '../accounts/handle.ts'
-import { needsReconnect } from '../accounts/store.ts'
 import { parseAtUri, type BlobRef, type BlueskyClient, type ImageDraft, type NetworkError as BlueskyError, type PostDraft, type StrongRef, type ThreadItem, type ThreadPosted } from '../lib/bluesky/index.ts'
+import { credentialsRefused, notReady, partsToRemove, removeEach } from './held.ts'
 import { postedParts, partKey, recordCall, savePart, textsOf } from './parts.ts'
 import type { DueItem, PublishContext, PublishOutcome, Publisher } from './types.ts'
 
@@ -54,7 +54,7 @@ export const blueskyPublisher: Publisher = {
 
   async publish(item, ctx) {
     const opened = await blueskyFor(ctx.env, ctx.db, ctx.account, ctx.now)
-    if (!opened.ok) return { state: 'held', kind: 'reconnect', next_attempt_at: null, error: { code: opened.code, message: opened.message } }
+    if (!opened.ok) return notReady(opened)
     const { client } = opened
     const images: ImageDraft[] = []
     for (const media of item.media) {
@@ -94,7 +94,9 @@ export const blueskyPublisher: Publisher = {
       texts.push(back.value.text)
       firstUrl ||= back.value.webUrl
     }
-    return { state: 'posted', url: firstUrl, network_id: outcome.posted[0]!.uri, posted_at: ctx.now(), text: texts.join('\n\n') }
+    // The PDS holds no follower count; the AppView it proxies answers it, where there is one.
+    const followers = await client.followers()
+    return { state: 'posted', url: firstUrl, network_id: outcome.posted[0]!.uri, posted_at: ctx.now(), text: texts.join('\n\n'), followers: followers.ok ? followers.value : null }
   },
 
   async readBack(url, ctx) {
@@ -105,15 +107,26 @@ export const blueskyPublisher: Publisher = {
     const back = await opened.client.getPost(target.parent.uri)
     if (!back.ok) return { ok: false, message: back.error.message }
     if (back.value.repo !== opened.client.auth().did) return { ok: false, message: `${url} is not a post of ${shownHandle(ctx.account)}.` }
-    return { ok: true, url: back.value.webUrl, network_id: back.value.uri, text: back.value.text }
+    const followers = await opened.client.followers()
+    return { ok: true, url: back.value.webUrl, network_id: back.value.uri, text: back.value.text, followers: followers.ok ? followers.value : null }
+  },
+
+  async remove(entry, ctx) {
+    const opened = await blueskyFor(ctx.env, ctx.db, ctx.account, ctx.now)
+    if (!opened.ok) return { outcome: 'failed', error: opened.message }
+    return removeEach(await partsToRemove(ctx, ctx.account.id, entry.network_id), async uri => {
+      const gone = await opened.client.deletePost(uri)
+      if (gone.ok) return { outcome: gone.value.alreadyGone ? 'not_found' : 'deleted' }
+      if (gone.error.kind === 'not_found') return { outcome: 'not_found' }
+      if (gone.error.kind === 'auth_revoked' || gone.error.kind === 'credentials_invalid') await credentialsRefused(ctx, /expired/i.test(gone.error.message) ? 'expired' : 'revoked', error(gone.error))
+      return { outcome: 'failed', error: gone.error.message }
+    })
   },
 }
 
 async function fault(ctx: PublishContext, e: BlueskyError, postedCount: number, first: { url: string; network_id: string } | null): Promise<PublishOutcome> {
-  if (e.kind === 'auth_revoked' || e.kind === 'credentials_invalid') {
-    await needsReconnect(ctx.db, ctx.env, ctx.account, 'revoked', ctx.now())
-    return { state: 'held', kind: 'reconnect', next_attempt_at: null, error: error(e) }
-  }
+  // The PDS refused the session (revoked, or a refresh that expired).
+  if (e.kind === 'auth_revoked' || e.kind === 'credentials_invalid') return credentialsRefused(ctx, /expired/i.test(e.message) ? 'expired' : 'revoked', error(e))
   if (e.kind === 'rate_limited') return { state: 'held', kind: 'rate_limit', next_attempt_at: e.retryAtMs ?? null, error: error(e) }
   // Earlier parts that are up make the item partly posted; resuming writes the rest under the same
   // record keys, so a part that did land is read back, never posted twice (STUMP-PUBLISH-004.4).

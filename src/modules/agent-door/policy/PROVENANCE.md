@@ -14,3 +14,12 @@ parameter property into an explicit readonly property and assignment. Policy
 behavior, the eleven classes, validation and decision precedence are unchanged.
 
 `SHA256SUMS` records the actual hashes of the three ported files in this directory.
+
+## Stump adaptation
+
+Stump adapts `catalogue.ts`, `document.ts` and `decide.ts` (recorded in
+`base-copies.json`): a money or commitment measure and threshold is a number of
+currency units to the millionth (an X post with a link is `0.2` USD), compared
+as whole millionths; currency codes match ignoring case; and a counterparty may
+be the lower-case id of the provider paid (`x`) as well as internal, known, new
+or public. Whole-number measures and the vectors decide exactly as before.

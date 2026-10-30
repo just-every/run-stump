@@ -35,6 +35,8 @@ export interface XPostReadback {
   text: string
   authorId: string | null
   authorUsername: string | null
+  /** The author's follower count, where X expanded the author with public_metrics. */
+  authorFollowers: number | null
   createdAt: string | null
   conversationId: string | null
   inReplyToUserId: string | null
@@ -108,6 +110,7 @@ export function parsePost(p: any, includes: any, ctx: XContext): XPostReadback {
     text: plainPostText(p),
     authorId: typeof p.author_id === 'string' ? p.author_id : null,
     authorUsername: typeof author?.username === 'string' ? author.username : null,
+    authorFollowers: typeof author?.public_metrics?.followers_count === 'number' ? author.public_metrics.followers_count : null,
     createdAt: typeof p.created_at === 'string' ? p.created_at : null,
     conversationId: typeof p.conversation_id === 'string' ? p.conversation_id : null,
     inReplyToUserId: typeof p.in_reply_to_user_id === 'string' ? p.in_reply_to_user_id : null,

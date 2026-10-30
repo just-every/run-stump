@@ -58,6 +58,7 @@ export function parseStatus(json: unknown): PostedStatus | null {
     }),
     poll: parsePoll(j.poll),
     accountId: typeof account?.id === 'string' ? account.id : null,
+    accountFollowers: typeof account?.followers_count === 'number' ? account.followers_count : null,
   };
 }
 

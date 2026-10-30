@@ -89,8 +89,10 @@ export interface LedgerEntry {
   charge_usd: number | null
   approved_by: unknown
   hold: unknown
-  removal: { reason: string; person_id: string; agent_id: string | null; at: string } | null
+  removal: { reason: string; person_id: string; agent_id: string | null; at: string; network_delete?: { outcome: 'deleted' | 'not_found'; at: string } } | null
   legal_hold: { reason: string; person_id: string; agent_id: string | null; at: string } | null
+  /** What Vane answered for the post's annotation, when the posting path sent one. */
+  annotation: { status: string; at: string; error?: string } | null
   versions: LedgerVersion[]
 }
 
@@ -102,6 +104,6 @@ export function toEntry(row: LedgerRow, versions: LedgerVersion[]): LedgerEntry 
     claims: json(row.claims) as unknown[], product_id: row.product_id as string | null, campaign: row.campaign as string | null, route: row.route as LedgerEntry['route'],
     state: row.state as LedgerEntry['state'], confirmation: row.confirmation as LedgerEntry['confirmation'], revision: row.revision as number | null, posted_at: iso(row.posted_at),
     charge_usd: row.charge_usd as number | null, approved_by: json(row.approved_by), hold: json(row.hold), removal: json(row.removal) as LedgerEntry['removal'],
-    legal_hold: json(row.legal_hold) as LedgerEntry['legal_hold'], versions: withCurrent(row, versions),
+    legal_hold: json(row.legal_hold) as LedgerEntry['legal_hold'], annotation: json(row.annotation) as LedgerEntry['annotation'], versions: withCurrent(row, versions),
   }
 }

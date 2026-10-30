@@ -9,7 +9,7 @@ import { itemView, readItem, type FullItemRow } from './items.ts'
 import { publishers } from './publishers.ts'
 import { agentRuleBroken } from './rules.ts'
 import { textsOf } from './parts.ts'
-import { claim, deliver, dueItem, holdOwner } from './tick.ts'
+import { afterPosted, claim, deliver, holdOwner, sendable } from './tick.ts'
 import { parseAt, validZone } from './time.ts'
 import type { DueItem } from './types.ts'
 
@@ -75,7 +75,8 @@ export async function prepare(ctx: ActionContext, action: string, input: { item_
   if (broken) await refuseAct(ctx, TOOL, action, broken.source, { account_id: account.id, reason: broken.reason, ...(broken.rules ? { rules: broken.rules } : {}) })
   const flagged = blockingFlags(row)
   if (flagged.length && !options.holdFlagged) refuse('item_flagged', { item_id: row.id, flag: flagged[0]!.code, flags: flagged })
-  const due = await dueItem(ctx.db, row, account)
+  // The checks see the text as it will go out, own links tagged (STUMP-LINK-001).
+  const due = await sendable(ctx.db, row, account)
   const missingAlt = due.media.find(media => !media.alt?.trim())
   if (missingAlt) refuse('alt_text_missing', { item_id: row.id, media_id: missingAlt.id })
   const publisher = publishers[account.network]
@@ -92,39 +93,42 @@ export async function prepare(ctx: ActionContext, action: string, input: { item_
   return { item: row, account, due, at, zone, charge_micro: publisher.quote?.(due, env.prices) ?? 0, posts: due.format === 'thread' ? due.parts?.length ?? 0 : 1 }
 }
 
-/**
- * Base reads a money measure as whole units of its currency and takes integers
- * only, so an X charge in millionths of a dollar goes to policy as whole US
- * dollars rounded up: a policy limit is never crossed unseen, and the exact
- * charge travels in the approval summary's amount.
- */
-export const wholeUsd = (micro: number) => Math.ceil(micro / 1e6)
-
-/** The exact charge in US dollars, for the approver to read beside policy's whole-dollar measure. */
+/** The charge in US dollars as the approval summary's amount, paid to X. */
 export const money = (micro: number) => micro > 0 ? { amount: { value: micro / 1e6, currency: 'USD' }, payee: 'X' } : {}
 
-/** The classes sending posts computes: posts going out in public, what X charges for them, and variants held for a person. */
-export function publishClasses(posts: number, micro: number, held = 0) {
+/** The people a post on these accounts reaches: each account's follower count as the network last reported it, once per account. */
+export function audience(accounts: Array<Pick<AccountRow, 'id' | 'follower_count'>>): number {
+  return [...new Map(accounts.map(account => [account.id, account.follower_count ?? 0])).values()].reduce((sum, count) => sum + count, 0)
+}
+
+/**
+ * The classes sending posts computes (V1 "Agent door"): external to the public,
+ * measured by the followers of the accounts it goes to; money for what X charges
+ * for this one call in US dollars, priced once from the company's table (only X
+ * charges per post, so X is the counterparty); and variants held for a person.
+ * The agent door's adapted policy copy takes a money measure to the millionth.
+ */
+export function publishClasses(followers: number, micro: number, held = 0) {
   return [
-    { class: 'external' as const, facts: { measure: posts, counterparty: 'public' as const } },
-    ...(micro > 0 ? [{ class: 'money' as const, facts: { measure: wholeUsd(micro), currency: 'USD', counterparty: 'known' as const } }] : []),
+    { class: 'external' as const, facts: { measure: followers, counterparty: 'public' as const } },
+    ...(micro > 0 ? [{ class: 'money' as const, facts: { measure: micro / 1e6, currency: 'usd', counterparty: 'x' } }] : []),
     ...(held > 0 ? [{ class: 'gated' as const, facts: { measure: held, provider: 'stump', step: 'rewrite_flagged_variant' } }] : []),
   ]
 }
 
 /** The classes a schedule computes from its plans. */
 export const scheduleClasses = (plans: Plan[], held = 0) =>
-  publishClasses(plans.reduce((sum, plan) => sum + plan.posts, 0), plans.reduce((sum, plan) => sum + plan.charge_micro, 0), held)
+  publishClasses(audience(plans.map(plan => plan.account)), plans.reduce((sum, plan) => sum + plan.charge_micro, 0), held)
 
 /** The posts of an item not yet out at its network, and what sending them costs from the company's price table (STUMP-SURFACE-004). */
-export async function remaining(ctx: ActionContext, row: FullItemRow): Promise<{ posts: number; charge_micro: number }> {
+export async function remaining(ctx: ActionContext, row: FullItemRow): Promise<{ posts: number; charge_micro: number; followers: number }> {
   const account = row.account_id ? await readAccount(ctx.db, row.account_id) : null
-  if (!account) return { posts: 0, charge_micro: 0 }
-  const due = await dueItem(ctx.db, row, account), texts = textsOf(due)
+  if (!account) return { posts: 0, charge_micro: 0, followers: 0 }
+  const due = await sendable(ctx.db, row, account), texts = textsOf(due), followers = audience([account])
   const done = (await ctx.db.prepare('SELECT COUNT(*) AS n FROM stump_item_parts WHERE item_id=?').bind(row.id).first<{ n: number }>())?.n ?? 0
-  if (done >= texts.length) return { posts: 0, charge_micro: 0 }
+  if (done >= texts.length) return { posts: 0, charge_micro: 0, followers }
   const rest: DueItem = due.format === 'thread' ? { ...due, parts: texts.slice(done) } : due
-  return { posts: texts.length - done, charge_micro: publishers[account.network]?.quote?.(rest, await xPrices(ctx.db)) ?? 0 }
+  return { posts: texts.length - done, charge_micro: publishers[account.network]?.quote?.(rest, await xPrices(ctx.db)) ?? 0, followers }
 }
 
 /** Puts a checked item on the schedule: paused while a Pause covers its account. */
@@ -183,6 +187,7 @@ export async function resolveUncertain(ctx: ActionContext, row: FullItemRow, dec
       ...await recordOutcome(ctx.db, row, { state: 'posted', url: back.url, network_id: back.network_id,
         text: back.text ?? (row.parts ? (JSON.parse(row.parts) as string[]).join('\n\n') : row.text ?? ''), posted_at: now }, now),
     ])
+    await afterPosted(ctx.env, row.id, account.id, back.followers)
   } else {
     const error = row.error ? JSON.parse(row.error) as { code: string; message: string } : { code: 'uncertain', message: 'The network did not confirm this post.' }
     await ctx.db.batch([

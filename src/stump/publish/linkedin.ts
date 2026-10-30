@@ -1,9 +1,9 @@
 import { linkedInFor } from '../accounts/clients.ts'
-import { needsReconnect } from '../accounts/store.ts'
 import {
-  LINKEDIN_IMAGE_TYPES, LINKEDIN_MEMBER_DAILY_LIMIT, createLinkedInPost, estimateLinkedInRequests, evaluateLinkedInDailyQuota, findOwnLinkedInPostByText,
+  LINKEDIN_IMAGE_TYPES, LINKEDIN_MEMBER_DAILY_LIMIT, createLinkedInPost, deleteLinkedInPost, estimateLinkedInRequests, evaluateLinkedInDailyQuota, findOwnLinkedInPostByText,
   getLinkedInPost, linkedInDayWindow, uploadLinkedInImage, validateLinkedInPost, type LinkedInError, type LinkedInImageRef, type LinkedInPostInput,
 } from '../lib/linkedin/index.ts'
+import { credentialsRefused, notReady, removeEach } from './held.ts'
 import { postedParts, recordCall, savePart } from './parts.ts'
 import type { DueItem, PublishContext, PublishOutcome, Publisher } from './types.ts'
 
@@ -41,7 +41,7 @@ export const linkedinPublisher: Publisher = {
 
   async publish(item, ctx) {
     const opened = await linkedInFor(ctx.env, ctx.db, ctx.account, ctx.now)
-    if (!opened.ok) return { state: 'held', kind: 'reconnect', next_attempt_at: null, error: { code: opened.code, message: opened.message } }
+    if (!opened.ok) return notReady(opened)
     const li = opened.client, urn = opened.credentials.network === 'linkedin' ? opened.credentials.urn : ''
     const already = (await postedParts(ctx, item))[0]
     let ref = already ? { urn: already.network_id, url: already.url } : null
@@ -90,13 +90,24 @@ export const linkedinPublisher: Publisher = {
     if (back.error.kind === 'permission_denied') return { ok: true, url: `https://www.linkedin.com/feed/update/${urn}/`, network_id: urn, text: null }
     return { ok: false, message: back.error.message }
   },
+
+  async remove(entry, ctx) {
+    const opened = await linkedInFor(ctx.env, ctx.db, ctx.account, ctx.now)
+    if (!opened.ok) return { outcome: 'failed', error: opened.message }
+    return removeEach([entry.network_id], async urn => {
+      const gone = await deleteLinkedInPost(opened.client, urn)
+      await recordCall(ctx, { network: 'linkedin', item_id: null, act: 'delete' })
+      if (gone.ok) return { outcome: 'deleted' }
+      if (gone.error.kind === 'not_found') return { outcome: 'not_found' }
+      if (gone.error.kind === 'auth_expired' || gone.error.kind === 'auth_revoked') await credentialsRefused(ctx, gone.error.kind === 'auth_expired' ? 'expired' : 'revoked', error(gone.error))
+      return { outcome: 'failed', error: gone.error.message }
+    })
+  },
 }
 
 async function fault(ctx: PublishContext, e: LinkedInError): Promise<PublishOutcome> {
-  if (e.kind === 'auth_expired' || e.kind === 'auth_revoked') {
-    await needsReconnect(ctx.db, ctx.env, ctx.account, e.kind === 'auth_expired' ? 'expired' : 'revoked', ctx.now())
-    return { state: 'held', kind: 'reconnect', next_attempt_at: null, error: error(e) }
-  }
+  // A 401: LinkedIn refused the member's token, as revoked (REVOKED_ACCESS_TOKEN) or expired.
+  if (e.kind === 'auth_expired' || e.kind === 'auth_revoked') return credentialsRefused(ctx, e.kind === 'auth_expired' ? 'expired' : 'revoked', error(e))
   // LinkedIn's day throttle names no reset time; its day ends at 00:00 UTC (STUMP-PUBLISH-005.3).
   if (e.kind === 'rate_limited') return { state: 'held', kind: 'day_limit', next_attempt_at: Date.parse(e.resetAt ?? linkedInDayWindow(ctx.now()).resetsAt), error: error(e) }
   if (e.mayHaveApplied) return { state: 'uncertain', error: error(e) }

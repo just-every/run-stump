@@ -56,6 +56,18 @@ async function mastodonApp(ctx: ActionContext, origin: string, redirectUri: stri
 
 export interface StartInput { network: Network; owner: 'me' | 'company'; instance?: string; service?: string; handle?: string; account?: AccountRow }
 
+/**
+ * One network account has one owner (STUMP-PUBLISH-001.3): connecting an account
+ * Stump already holds for someone else is refused, naming that owner, and the
+ * consent that proved its identity is given back to the network.
+ */
+async function refuseOwnedElsewhere(ctx: ActionContext, network: Network, networkUserId: string, owner: { kind: 'person' | 'company'; person_id: string | null }, revoke?: () => Promise<void>) {
+  const existing = await ctx.db.prepare('SELECT * FROM stump_accounts WHERE network=? AND network_user_id=?').bind(network, networkUserId).first<AccountRow>()
+  if (!existing || (existing.owner_kind === owner.kind && existing.owner_person_id === owner.person_id)) return existing
+  await revoke?.()
+  refuse('account_owned', { network, handle: existing.handle, owner: { kind: existing.owner_kind, person_id: existing.owner_person_id, name: await ownerName(ctx.db, existing) } })
+}
+
 /** Begins a connection; answers the consent URL, or the app-password step where a PDS has no consent screen. */
 export async function startConnection(ctx: ActionContext, input: StartInput) {
   const { network } = input
@@ -79,6 +91,8 @@ export async function startConnection(ctx: ActionContext, input: StartInput) {
       ? await resolveIdentityAtServer({ fetch }, named, identifier)
       : await resolveIdentity({ fetch }, identifier, { handleResolverUrl: DEFAULT_BLUESKY_SERVICE })
     if (!identity.ok) networkError('bluesky', identity.error)
+    // The handle already names its DID, so an account someone else owns is refused here, before any consent screen.
+    await refuseOwnedElsewhere(ctx, 'bluesky', identity.value.did, { kind: input.owner === 'company' ? 'company' : 'person', person_id: input.owner === 'company' ? null : ctx.person.id })
     const offered = await discoverOAuth({ fetch }, identity.value.pdsUrl)
     if (!offered.ok) networkError('bluesky', offered.error)
     if (offered.value === null) {
@@ -122,6 +136,8 @@ async function insert(ctx: ActionContext, id: string, stateHash: string, input: 
 export interface CompleteInput { state?: string; connection_id?: string; code?: string; iss?: string; error?: string; app_password?: string }
 
 interface Connected { networkUserId: string; handle: string; displayName: string | null; instance: string | null; credentials: Credentials; expiresAt: number | null
+  /** The follower count the network reports at connect; null where it reports none (a LinkedIn member). */
+  followers: number | null
   bot?: boolean; botRules?: Array<{ id: string; text: string }>; postLimit?: number | null; revoke(): Promise<void> }
 
 /** Finishes a connection the same person started, and answers the account. */
@@ -138,29 +154,27 @@ export async function completeConnection(ctx: ActionContext, input: CompleteInpu
   const pending = await unseal<Pending>(ctx.env, `connection:${connection.id}`, connection.pending)
   const connected = await exchange(ctx, connection, pending, input)
   const reconnecting = connection.account_id ? await readAccount(ctx.db, connection.account_id) : null
-  const existing = await ctx.db.prepare('SELECT * FROM stump_accounts WHERE network=? AND network_user_id=?').bind(connection.network, connected.networkUserId).first<AccountRow>()
   const ownerKind = connection.owner_kind, ownerId = ownerKind === 'person' ? connection.person_id : null
-  if (existing && (existing.owner_kind !== ownerKind || existing.owner_person_id !== ownerId)) {
-    await connected.revoke()
-    refuse('account_owned', { network: connection.network, handle: existing.handle, owner: { kind: existing.owner_kind, person_id: existing.owner_person_id, name: await ownerName(ctx.db, existing) } })
-  }
+  // Mastodon, X and LinkedIn first name the account here, once the consent is done; Bluesky was checked at start too.
+  const existing = await refuseOwnedElsewhere(ctx, connection.network, connected.networkUserId, { kind: ownerKind, person_id: ownerId }, () => connected.revoke())
   if (reconnecting && existing && existing.id !== reconnecting.id) {
     await connected.revoke()
     refuse('different_account', { account_id: reconnecting.id, handle: connected.handle })
   }
   const now = ctx.now(), id = existing?.id ?? reconnecting?.id ?? crypto.randomUUID()
   const sealed = await sealCredentials(ctx.env, id, connected.credentials as Credentials)
-  const fields = [connected.handle, connected.displayName, connected.instance, sealed, connected.networkUserId, connected.bot ? 1 : 0, JSON.stringify(connected.botRules ?? []), connected.postLimit ?? null, connected.expiresAt]
+  const fields = [connected.handle, connected.displayName, connected.instance, sealed, connected.networkUserId, connected.bot ? 1 : 0, JSON.stringify(connected.botRules ?? []), connected.postLimit ?? null, connected.expiresAt,
+    connected.followers ?? null]
   if (existing || reconnecting) {
     await ctx.db.batch([
-      ctx.db.prepare(`UPDATE stump_accounts SET handle=?,display_name=?,instance=?,credentials=?,network_user_id=?,bot=?,bot_rules=?,post_limit=?,token_expires_at=?,
-        state='connected',reconnect_url=NULL,connected_by=?,connected_at=?,disconnected_at=NULL,disconnected_by=NULL,updated_at=?,revision=revision+1 WHERE id=?`).bind(...fields, ctx.person.id, now, now, id),
+      ctx.db.prepare(`UPDATE stump_accounts SET handle=?,display_name=?,instance=?,credentials=?,network_user_id=?,bot=?,bot_rules=?,post_limit=?,token_expires_at=?,follower_count=COALESCE(?,follower_count),
+        state='connected',state_reason=NULL,reconnect_url=NULL,connected_by=?,connected_at=?,disconnected_at=NULL,disconnected_by=NULL,updated_at=?,revision=revision+1 WHERE id=?`).bind(...fields, ctx.person.id, now, now, id),
       ctx.db.prepare('UPDATE stump_connections SET completed_at=?,account_id=? WHERE id=?').bind(now, id, connection.id),
     ])
   } else {
     await ctx.db.batch([
-      ctx.db.prepare(`INSERT INTO stump_accounts(id,network,handle,display_name,instance,credentials,network_user_id,bot,bot_rules,post_limit,token_expires_at,owner_kind,owner_person_id,
-        connected_by,connected_at,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'connected',?,?)`).bind(id, connection.network, ...fields, ownerKind, ownerId, ctx.person.id, now, now, now),
+      ctx.db.prepare(`INSERT INTO stump_accounts(id,network,handle,display_name,instance,credentials,network_user_id,bot,bot_rules,post_limit,token_expires_at,follower_count,owner_kind,owner_person_id,
+        connected_by,connected_at,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'connected',?,?)`).bind(id, connection.network, ...fields, ownerKind, ownerId, ctx.person.id, now, now, now),
       ctx.db.prepare('UPDATE stump_connections SET completed_at=?,account_id=? WHERE id=?').bind(now, id, connection.id),
     ])
   }
@@ -188,7 +202,7 @@ async function exchange(ctx: ActionContext, connection: ConnectionRow, pending: 
     return {
       networkUserId: `${pending.origin}|${account.value.id}`, handle: account.value.handle.replace(/^@/, ''), displayName: account.value.displayName, instance: pending.origin,
       credentials: { network: 'mastodon', origin: pending.origin, redirect_uri: pending.redirect_uri, access_token: token.value.accessToken }, expiresAt: null,
-      bot: account.value.bot, botRules: instance.value.botFlagRules, postLimit: instance.value.maxCharacters,
+      bot: account.value.bot, botRules: instance.value.botFlagRules, postLimit: instance.value.maxCharacters, followers: account.value.followersCount,
       revoke: async () => { await revokeToken({ fetch }, pending.origin, { clientId: app.clientId, clientSecret: app.clientSecret, token: token.value.accessToken }) },
     }
   }
@@ -205,7 +219,7 @@ async function exchange(ctx: ActionContext, connection: ConnectionRow, pending: 
     const me = await getXMe({ fetch, accessToken: tokens.value.accessToken })
     if (!me.ok) networkError('x', me.error)
     return {
-      networkUserId: me.value.id, handle: me.value.username, displayName: me.value.name, instance: null, expiresAt: Date.parse(tokens.value.expiresAt),
+      networkUserId: me.value.id, handle: me.value.username, displayName: me.value.name, instance: null, expiresAt: Date.parse(tokens.value.expiresAt), followers: me.value.followers,
       credentials: { network: 'x', tokens: tokens.value, user_id: me.value.id, username: me.value.username },
       // X lets longer posts through only for subscribed accounts; everyone else has the weighted 280.
       postLimit: me.value.verifiedType && me.value.verifiedType !== 'none' ? 25_000 : 280,
@@ -221,6 +235,8 @@ async function exchange(ctx: ActionContext, connection: ConnectionRow, pending: 
   return {
     networkUserId: member.value.sub, handle: member.value.name, displayName: member.value.name, instance: null, expiresAt: Date.parse(tokens.value.expiresAt),
     credentials: { network: 'linkedin', tokens: tokens.value, urn: member.value.urn }, postLimit: 3000,
+    // Share on LinkedIn grants no read of a member's followers (docs/networks.md).
+    followers: null,
     // LinkedIn's member products offer no token revocation endpoint.
     revoke: async () => {},
   }
@@ -231,10 +247,11 @@ async function bluesky(ctx: ActionContext, pdsUrl: string, auth: BlueskyAuth): P
   const client = createBlueskyClient({ fetch, pdsUrl, auth, oauthClient: blueskyOAuthClient(ctx.env), onAuthChange: next => { auth = next } })
   const profile = await client.profile()
   if (!profile.ok) networkError('bluesky', profile.error)
+  const followers = await client.followers()
   return {
     networkUserId: profile.value.did, handle: profile.value.handle, displayName: profile.value.displayName, instance: pdsUrl,
     get credentials() { return { network: 'bluesky' as const, pds_url: pdsUrl, auth } },
-    expiresAt: auth.kind === 'password' ? auth.refreshExpiresAtMs : auth.expiresAtMs, postLimit: 300,
+    expiresAt: auth.kind === 'password' ? auth.refreshExpiresAtMs : auth.expiresAtMs, postLimit: 300, followers: followers.ok ? followers.value : null,
     revoke: async () => { await client.disconnect() },
   }
 }

@@ -5,7 +5,7 @@ import { ensureFreshXTokens, type XContext } from '../lib/x/index.ts'
 import type { StumpEnv } from '../env.ts'
 import { stumpFetch } from '../net/fetch.ts'
 import { appKeys, callbackUrl } from './apps.ts'
-import { needsReconnect, openCredentials, saveCredentials, type AccountRow, type Credentials } from './store.ts'
+import { needsReconnect, openCredentials, reconnectStep, saveCredentials, type AccountRow, type Credentials } from './store.ts'
 import { shownHandle } from './handle.ts'
 
 // A ready network client for one connected account: credentials opened,
@@ -13,7 +13,17 @@ import { shownHandle } from './handle.ts'
 // A refusal at refresh marks the account for its owner to reconnect.
 
 export interface Opened<C> { ok: true; client: C; credentials: Credentials }
-export interface NotReady { ok: false; code: 'not_connected' | 'reconnect' | 'app_not_set'; message: string }
+export interface NotReady { ok: false; code: 'not_connected' | 'reconnect' | 'app_not_set'; message: string; reason?: string }
+
+/** The account already waits for its owner: the reconnect step is the reason anything on it holds. */
+const waiting = (row: AccountRow): NotReady =>
+  ({ ok: false, code: 'reconnect', message: `${shownHandle(row)} is ${row.state}. ${row.state_reason ?? ''}`.trim(), reason: reconnectStep(row, /revoked/i.test(row.state_reason ?? '') ? 'revoked' : 'expired') })
+
+/** The network refused the account's credentials: it reads expired, and the reason names the reconnect step. */
+async function refused(env: StumpEnv, db: D1Database, row: AccountRow, message: string, now: number): Promise<NotReady> {
+  const reason = await needsReconnect(db, env, row, /revok/i.test(message) ? 'revoked' : 'expired', now)
+  return { ok: false, code: 'reconnect', message, reason }
+}
 
 const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]'])
 
@@ -32,7 +42,8 @@ export function blueskyOAuthClient(env: Pick<StumpEnv, 'AUTH_ORIGIN'>): OAuthCli
 }
 
 async function credentials(env: StumpEnv, row: AccountRow): Promise<Credentials | NotReady> {
-  if (row.state !== 'connected') return { ok: false, code: row.state === 'disconnected' ? 'not_connected' : 'reconnect', message: `${shownHandle(row)} is ${row.state}.` }
+  if (row.state === 'disconnected') return { ok: false, code: 'not_connected', message: `${shownHandle(row)} is disconnected.` }
+  if (row.state !== 'connected') return waiting(row)
   const opened = await openCredentials(env, row)
   return opened ?? { ok: false, code: 'not_connected', message: `${shownHandle(row)} has no credentials.` }
 }
@@ -69,7 +80,8 @@ export async function xFor(env: StumpEnv, db: D1Database, row: AccountRow, now: 
   const fetch = stumpFetch(env)
   const fresh = await ensureFreshXTokens({ fetch, keys, tokens: creds.tokens, now })
   if (!fresh.ok) {
-    if (fresh.error.kind === 'auth_revoked') { await needsReconnect(db, env, row, 'expired', now()); return { ok: false, code: 'reconnect', message: fresh.error.message } }
+    // X refused the refresh (or no refresh token is held): the grant expired or was revoked.
+    if (fresh.error.kind === 'auth_revoked') return refused(env, db, row, fresh.error.message, now())
     return { ok: false, code: 'not_connected', message: fresh.error.message }
   }
   const current: Credentials = fresh.value.refreshed ? { ...creds, tokens: fresh.value.tokens } : creds
@@ -93,6 +105,5 @@ export async function linkedInFor(env: StumpEnv, db: D1Database, row: AccountRow
       return { ok: true, credentials: current, client: { fetch, accessToken: refreshed.value.accessToken } }
     }
   }
-  await needsReconnect(db, env, row, 'expired', now())
-  return { ok: false, code: 'reconnect', message: 'The LinkedIn access expired. Its owner reconnects it.' }
+  return refused(env, db, row, 'The LinkedIn access expired. Its owner reconnects it.', now())
 }
