@@ -126,7 +126,8 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
     if (done) { setAdding(false); onChanged() }
   }
   const approve = (id: string) => run(() => runAction('stump.venues.members', { action: 'approve_application', idempotency_key: key(), application_id: id })).then(done => { if (done) onChanged() })
-  const gateWords = (gate: { gate: string; need: number | boolean }) => gate.gate === 'karma' ? `needs ${gate.need} karma` : gate.gate === 'account_age' ? `account needs ${gate.need} days` : gate.gate === 'approval' ? 'needs approval' : 'not a member'
+  const gateWords = (gate: { gate: string; need: number | boolean }) => gate.gate === 'karma' ? `needs ${gate.need} karma` : gate.gate === 'account_age' ? `account needs ${gate.need} days` : gate.gate === 'approval' ? 'needs approval' : 'join first'
+  const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
   const pending = members.applications.filter(application => application.state === 'applied')
   return <section className="st-card" aria-labelledby="members-title">
     <h2 className="st-panel-title" id="members-title"><Disc icon="people" />Members</h2>
@@ -135,7 +136,8 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
         <div className="st-name">{member.display_name ?? names.get(member.person_id) ?? 'Teammate'}</div>
         <div className="st-meta">{[member.handle, member.karma !== null ? `${member.karma.toLocaleString('en-US')} karma` : null, member.joined_on ? `joined ${monthYear(member.joined_on)}` : null].filter(Boolean).join(' · ')}</div>
       </div>
-      {member.eligible ? <span className="st-chip ok">Can post</span> : <span className="st-chip held">{member.unmet.map(gateWords).join(', ')}</span>}
+      {/* Able to post is the default (H16): a chip shows only what still stands in the way. */}
+      {member.eligible ? null : <span className="st-chip held">{capital(member.unmet.map(gateWords).join(', '))}</span>}
     </li>)}</ul> : <p className="st-meta">No one on the team is a member yet.</p>}
     {pending.length ? <>
       <h3 style={{ fontSize: 'var(--stump-size-body)', margin: '16px 0 4px' }}>Applied to join</h3>

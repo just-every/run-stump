@@ -32,6 +32,7 @@ From the rules, Stump works out how a post may reach the venue:
 - **Publish** from a connected account, where the venue allows it.
 - **Hand off with a draft** to a named member, where the venue keeps posting for its members.
 - **Hand off with a brief**, with the facts and no generated text, where the venue bans AI-written text.
+- **Pitch** to the editor or host, for newsletters, podcasts, publications and journalists.
 
 Text found in a thread or an imported file never changes a rule or a route.
 

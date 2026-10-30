@@ -6,15 +6,25 @@ import type { HandoffRecord } from '../model.ts'
 export type Handoff = HandoffRecord
 type Rule = { value: unknown; source_url: string | null; read_at: string | null; sourced: boolean; detail?: string | null; thread_url?: string | null }
 
-/** Where in the venue it goes: its thread, its channel, else a post. */
-export function placeOf(handoff: Handoff): string {
+/**
+ * Where in the venue it goes, in the venue's own words: its thread or channel ("weekly thread", "launch post"); else its
+ * self-promotion thread when the venue's rule keeps promotion to one; else the product's post ("Brightwell post"), so two
+ * hand-offs at one venue never read the same.
+ */
+export function placeOf(handoff: Handoff): { words: string; product: boolean } {
   const how = handoff.venue.how_to_post as Record<string, unknown>
   const text = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim() : null
-  return text(how.thread) ?? (handoff.thread_url ? 'Thread' : text(how.channel) ?? 'Post')
+  const own = text(how.thread) ?? text(how.channel)
+  if (own) return { words: own, product: false }
+  if ((handoff.rules as Record<string, Rule | null>).self_promotion?.value === 'thread') return { words: 'self-promotion thread', product: false }
+  return handoff.product_name ? { words: `${handoff.product_name} post`, product: true } : { words: handoff.thread_url ? 'thread' : 'post', product: false }
 }
 const cap = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
-export const rowTitle = (handoff: Handoff) => `${handoff.venue.name} · ${cap(placeOf(handoff))}`
-export const briefTitle = (handoff: Handoff) => `Post in: ${handoff.venue.name} ${placeOf(handoff).toLowerCase()}`
+export const rowTitle = (handoff: Handoff) => `${handoff.venue.name} · ${cap(placeOf(handoff).words)}`
+export function briefTitle(handoff: Handoff): string {
+  const place = placeOf(handoff)
+  return place.product ? `${place.words} on ${handoff.venue.name}` : `Post in: ${handoff.venue.name} ${place.words.toLowerCase()}`
+}
 
 /** Whole days from the viewer's today to the day of `at`: 0 today, 1 tomorrow, -1 yesterday. */
 function daysFrom(at: Date, now: Date): number {

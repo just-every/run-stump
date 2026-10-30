@@ -6,6 +6,7 @@ import { Outcome, PanelTitle, useLoaded, useRun, when } from '../stump/ui/kit.ts
 import type { PauseState, Resumed, Team } from '../stump/ui/types.ts'
 import { shownHandle } from '../stump/accounts/handle.ts'
 import { pauseChanged } from '../stump/ui/pause.tsx'
+import { Icon } from '../stump/ui/icons.tsx'
 
 export const Route = createFileRoute('/app/settings/publishing')({ component: PublishingPage })
 
@@ -120,7 +121,7 @@ function AppRow({ app, admin, onSaved }: { app: App; admin: boolean; onSaved(): 
       <span className="st-row-main"><span className="st-name st-handle">{app.name}</span>
         <span className="st-meta">{app.keys ? `Client ID ${app.keys.client_id}` : app.state === 'not_needed' ? 'Each person connects on the network\'s own screen' : 'The company\'s own developer app'}</span></span>
       <span className="st-state"><span className={app.state === 'not_created' ? 'st-dot off' : 'st-dot'} aria-hidden="true" />{STATE_WORDS[app.state]}</span>
-      <span className="st-chevron" aria-hidden="true">›</span>
+      <span className="st-chevron" aria-hidden="true"><Icon name="chevronRight" /></span>
     </button>
     {open ? <div className="st-pub-detail">
       <ol>{app.steps.map(step => <li key={step}>{step}</li>)}</ol>
@@ -173,7 +174,7 @@ function AccountRow({ account, slots, scope, may, busy: pausing, name, onPause, 
     <div className="st-pub-account">
       {connected ? <button className="st-row-toggle" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
         <span className="st-row-main"><span className="st-name st-handle">{shownHandle(account)}</span><span className="st-meta">{meta}</span></span>
-        <span className="st-chevron" aria-hidden="true">›</span>
+        <span className="st-chevron" aria-hidden="true"><Icon name="chevronRight" /></span>
       </button> : <div className="st-row-main"><div className="st-name st-handle">{shownHandle(account)}</div><div className="st-meta">{meta}</div></div>}
       {may ? scope
         ? <button className="st-button" type="button" disabled={pausing} onClick={onResume}>Resume</button>

@@ -46,6 +46,10 @@ export const listeningStyles = `
 .st-listen .st-check { display: flex; align-items: center; gap: var(--stump-space); font-size: var(--stump-size-body); }
 .st-listen .st-check input { width: 20px; height: 20px; margin: 0; }
 .st-listen .st-source-box { display: grid; gap: var(--stump-space); padding: calc(var(--stump-space) * 1.5) 0; border-top: 1px solid var(--stump-hairline); }
+.st-listen .st-editor-more { display: inline-flex; align-items: center; gap: 8px; justify-self: start; min-height: 44px; padding: 0; border: 0; background: none; font: 600 var(--stump-size-body)/22px var(--stump-font); color: var(--stump-ink); cursor: pointer; }
+.st-listen .st-editor-more svg { width: 20px; height: 20px; color: var(--stump-muted); transform: rotate(-90deg); transition: transform var(--stump-motion); }
+.st-listen .st-editor-more[aria-expanded="true"] svg { transform: none; }
+.st-listen .st-editor-more:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; border-radius: 6px; }
 .st-listen .st-blocked { display: flex; flex-wrap: wrap; gap: var(--stump-space); }
 .st-listen .st-blocked .st-button { min-height: 36px; padding: 4px 12px; }
 .st-listen .st-listen-none { color: var(--stump-muted); padding: calc(var(--stump-space) * 3) 0; margin: 0; }

@@ -2,6 +2,8 @@
 // only from the app's tokens in src/stump/ui/styles.ts; it adds no colours.
 export const inboxStyles = `
 .st-inbox { max-width: 1120px; }
+/* Reply stays the row's ink primary while the field is empty: ink at 40 %, never the grey fill (hierarchy rule). */
+.st-inbox .st-inbox-actions .st-button.primary:disabled, .st-inbox .st-inbox-actions .st-button.primary:disabled:hover { opacity: .4; background: var(--stump-ink); border-color: var(--stump-ink); color: var(--stump-white); }
 .st-inbox .st-inbox-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -16px 0 24px; }
 .st-inbox .st-inbox-bar .st-meta { margin-right: auto; }
 .st-inbox .st-inbox-bar .st-button { margin-left: auto; }

@@ -7,6 +7,7 @@ import { NETWORK_OPTIONS, ROUTE_WORDS, STATE_WORDS, networkName } from '../stump
 import { me, runAction } from '../stump/ui/api.ts'
 import { Chip, Empty, Outcome, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
 import type { Team } from '../stump/ui/types.ts'
+import { Icon } from '../stump/ui/icons.tsx'
 
 export const Route = createFileRoute('/app/ledger')({ component: LedgerPage })
 
@@ -58,7 +59,7 @@ function LedgerPage() {
       {none ? <Empty title="Nothing on the ledger yet" actions={writer ? <a className="st-button primary" href="/app/compose">Write a post</a> : undefined}>
         Every post appears here the moment it goes out or a member posts it by hand.</Empty> : null}
       {data && !none ? <div className="st-bar" role="search">
-        <input className="st-search" type="search" aria-label="Search ledger" placeholder="Search ledger…" value={typed} onChange={event => setTyped(event.target.value)} />
+        <div className="st-search-field"><Icon name="search" /><input className="st-search" type="search" aria-label="Search ledger" placeholder="Search ledger…" value={typed} onChange={event => setTyped(event.target.value)} /></div>
         <button className="st-button" type="button" aria-expanded={showFilters} onClick={() => setShowFilters(shown => !shown)}>Filters{applied.filter(([field]) => field !== 'q').length ? ` (${applied.filter(([field]) => field !== 'q').length})` : ''}</button>
         <button className="st-button primary" type="button" disabled={busy || !data?.total} onClick={() => void exportCsv()}>Export CSV</button>
       </div> : null}
@@ -85,7 +86,7 @@ function LedgerPage() {
       <Outcome message={message} />
       {data && !none ? <p className="st-meta" role="status">{data.total} {data.total === 1 ? 'entry' : 'entries'}</p> : null}
       {data && !none && !data.items.length ? <p>No entries match these filters.</p> : null}
-      {data?.items.length ? <table className="st-table">
+      {data?.items.length ? <div className="st-table-panel"><table className="st-table">
         <thead><tr><th scope="col">When</th><th scope="col">Where</th><th scope="col">Who</th><th scope="col">Route</th><th scope="col">State</th><th scope="col">Link</th></tr></thead>
         <tbody>{data.items.map(entry => {
           const open = openId === entry.id, at = entry.posted_at
@@ -112,7 +113,7 @@ function LedgerPage() {
             {open ? <tr className="detail-row" id={`entry-${entry.id}`}><td colSpan={7}><Detail entry={entry} mayCorrect={mayCorrect} admin={admin} person={person} onChange={() => void refresh()} /></td></tr> : null}
           </Fragment>
         })}</tbody>
-      </table> : null}
+      </table></div> : null}
       {data && data.items.length < data.total ? <div className="st-show-more"><button className="st-button" type="button" onClick={() => setLimit(current => current + STEP)}>Show more</button></div> : null}
     </section>
   </HydrationUnit>

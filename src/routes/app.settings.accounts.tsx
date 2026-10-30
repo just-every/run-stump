@@ -5,6 +5,7 @@ import { me, runAction } from '../stump/ui/api.ts'
 import { Outcome, useLoaded, useRun } from '../stump/ui/kit.tsx'
 import { shownHandle } from '../stump/accounts/handle.ts'
 import type { Team } from '../stump/ui/types.ts'
+import { Icon } from '../stump/ui/icons.tsx'
 
 export const Route = createFileRoute('/app/settings/accounts')({ component: AccountsPage })
 
@@ -51,7 +52,7 @@ function AccountsPage() {
   const accounts = data?.accounts.items ?? []
   const showForm = connecting || (data !== null && !accounts.length && !viewer)
   return <HydrationUnit>
-    <section className="st-page" aria-labelledby="accounts-title">
+    <section className="st-page st-accounts" aria-labelledby="accounts-title">
       <h1 id="accounts-title" className="st-sr">Accounts</h1>
       {error ? <p className="st-error">{error}</p> : null}
       {note ? <p className="st-note" role="status">{note}</p> : null}
@@ -101,7 +102,7 @@ function AccountRow({ account, owner, connectedBy, open, mine, onToggle, onChang
         <span className="st-meta">{NAMES[account.network] ?? account.network} · {owner}</span>
       </span>
       <span className="st-state"><span className={state.dot} aria-hidden="true" />{state.text}</span>
-      <span className="st-chevron" aria-hidden="true">›</span>
+      <span className="st-chevron" aria-hidden="true"><Icon name="chevronRight" /></span>
     </button>
     {open ? <div className="st-panel">
       {account.state === 'expired' ? <p className="st-note">{account.state_reason ?? 'The network refused its access.'} Posts queued on it hold until it is reconnected.</p> : null}

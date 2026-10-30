@@ -69,3 +69,10 @@ export function stumpAgentDoor(original: StumpEnv) {
 }
 
 export const AGENT_PATHS = (path: string) => path === '/mcp' || path === '/agents' || path.startsWith('/agents/') || path === '/api/rer/agent-policy' || path.startsWith('/.well-known/oauth-protected-resource')
+
+/** One path scheme (U17): Base's /agents dashboard is Settings · Agents in the app; its approval pages and doors stay at /agents/... */
+export function agentsPageRedirect(request: Request): Response | null {
+  const url = new URL(request.url)
+  if ((url.pathname !== '/agents' && url.pathname !== '/agents/') || !['GET', 'HEAD'].includes(request.method)) return null
+  return new Response(null, { status: 302, headers: { location: '/app/settings/agents', 'cache-control': 'no-store' } })
+}

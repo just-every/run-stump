@@ -58,25 +58,25 @@ export interface HeldRow { key: string; name: string; meta: string; thread: { wo
 const FORMAT: Record<string, string> = { post: 'Post', thread: 'Thread', reply: 'Reply', pitch: 'Pitch' }
 const blockingOf = (item: ItemRecord) => (item.flags as Flag[]).filter(flag => flag.blocking)
 
-/** An item aimed at a venue or a recipient, in a few words: "Reply on Indie Hackers", "Pitch to Healthcare Dive". */
-function placedName(item: ItemRecord, venues: Map<string, string>): string | null {
+/**
+ * An item aimed at a venue or a recipient, in a few words: "Reply on Indie Hackers", "Pitch to Healthcare Dive". A standalone
+ * post is named by its own product ("Brightwell Rooms post"), else its opening words, never by the venue, so it never reads as that venue's hand-off;
+ * the meta line says where it is aimed and why it holds.
+ */
+function placedName(item: ItemRecord, venues: Map<string, string>, products: Map<string, string>): string | null {
   const format = FORMAT[String(item.format)] ?? 'Draft'
   const venue = item.venue_id ? venues.get(String(item.venue_id)) : null
+  if (venue && item.format === 'post') { const product = item.product_id ? products.get(String(item.product_id)) : null; return product ? `${product} post` : openingWords(String(item.text ?? (item.parts as string[] | null)?.[0] ?? '')) }
   if (venue) return `${format} on ${venue}`
   if (item.format === 'pitch') { const to = (item.recipient as { name?: string } | null)?.name; return to ? `Pitch to ${to}` : 'Pitch' }
   return null
 }
 
-/** A post with no master, named by its opening words: its first sentence, or the words that fit, with "…" where more follows. */
-export function openingWords(text: string, max = 48): string {
-  const full = text.replace(/\s+/g, ' ').trim()
-  const clean = full.replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim()
+/** A post with no master, named by its opening words: its first sentence, links left out. The row cuts it to one line itself. */
+export function openingWords(text: string): string {
+  const clean = text.replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim()
   if (!clean) return 'Untitled draft'
-  const sentence = /^.+?[.!?](?=\s|$)/.exec(clean)?.[0]
-  let head = sentence && sentence.length <= max + 12 ? sentence : clean.slice(0, max)
-  if (head !== sentence && head.length < clean.length) { const space = head.lastIndexOf(' '); if (space > max / 2) head = head.slice(0, space) }
-  // Anything after the opening words, a link included, shows as "…".
-  return head === full ? head : `${head.replace(/[\s.,;:!?–—-]+$/, '')}…`
+  return /^.+?[.!?](?=\s|$)/.exec(clean)?.[0] ?? clean
 }
 
 /** "X variant", "X and Mastodon variants", "Bluesky, X and Mastodon variants", in Compose's order of networks. */
@@ -94,7 +94,7 @@ const variantsName = (networks: string[]) => {
  * hand-off is the hand-off's, so only a held hand-off shows here, with its own
  * hold. The person's own come first, then the most recently changed.
  */
-export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string, venues: Map<string, string>, accounts: Map<string, Account>): HeldRow[] {
+export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string, venues: Map<string, string>, accounts: Map<string, Account>, products: Map<string, string> = new Map()): HeldRow[] {
   const handedOff = new Set(queue.flatMap(handoff => handoff.item_id ? [handoff.item_id] : []))
   const names = new Map(venues)
   for (const handoff of queue) names.set(handoff.venue_id, handoff.venue.name)
@@ -116,7 +116,7 @@ export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string
       : { label: over ? 'Edit variant' : 'Open draft', to: { kind: 'compose' as const, ...draft } }
     const thread = flag && typeof flag.thread_url === 'string' && typeof flag.where === 'string' && reason.includes(flag.where) ? { words: flag.where, url: flag.thread_url } : null
     const mine = item.person_id === personId, changed = at(item.updated_at)
-    const placed = placedName(item, names)
+    const placed = placedName(item, names, products)
     if (master && !placed) {
       // One row per problem the master's variants share; a limit is each variant's own.
       const key = `master:${master}:${over ? `over:${item.id}` : reason}`

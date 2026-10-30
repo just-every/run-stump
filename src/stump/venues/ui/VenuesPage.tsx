@@ -2,6 +2,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
+import { Icon } from '../../ui/icons.tsx'
 import { Empty, useLoaded } from '../../ui/kit.tsx'
 import { KIND_FIELDS, STATUS_LABELS } from '../kinds.ts'
 import { ImportPanel } from './ImportPanel.tsx'
@@ -43,7 +44,7 @@ export function VenuesPage() {
   const changed = () => { void refresh() }
 
   return <HydrationUnit>
-    <section className="st-page" aria-labelledby="venues-title" style={{ maxWidth: 1120 }}>
+    <section className="st-page st-venues" aria-labelledby="venues-title" style={{ maxWidth: 1120 }}>
       <h1 id="venues-title">Venues</h1>
       {empty ? null : <p className="st-sub">Find and manage the best places to tell your story.</p>}
       {error ? <p className="st-error" role="alert">{error}</p> : null}
@@ -54,7 +55,7 @@ export function VenuesPage() {
         </> : undefined}>Communities, newsletters, podcasts and journalists worth showing up in.</Empty>
       </div> : <>
         <div className="st-toolbar" role="search">
-          <div className="st-grow"><input className="st-search" type="search" aria-label="Search venues" placeholder="Search venues…" value={query} onChange={event => setQuery(event.target.value)} /></div>
+          <div className="st-grow st-search-field"><Icon name="search" /><input className="st-search" type="search" aria-label="Search venues" placeholder="Search venues…" value={query} onChange={event => setQuery(event.target.value)} /></div>
           <button className="st-button pill outline" type="button" aria-expanded={panel === 'filters'} onClick={() => setPanel(panel === 'filters' ? 'none' : 'filters')}>Filters{applied.length ? ` (${applied.length})` : ''}</button>
           {editor ? <button className="st-button primary pill st-end" type="button" onClick={() => setPanel('add')}>+ Add venue</button> : null}
         </div>
@@ -75,10 +76,10 @@ export function VenuesPage() {
       </>}
       {panel === 'add' ? <VenueForm onDone={venue => { setPanel('none'); void navigate({ to: '/app/venues/$venueId', params: { venueId: venue.id } }) }} onCancel={() => setPanel('none')} onImport={owner ? () => setPanel('import') : undefined} /> : null}
       {panel === 'import' ? <ImportPanel onChanged={changed} onClose={() => setPanel('none')} /> : null}
-      {data && !empty ? data.list.items.length ? <table className="st-table st-linked">
+      {data && !empty ? data.list.items.length ? <div className="st-table-panel"><table className="st-table st-linked">
         <thead><tr><th>Venue</th><th className="st-cell">Kind</th><th className="st-cell">Status</th><th className="st-cell">Route</th><th className="st-cell">Next open</th></tr></thead>
         <tbody>{data.list.items.map(venue => <Row key={venue.id} venue={venue} open={() => void navigate({ to: '/app/venues/$venueId', params: { venueId: venue.id } })} />)}</tbody>
-      </table> : <p className="st-note">No venues match.</p> : null}
+      </table></div> : <p className="st-note">No venues match.</p> : null}
       {data && !empty ? <p className="st-note">{data.list.total} {data.list.total === 1 ? 'venue' : 'venues'}{owner && panel !== 'import' ? <> · <button className="st-value" type="button" style={{ minHeight: 0, padding: 0, color: 'inherit' }} onClick={() => setPanel('import')}>Import a venue list</button></> : null}</p> : null}
     </section>
   </HydrationUnit>

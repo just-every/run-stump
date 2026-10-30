@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { runAction } from '../../ui/api.ts'
-import { Disc, Outcome, Tip, pageName, useRun } from '../../ui/kit.tsx'
+import { Disc, Outcome, pageName, useRun } from '../../ui/kit.tsx'
 import { readOn } from './labels.ts'
 import type { Rule, RuleKey, Venue } from './types.ts'
 
@@ -43,14 +43,18 @@ export function RulesCard({ venue, editor, onSaved }: { venue: Venue; editor: bo
     <h2 className="st-panel-title" id="rules-title"><Disc icon="list" />Rules</h2>
     {KEYS.map(name => {
       const rule = venue.rules[name]
+      // A self-promotion thread reads as one link to it ("weekly thread ↗"); its label then opens the rule's editor.
+      const thread = name === 'self_promotion' && rule?.thread_url ? rule.thread_url : null
+      const toggle = () => setEditing(editing === name ? null : name)
       return <div key={name}>
         <div className="st-rule">
-          <span className="st-rule-label">{LABELS[name]}</span>
+          {editor && thread ? <button className="st-value st-rule-label" type="button" aria-expanded={editing === name} onClick={toggle}>{LABELS[name]}</button>
+            : <span className="st-rule-label">{LABELS[name]}</span>}
           {/* A thread address is long: it wraps inside the card rather than widening the page. */}
           <span className="st-rule-value">
-            {editor ? <button className="st-value" type="button" aria-expanded={editing === name} onClick={() => setEditing(editing === name ? null : name)}>{ruleWords(name, rule)}</button>
+            {thread ? <a className="st-rule-thread" href={thread} target="_blank" rel="noreferrer noopener">{ruleWords(name, rule)} ↗</a>
+              : editor ? <button className="st-value" type="button" aria-expanded={editing === name} onClick={toggle}>{ruleWords(name, rule)}</button>
               : <span>{ruleWords(name, rule)}</span>}
-            {name === 'self_promotion' && rule?.thread_url ? <Tip label="Open the thread"><a className="st-rule-thread" href={rule.thread_url} target="_blank" rel="noreferrer noopener" aria-label="Open the thread">↗</a></Tip> : null}
           </span>
           <span className="st-rule-source">{rule ? rule.sourced
             ? <><a href={rule.source_url!} target="_blank" rel="noreferrer noopener">{pageName(rule.source_url!)} ↗</a> · read {readOn(rule.read_at)}</>
