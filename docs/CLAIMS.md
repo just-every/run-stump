@@ -9,7 +9,7 @@ A product claim is done when every clause behind it is done, missing when every 
 | 1 | Know every place worth showing up, and what each one allows. | `STUMP-VENUE-001` partial; `STUMP-VENUE-002` partial | partial |
 | 2 | Your release notes become posts in your own voice. | `STUMP-DRAFT-002` partial; `STUMP-BRAND-002` partial; `STUMP-LOOP-001` missing | partial |
 | 3 | Post to X, Bluesky, Mastodon, LinkedIn and Threads from one calendar. | `STUMP-PUBLISH-002` missing; `STUMP-PUBLISH-003` missing; `STUMP-PUBLISH-004` partial; `STUMP-PUBLISH-005` missing; `STUMP-PUBLISH-007` missing; `STUMP-PLAN-001` missing | partial |
-| 4 | Where a community wants a real member, the post goes to the person who belongs there. | `STUMP-HANDOFF-001` missing; `STUMP-HANDOFF-002` missing | missing |
+| 4 | Where a community wants a real member, the post goes to the person who belongs there. | `STUMP-HANDOFF-001` partial; `STUMP-HANDOFF-002` partial | partial |
 | 5 | Every post, reply and pitch is on the record, with its link and who wrote it. | `STUMP-LEDGER-001` partial; `STUMP-LEDGER-002` partial | partial |
 | 6 | Find the threads worth answering on Hacker News, Bluesky, Mastodon and the feeds you follow. | `STUMP-WATCH-001` partial; `STUMP-WATCH-002` done; `STUMP-WATCH-003` partial; `STUMP-WATCH-005` partial | partial |
 | 7 | See which posts brought signups. | `STUMP-LINK-001` partial; `STUMP-LINK-003` missing; `STUMP-STACK-007` missing; `STUMP-LOOP-003` missing | partial |
@@ -21,4 +21,4 @@ A product claim is done when every clause behind it is done, missing when every 
 | 13 | Bring your Buffer, Typefully, Hootsuite or Postiz history with you. | `STUMP-IMPORT-001` missing; `STUMP-IMPORT-002` missing; `STUMP-IMPORT-003` missing; `STUMP-IMPORT-004` missing | missing |
 | 14 | Take your whole record with you, any time. | `STUMP-DATA-001` missing | missing |
 
-Claims: 14; 0 done, 10 partial, 4 missing.
+Claims: 14; 0 done, 11 partial, 3 missing.
