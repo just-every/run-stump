@@ -87,8 +87,8 @@ test('switching from Buffer: a dry run, sent posts to the ledger, schedules to s
   assert.deepEqual((await act('stump.calendar.plan', { action: 'slots', account_id: account.id })).slots, [])
 })
 
-test('erasing an engager removes them from findings and offers, and asks for each company post naming them to be deleted; a legal hold keeps its entry', async () => {
-  await app.owner()
+test('erasing a person: an engager leaves findings and offers, a journalist their record and route while pitches keep an anonymised reference, each company post naming them is asked to be deleted, and a legal hold keeps its entry', async () => {
+  const owner = await app.owner()
   const watch = await act('stump.watches.manage', { action: 'create', name: 'Synthwell', terms: { any: ['synthwell'] }, sources: [{ kind: 'hn' }] })
   const findings = async () => (await act('stump.findings.work', { action: 'list', watch_id: watch.id })).items.map(finding => finding.author).sort()
   assert.deepEqual(await findings(), ['synthetic-alice', 'synthetic-bob'])
@@ -111,4 +111,13 @@ test('erasing an engager removes them from findings and offers, and asks for eac
   assert.deepEqual((await act('stump.stack.send', { action: 'offers' })).items, [])
   const kept = (await act('stump.ledger.search', { action: 'get', entry_id: held.id })).entry
   assert.deepEqual([kept.text, kept.legal_hold.reason], [held.text, 'Dispute on file'])
+
+  const contact = await act('stump.press.contacts', { action: 'create', kind: 'journalist', name: 'Jordan Reed', contact_route: { kind: 'email', value: 'synthetic-stump-reporter@example.com', source_url: 'https://example.com/staff', read_at: '2026-10-30' } })
+  const pitch = await act('stump.drafts.write', { action: 'create', format: 'pitch', person_id: owner.id, recipient: { contact_id: contact.id }, subject: 'For Jordan Reed', text: 'Hi Jordan Reed, recurring bookings shipped today.' })
+  const journalist = await act('stump.data.erase', { action: 'erase', subject: { kind: 'journalist', contact_id: contact.id } })
+  assert.equal(journalist.removed.press_contacts, 1)
+  assert.equal((await app.action('owner', 'stump.press.contacts', { action: 'get', contact_id: contact.id })).body.code, 'not_found')
+  const anonymised = await act('stump.drafts.revise', { action: 'get', item_id: pitch.id })
+  assert.match(anonymised.recipient.erased, /^erasure:/)
+  assert.ok(!JSON.stringify(anonymised).includes('Jordan Reed'), 'the pitch keeps no trace of the name')
 })

@@ -20,6 +20,7 @@ import { Route as AppSettingsAccountsRouteImport } from './routes/app.settings.a
 import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
 import { Route as AppSettingsBrandRouteImport } from './routes/app.settings.brand'
 import { Route as AppSettingsConnectionsRouteImport } from './routes/app.settings.connections'
+import { Route as AppSettingsImportRouteImport } from './routes/app.settings.import'
 import { Route as AppSettingsPublishingRouteImport } from './routes/app.settings.publishing'
 import { Route as AppSettingsTeamRouteImport } from './routes/app.settings.team'
 import { Route as AppVenuesIndexRouteImport } from './routes/app.venues.index'
@@ -81,6 +82,11 @@ const AppSettingsConnectionsRoute = AppSettingsConnectionsRouteImport.update({
   path: '/settings/connections',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsImportRoute = AppSettingsImportRouteImport.update({
+  id: '/settings/import',
+  path: '/settings/import',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsPublishingRoute = AppSettingsPublishingRouteImport.update({
   id: '/settings/publishing',
   path: '/settings/publishing',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/connections': typeof AppSettingsConnectionsRoute
+  '/app/settings/import': typeof AppSettingsImportRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/connections': typeof AppSettingsConnectionsRoute
+  '/app/settings/import': typeof AppSettingsImportRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/connections': typeof AppSettingsConnectionsRoute
+  '/app/settings/import': typeof AppSettingsImportRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/app/settings/agents'
     | '/app/settings/brand'
     | '/app/settings/connections'
+    | '/app/settings/import'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/app/venues/$venueId'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/app/settings/agents'
     | '/app/settings/brand'
     | '/app/settings/connections'
+    | '/app/settings/import'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/app/venues/$venueId'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/app/settings/agents'
     | '/app/settings/brand'
     | '/app/settings/connections'
+    | '/app/settings/import'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/app/venues/$venueId'
@@ -302,6 +314,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsConnectionsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/settings/import': {
+      id: '/app/settings/import'
+      path: '/settings/import'
+      fullPath: '/app/settings/import'
+      preLoaderRoute: typeof AppSettingsImportRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/settings/publishing': {
       id: '/app/settings/publishing'
       path: '/settings/publishing'
@@ -351,6 +370,7 @@ interface AppRouteChildren {
   AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
   AppSettingsBrandRoute: typeof AppSettingsBrandRoute
   AppSettingsConnectionsRoute: typeof AppSettingsConnectionsRoute
+  AppSettingsImportRoute: typeof AppSettingsImportRoute
   AppSettingsPublishingRoute: typeof AppSettingsPublishingRoute
   AppSettingsTeamRoute: typeof AppSettingsTeamRoute
   AppVenuesVenueIdRoute: typeof AppVenuesVenueIdRoute
@@ -368,6 +388,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsAgentsRoute: AppSettingsAgentsRoute,
   AppSettingsBrandRoute: AppSettingsBrandRoute,
   AppSettingsConnectionsRoute: AppSettingsConnectionsRoute,
+  AppSettingsImportRoute: AppSettingsImportRoute,
   AppSettingsPublishingRoute: AppSettingsPublishingRoute,
   AppSettingsTeamRoute: AppSettingsTeamRoute,
   AppVenuesVenueIdRoute: AppVenuesVenueIdRoute,

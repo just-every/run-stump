@@ -174,6 +174,8 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-spaced { margin-top: calc(var(--stump-space) * 1.5); }
 .st-field.st-check { flex-direction: row; align-items: center; gap: var(--stump-space); color: var(--stump-text); }
 .st-field.st-check input { min-height: 0; }
+/* Settings · Import: the confirmation is a checkbox beside its words, at every width. */
+.st-buffer .st-field.st-check input { width: auto; flex: none; }
 .st-days { display: flex; flex-wrap: wrap; gap: 4px; }
 .st-days label { display: inline-flex; align-items: center; gap: 4px; font-size: var(--stump-size-small); color: var(--stump-text); min-height: 32px; padding: 0 8px; background: var(--stump-sunk); border-radius: 8px; }
 .st-note, .st-error { margin: 4px 0 0; }
