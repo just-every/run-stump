@@ -9,7 +9,8 @@ const sentence = (length = 14) => Array.from({ length }, () => WORDS[randomInt(W
 // alert destinations and the company's X app keys derived at run time, so no
 // secret-shaped value is a literal; posts unlike any earlier round's, so no
 // round's post reads as a near-duplicate of the last, a master text over X's
-// 280 so its X variant holds with its flag, and a time ten days out.
+// 280 so its X variant holds with its flag, a reply unlike any earlier round's,
+// and a time ten days out.
 export default async function prepare() {
   const id = randomUUID()
   return { values: {
@@ -23,6 +24,7 @@ export default async function prepare() {
     xClientSecret: randomUUID().replaceAll('-', ''),
     xPost: `${sentence()} https://example.com/changelog`,
     xLong: sentence(60),
+    xReply: `${sentence(10)} every week`,
     scheduleAt: new Date(Date.now() + 10 * 86_400_000).toISOString(),
   } }
 }

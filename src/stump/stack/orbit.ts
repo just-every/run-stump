@@ -10,6 +10,8 @@ export interface EngagerOffer {
   post_url: string
   engagement: string | null
   public_email: string | null
+  /** The network's own id for the person, when the network gives one. */
+  network_user_id?: string | null
   occurred_at: number
 }
 
@@ -28,8 +30,10 @@ const hex = (bytes: ArrayBuffer) => Array.from(new Uint8Array(bytes), byte => by
 /**
  * The social-engagement signal for an engager. Only what is public goes: the handle,
  * the post link and, when the person shows one on their own profile, their email. The
- * identity basis is the same for the same person every time, and the event id is the
- * offer's, so a resend of one offer is a replay in Orbit and never a second signal.
+ * identity basis is the same for the same person every time: the network's own id for
+ * them where the network gives one (it outlives a handle change), else their handle.
+ * The event id is the offer's, so a resend of one offer is a replay in Orbit and never
+ * a second signal.
  */
 export function engagerEvent(sourceId: string, offer: EngagerOffer): SignalEvent {
   const handle = offer.handle.trim(), network = offer.network.trim().toLowerCase()
@@ -39,7 +43,7 @@ export function engagerEvent(sourceId: string, offer: EngagerOffer): SignalEvent
     subject: `${offer.display_name ? `${offer.display_name} (${handle})` : handle} engaged on ${network}`.slice(0, 2000),
     occurredAt: new Date(offer.occurred_at).toISOString(),
     ...(offer.public_email ? { email: offer.public_email } : {}),
-    identityBasis: `stump:engager:${network}:${handle.toLowerCase()}`,
+    identityBasis: offer.network_user_id ? `stump:engager:${network}:id:${offer.network_user_id}` : `stump:engager:${network}:${handle.toLowerCase()}`,
     data: { network, handle, post_url: offer.post_url, ...(offer.engagement ? { engagement: offer.engagement } : {}), ...(offer.display_name ? { display_name: offer.display_name } : {}) },
   }
 }

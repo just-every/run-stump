@@ -16,6 +16,7 @@ and are never edited in place.
 | `accounts/` | Connected accounts and the company's network apps: consent, sealed credentials (`seal.ts`), refresh and disconnect. |
 | `ledger/` | Reading, searching, correcting and exporting ledger entries (`query.ts`, `correct.ts`, `csv.ts`); `record.ts` is the one writer of `stump_ledger` and `stump_ledger_versions`. |
 | `links/` | The company's link rules and `tagOwnLinks`, the one function that puts UTM tags on its own links. |
+| `inbox/` | The inbox: reading a connected X account's mentions and replies once each at the company's read price (`poll.ts`), the records both doors answer (`store.ts`), and replies to people who engaged first through drafting, the publisher and the ledger (`reply.ts`). |
 | `stack/` | Connections to Orbit and Vane (secrets sealed), offers, signed sends, and `annotateLedgerEntry` for the posting path. |
 | `net/` | `stumpFetch`, the one outbound fetch every network call uses. |
 | `watches/` | Watches: source polling with per-source state, screening (with the company's one author block list, `blocks.ts`) and ranking reads of findings, immediate alerts to Slack and a signed webhook with replay (credentials sealed in `seal.ts`), and the scheduled event's `pollDueWatches`. |

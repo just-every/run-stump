@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppComposeRouteImport } from './routes/app.compose'
+import { Route as AppInboxRouteImport } from './routes/app.inbox'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
 import { Route as AppListeningRouteImport } from './routes/app.listening'
 import { Route as AppPauseRouteImport } from './routes/app.pause'
@@ -39,6 +40,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppComposeRoute = AppComposeRouteImport.update({
   id: '/compose',
   path: '/compose',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInboxRoute = AppInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLedgerRoute = AppLedgerRouteImport.update({
@@ -111,6 +117,7 @@ const OauthBlueskyClientMetadataDotjsonRoute =
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/app/compose': typeof AppComposeRoute
+  '/app/inbox': typeof AppInboxRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/pause': typeof AppPauseRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/app/compose': typeof AppComposeRoute
+  '/app/inbox': typeof AppInboxRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/pause': typeof AppPauseRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/app': typeof AppRouteWithChildren
   '/app/compose': typeof AppComposeRoute
+  '/app/inbox': typeof AppInboxRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/pause': typeof AppPauseRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/app'
     | '/app/compose'
+    | '/app/inbox'
     | '/app/ledger'
     | '/app/listening'
     | '/app/pause'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/app/compose'
+    | '/app/inbox'
     | '/app/ledger'
     | '/app/listening'
     | '/app/pause'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/app'
     | '/app/compose'
+    | '/app/inbox'
     | '/app/ledger'
     | '/app/listening'
     | '/app/pause'
@@ -244,6 +256,13 @@ declare module '@tanstack/react-router' {
       path: '/compose'
       fullPath: '/app/compose'
       preLoaderRoute: typeof AppComposeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/inbox': {
+      id: '/app/inbox'
+      path: '/inbox'
+      fullPath: '/app/inbox'
+      preLoaderRoute: typeof AppInboxRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/ledger': {
@@ -342,6 +361,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppComposeRoute: typeof AppComposeRoute
+  AppInboxRoute: typeof AppInboxRoute
   AppLedgerRoute: typeof AppLedgerRoute
   AppListeningRoute: typeof AppListeningRoute
   AppPauseRoute: typeof AppPauseRoute
@@ -359,6 +379,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppComposeRoute: AppComposeRoute,
+  AppInboxRoute: AppInboxRoute,
   AppLedgerRoute: AppLedgerRoute,
   AppListeningRoute: AppListeningRoute,
   AppPauseRoute: AppPauseRoute,
