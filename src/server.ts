@@ -11,6 +11,7 @@ import { authResponse, businessSettings, operatorAuth, runtimeBindings, type Bin
 import { identity } from './identity'
 import { AGENT_PATHS, stumpAgentDoor } from './stump/agent-door/index.ts'
 import { appDocumentGate } from './stump/http/app-gate.ts'
+import { importDoorResponse } from './stump/imports/door.ts'
 import { personDoorResponse } from './stump/http/routes.ts'
 import { publishDue } from './stump/publish/tick.ts'
 
@@ -38,6 +39,9 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
       const agent = await stumpAgentDoor(env).handle(request)
       if (agent) return rejectedResponse(request, agent)
     }
+    // The owner's import door: venue lists today (src/stump/imports/door.ts).
+    const imported = await importDoorResponse(request, env)
+    if (imported) return rejectedResponse(request, imported)
     if (['/api/rer/business-settings', '/rer-business-logo', '/rer-business.css'].includes(path)) {
       const settings = await businessSettings(runtimeBindings(env)).handle(request)
       if (settings) return rejectedResponse(request, settings)
