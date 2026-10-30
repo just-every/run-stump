@@ -8,10 +8,10 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 0 | 19 | 125 | 144 |
-| Agent surface | 0 | 17 | 11 | 28 |
+| Core | 0 | 21 | 123 | 144 |
+| Agent surface | 0 | 18 | 10 | 28 |
 | Later | 0 | 0 | 8 | 8 |
-| Full target | 0 | 36 | 144 | 180 |
+| Full target | 0 | 39 | 141 | 180 |
 
 Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c9a` (30 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
@@ -164,7 +164,7 @@ Core · published · **missing** · From new
 
 #### STUMP-LEDGER-001 — Every post and reply on the record
 
-Core · published · **missing** · From new · Cites BASE-AUDIT-001 · Rules D-5 · Register R-8
+Core · published · **partial** · From new · Cites BASE-AUDIT-001 · Rules D-5 · Register R-8
 
 **Requirement.** The ledger is the company's record of everything that went out in its name or about its products from its people: posts, threads, replies, articles, pitches, launch posts, directory listings and hand-off posts. Each entry holds the URL and network id, the venue, the account, the person, the agent that drafted or published it shown as "<agent> for <person>", the exact text and media as posted, the disclosure line, the claims it used, the product and campaign, the route (published, handed off, or sent through a connected tool such as Orbit or Mango), the time, and its state: posted, failed, uncertain, deleted or removed by the venue. Entries are append-only; a correction adds a version.
 
@@ -176,8 +176,8 @@ Core · published · **missing** · From new · Cites BASE-AUDIT-001 · Rules D-
 5. A post later removed by a venue's moderators is marked removed with the reason and stays on the record.
 6. An item an agent drafted or published reads "<agent> for <person>" in the ledger and in its export.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"
+**Gap.** Points 2 and 6 are asserted for a published X post: the entry's text equals the text read back, it reads "<agent> for <person>" with its URL, charge, route and network confirmation (`src/stump/ledger/record.ts`). Failed and uncertain entries (.4) are written and not yet asserted in a repo test; hand-offs (.1), corrections (.3), removals (.5) and export belong to later work and the ledger-stack lane.
 
 #### STUMP-LEDGER-002 — Ledger search and history
 
@@ -409,7 +409,7 @@ Core · published · **missing** · From new · Rules D-4, D-5 · Register R-6
 
 #### STUMP-PUBLISH-004 — X posts and threads
 
-Core · published · **missing** · From new · Rules D-4, D-5 · Register R-1
+Core · published · **partial** · From new · Rules D-4, D-5 · Register R-1
 
 **Requirement.** Stump publishes to a connected X account through the company's own X developer app on pay-per-use pricing: posts within the account's weighted limit, media with alt text, video, polls, quote posts, and threads as reply chains. Before each publish it shows the charge from the company's price table (`docs/networks.md`, which the company can update) and records it on the ledger entry. The connection records whether the account carries X's Automated label with its operator named in the bio, which D-4 enforces for agent-initiated publishing.
 
@@ -423,8 +423,8 @@ Core · published · **missing** · From new · Rules D-4, D-5 · Register R-1
 7. An agent's publish to an account without a recorded Automated label and operator bio returns `act_refused` naming X's rule, and the same post from a person's own composer publishes.
 8. Once the label and bio are recorded, the agent's publish goes to the company's policy like any call.
 
-**Evidence.** None.
-**Gap.** Built: `src/stump/publish/x.ts` publishes posts, threads, polls and media through the company's app, charges each call from the price table, holds exhausted credits and rate limits, and refuses an agent's publish without the Automated label. The proving test needs drafted items, which `stump.drafts.write` creates.
+**Evidence.** `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `agent-surface.json` journey (stump shard of `verification.json`) steps label-x and x-schedule
+**Gap.** Points 1, 2 (the URL-post charge recorded) and 8 are asserted: an agent's post goes out once through the company's app, reads back with X's id and URL, and goes to the company's policy once the label is recorded. Points 3 to 7 are built in `src/stump/publish/x.ts` (weighted limit, partly posted threads and resume, held credits and rate limits, polls and media with alt text, the Automated label refusal) and not yet asserted in a repo test.
 
 #### STUMP-PUBLISH-005 — LinkedIn member posts
 
@@ -510,7 +510,7 @@ Core · published · **missing** · From new · Cites BASE-OPS-003, BASE-OPS-004
 7. An edit carrying a stale expected revision, from a person or an agent, while the publisher fires is refused with the current revision, and the scheduled revision is unchanged and posts once.
 
 **Evidence.** None.
-**Gap.** Built: `src/stump/publish/schedule.ts` and `src/stump/publish/tick.ts` schedule in the account's time zone, claim the exact revision once, read back before posted, and hold lost answers as uncertain with an owner. The proving test needs drafted items, which `stump.drafts.write` creates.
+**Gap.** Built: `src/stump/publish/schedule.ts` and `src/stump/publish/tick.ts` schedule in the account's time zone, claim the exact revision once, read back before posted, and hold lost answers as uncertain with an owner. None of points 1 to 7 is asserted in a repo test yet.
 
 #### STUMP-CONNECT-002 — The company's own network apps
 
@@ -611,8 +611,8 @@ Core · published · **partial** · From new · Rules D-3
 6. A variant that fails a check holds with its flag, and the other variants are scheduled.
 7. Each variant reads back from its network with the text its preview showed.
 
-**Evidence.** `agent-surface.json` journey (stump shard of `verification.json`)
-**Gap.** The master post opens one variant item per account with master_id, counts and flags each on its own network, follows the master unless edited (differs_from_master), and previews every variant. Not in a repo test yet; scheduling every variant with one action (.5-.7) belongs to the publishing lane.
+**Evidence.** `agent-surface.json` journey (stump shard of `verification.json`) steps x-master and x-master-schedule
+**Gap.** The master post opens one variant item per account with master_id, counts and flags each on its own network, follows the master unless edited (differs_from_master), and previews every variant. One schedule_master action schedules every passing variant and holds a flagged one with its flag; the journey holds an X variant over its limit alone (.6, one variant). Not in a repo test yet; .5 and .7 across several networks are not asserted.
 
 #### STUMP-DRAFT-001 — Formats and network limits
 
@@ -722,7 +722,7 @@ Core · published · **missing** · From new
 4. Removing a slot moves its items to the next open slots and lists them.
 
 **Evidence.** None.
-**Gap.** Built: queue slots in the account's time zone, the next open slot, and moving queued items off a removed slot (`src/stump/publish/slots.ts`). The proving test needs drafted items, which `stump.drafts.write` creates.
+**Gap.** Built: queue slots in the account's time zone, the next open slot, and moving queued items off a removed slot (`src/stump/publish/slots.ts`); the agent-surface journey's x-queue step queues one item into its account's next open slot. Points 1 to 4 are not asserted in a repo test, and suggestions (.3) are not built.
 
 ### Engagement inbox
 
@@ -1189,8 +1189,8 @@ Core · target · **partial** · From new
 3. Resuming lists what will go out and holds overdue items until they are rescheduled or dropped.
 4. Pause and resume are recorded with the person and time.
 
-**Evidence.** `tests/stump/team.test.mjs` "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked"
-**Gap.** Point 4 is proven. The tick and resume code for points 1 to 3 is in `src/stump/publish/tick.ts` and `src/stump/tools/calendar.ts`; their proof waits for scheduled items, which the scheduling lane adds.
+**Evidence.** `tests/stump/team.test.mjs` "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked"; `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"
+**Gap.** Point 4 is proven, and point 1 for publishing now: while all publishing is paused an agent's publish is refused and nothing reaches X. The tick, one-account pause and resume answers (will_post, held_overdue) for points 1 to 3 are in `src/stump/publish/tick.ts` and `src/stump/tools/calendar.ts`, not yet asserted in a repo test.
 
 ### More channels and formats
 
@@ -2699,7 +2699,7 @@ Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE
 
 #### STUMP-SURFACE-004 — Network spend and paid listings compute money
 
-Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE-AGENT-007, BASE-AGENT-011
+Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE-AGENT-007, BASE-AGENT-011
 
 **Requirement.** Calls that spend at a network, a supplier or a directory compute money from the company's price table (`docs/networks.md`) or the provider's quote.
 
@@ -2710,8 +2710,8 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 4. After the company updates the price table, the next call carries the new price.
 5. Under a company spend cap, the call that would cross it returns `budget_exhausted` before any effect.
 
-**Evidence.** None.
-**Gap.** Built: an X publish computes money in USD from the company's price table, URL and plain posts apart, and the next call carries an updated price (`src/stump/publish/schedule.ts`). The proving test needs drafted items, which `stump.drafts.write` creates.
+**Evidence.** `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `agent-surface.json` journey (stump shard of `verification.json`) steps x-queue and x-schedule
+**Gap.** Point 1 holds for an X URL post: money computes in USD from the company's price table and the ledger records $0.20. Base reads a money measure as whole currency units and takes integers only, so the measure is the charge rounded up to whole dollars and the exact charge is the approval summary's amount (`src/stump/publish/schedule.ts`). Point 4 (an updated price on the next call) is built, not yet asserted in a repo test; .2, .3 and .5 belong to later lanes.
 
 #### STUMP-SURFACE-005 — Steps venues and providers keep for a person compute gated
 
