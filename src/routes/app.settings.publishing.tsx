@@ -5,6 +5,7 @@ import { me, runAction } from '../stump/ui/api.ts'
 import { Outcome, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
 import type { PauseState, Resumed, Team } from '../stump/ui/types.ts'
 import { shownHandle } from '../stump/accounts/handle.ts'
+import { pauseChanged } from '../stump/ui/pause.tsx'
 
 export const Route = createFileRoute('/app/settings/publishing')({ component: PublishingPage })
 
@@ -41,12 +42,13 @@ function PublishingPage() {
   const handle = (id: string | null) => { const found = data?.accounts.find(account => account.id === id); return found ? shownHandle(found) : 'An account' }
   async function pause() {
     setResumed(null)
-    await run(() => runAction('stump.calendar.pause', { action: 'pause', scope: 'all', idempotency_key: key() }), () => 'Paused. Nothing posts until you resume.')
+    const done = await run(() => runAction<{ paused_at: string }>('stump.calendar.pause', { action: 'pause', scope: 'all', idempotency_key: key() }), () => 'Paused. Nothing posts until you resume.')
+    if (done) pauseChanged({ scope: { scope: 'all', account_id: null, person_id: data?.me.person.id ?? '', at: done.paused_at } })
     await refresh()
   }
   async function resume(scope: 'all' | 'account', account?: string | null) {
     const result = await run(() => runAction<Resumed>('stump.calendar.pause', { action: 'resume', scope, ...(account ? { account_id: account } : {}), idempotency_key: key() }), () => 'Resumed.')
-    if (result) setResumed(result)
+    if (result) { setResumed(result); if (scope === 'all') pauseChanged({ resumed: 'all' }) }
     await refresh()
   }
   return <HydrationUnit>
