@@ -523,4 +523,50 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-table td.st-team-more { position: absolute; top: 8px; right: 0; width: auto; margin: 0; }
   .st-table tr:has(.st-team-more) { position: relative; padding-right: 48px; }
 }
+
+/* Today (SPEC §4.2 Today, src/stump/today/): the focal hand-off, the held and worth-answering pair, today's posts, results and the week rail */
+.st-today .st-today-grid { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 24px; align-items: start; }
+.st-today .st-today-main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.st-today .st-panel { margin: 0; min-width: 0; }
+.st-today .st-today-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
+.st-today .st-today-pair.single { grid-template-columns: minmax(0, 1fr); }
+.st-today .st-today-focal { font-size: 21px; line-height: 28px; font-weight: 600; color: var(--stump-ink); margin: 0 0 6px; overflow-wrap: anywhere; }
+.st-today .st-today-who { font-size: var(--stump-size-body); line-height: 22px; color: var(--stump-body); margin: 0 0 20px; }
+.st-today .st-today-more { margin-top: 16px; }
+.st-today .st-today-more .st-row:first-child { border-top: 1px solid var(--stump-hairline); }
+.st-today .st-today-line { font-size: var(--stump-size-body); line-height: 22px; color: var(--stump-ink); overflow-wrap: anywhere; }
+.st-today .st-today-line span { color: var(--stump-body); }
+.st-today .st-today-clip { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.st-today .st-row .st-button { flex: none; }
+.st-today .st-today-empty { font-size: var(--stump-size-body); line-height: 24px; color: var(--stump-body); margin: 0; }
+.st-today .st-today-finding { padding: 0 0 16px; }
+.st-today .st-today-finding + .st-today-finding { border-top: 1px solid var(--stump-hairline); padding-top: 16px; }
+.st-today .st-today-finding:last-child { padding-bottom: 0; }
+.st-today .st-today-finding-title { display: block; font-size: 17px; line-height: 24px; font-weight: 500; color: var(--stump-ink); text-decoration: none; margin: 0 0 10px; overflow-wrap: anywhere; }
+.st-today .st-today-finding-title:hover { text-decoration: underline; }
+.st-today .st-today-finding .st-chips { list-style: none; margin: 0 0 16px; padding: 0; }
+.st-today .st-today-finding .st-chip { background: var(--stump-focus-tint); color: var(--stump-body); }
+.st-today .st-today-out { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; color: var(--stump-body); text-decoration: none; }
+.st-today a.st-today-out:hover .st-today-out-line { text-decoration: underline; }
+.st-today .st-today-out-line { flex: 1 1 auto; min-width: 0; font-size: var(--stump-size-body); line-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-today .st-today-all { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; font-weight: 600; }
+.st-today .st-today-week ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.st-today .st-today-week li { display: flex; align-items: center; gap: 20px; font-size: 17px; color: var(--stump-ink); }
+.st-today .st-today-week .st-panel-title .st-disc { display: none; }
+.st-today .st-today-out:focus-visible, .st-today .st-today-finding-title:focus-visible, .st-today .st-today-all:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; border-radius: 6px; }
+@media (max-width: 1100px) {
+  .st-today .st-today-pair { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .st-today .st-today-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .st-today .st-today-main { gap: 16px; }
+  .st-today .st-today-pair { gap: 16px; }
+  .st-today .st-today-focal { font-size: 19px; line-height: 26px; }
+  .st-today .st-today-out-line { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .st-today .st-row { flex-wrap: nowrap; align-items: flex-start; }
+  .st-today .st-today-week .st-panel-title .st-disc { display: inline-flex; }
+  .st-today .st-today-week ul { display: flex; flex-wrap: wrap; gap: 12px 28px; }
+  .st-today .st-today-week li { gap: 12px; font-size: 16px; white-space: nowrap; }
+  .st-today .st-today-week .st-disc.big { width: 44px; height: 44px; font-size: 18px; }
+}
 `
