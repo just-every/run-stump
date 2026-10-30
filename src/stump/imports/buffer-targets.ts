@@ -4,7 +4,11 @@
 // ledger/record.ts) and its queued and draft posts as items. A side row per
 // target keeps the exact value the import wrote and the native marker right
 // after, so any later edit in Stump reads as an edit: a rerun names it, and
-// Undo keeps it and every record it depends on.
+// Undo keeps it and every record it depends on. For an item the marker is what
+// a person changes (its text revision, time and account) and whether it has
+// begun posting; the import's own release from paused to scheduled, the draft
+// check and a hold are not edits, so Undo removes a released post that has not
+// gone out.
 import { canonicalJson, sha256 } from '../../modules/import-kit/src/provenance/identity.ts'
 import type { D1Database, D1Sql, D1TargetAdapter, D1UndoDependency, TargetRow } from '../../modules/import-kit/src/d1/index.ts'
 import type { Json } from '../../modules/import-kit/src/types.ts'
@@ -26,7 +30,11 @@ export const SHAPES: Record<BufferKind, Shape> = {
   account: { table: 'stump_accounts', key: 'id', marker: "n.revision||''" },
   slots: { table: 'stump_queue_slots', key: 'account_id', marker: "n.updated_at||''" },
   ledger_entry: { table: 'stump_ledger', key: 'id', marker: "n.updated_at||''" },
-  item: { table: 'stump_items', key: 'id', marker: "n.revision||':'||n.updated_at" },
+  item: {
+    table: 'stump_items', key: 'id',
+    marker: `n.revision||':'||COALESCE(n.scheduled_at,'')||':'||COALESCE(n.account_id,'')||':'||CASE WHEN n.state IN ('posting','posted','partly_posted','failed','uncertain')
+      OR EXISTS(SELECT 1 FROM stump_item_history h WHERE h.item_id=n.id AND h.to_state='posting') THEN 'posting' ELSE '' END`,
+  },
 }
 const shape = (kind: string) => { if (!Object.hasOwn(SHAPES, kind)) throw new Error('IMPORT_TARGET_SCOPE_INVALID'); return SHAPES[kind as BufferKind] }
 /** The native record a target names: the id its value carries. */
@@ -69,7 +77,8 @@ function writeItem(value: Value): D1Sql[] {
     // Each imported item waits for the draft check before anything schedules it (blocking until checked).
     sql(`INSERT INTO stump_items(id,format,network,account_id,person_id,state,text,flags,options,hold,scheduled_at,time_zone,queued,created_by,created_at,updated_at)
       VALUES(?,'post',?,?,?,?,?,?,?,?,?,?,?,?,${NOW},${NOW})
-      ON CONFLICT(id) DO UPDATE SET network=excluded.network,account_id=excluded.account_id,text=excluded.text,options=excluded.options,hold=excluded.hold,scheduled_at=excluded.scheduled_at,
+      ON CONFLICT(id) DO UPDATE SET network=excluded.network,account_id=excluded.account_id,text=excluded.text,options=excluded.options,
+        hold=CASE WHEN stump_items.state='paused' THEN excluded.hold ELSE stump_items.hold END,scheduled_at=excluded.scheduled_at,
         time_zone=excluded.time_zone,queued=excluded.queued,revision=stump_items.revision+1,updated_at=excluded.updated_at`,
     id, value.network, value.account_id, value.person_id, value.state, value.text,
     JSON.stringify([{ code: 'not_checked', blocking: true, reason: 'Imported; the draft check runs once the import is applied.' }]),

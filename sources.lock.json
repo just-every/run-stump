@@ -3548,7 +3548,7 @@
       "executable": false
     },
     "src/stump/imports/buffer-targets.ts": {
-      "sha256": "ee82d933c5dc5575091da3a89a50f8517fe14af49abe840c0d7aeb4b47789ad7",
+      "sha256": "d6787a27df9b31febc0949df62f7a19dfbe25002ec4f551e88fec8af0c1e53c2",
       "executable": false
     },
     "src/stump/imports/buffer.ts": {
@@ -4420,7 +4420,7 @@
       "executable": false
     },
     "tests/stump/data.test.mjs": {
-      "sha256": "74e29ae5ed7f90253a2e8532b64ff470e06699062c78881c3e4a206ff4992b90",
+      "sha256": "a6cb4819c7bf9a578a84162da4ce57f4d5d6fb94ba5131900004c757474c4a41",
       "executable": false
     },
     "tests/stump/drafting.test.mjs": {

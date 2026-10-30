@@ -28,7 +28,8 @@ const bundle = {
       sent: { total: 2, updates: [
         { id: 'xs1', status: 'sent', text: 'Recurring bookings are live. Thanks @synthetic-alice for the idea.', sent_at: at(20, 15), service_update_id: '185000000000001', statistics: { favorites: 12, retweets: 3 } },
         { id: 'xs2', status: 'sent', text: 'Calendar sync handles daylight saving now.', sent_at: at(21, 15), service_update_id: '185000000000002' }] },
-      pending: [{ id: 'xq1', status: 'buffer', text: 'Waitlists for cancelled slots are coming.', due_at: next }],
+      pending: [{ id: 'xq1', status: 'buffer', text: 'Waitlists for cancelled slots are coming.', due_at: next },
+        { id: 'xq2', status: 'buffer', text: 'Reminder texts now go out in the patient\'s own time zone.', due_at: next + 86_400 }],
     },
     'p-f': { sent: [{ id: 'fs1', status: 'sent', text: 'A Facebook post.', sent_at: at(19, 12) }] },
   },
@@ -54,11 +55,11 @@ async function until(verb, planned, done) {
 }
 const act = async (tool, args) => { const answer = await app.action('owner', tool, args); assert.equal(answer.status, 200, JSON.stringify(answer.body)); return answer.body.result }
 
-test('switching from Buffer: a dry run, sent posts to the ledger, schedules to slots, queued posts paused until released, a rerun that changes nothing, and Undo', async () => {
+test('switching from Buffer: a dry run, sent posts to the ledger, schedules to slots, queued posts paused until released, a rerun that changes nothing, and an Undo that keeps only edits', async () => {
   await app.owner()
   const first = await plan(JSON.stringify(bundle))
   assert.equal(first.status, 200, JSON.stringify(first.body))
-  assert.deepEqual([first.body.summary.channels, first.body.summary.sent, first.body.summary.queued], [1, 2, 1])
+  assert.deepEqual([first.body.summary.channels, first.body.summary.sent, first.body.summary.queued], [1, 2, 2])
   assert.ok(first.body.rejected.some(row => /facebook/.test(row.reason)), 'a channel Stump does not publish to is refused by name')
   assert.equal((await act('stump.ledger.search', { action: 'search' })).total, 0, 'a dry run writes nothing')
   await until('apply', first.body, ['completed'])
@@ -73,16 +74,22 @@ test('switching from Buffer: a dry run, sent posts to the ledger, schedules to s
   const [queued] = (await act('stump.drafts.revise', { action: 'list', q: 'Waitlists' })).items
   assert.deepEqual([queued.state, queued.account_id, Date.parse(queued.scheduled_at)], ['paused', account.id, next * 1000])
 
+  const unconfirmed = await app.action('owner', 'stump.calendar.plan', { action: 'release_import', item_ids: [queued.id], confirm_source_cleared: false })
+  assert.ok(unconfirmed.status >= 400)
+  assert.deepEqual((await act('stump.calendar.plan', { action: 'release_import', item_ids: [queued.id], confirm_source_cleared: true })).released, [queued.id])
+  assert.equal((await act('stump.drafts.revise', { action: 'get', item_id: queued.id })).state, 'scheduled')
+
+  // The import's own release is not an edit: a rerun of the same file still changes nothing.
   const again = await plan(JSON.stringify(bundle))
   for (const kind of ['additions', 'replacements', 'conflicts']) assert.equal(again.body.differences[kind].length, 0, kind)
   assert.equal(again.body.changes.length, 0)
 
-  const unconfirmed = await app.action('owner', 'stump.calendar.plan', { action: 'release_import', item_ids: [queued.id], confirm_source_cleared: false })
-  assert.ok(unconfirmed.status >= 400)
-  assert.deepEqual((await act('stump.calendar.plan', { action: 'release_import', item_ids: [queued.id], confirm_source_cleared: true })).released, [queued.id])
+  const [reminder] = (await act('stump.drafts.revise', { action: 'list', q: 'Reminder texts' })).items
+  await act('stump.drafts.revise', { action: 'save', item_id: reminder.id, text: 'Reminder texts now follow each patient\'s own time zone.' })
 
   const undone = await until('undo', again.body, ['undone'])
-  assert.deepEqual(undone.kept.map(kept => kept.kind).sort(), ['account', 'item'], 'Undo keeps the released post and the account it needs')
+  assert.deepEqual(undone.kept.map(kept => `${kept.kind}:${kept.id}:${kept.reason}`).sort(), [`account:${account.id}:in_use`, `item:${reminder.id}:edited`], 'Undo keeps the edited post and the account it needs')
+  assert.deepEqual((await act('stump.drafts.revise', { action: 'list', q: 'Waitlists' })).items, [], 'Undo removes the released post that has not gone out')
   assert.equal((await act('stump.ledger.search', { action: 'search' })).total, 0)
   assert.deepEqual((await act('stump.calendar.plan', { action: 'slots', account_id: account.id })).slots, [])
 })
