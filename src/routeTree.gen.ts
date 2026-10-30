@@ -14,6 +14,8 @@ import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
 import { Route as AppSettingsPublishingRouteImport } from './routes/app.settings.publishing'
 import { Route as AppSettingsTeamRouteImport } from './routes/app.settings.team'
+import { Route as AppVenuesIndexRouteImport } from './routes/app.venues.index'
+import { Route as AppVenuesVenueIdRouteImport } from './routes/app.venues.$venueId'
 
 const AppRoute = AppRouteImport.update({
   id: '/app',
@@ -40,6 +42,16 @@ const AppSettingsTeamRoute = AppSettingsTeamRouteImport.update({
   path: '/settings/team',
   getParentRoute: () => AppRoute,
 } as any)
+const AppVenuesIndexRoute = AppVenuesIndexRouteImport.update({
+  id: '/venues/',
+  path: '/venues/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppVenuesVenueIdRoute = AppVenuesVenueIdRouteImport.update({
+  id: '/venues/$venueId',
+  path: '/venues/$venueId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
@@ -47,12 +59,16 @@ export interface FileRoutesByFullPath {
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
+  '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/app/venues/': typeof AppVenuesIndexRoute
 }
 export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
+  '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/app/venues': typeof AppVenuesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,6 +77,8 @@ export interface FileRoutesById {
   '/app/settings/agents': typeof AppSettingsAgentsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
+  '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/app/venues/': typeof AppVenuesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -70,12 +88,16 @@ export interface FileRouteTypes {
     | '/app/settings/agents'
     | '/app/settings/publishing'
     | '/app/settings/team'
+    | '/app/venues/$venueId'
+    | '/app/venues/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/app'
     | '/app/settings/agents'
     | '/app/settings/publishing'
     | '/app/settings/team'
+    | '/app/venues/$venueId'
+    | '/app/venues'
   id:
     | '__root__'
     | '/app'
@@ -83,6 +105,8 @@ export interface FileRouteTypes {
     | '/app/settings/agents'
     | '/app/settings/publishing'
     | '/app/settings/team'
+    | '/app/venues/$venueId'
+    | '/app/venues/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -126,6 +150,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsTeamRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/venues/': {
+      id: '/app/venues/'
+      path: '/venues'
+      fullPath: '/app/venues/'
+      preLoaderRoute: typeof AppVenuesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/venues/$venueId': {
+      id: '/app/venues/$venueId'
+      path: '/venues/$venueId'
+      fullPath: '/app/venues/$venueId'
+      preLoaderRoute: typeof AppVenuesVenueIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -134,6 +172,8 @@ interface AppRouteChildren {
   AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
   AppSettingsPublishingRoute: typeof AppSettingsPublishingRoute
   AppSettingsTeamRoute: typeof AppSettingsTeamRoute
+  AppVenuesVenueIdRoute: typeof AppVenuesVenueIdRoute
+  AppVenuesIndexRoute: typeof AppVenuesIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -141,6 +181,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsAgentsRoute: AppSettingsAgentsRoute,
   AppSettingsPublishingRoute: AppSettingsPublishingRoute,
   AppSettingsTeamRoute: AppSettingsTeamRoute,
+  AppVenuesVenueIdRoute: AppVenuesVenueIdRoute,
+  AppVenuesIndexRoute: AppVenuesIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

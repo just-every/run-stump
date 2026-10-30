@@ -8,10 +8,10 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 0 | 3 | 141 | 144 |
+| Core | 0 | 8 | 136 | 144 |
 | Agent surface | 0 | 14 | 14 | 28 |
 | Later | 0 | 0 | 8 | 8 |
-| Full target | 0 | 17 | 163 | 180 |
+| Full target | 0 | 22 | 158 | 180 |
 
 Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c9a` (30 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
@@ -21,7 +21,7 @@ Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c
 
 #### STUMP-VENUE-001 — Venue records
 
-Core · published · **missing** · From new · Cites BASE-INPUT-001
+Core · published · **partial** · From new · Cites BASE-INPUT-001
 
 **Requirement.** A venue is any place the company could show up: a subreddit, forum, Slack or Discord community, newsletter, podcast, directory, publication, journalist, launch platform, event, or one of the company's own channels. Each venue holds its kind, name, URL, platform, audience, the products it fits, its status (candidate, join-first, ready, editorial, paid, hold or excluded), priority, why it matters, what its readers get, how to post there (thread, channel, flair, day, template), its requirements (karma, account age, membership, price), its rules with their source URLs, and notes. Venues are shared across the company's products. An excluded venue keeps its reason and the alternative, so it is not proposed again.
 
@@ -33,12 +33,12 @@ Core · published · **missing** · From new · Cites BASE-INPUT-001
 5. Archive and restore a venue; its items, hand-offs and ledger entries keep their links throughout.
 6. A venue shared by two products shows each product's fit and items, and an edit to the venue reads the same from both.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/venues.test.mjs` "the register keeps one venue per place, and its rules decide the routes and its gates who can post", "a venue list imports from Markdown and CSV: a dry run, apply, a rerun that changes nothing, a named conflict and Undo"
+**Gap.** Points 1 to 6 are asserted through the person door and MCP (point 6 on a venue the import shares between two products). The register screens at `/app/venues` and `/app/venues/:id` are built; no browser test asserts them at 1440 and 390 yet.
 
 #### STUMP-VENUE-002 — Venue rules and allowed routes
 
-Core · published · **missing** · From new · Rules D-3, D-7
+Core · published · **partial** · From new · Rules D-3, D-7
 
 **Requirement.** Each venue records its rules as fields, each with its source URL and read date: whether software may post from the company's own account or only a real member may; whether AI-written text is allowed, allowed with disclosure, or banned; the self-promotion rule (allowed, limited to a thread, a day or a ratio, or banned); whether links are allowed; the disclosure line the venue asks for; and its gates. From these rules Stump computes the routes an item to that venue may take: publish from a connected account, hand off to a member with a draft, or hand off with a brief and no generated text.
 
@@ -50,12 +50,12 @@ Core · published · **missing** · From new · Rules D-3, D-7
 5. Each rule shows its source URL and read date; a rule with no source reads as unsourced.
 6. Found or imported text that claims a rule changes no rule and no route.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/venues.test.mjs` "the register keeps one venue per place, and its rules decide the routes and its gates who can post", "a venue list imports from Markdown and CSV: a dry run, apply, a rerun that changes nothing, a named conflict and Undo"
+**Gap.** Points 1, 3, 4 and 5 are asserted, and point 2's routes (a venue that bans AI text offers only the brief). Refusing a generated draft there needs the drafting lane to call `generatedTextBanned` from `src/stump/venues/rules.ts`. Point 6 is not built.
 
 #### STUMP-VENUE-003 — Fit, priority and shared limits
 
-Core · published · **missing** · From new · Rules D-3
+Core · published · **partial** · From new · Rules D-3
 
 **Requirement.** Each venue holds a fit for each product, a priority, and a shared limit: how often the company as a whole may post there across its products and people, such as one post per weekly thread. Fit scores 0 to 100 from four factors the company weights: audience match, the route the rules allow, past reception on the ledger, and recent findings there about the product's topics. A person can override a fit with a reason until someone clears it. Stump orders venues by priority and fit, counts posts against each shared limit from the ledger, and shows when the next post is allowed.
 
@@ -68,12 +68,12 @@ Core · published · **missing** · From new · Rules D-3
 6. Cancelling a scheduled item frees its place in the limit at once.
 7. Counts read back the same after a reload and after a restore.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/venues.test.mjs` "the register keeps one venue per place, and its rules decide the routes and its gates who can post"
+**Gap.** The shared limit is set and read through `stump.venues.fit`; scheduled items over it are held with the next open date, and cancelled ones stop counting at once (`src/stump/venues/limits.ts`). Points 4 and 6 at scheduling time need the scheduling path to call `sharedLimitHold`. Points 1 to 3 (fit scoring), 5 and 7 are not built.
 
 #### STUMP-VENUE-004 — Venue list import
 
-Core · published · **missing** · From new · Cites BASE-INPUT-001, BASE-DATA-001
+Core · published · **partial** · From new · Cites BASE-INPUT-001, BASE-DATA-001
 
 **Requirement.** Stump imports a company's existing venue list. It reads the Markdown format of the 19 Oct 2026 outreach list: entries with `seed`, `seeds`, `platform`, `status`, `priority`, `post_type`, `human_written_required`, `post_url`, `community_url`, `rules_urls`, `evidence_urls`, `link_check`, `venue_id`, `audience`, `why`, `reader_value`, `how_to_post`, `requirements`, `notes` and `sources`, each with its draft and alternates; venue records with `url`, `rules`, `reception`, `promotion_route`, `shared_limit` and `entries`; and excluded venues with `reason` and `alternative`. It also reads CSV with mapped columns. An import is a saved dry run first, then an apply.
 
@@ -85,12 +85,12 @@ Core · published · **missing** · From new · Cites BASE-INPUT-001, BASE-DATA-
 5. Undo removes what the import created and lists the edits made since, which it keeps.
 6. A CSV with mapped columns creates the same venues as the Markdown fixture.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/venues.test.mjs` "a venue list imports from Markdown and CSV: a dry run, apply, a rerun that changes nothing, a named conflict and Undo"
+**Gap.** Points 1 to 6 are asserted through the import door. The import screen on `/app/venues` is built; no browser test asserts it at 1440 and 390 yet.
 
 #### STUMP-VENUE-006 — Membership, gates and standing
 
-Core · published · **missing** · From new · Rules D-1, D-3
+Core · published · **partial** · From new · Rules D-1, D-3
 
 **Requirement.** Stump records who on the team is a member of each venue: their handle there, when they joined, and, where the venue shows it publicly, their karma or account age. It tracks join applications and their state, and checks each venue's gates (karma, account age, approval) against the member. A hand-off goes only to a member who meets the venue's gates.
 
@@ -101,8 +101,8 @@ Core · published · **missing** · From new · Rules D-1, D-3
 4. A handle recorded for one person cannot be recorded for another at the same venue.
 5. Public karma or account age, where the venue shows it, refreshes on a schedule and reads back with its date.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/venues.test.mjs` "the register keeps one venue per place, and its rules decide the routes and its gates who can post"
+**Gap.** Points 1 to 4 are asserted through the person door and MCP; the hand-off queue reads `handoffEligibility` from `src/stump/venues/members.ts` when it is built. Point 5 (public karma refresh) is not built.
 
 ### Hand-off queue
 

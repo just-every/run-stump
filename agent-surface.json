@@ -6,7 +6,11 @@
   "tools": [
     { "name": "stump.calendar.pause", "scope": "stump:calendar", "readOnly": false, "classes": ["live"], "clauses": ["STUMP-PLAN-007"] },
     { "name": "stump.ledger.search", "scope": "stump:ledger", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001", "STUMP-LEDGER-002"] },
-    { "name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001"] }
+    { "name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001"] },
+    { "name": "stump.venues.fit", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-003"] },
+    { "name": "stump.venues.manage", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-001"] },
+    { "name": "stump.venues.members", "scope": "stump:venues", "readOnly": false, "classes": ["standard", "gated"], "clauses": ["STUMP-VENUE-006"] },
+    { "name": "stump.venues.rules", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-002"] }
   ],
   "notTools": [
     { "clauses": ["STUMP-VENUE-004", "STUMP-IMPORT-001"], "reason": "import-door" },
@@ -43,6 +47,38 @@
       "id": "ledger",
       "tool": "stump.ledger.search",
       "args": { "action": "search" },
+      "expect": [{ "class": "standard" }]
+    },
+    {
+      "id": "venue-create",
+      "tool": "stump.venues.manage",
+      "args": { "action": "create", "kind": "forum", "name": "Synthetic builders forum", "url": { "$fixture": "venue_url", "pointer": "" }, "status": "candidate" },
+      "expect": [{ "class": "standard" }]
+    },
+    {
+      "id": "venue-rules",
+      "tool": "stump.venues.rules",
+      "args": { "action": "set", "venue_id": { "$from": "venue-create", "pointer": "/id" }, "rules": {
+        "posting": { "value": "members_only", "source_url": "https://example.com/rules", "read_at": "2026-10-30" },
+        "gates": { "value": { "approval": true }, "source_url": "https://example.com/rules", "read_at": "2026-10-30" } } },
+      "expect": [{ "class": "standard" }]
+    },
+    {
+      "id": "venue-limit",
+      "tool": "stump.venues.fit",
+      "args": { "action": "set_limit", "venue_id": { "$from": "venue-create", "pointer": "/id" }, "limit": { "posts": 1, "per": "week" } },
+      "expect": [{ "class": "standard" }]
+    },
+    {
+      "id": "venue-apply",
+      "tool": "stump.venues.members",
+      "args": { "action": "apply", "venue_id": { "$from": "venue-create", "pointer": "/id" }, "handle": { "$fixture": "venue_handle", "pointer": "" } },
+      "expect": [{ "class": "gated", "facts": { "step": "join application" } }]
+    },
+    {
+      "id": "venue-approve",
+      "tool": "stump.venues.members",
+      "args": { "action": "approve_application", "application_id": { "$from": "venue-apply", "pointer": "/application/id" } },
       "expect": [{ "class": "standard" }]
     }
   ],
