@@ -4,11 +4,15 @@
 // "example.com/page" and "v2.1" do not split. Parts are packed greedily and each
 // is counted with the network's own rule (count.ts), numbering included. A single
 // sentence that does not fit on its own is broken at a clause mark, then a word,
-// then a grapheme, in that order, and the result says so. A URL is never cut:
-// one that cannot fit is reported as a problem on its part.
+// then a grapheme, in that order, and the result says so. A URL is never cut: no
+// sentence ends inside one (a "?" in its query is not a question mark), a word is cut
+// around the URLs it holds, never inside one, and a URL that cannot fit is reported as
+// a problem on its part.
 
 import { splitGraphemes, splitSentences } from './graphemes'
 import { countText } from './count'
+import { extractUrls } from './urls'
+import { normalizeDomain } from './utm'
 import type { CountTarget, TextCount } from './types'
 
 export type NumberingFormat = 'n/N' | 'n/' | '(n/N)'
@@ -17,6 +21,11 @@ export interface ThreadOptions {
   target: CountTarget
   /** Number the parts. A text that fits one post is never numbered. */
   numbering?: { format: NumberingFormat; position?: 'start' | 'end' }
+  /**
+   * The company's own domains (LinkRules.own_domains): a bare link to one, such as a tagged
+   * "example.dev?utm_source=x", is a URL whatever its top-level domain, so it is never cut.
+   */
+  own_domains?: readonly string[]
 }
 
 export interface ThreadPart {
@@ -63,43 +72,69 @@ interface Unit {
   level: Level
 }
 
-function breakSentence(sentence: string, fits: (s: string) => boolean): Unit[] {
+/** A word written as a link ("https://...", "example.com/x"). */
+const LINK_WORD = /^https?:\/\/|^[^\s/]+\.[^\s/]+\/\S/i
+
+/** A word that is, or holds, a URL ("example.dev?ref=x" on an own domain included). */
+function holdsUrl(word: string, ownHosts: readonly string[]): boolean {
+  return LINK_WORD.test(word) || extractUrls(word, { extraBareHosts: ownHosts }).length > 0
+}
+
+function breakSentence(sentence: string, fits: (s: string) => boolean, ownHosts: readonly string[]): Unit[] {
   if (fits(sentence.trim())) return [{ text: sentence, level: 'sentence' }]
   const clauses = sentence.split(/(?<=[,;:—–])(?=\s)/u)
   if (clauses.length > 1) {
-    return clauses.flatMap((c) => (fits(c.trim()) ? [{ text: c, level: 'clause' as Level }] : breakWords(c, fits)))
+    return clauses.flatMap((c) => (fits(c.trim()) ? [{ text: c, level: 'clause' as Level }] : breakWords(c, fits, ownHosts)))
   }
-  return breakWords(sentence, fits)
+  return breakWords(sentence, fits, ownHosts)
 }
 
-function breakWords(text: string, fits: (s: string) => boolean): Unit[] {
+function breakWords(text: string, fits: (s: string) => boolean, ownHosts: readonly string[]): Unit[] {
   const words = text.split(/(?<=\s)(?=\S)/u)
   const out: Unit[] = []
+  const cutGraphemes = (piece: string) => {
+    let acc = ''
+    for (const g of splitGraphemes(piece)) {
+      if (acc && !fits((acc + g).trim())) {
+        out.push({ text: acc, level: 'grapheme' })
+        acc = g
+      } else acc += g
+    }
+    if (acc) out.push({ text: acc, level: 'grapheme' })
+  }
   for (const w of words) {
     if (fits(w.trim())) {
       out.push({ text: w, level: 'word' })
       continue
     }
-    if (/^https?:\/\//i.test(w.trim()) || /^[^\s/]+\.[^\s/]+\/\S/.test(w.trim())) {
+    const lead = w.length - w.trimStart().length
+    const end = lead + w.trim().length
+    const urls = extractUrls(w, { extraBareHosts: ownHosts })
+    if (LINK_WORD.test(w.trim()) || (urls.length === 1 && urls[0]?.start === lead && urls[0]?.end === end)) {
       out.push({ text: w, level: 'word' }) // reported as unsplittable_url by the packer
       continue
     }
-    let piece = ''
-    for (const g of splitGraphemes(w)) {
-      if (piece && !fits((piece + g).trim())) {
-        out.push({ text: piece, level: 'grapheme' })
-        piece = g
-      } else piece += g
+    // Cut inside the word at graphemes, never inside a URL it holds: each URL stays one piece.
+    let cursor = 0
+    for (const u of urls) {
+      if (u.start > cursor) cutGraphemes(w.slice(cursor, u.start))
+      out.push({ text: w.slice(u.start, u.end), level: 'grapheme' })
+      cursor = u.end
     }
-    if (piece) out.push({ text: piece, level: 'grapheme' })
+    if (cursor < w.length) cutGraphemes(w.slice(cursor))
   }
   return out
+}
+
+function ownHostsOf(opts: ThreadOptions): string[] {
+  return (opts.own_domains ?? []).map(normalizeDomain).filter(Boolean)
 }
 
 function pack(text: string, opts: ThreadOptions, digits: number): ThreadPart[] {
   const maxN = Number('9'.repeat(digits))
   const fitsAt = (s: string) => countText(opts.target, compose(s, opts, maxN, maxN)).fits
-  const units = splitSentences(text).flatMap((s) => breakSentence(s, fitsAt))
+  const ownHosts = ownHostsOf(opts)
+  const units = splitSentences(text, { own_domains: ownHosts }).flatMap((s) => breakSentence(s, fitsAt, ownHosts))
 
   const bodies: Array<{ body: string; cut: Level }> = []
   let current = ''
@@ -146,9 +181,10 @@ export function splitThread(text: string, opts: ThreadOptions): ThreadResult {
   }
 
   const problems: ThreadProblem[] = []
+  const ownHosts = ownHostsOf(opts)
   for (const p of parts) {
     if (p.count.fits) continue
-    const urlOnly = /^(https?:\/\/\S+|\S+\.\S+\/\S+)$/.test(p.body)
+    const urlOnly = /^(https?:\/\/\S+|\S+\.\S+\/\S+)$/.test(p.body) || (!/\s/.test(p.body) && holdsUrl(p.body, ownHosts))
     problems.push({
       part: p.index,
       code: urlOnly ? 'unsplittable_url' : 'part_over_limit',

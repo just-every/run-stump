@@ -123,3 +123,26 @@ export function extractUrls(text: string, options: ExtractUrlOptions = {}): UrlM
   }
   return found.sort((a, b) => a.start - b.start)
 }
+
+// Unicode's sentence terminators (UAX #29 STerm and ATerm): ".", "?", "!", "。", "؟", ...
+const SENTENCE_TERMINATOR = /\p{Sentence_Terminal}/gu
+
+/**
+ * The text with every sentence terminator inside a URL ("?" and "!" in a query, "." in a
+ * path) replaced by "X", one per UTF-16 unit, so every offset still points into the
+ * original. Intl.Segmenter ends a sentence at the "?" of "https://orbit.run/b?x=1"; segment
+ * this copy instead and slice the original by its offsets, and no sentence ends inside a
+ * link. "X" is an upper-case letter, which, like the terminator it replaces, stops UAX #29
+ * rule SB8 from joining a sentence before the link to the one holding it.
+ */
+export function maskUrlTerminators(text: string, options: ExtractUrlOptions = {}): string {
+  const urls = extractUrls(text, options)
+  if (urls.length === 0) return text
+  let out = ''
+  let cursor = 0
+  for (const u of urls) {
+    out += text.slice(cursor, u.start) + u.url.replace(SENTENCE_TERMINATOR, (t) => 'X'.repeat(t.length))
+    cursor = u.end
+  }
+  return out + text.slice(cursor)
+}

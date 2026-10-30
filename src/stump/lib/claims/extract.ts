@@ -5,6 +5,7 @@
 // announcements are not claims. Text in a draft is data (D-7): nothing here changes
 // what the check does beyond which sentences it reads.
 
+import { maskUrlTerminators } from '../text/urls'
 import { extractNumbers } from './numbers'
 import type { FoundNumber } from './numbers'
 import { foldText, sentenceSpans } from './sentences'
@@ -23,6 +24,13 @@ export interface ExtractContext {
   /** Names of the company's products (and other names): a sentence naming one is about the product. */
   product_names: readonly string[]
   competitor_names: readonly string[]
+  /** Hosts of the products' own URLs: a bare link to one is a URL whatever its top-level domain. */
+  own_hosts?: readonly string[]
+}
+
+/** A question ends in "?" outside any link: "Orbit is the fastest https://orbit.run/?ref=x" states a claim. */
+function isQuestion(text: string, ownHosts: readonly string[] = []): boolean {
+  return maskUrlTerminators(text, { extraBareHosts: ownHosts }).endsWith('?')
 }
 
 const COMPLIANCE =
@@ -68,7 +76,7 @@ export function startsWithPronoun(sentence: string): boolean {
  */
 export function readSentence(span: Span, ctx: ExtractContext, pronounProduct?: string, found?: readonly FoundNumber[]): ClaimCandidate | undefined {
   const folded = foldText(span.text)
-  if (span.text.endsWith('?')) return undefined
+  if (isQuestion(span.text, ctx.own_hosts)) return undefined
   if (wordCount(folded) < 3) return undefined
 
   const numbers = found ? [...found] : extractNumbers(span.text)
@@ -101,7 +109,7 @@ export function readSentence(span: Span, ctx: ExtractContext, pronounProduct?: s
 
 export function findClaimCandidates(text: string, ctx: ExtractContext): ClaimCandidate[] {
   const out: ClaimCandidate[] = []
-  for (const span of sentenceSpans(text)) {
+  for (const span of sentenceSpans(text, ctx.own_hosts)) {
     const c = readSentence(span, ctx)
     if (c) out.push(c)
   }

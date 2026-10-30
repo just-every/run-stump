@@ -6,8 +6,8 @@
 // claim with a dated source. A stale claim, one without proof and one for another
 // product are left out and reported, so the item's record shows exactly what went out.
 
-import { claimStaleness } from './validate'
-import { isCurrentRecord } from './check'
+import { assertToday, claimStaleness } from './validate'
+import { isBackedRecord, isCurrentRecord } from './check'
 import type { Claim } from './types'
 
 /** The fields of a claim that go into a request. Nothing else of the record is sent. */
@@ -34,7 +34,9 @@ export interface ClaimsForRequest {
   sent_ids: string[]
 }
 
+/** `today` is YYYY-MM-DD in the company's time zone; anything else throws a RangeError. */
 export function claimsForRequest(claims: readonly Claim[], options: { product_id?: string; today: string }): ClaimsForRequest {
+  assertToday(options.today)
   const out: ClaimsForRequest = { allowed: [], banned: [], comparative: [], omitted: [], sent_ids: [] }
   for (const c of claims) {
     const send: RequestClaim = { id: c.id, kind: c.kind, text: c.text }
@@ -47,11 +49,12 @@ export function claimsForRequest(claims: readonly Claim[], options: { product_id
       out.omitted.push({ id: c.id, reason: 'other_product' })
       continue
     }
-    if (!isCurrentRecord(c)) {
+    if (!isBackedRecord(c)) {
       out.omitted.push({ id: c.id, reason: 'no_proof' })
       continue
     }
-    if (claimStaleness(c, options.today).stale) {
+    // A backed claim with no valid review date can never be shown current: it goes out as stale.
+    if (!isCurrentRecord(c) || claimStaleness(c, options.today).stale) {
       out.omitted.push({ id: c.id, reason: 'stale' })
       continue
     }

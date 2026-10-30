@@ -1,6 +1,8 @@
 // Sentence spans and tokens used by the claim check. Intl.Segmenter is part of the
 // Workers runtime; there is no fallback.
 
+import { maskUrlTerminators } from '../text/urls'
+
 let segmenter: Intl.Segmenter | null = null
 
 export interface Span {
@@ -9,12 +11,17 @@ export interface Span {
   end: number
 }
 
-/** Sentences of a text with their offsets, trimmed of surrounding whitespace. */
-export function sentenceSpans(text: string): Span[] {
+/**
+ * Sentences of a text with their offsets, trimmed of surrounding whitespace. A sentence
+ * never ends inside a URL, so the "?" of "https://orbit.run/?ref=x" is not a question mark.
+ * `ownHosts` are hosts whose bare links are URLs whatever their top-level domain.
+ */
+export function sentenceSpans(text: string, ownHosts: readonly string[] = []): Span[] {
   segmenter ??= new Intl.Segmenter('en', { granularity: 'sentence' })
+  const masked = maskUrlTerminators(text, { extraBareHosts: ownHosts })
   const spans: Span[] = []
-  for (const part of segmenter.segment(text)) {
-    const raw = part.segment
+  for (const part of segmenter.segment(masked)) {
+    const raw = text.slice(part.index, part.index + part.segment.length)
     const lead = raw.length - raw.trimStart().length
     const trimmed = raw.trim()
     if (trimmed === '') continue
