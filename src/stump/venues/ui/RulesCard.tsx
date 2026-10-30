@@ -46,7 +46,7 @@ export function RulesCard({ venue, editor, onSaved }: { venue: Venue; editor: bo
       // A self-promotion thread reads as one link to it ("weekly thread ↗"); its label then opens the rule's editor.
       const thread = name === 'self_promotion' && rule?.thread_url ? rule.thread_url : null
       const toggle = () => setEditing(editing === name ? null : name)
-      return <div key={name}>
+      return <div className="st-rule-row" key={name}>
         <div className="st-rule">
           {editor && thread ? <button className="st-value st-rule-label" type="button" aria-expanded={editing === name} onClick={toggle}>{LABELS[name]}</button>
             : <span className="st-rule-label">{LABELS[name]}</span>}

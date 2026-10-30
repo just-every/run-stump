@@ -44,6 +44,8 @@ export const handoffStyles = `
 .st-handoffs .st-ho-notice h2 { margin: 0 0 8px; font-size: var(--stump-size-section); }
 .st-handoffs .st-ho-notice ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; }
 .st-handoffs .st-ho-notice p { margin: 0; }
+/* A recorded link is one long word (a Discord message path): it breaks anywhere rather than widen the page. */
+.st-handoffs .st-ho-notice a { overflow-wrap: anywhere; }
 .st-handoffs .st-ho-notice .st-actions { margin-top: 12px; }
 .st-handoffs .st-ho-skip { display: grid; gap: 12px; margin: 16px 0 0; }
 .st-handoffs .st-ho-bar { display: none; }

@@ -30,7 +30,7 @@ export function AgentsSettings() {
       {error ? <p className="st-error">{error}</p> : null}
       <Connect items={data?.creds.items ?? null} refresh={refresh} />
       {data?.state ? <Policy owner={data.owner} state={data.state} document={data.overview?.document ?? null} stored={data.answers} refresh={refresh} /> : null}
-      {data?.state ? <PausePanel owner={data.owner} paused={data.state.paused} refresh={refresh} /> : null}
+      {data?.state ? <PausePanel owner={data.owner} paused={data.state.paused} complete={data.state.policy.complete} refresh={refresh} /> : null}
       {data && (data.waiting.length || data.toReview.length) ? <Waiting approvals={data.waiting} reviews={data.toReview} refresh={refresh} /> : null}
       {data?.activity ? <section className="st-panel" aria-labelledby="activity-title">
         <PanelTitle icon="clock" id="activity-title">Recent activity</PanelTitle>
@@ -186,16 +186,18 @@ function PolicyDocumentEditor({ document: policy, stored, refresh }: { document:
   </details>
 }
 
-function PausePanel({ owner, paused, refresh }: { owner: boolean; paused: { business: boolean; local: boolean }; refresh(): Promise<void> }) {
+/** Pause for agents that are on. Until every kind of action has an answer no agent runs, so the panel says that and offers no Pause. */
+function PausePanel({ owner, paused, complete, refresh }: { owner: boolean; paused: { business: boolean; local: boolean }; complete: boolean; refresh(): Promise<void> }) {
   const { busy, message, run } = useRun()
   const off = paused.business || paused.local
+  const waiting = !complete && !off
   return <section className="st-panel" aria-labelledby="agents-pause-title">
     <div className="st-panel-head">
       <PanelTitle icon="pause" id="agents-pause-title">Pause agents</PanelTitle>
-      {owner ? <button className={paused.local ? 'st-button primary' : 'st-button'} type="button" disabled={busy}
+      {owner && !waiting ? <button className={paused.local ? 'st-button primary' : 'st-button'} type="button" disabled={busy}
         onClick={() => void run(() => setPaused(!paused.local), () => paused.local ? 'Agents are on again.' : 'Agents are paused.').then(refresh)}>{paused.local ? 'Resume agents' : 'Pause agents'}</button> : null}
     </div>
-    <p className="st-meta" data-agents-state>{off ? 'Agents are paused. Every agent call waits until they resume.' : 'Agents are on. Pausing stops every agent call at once; people keep working.'}{paused.business ? ' Paused in Business.' : ''}</p>
+    <p className="st-meta" data-agents-state>{waiting ? 'Agents start once every kind above has an answer.' : off ? 'Agents are paused. Every agent call waits until they resume.' : 'Agents are on. Pausing stops every agent call at once; people keep working.'}{paused.business ? ' Paused in Business.' : ''}</p>
     <Outcome message={message} />
   </section>
 }

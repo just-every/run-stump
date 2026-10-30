@@ -59,7 +59,7 @@ export function BriefPage({ handoffId }: { handoffId: string }) {
         </header>
         <Notice handoff={handoff} mine={handoff.person_id === data.who.person.id} onChanged={refresh} />
         <div className="st-ho-grid">
-          <Work handoff={handoff} mine={handoff.person_id === data.who.person.id} editor={['owner', 'admin', 'editor'].includes(data.who.person.role)} onChanged={refresh} />
+          <Work handoff={handoff} mine={handoff.person_id === data.who.person.id} viewer={data.who.person.id} editor={['owner', 'admin', 'editor'].includes(data.who.person.role)} onChanged={refresh} />
           <div className="st-ho-side">
             <Side icon="ledger" title="Rules">
               {ruleLines(handoff.rules as never).map(line => <div className="st-ho-rule" key={line.key}>
@@ -118,13 +118,25 @@ function Notice({ handoff, mine, onChanged }: { handoff: Handoff; mine: boolean;
 }
 
 /** The draft (or talking points and the person's own words), copy and open, then paste the link back. */
-function Work({ handoff, mine, editor, onChanged }: { handoff: Handoff; mine: boolean; editor: boolean; onChanged(): void }) {
+/**
+ * Whose words the draft is: "In Maya's voice" only when it was written through the AI provider with her voice guide; any other
+ * draft names who wrote it ("Written by Dana laptop agent for Dana Reyes", "Written by you").
+ */
+function draftedBy(handoff: Handoff, viewer: string): string {
+  const drafted = handoff.drafted
+  if (!drafted) return ''
+  if (drafted.in_voice) return `In ${(handoff.person_name ?? '').split(/\s+/)[0] || 'their'}'s voice`
+  const yours = drafted.by.person_id === viewer, person = yours ? 'you' : drafted.by.name ?? 'someone who left'
+  const who = handoff.agent ? yours ? `your agent, ${handoff.agent.name}` : `${handoff.agent.name} for ${person}` : person
+  return drafted.ai ? `AI draft, prepared by ${who}` : `Written by ${who}`
+}
+
+function Work({ handoff, mine, viewer, editor, onChanged }: { handoff: Handoff; mine: boolean; viewer: string; editor: boolean; onChanged(): void }) {
   const [draft, setDraft] = useState(handoff.draft_text ?? ''), [own, setOwn] = useState(''), [url, setUrl] = useState(''), [attest, setAttest] = useState(false)
   const [skipping, setSkipping] = useState(false), [reason, setReason] = useState('')
   const { busy, message, act, setMessage } = useAct()
   useEffect(() => { setDraft(handoff.draft_text ?? '') }, [handoff.draft_text])
   const open = handoff.state === 'open', working = ['open', 'join_first', 'held'].includes(handoff.state) && (mine || editor)
-  const first = (handoff.person_name ?? '').split(/\s+/)[0] || 'their'
   const thread = handoff.thread_url ?? handoff.venue.url
   const copyText = handoff.draft_text === null ? own : draft
 
@@ -154,7 +166,7 @@ function Work({ handoff, mine, editor, onChanged }: { handoff: Handoff; mine: bo
   return <section className={open && mine && working ? 'st-ho-card st-ho-barred' : 'st-ho-card'} aria-labelledby="draft-title">
     {handoff.draft_text !== null ? <>
       <h2 className="st-panel-title" id="draft-title"><Disc icon="pencil" />Draft</h2>
-      <p className="st-ho-voice">In {first}'s voice</p>
+      <p className="st-ho-voice">{draftedBy(handoff, viewer)}</p>
       <textarea className="st-ho-draft" aria-labelledby="draft-title" value={draft} readOnly={!working} onChange={event => setDraft(event.target.value)} onBlur={() => void save()} />
     </> : <>
       <h2 className="st-panel-title" id="draft-title"><Disc icon="pencil" />Talking points</h2>

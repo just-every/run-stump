@@ -12,16 +12,20 @@ export async function records(ctx: Pick<ActionContext, 'db'>, rows: HandoffRow[]
   const ids = rows.map(row => row.id), history = await historyOf(ctx.db, ids), venues = new Map<string, VenueRow>()
   for (const row of rows) if (!venues.has(row.venue_id)) venues.set(row.venue_id, (await readVenue(ctx.db, row.venue_id))!)
   const people = new Map((await ctx.db.prepare('SELECT id,display_name FROM stump_people WHERE id IN (SELECT value FROM json_each(?))')
-    .bind(JSON.stringify([...new Set(rows.map(row => row.person_id))])).all<{ id: string; display_name: string }>()).results.map(row => [row.id, row.display_name]))
+    .bind(JSON.stringify([...new Set(rows.flatMap(row => [row.person_id, row.created_by]))])).all<{ id: string; display_name: string }>()).results.map(row => [row.id, row.display_name]))
   const products = new Map((await ctx.db.prepare('SELECT id,name FROM stump_products WHERE id IN (SELECT value FROM json_each(?))')
     .bind(JSON.stringify([...new Set(rows.map(row => row.product_id).filter(Boolean))])).all<{ id: string; name: string }>()).results.map(row => [row.id, row.name]))
-  const items = new Map((await ctx.db.prepare('SELECT id,flags FROM stump_items WHERE id IN (SELECT value FROM json_each(?))')
-    .bind(JSON.stringify(rows.map(row => row.item_id).filter(Boolean))).all<{ id: string; flags: string }>()).results.map(row => [row.id, JSON.parse(row.flags) as unknown[]]))
+  const items = new Map((await ctx.db.prepare('SELECT id,flags,ai FROM stump_items WHERE id IN (SELECT value FROM json_each(?))')
+    .bind(JSON.stringify(rows.map(row => row.item_id).filter(Boolean))).all<{ id: string; flags: string; ai: string | null }>()).results
+    .map(row => [row.id, { flags: JSON.parse(row.flags) as unknown[], ai: row.ai === null ? null : JSON.parse(row.ai) as { fields_sent?: string[] } }]))
   const out: HandoffRecord[] = []
   for (const row of rows) {
     const venue = venues.get(row.venue_id)!
     const draft = row.draft_text === null ? null : await tagOwnLinks(ctx.db, { text: row.draft_text, route: 'handoff', source: venue.platform ?? venue.name, campaign: row.campaign, content: shortContent(row.id) })
-    out.push(handoffRecord(row, venue, { person_name: people.get(row.person_id) ?? null, product_name: row.product_id ? products.get(row.product_id) ?? null : null, history: history.get(row.id)!, flags: row.item_id ? items.get(row.item_id) ?? [] : [], draft_text: draft }))
+    const item = row.item_id ? items.get(row.item_id) : undefined
+    // Who wrote the draft: a draft generated with the person's voice guide is in their voice; any other is the preparer's words.
+    const drafted = row.draft_text === null ? null : { ai: !!item?.ai, in_voice: !!item?.ai?.fields_sent?.includes('voice'), by: { person_id: row.created_by, name: people.get(row.created_by) ?? null } }
+    out.push(handoffRecord(row, venue, { person_name: people.get(row.person_id) ?? null, product_name: row.product_id ? products.get(row.product_id) ?? null : null, history: history.get(row.id)!, flags: item?.flags ?? [], draft_text: draft, drafted }))
   }
   return out
 }

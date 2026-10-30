@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, type ReactNode } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, Saved, pageName, useLoaded, useRun, useSaved, words } from '../stump/ui/kit.tsx'
+import { Outcome, Saved, useLoaded, useRun, useSaved, words } from '../stump/ui/kit.tsx'
 import type { Team } from '../stump/ui/types.ts'
 import { Disc } from '../stump/drafting/disc.tsx'
 import type { ClaimView, Product, VoiceView } from '../stump/drafting/view.ts'
@@ -11,15 +11,30 @@ export const Route = createFileRoute('/app/settings/brand')({ component: BrandPa
 
 const key = () => crypto.randomUUID()
 const list = (value: string) => value.split(',').map(item => item.trim()).filter(Boolean)
-const shortDate = (value: string | null) => value ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`)) : ''
+/** "Jan 15, 2027", its parts joined by no-break spaces so a date never breaks across lines; a date within the next 12 months drops its year ("Jan 15"). */
+const shortDate = (value: string | null, soon = false) => {
+  if (!value) return ''
+  const at = new Date(`${value}T00:00:00Z`), now = new Date(), inAYear = new Date(now); inAYear.setFullYear(now.getFullYear() + 1)
+  const year = !(soon && at >= new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z') && at < inAYear)
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', ...(year ? { year: 'numeric' } : {}), timeZone: 'UTC' }).format(at).replace(/ /g, '\u00a0')
+}
 const bare = (value: string) => value.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
-/** A proof in a few words: its own label, else its number and where it lives. */
-const proofText = (proof: unknown) => {
-  if (typeof proof === 'string') return /^https?:\/\//.test(proof) ? pageName(proof) : bare(proof)
-  if (!proof || typeof proof !== 'object') return ''
-  const { text, document, number, unit, url, date } = proof as Record<string, string | number | undefined>
-  const amount = number === undefined ? undefined : unit === undefined ? number : /^[$€£¥]$/u.test(String(unit)) ? `${unit}${number}` : /^(%|x|×)$/iu.test(String(unit)) ? `${number}${unit}` : `${number} ${unit}`
-  return [text ?? document, amount, text || document ? null : url ? pageName(String(url)) : null, date].filter(item => item !== undefined && item !== null && item !== '').join(' · ')
+/**
+ * A proof as the claims list shows it: its own words (label, number, date), then the page that backs it as its address
+ * ("brightwell.app/changelog/3-2"), linked, so the reader sees which page it is and can open it.
+ */
+function Proof({ proof }: { proof: unknown }) {
+  const isUrl = (value: unknown): value is string => typeof value === 'string' && /^https?:\/\//.test(value)
+  let words = '', url: string | null = null
+  if (isUrl(proof)) url = proof
+  else if (typeof proof === 'string') words = bare(proof)
+  else if (proof && typeof proof === 'object') {
+    const { text, document, number, unit, url: page, date } = proof as Record<string, string | number | undefined>
+    const amount = number === undefined ? undefined : unit === undefined ? number : /^[$€£¥]$/u.test(String(unit)) ? `${unit}${number}` : /^(%|x|×)$/iu.test(String(unit)) ? `${number}${unit}` : `${number} ${unit}`
+    words = [text ?? document, amount, date].filter(item => item !== undefined && item !== null && item !== '').join(' · ')
+    url = isUrl(page) ? page : null
+  }
+  return <>{words}{words && url ? ' · ' : ''}{url ? <a className="st-proof-link" href={url} target="_blank" rel="noreferrer noopener">{bare(url)}</a> : null}</>
 }
 
 function BrandPage() {
@@ -63,8 +78,8 @@ function BrandPage() {
         <ul className="st-list">{data?.claims.map(claim => <li className="st-kv" key={claim.id}>
           <div className="st-name">{claim.kind === 'banned' ? <span className="st-pill danger">banned</span> : claim.stale ? <span className="st-pill danger">stale</span> : null}{claim.text}</div>
           <div className="st-meta">{claim.kind === 'banned' ? `reason: ${claim.reason ?? ''}`
-            : claim.kind === 'comparative' ? `vs ${claim.competitor ?? ''} · source ${shortDate(claim.source_date)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on)}`
-            : `proof: ${proofText(claim.proof)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on)}`}</div>
+            : claim.kind === 'comparative' ? `vs ${claim.competitor ?? ''} · source ${shortDate(claim.source_date)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on, true)}`
+            : <>proof: <Proof proof={claim.proof} /> · owner {name(claim.owner_id)} · review {shortDate(claim.review_on, true)}</>}</div>
         </li>)}</ul>
         {writer && data ? <ClaimForm open={!data.claims.length} busy={busy} team={data.team.filter(person => person.status === 'active')} me={data.who.person.id} products={data.products}
           onAdd={args => act({ action: 'claim_create', ...args }, 'Claim added')} /> : null}

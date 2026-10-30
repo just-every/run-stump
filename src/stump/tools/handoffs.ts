@@ -43,7 +43,13 @@ export const handoffTools: StumpTool[] = [{
       },
       required: ['venue_id', 'person_id', 'product_id', 'due_at', 'lapse'],
       classify: classes,
-      summary: args => ({ target: { name: `Hand a post at a venue to ${String(args.person_id)}${args.generate === true ? ', drafted through the AI provider' : ''}` } }),
+      // The approver reads names, never ids: who posts, where, for which product, and what the brief carries.
+      async summary(args, ctx) {
+        const planned = await plan(ctx, args)
+        const carries = planned.route === 'handoff_brief' || !planned.writes ? 'Talking points and facts; the member writes the post'
+          : args.generate === true ? 'A draft written through the AI provider' : `A draft written by ${ctx.agent?.name ?? ctx.person.display_name}`
+        return { target: { name: `Hand ${planned.person.display_name} a post on ${planned.venue.name}` }, items: [`For ${planned.product.name}`, carries] }
+      },
       target: args => ({ kind: 'venue', id: String(args.venue_id) }),
       async run(args, ctx) { return one(ctx, await prepare(ctx, args, await plan(ctx, args))) },
     }),
