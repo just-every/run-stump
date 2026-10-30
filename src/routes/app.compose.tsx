@@ -179,7 +179,7 @@ function ComposePage() {
               {source ? <Tip label="Remove source"><button className="st-icon" type="button" aria-label="Remove source" onClick={() => setSource('')}>×</button></Tip> : null}
             </div>}
           <h3 className="st-sub"><Disc icon="people" />Accounts</h3>
-          {data && !accounts.length ? <p className="st-meta">Connect an account to post to it.</p> : null}
+          {data && !accounts.length ? <p className="st-meta"><Link to="/app/settings/accounts">Connect an account</Link> to post to it.</p> : null}
           <div className="st-chips">
             {accounts.filter(account => !preview || chosen.includes(account.id)).map(account =>
               <button key={account.id} className="st-chip" type="button" aria-pressed={chosen.includes(account.id)} disabled={!!preview}
@@ -199,7 +199,7 @@ function ComposePage() {
       </section> : null}
       {open && !(alone && !alone.account_id) ? <div className="st-bar">
         {held.length === variants.length
-          ? <span className="st-pill held">{variants.length === 1 ? `The ${networkName(held[0]!.network)} variant holds until fixed` : `All ${variants.length} variants hold until fixed`}</span>
+          ? <span className="st-pill held st-bar-held">{variants.length === 1 ? `The ${networkName(held[0]!.network)} variant holds until fixed` : variants.length === 2 ? 'Both variants hold until fixed' : `All ${variants.length} variants hold until fixed`}</span>
           : <button className="st-button ink" type="button" disabled={busy} onClick={() => void schedule('schedule_master')}>
             {alone ? 'Schedule' : held.length ? `Schedule ${variants.length - held.length} ${variants.length - held.length === 1 ? 'post' : 'posts'}` : 'Schedule all'} →
           </button>}

@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { ActionError, explain, me, runAction } from '../stump/ui/api.ts'
 import { Icon } from '../stump/ui/icons.tsx'
-import { MoreMenu, Outcome, accountWord, useLoaded, useRun } from '../stump/ui/kit.tsx'
+import { Empty, MoreMenu, Outcome, accountWord, useLoaded, useRun } from '../stump/ui/kit.tsx'
 import { flagLine, type Flag } from '../stump/drafting/view.ts'
 import { listeningStyles } from '../stump/watches/styles.ts'
 import type { BlockedAuthor, FindingList, FindingView, PollView, WatchList, WatchView } from '../stump/watches/ui-types.ts'
@@ -63,13 +63,20 @@ function Listening() {
   const reload = async () => { await watches.refresh(); await findings.refresh() }
   const role = watches.data?.me.person.role ?? 'viewer'
   const mayEdit = ['owner', 'admin', 'editor'].includes(role)
+  // With no watches yet the screen is the new-watch form itself (U5); Cancel leaves the empty state with its one action.
+  const none = !!watches.data && !items.length
+  const [setAside, setSetAside] = useState(false)
   return <HydrationUnit>
     <style>{listeningStyles}</style>
     <section className="st-page st-listen" aria-labelledby="listening-title">
       <h1 id="listening-title">Listening</h1>
       <p className="st-lead">Watches and findings</p>
       {watches.error ? <p className="st-error">{watches.error}</p> : null}
-      <div className="st-listen-grid">
+      {none ? mayEdit && !setAside
+        ? <div className="st-card st-listen-first"><Editor role={role} onDone={async id => { await reload(); choose(id) }} onCancel={() => setSetAside(true)} /></div>
+        : <Empty title="No watches yet" actions={mayEdit ? <button className="st-button primary" type="button" onClick={() => setSetAside(false)}>+ New watch</button> : undefined}>
+          A watch follows Hacker News, feeds, Bluesky and Mastodon for threads you could answer.</Empty> : null}
+      {watches.data && !none ? <div className="st-listen-grid">
         <div className="st-card" aria-label="Your watches">
           <h2>Your watches</h2>
           {/* At phone width the watches are one picker; New watch is its last choice, below the focal finding in weight. */}
@@ -85,7 +92,6 @@ function Listening() {
               </button>
             </li>)}
           </ul>
-          {watches.data && !items.length ? <p className="st-empty">No watches yet. A watch follows Hacker News, feeds, Bluesky and Mastodon for threads you could answer.</p> : null}
           {mayEdit ? <button className={items.length ? 'st-button primary st-new-watch' : 'st-button primary'} type="button" onClick={() => setEditing('new')}>+ New watch</button> : null}
         </div>
         <div className="st-card" aria-label={editing ? 'Watch' : 'Top findings'}>
@@ -96,7 +102,7 @@ function Listening() {
             onFocus={id => void navigate({ search: { ...(selected ? { watch: selected.id } : {}), finding: id } })}
             onEdit={() => setEditing('edit')} onChange={reload} /> : null}
         </div>
-      </div>
+      </div> : null}
     </section>
   </HydrationUnit>
 }
@@ -107,7 +113,7 @@ interface Context { me: string; role: string; products: Array<{ id: string; name
 
 function Findings({ watch, data, error, focus, act, may, context, onFocus, onEdit, onChange }: { watch: WatchView | null; data: FindingList | null; error: string | null; focus?: string; act: boolean; may: boolean; context: Context; onFocus(id: string): void; onEdit(): void; onChange(): Promise<void> }) {
   const { busy, message, run } = useRun()
-  if (!watch) return <><h2>Top findings</h2><p className="st-empty">Create a watch to see the threads worth answering.</p></>
+  if (!watch) return <><h2>Top findings</h2><p className="st-listen-none">Create a watch to see the threads worth answering.</p></>
   async function checkNow() {
     await run(() => runAction<PollView>('stump.watches.manage', { action: 'poll', watch_id: watch!.id, idempotency_key: key() }),
       result => result.added ? `${result.added} new ${result.added === 1 ? 'finding' : 'findings'}.` : 'Nothing new.')
@@ -124,8 +130,8 @@ function Findings({ watch, data, error, focus, act, may, context, onFocus, onEdi
     <Outcome message={message} />
     {failing ? <div className="st-banner error" role="status">The last check failed {ago(failing.at)}: {failing.message}. Earlier findings are kept.</div> : null}
     {error ? <p className="st-error">{error}</p> : null}
-    {data && !data.items.length ? <p className="st-empty">No findings yet. Matches from the last 30 days and anything new will show here.</p> : null}
-    {!data && !error ? <p className="st-empty">Loading findings.</p> : null}
+    {data && !data.items.length ? <p className="st-listen-none">No findings yet. Matches from the last 30 days and anything new will show here.</p> : null}
+    {!data && !error ? <p className="st-listen-none">Loading findings.</p> : null}
     <ol className="st-findings">
       {data?.items.map((finding, index) => <Finding key={finding.id} finding={finding} rank={index + 1} watch={watch} focal={focus ? finding.id === focus : index === 0} act={act} may={may} context={context}
         onFocus={() => onFocus(finding.id)} onChange={onChange} />)}

@@ -227,7 +227,7 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-count-row:first-of-type { border-top: 0; }
 .st-count { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 28px; height: 28px; padding: 0 6px; border-radius: var(--stump-pill); background: var(--stump-emerald-tint); color: var(--stump-emerald-text); font: 700 14px/1 var(--stump-font); }
 .st-count.held { background: var(--stump-held-tint); color: var(--stump-held); }
-.st-scrim { display: none; }
+.st-scrim, .st-sheet-scrim { display: none; }
 .st-icon-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--stump-ink); cursor: pointer; padding: 0; }
 .st-icon-button svg { width: 22px; height: 22px; }
 .st-icon-button:hover { background: var(--stump-sunk); }
@@ -288,6 +288,8 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
   .st-row { flex-wrap: wrap; }
   .st-panel { padding: 16px; }
   .st-popover { position: fixed; inset: auto 0 0 0; top: auto; width: auto; border-radius: 20px 20px 0 0; padding: 20px 16px calc(24px + env(safe-area-inset-bottom)); }
+  /* The bottom sheet sits on a scrim of ink at 30 %, which closes it on a tap. */
+  .st-sheet-scrim { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(28,27,24,.3); }
   .st-banner { font-size: 16px; padding: 12px 14px; margin-bottom: 24px; }
   .st-table, .st-table tbody, .st-table tr, .st-table td { display: block; width: 100%; }
   .st-table thead { display: none; }
@@ -348,11 +350,14 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-kv dd { margin: 0; overflow-wrap: anywhere; }
 .st-counts { display: flex; gap: calc(var(--stump-space) * 3); flex-wrap: wrap; margin: var(--stump-space) 0 calc(var(--stump-space) * 2); }
 .st-counts strong { display: block; font-size: var(--stump-size-section); }
-/* A venue's page (src/stump/venues/ui/VenuePage.tsx): section discs on Rules, Routes and Members, and its address and why as quiet lines */
+/* A venue's page (src/stump/venues/ui/VenuePage.tsx): section discs on every panel, its address in the subline, why it fits and its products in the right column */
 .st-venue .st-card > .st-panel-title { margin: 0 0 16px; }
-.st-venue-about { display: grid; gap: 6px; padding: 4px 4px 0; }
-.st-venue-about p { margin: 0; }
-.st-venue-about a { color: var(--stump-emerald-text); }
+.st-venue .st-venue-link { color: var(--stump-emerald-text); }
+.st-venue .st-venue-why { margin: 0; color: var(--stump-body); }
+.st-venue .st-venue-facts { display: grid; gap: 10px; margin: 16px 0 0; }
+.st-venue .st-venue-facts dt { font-size: var(--stump-size-small); color: var(--stump-muted); }
+.st-venue .st-venue-facts dd { margin: 0; overflow-wrap: anywhere; }
+.st-venue .st-venue-sub { font-size: var(--stump-size-body); font-weight: 600; margin: 16px 0 4px; padding-top: 16px; border-top: 1px solid var(--stump-hairline); }
 @media (max-width: 760px) {
   .st-table th.st-cell, .st-table td.st-cell { display: none; }
   .st-rowline { display: block; font-size: var(--stump-size-small); color: var(--stump-muted); margin-top: 2px; }
@@ -487,6 +492,10 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-drafting .st-when-long { display: none; }
   .st-drafting .st-when-short { display: inline; }
   .st-drafting .st-when-pill svg:last-child { display: none; }
+  /* Everything held: the held note and the time share one 72 px row, the note wrapping inside its pill. */
+  .st-drafting .st-bar:has(> .st-bar-held) { flex-wrap: nowrap; min-height: 72px; }
+  .st-drafting .st-bar > .st-bar-held { flex: 1 1 auto; min-width: 0; white-space: normal; line-height: 18px; padding: 6px 14px; }
+  .st-drafting .st-bar:has(> .st-bar-held) .st-when { flex: 0 0 auto; min-width: 0; }
 }
 
 /* First-run setup (src/routes/app.setup.tsx, SPEC §4.2): the paper page, the stump seated above one white card, four numbered steps. */
@@ -503,11 +512,11 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-setup-steps > li:nth-child(n+3) { padding-top: 32px; background: linear-gradient(var(--stump-hairline), var(--stump-hairline)) top / 100% 1px no-repeat; }
 .st-setup-num { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--stump-emerald); color: var(--stump-white); font: 700 20px/1 var(--stump-font); }
 .st-setup-steps h2 { margin: 6px 0 10px; font: 700 22px/28px var(--stump-font); color: var(--stump-ink); }
-.st-setup-value { display: block; width: 100%; font: 400 19px/26px var(--stump-font); color: var(--stump-body); background: transparent; border: 1px solid transparent; border-radius: var(--stump-radius-field); padding: 6px 10px; margin-left: -11px; min-height: 40px; }
-.st-setup-value:hover { border-color: var(--stump-hairline); }
-.st-setup-value:focus-visible, .st-setup-site input:focus-visible, .st-setup-pill:focus-visible, .st-setup-brand:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
-.st-setup-site { display: block; margin-top: 8px; }
-.st-setup-site input { width: 100%; font: 400 15px/20px var(--stump-font); color: var(--stump-ink); background: var(--stump-sunk); border: 1px solid transparent; border-radius: var(--stump-pill); padding: 0 14px; min-height: 40px; }
+/* The company site, then the company and product names: SPEC 3.4 fields (label above, 44 px, one border, focus on that border). */
+.st-setup-fields { display: grid; gap: 14px; }
+.st-setup-fields h2 { margin-bottom: 0; }
+.st-setup-fields .st-field input { font-size: 17px; }
+.st-setup-pill:focus-visible, .st-setup-brand:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
 .st-setup-pills { display: flex; flex-wrap: wrap; gap: 12px; }
 .st-setup-pill { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: var(--stump-pill); background: var(--stump-emerald-tint); color: var(--stump-ink); font: 500 15px/20px var(--stump-font); text-decoration: none; white-space: nowrap; }
 .st-setup-pill:hover { background: #DCE9DE; }
@@ -543,6 +552,25 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-venues-empty { min-height: calc(100vh - 56px - 24px - 32px - 48px); }
   .st-venues-empty .st-empty img { width: 200px; }
   .st-venues-empty .st-empty .st-actions { flex-direction: column; align-self: stretch; }
+}
+
+/* Settings · Publishing and Connections (src/routes/app.settings.publishing.tsx, app.settings.connections.tsx): one hairline panel per
+   section with its heading inside, an account row's toggle beside its Pause, and an opened row's settings on the sunk tone */
+.st-pub .st-pub-account { display: flex; align-items: center; gap: 16px; }
+.st-pub .st-pub-account > .st-row-toggle, .st-pub .st-pub-account > .st-row-main { flex: 1 1 auto; min-width: 0; }
+.st-pub .st-pub-account > .st-button { flex: none; }
+.st-pub .st-pub-account .st-handle { font-size: 17px; line-height: 24px; }
+.st-pub .st-pub-detail { background: var(--stump-sunk); border-radius: var(--stump-radius-row); padding: 16px; margin-top: 12px; }
+.st-pub .st-pub-detail ol { margin: 0 0 12px; padding-left: 20px; }
+.st-pub .st-pub-detail .st-secret { background: var(--stump-white); }
+.st-pub .st-pub-detail .st-days label { background: var(--stump-white); }
+.st-conn .st-conn-line { margin: 0 0 12px; }
+.st-conn .st-conn-line + .st-row { border-top: 0; padding-top: 0; }
+.st-conn .st-conn-form { display: grid; gap: 12px; margin-top: 12px; }
+.st-conn .st-conn-form .st-actions { margin-top: 0; }
+@media (max-width: 760px) {
+  .st-pub .st-pub-account { align-items: flex-start; gap: 8px; }
+  .st-pub .st-pub-account .st-row-toggle { column-gap: 4px; }
 }
 
 /* Settings · Team (src/routes/app.settings.team.tsx): the role as text with a dot, the row's ⋯ menu, and its inline edits */
@@ -592,6 +620,12 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-today .st-today-week ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .st-today .st-today-week li { display: flex; align-items: center; gap: 20px; font-size: 17px; color: var(--stump-ink); }
 .st-today .st-today-week .st-panel-title .st-disc { display: none; }
+/* The week's numerals are the rail's strongest marks: ink at the plate's size inside the 52 px discs. */
+.st-today .st-today-week .st-disc.big { color: var(--stump-ink); font-size: 30px; letter-spacing: -0.03em; }
+/* A list sits close under its panel title and close above the panel's end; rows keep their 56 px pitch between them. */
+.st-today .st-panel > .st-list > .st-row:first-child { padding-top: 4px; min-height: 0; }
+.st-today .st-panel > .st-list > .st-row:last-child { padding-bottom: 4px; min-height: 0; }
+.st-today .st-today-reason a { color: var(--stump-emerald-text); }
 .st-today .st-today-out:focus-visible, .st-today .st-today-finding-title:focus-visible, .st-today .st-today-all:focus-visible, .st-today .st-today-line a:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; border-radius: 6px; }
 @media (max-width: 1100px) {
   .st-today .st-today-pair { grid-template-columns: minmax(0, 1fr); }
@@ -607,6 +641,6 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-today .st-today-week ul { display: flex; flex-wrap: wrap; gap: 12px 28px; }
   .st-today .st-today-week li { gap: 12px; font-size: 16px; white-space: nowrap; }
   .st-today .st-today-count { gap: 12px; }
-  .st-today .st-today-week .st-disc.big { width: 44px; height: 44px; font-size: 18px; }
+  .st-today .st-today-week .st-disc.big { width: 44px; height: 44px; font-size: 22px; }
 }
 `

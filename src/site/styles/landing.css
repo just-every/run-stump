@@ -57,7 +57,8 @@
 .lp-row-name { font-weight: 600; font-size: 18px; color: var(--ink); }
 .lp-row-meta { color: var(--muted); font-size: 15px; }
 .lp-rows .lp-row-meta::before { content: "· "; }
-.lp-rows .lp-chip { margin-left: auto; }
+.lp-rows .lp-chip { margin-left: auto; flex: none; }
+.lp-row-text { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .lp-master { margin: 0; padding: 18px 20px; border-radius: 14px; background: var(--focus-tint); font: 600 20px/1.35 var(--font); color: var(--ink); }
 .lp-variants { list-style: none; margin: 14px 0 22px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .lp-variants li { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 10px; background: var(--focus-tint); }
@@ -128,6 +129,7 @@
   .lp-feature { padding: 32px 36px; }
   .lp-card-title { margin-bottom: 10px; font: 700 26px/1.3 var(--font); letter-spacing: -0.005em; }
   .lp-rows li { gap: 14px; min-height: 66px; }
+  .lp-row-text { gap: 14px; }
   .lp-row-name { font-size: 21px; font-weight: 700; }
   .lp-row-meta { font-size: 17px; }
   .lp-band .lp-chips li, .lp-band .lp-chip { height: 32px; padding: 0 14px; font-size: 17px; }
@@ -216,4 +218,10 @@
   .lp-closing-plate { order: -1; width: 260px; justify-self: center; }
   .lp-closing h2 { font-size: 40px; line-height: 42px; text-align: center; }
   .lp-closing .lp-actions { align-items: stretch; }
+}
+/* A phone's register row: the name over its meta on the left, the chip centred on the right, so every row keeps one shape. */
+@media (max-width: 479px) {
+  .lp-rows li { flex-wrap: nowrap; }
+  .lp-row-text { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .lp-rows .lp-row-text .lp-row-meta::before { content: none; }
 }

@@ -150,7 +150,8 @@ function Work({ handoff, mine, editor, onChanged }: { handoff: Handoff; mine: bo
     if (done) { setSkipping(false); onChanged() }
   }
 
-  return <section className="st-ho-card" aria-labelledby="draft-title">
+  // On a phone the poster's own open hand-off keeps Copy text and Record the link in the sticky bar; Open thread stays in the card.
+  return <section className={open && mine && working ? 'st-ho-card st-ho-barred' : 'st-ho-card'} aria-labelledby="draft-title">
     {handoff.draft_text !== null ? <>
       <h2 className="st-panel-title" id="draft-title"><Disc icon="pencil" />Draft</h2>
       <p className="st-ho-voice">In {first}'s voice</p>
@@ -164,7 +165,7 @@ function Work({ handoff, mine, editor, onChanged }: { handoff: Handoff; mine: bo
     </>}
     {working ? <>
       <div className="st-ho-buttons">
-        <button className="st-button primary" type="button" onClick={() => void copy()} disabled={!copyText}>Copy text</button>
+        <button className="st-button primary st-ho-copy" type="button" onClick={() => void copy()} disabled={!copyText}>Copy text</button>
         {thread ? <a className="st-button outline" href={thread} target="_blank" rel="noreferrer noopener">Open thread ↗</a> : null}
       </div>
       {open && mine ? <form className="st-ho-link" onSubmit={recordLink}>

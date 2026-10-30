@@ -94,6 +94,8 @@ export async function admit(ctx: ActionContext, planned: Plan) {
 const draftArgs = (args: Args): Args => ({
   format: 'post', person_id: args.person_id, product_id: args.product_id, venue_id: args.venue_id,
   ...(args.generate === true ? { generate: true } : { text: args.text }), ...(args.campaign !== undefined ? { campaign: args.campaign } : {}), ...(args.recommends !== undefined ? { recommends: args.recommends } : {}),
+  // The draft is aimed at the hand-off's thread, so the venue's rule that keeps self-promotion to that thread reads it as in place.
+  ...(typeof args.thread_url === 'string' ? { thread_url: args.thread_url } : {}),
 })
 
 /** A hand-off is a step the venue keeps for a person: gated, with the venue and "a member posts" (STUMP-SURFACE-005.1); an AI draft adds the provider. */

@@ -68,11 +68,11 @@ function Go({ to, className, children }: { to: Dest; className?: string; childre
   }
 }
 
-/** A held reason, with the words that name a venue's thread linked to it; the address itself never shows. */
-function Reason({ row }: { row: { reason: string; thread: { words: string; url: string } | null } }) {
-  if (!row.thread) return <>{row.reason}</>
-  const at = row.reason.indexOf(row.thread.words)
-  return <>{row.reason.slice(0, at)}<a href={row.thread.url} target="_blank" rel="noopener noreferrer">{row.thread.words}</a>{row.reason.slice(at + row.thread.words.length)}</>
+/** A held row's meta line, with the words that name a venue's thread linked to it; the address itself never shows. */
+function Reason({ row }: { row: { meta: string; thread: { words: string; url: string } | null } }) {
+  if (!row.thread) return <>{row.meta}</>
+  const at = row.meta.indexOf(row.thread.words)
+  return <>{row.meta.slice(0, at)}<a href={row.thread.url} target="_blank" rel="noopener noreferrer">{row.thread.words}</a>{row.meta.slice(at + row.thread.words.length)}</>
 }
 
 /** A plain warm line for a section with nothing in it, with the one place that fills it. */
@@ -139,7 +139,7 @@ export function TodayPage() {
               {held && !held.length ? <Nothing>Nothing is held. Every draft is clear to go.</Nothing> : null}
               {shownHeld.length ? <ul className="st-list">
                 {shownHeld.map(row => <li className="st-row" key={row.key}>
-                  <div className="st-row-main"><div className="st-today-line">{row.name}{row.reason ? <> · <span><Reason row={row} /></span></> : null}</div></div>
+                  <div className="st-row-main"><div className="st-name">{row.name}</div><div className="st-meta st-today-reason"><Reason row={row} /></div></div>
                   <Go className="st-button quiet small" to={row.action.to}>{row.action.label}</Go>
                 </li>)}
               </ul> : null}

@@ -48,7 +48,9 @@ const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 export function shortTime(iso: string | null) {
   if (!iso) return ''
   const at = new Date(iso)
+  // A no-break space keeps "7:59 AM" whole when a line wraps.
   return new Intl.DateTimeFormat('en-US', sameDay(at, new Date()) ? { hour: 'numeric', minute: '2-digit' } : { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(at)
+    .replace(/\s+(?=[AP]M\b)/g, '\u00a0')
 }
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name
 export const pausedLine = (scope: PauseScope, name: (id: string) => string) => `Publishing paused by ${firstName(name(scope.person_id))} at ${shortTime(scope.at)}`
@@ -138,6 +140,7 @@ export function PauseControl({ role, personId }: { role: string | undefined; per
     <button type="button" className={all ? 'st-pause paused' : 'st-pause'} aria-expanded={open} aria-controls="st-resume" onClick={() => open ? close() : setOpen(true)}>
       <span className="st-pause-icon"><Icon name={all ? 'play' : 'pause'} /></span><span className="st-pause-label">{all ? <>Resume<span className="st-pause-more"> publishing</span></> : 'Pause publishing'}</span>
     </button>
+    {open ? <div className="st-sheet-scrim" aria-hidden="true" onClick={close} /> : null}
     {open ? <div className="st-popover" id="st-resume" role="dialog" aria-labelledby="st-resume-title">
       <p className="st-popover-title" id="st-resume-title">{resumed ? 'Publishing resumed' : 'Resume publishing'}</p>
       {resumed ? <ResumeOutcome resumed={resumed} /> : preview ? <div aria-live="polite">

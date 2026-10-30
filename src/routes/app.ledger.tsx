@@ -5,7 +5,7 @@ import type { LedgerEntry } from '../stump/ledger/entry.ts'
 import { screenStyles } from '../stump/ledger/screen-styles.ts'
 import { NETWORK_OPTIONS, ROUTE_WORDS, STATE_WORDS, networkName } from '../stump/ledger/words.ts'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Chip, Outcome, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
+import { Chip, Empty, Outcome, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
 import type { Team } from '../stump/ui/types.ts'
 
 export const Route = createFileRoute('/app/ledger')({ component: LedgerPage })
@@ -37,6 +37,9 @@ function LedgerPage() {
   const set = (field: keyof Filters, value: string | undefined) => { setLimit(STEP); setFilters(current => ({ ...current, [field]: value || undefined })) }
   const mayCorrect = context.data ? ['owner', 'admin', 'editor'].includes(context.data.me.person.role) : false
   const admin = context.data ? ['owner', 'admin'].includes(context.data.me.person.role) : false
+  // Nothing on the ledger at all: the family empty state, with no search, filters or export over an empty list.
+  const none = !!data && data.total === 0 && !applied.length && !typed.trim()
+  const writer = context.data ? ['owner', 'admin', 'editor', 'contributor'].includes(context.data.me.person.role) : false
 
   async function exportCsv() {
     const { action: _action, limit: _limit, ...view } = query
@@ -52,11 +55,13 @@ function LedgerPage() {
     <style>{screenStyles}</style>
     <section className="st-page st-ledger-screen" aria-labelledby="ledger-title">
       <h1 id="ledger-title">Ledger</h1>
-      <div className="st-bar" role="search">
+      {none ? <Empty title="Nothing on the ledger yet" actions={writer ? <a className="st-button primary" href="/app/compose">Write a post</a> : undefined}>
+        Every post appears here the moment it goes out or a member posts it by hand.</Empty> : null}
+      {data && !none ? <div className="st-bar" role="search">
         <input className="st-search" type="search" aria-label="Search ledger" placeholder="Search ledger…" value={typed} onChange={event => setTyped(event.target.value)} />
         <button className="st-button" type="button" aria-expanded={showFilters} onClick={() => setShowFilters(shown => !shown)}>Filters{applied.filter(([field]) => field !== 'q').length ? ` (${applied.filter(([field]) => field !== 'q').length})` : ''}</button>
         <button className="st-button primary" type="button" disabled={busy || !data?.total} onClick={() => void exportCsv()}>Export CSV</button>
-      </div>
+      </div> : null}
       {showFilters ? <div className="st-panel">
         <div className="st-form">
           <label className="st-field">Network<input list="ledger-networks" value={filters.network ?? ''} maxLength={60} placeholder="Any" autoComplete="off" onChange={event => set('network', event.target.value.trim().toLowerCase())} />
@@ -78,8 +83,8 @@ function LedgerPage() {
       </div> : null}
       {error ? <p className="st-error">{error}</p> : null}
       <Outcome message={message} />
-      {data ? <p className="st-meta" role="status">{data.total} {data.total === 1 ? 'entry' : 'entries'}</p> : null}
-      {data && !data.items.length ? <p>{applied.length ? 'No entries match these filters.' : 'Nothing is on the ledger yet. A post appears here the moment it goes out or a member posts it.'}</p> : null}
+      {data && !none ? <p className="st-meta" role="status">{data.total} {data.total === 1 ? 'entry' : 'entries'}</p> : null}
+      {data && !none && !data.items.length ? <p>No entries match these filters.</p> : null}
       {data?.items.length ? <table className="st-table">
         <thead><tr><th scope="col">When</th><th scope="col">Where</th><th scope="col">Who</th><th scope="col">Route</th><th scope="col">State</th><th scope="col">Link</th></tr></thead>
         <tbody>{data.items.map(entry => {

@@ -2,11 +2,11 @@ import { Link } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
-import { Disc, Outcome, Tip, monthYear, useLoaded, useRun } from '../../ui/kit.tsx'
+import { Disc, Outcome, Tip, monthYear, useLoaded, useRun, when, words } from '../../ui/kit.tsx'
 import type { Team } from '../../ui/types.ts'
 import { DETAIL_LABELS } from '../kinds.ts'
 import { kindLabel, limitWords, nextOpen, routeLabel, statusLabel, statusTone } from './labels.ts'
-import { RulesCard } from './RulesCard.tsx'
+import { RulesCard, threadWords } from './RulesCard.tsx'
 import type { Members, RouteAnswer, Venue, VenueItem } from './types.ts'
 import { VenueForm } from './VenueForm.tsx'
 
@@ -38,7 +38,8 @@ export function VenuePage({ venueId }: { venueId: string }) {
           <h1 id="venue-title" style={{ flex: '1 1 auto', overflowWrap: 'anywhere' }}>{venue.name}</h1>
           {editor ? <VenueMenu venue={venue} onEdit={() => setEditing(true)} onChanged={changed} /> : null}
         </div>
-        <p className="st-sub"><span className={`st-dot${statusTone(venue.status) === 'ok' ? '' : ' open'}`} aria-hidden="true" style={{ color: 'var(--stump-accent)' }} />{kindLabel(venue.kind)} · {statusLabel(venue.status)}{venue.archived ? ' · Archived' : ''}</p>
+        <p className="st-sub"><span className={`st-dot${statusTone(venue.status) === 'ok' ? '' : ' open'}`} aria-hidden="true" style={{ color: 'var(--stump-accent)' }} />{kindLabel(venue.kind)} · {statusLabel(venue.status)}{venue.archived ? ' · Archived' : ''}
+          {venue.url ? <> · <a className="st-venue-link" href={venue.url} target="_blank" rel="noreferrer noopener">{bare(venue.url)} ↗</a></> : null}</p>
         {venue.excluded ? <div className="st-panel" role="note"><strong>Excluded.</strong> {venue.excluded.reason}{venue.excluded.alternative ? ` Instead: ${venue.excluded.alternative}` : ''}</div> : null}
         {editing ? <VenueForm venue={venue} onDone={() => { setEditing(false); changed() }} onCancel={() => setEditing(false)} /> : null}
         <div className="st-columns">
@@ -46,7 +47,8 @@ export function VenuePage({ venueId }: { venueId: string }) {
           <div className="st-aside">
             <RoutesCard venue={venue} routes={data.routes} editor={editor} onChanged={changed} />
             <MembersCard venue={venue} members={data.members} team={data.team} me={data.who.person} editor={editor} onChanged={changed} />
-            <About venue={venue} />
+            <WhyCard venue={venue} />
+            <ProductsCard venue={venue} items={data.items} />
           </div>
         </div>
       </> : null}
@@ -93,7 +95,7 @@ function RoutesCard({ venue, routes, editor, onChanged }: { venue: Venue; routes
   return <section className="st-card" aria-labelledby="routes-title">
     <h2 className="st-panel-title" id="routes-title"><Disc icon="arrows" />Routes</h2>
     {routes.routes.length ? <div className="st-chips">{routes.routes.map(route => <span className="st-chip ok" key={route}>{routeLabel(route)}</span>)}</div> : <p>No route is open.</p>}
-    {closed.length ? <ul className="st-list">{closed.map(reason => <li className="st-meta" key={reason.route} style={{ padding: '2px 0' }}>{routeLabel(reason.route)}: {reason.because}</li>)}</ul> : null}
+    {closed.length ? <ul className="st-list">{closed.map(reason => <li className="st-meta" key={reason.route} style={{ padding: '2px 0' }}>{CLOSED[reason.route] ?? routeLabel(reason.route)}: {lower(reason.because)}</li>)}</ul> : null}
     <div style={{ borderTop: '1px solid var(--stump-line)', marginTop: 16, paddingTop: 16 }}>
       <div className="st-meta">Next open</div>
       <div style={{ fontWeight: 560 }}>{venue.shared_limit ? nextOpen(venue.next_open_at) ?? 'Not within a year' : 'Any time'}</div>
@@ -156,18 +158,62 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
   </section>
 }
 
-/** The venue's address, why it matters and its other details, as quiet lines under the right column. The title and
- * subline already say what it is, so details that repeat them (its platform, subreddit and priority) do not show. */
-function About({ venue }: { venue: Venue }) {
+/** A venue's address as people write it: "reddit.com/r/healthIT". */
+const bare = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+/** A closed route in words: what the person cannot do here. */
+const CLOSED: Record<string, string> = { publish: 'No direct posts', handoff_draft: 'No AI drafts', handoff_brief: 'No hand-offs' }
+/** A sentence continued after a colon: its first letter lower-cased, unless the first word is an initialism ("AI"). */
+const lower = (text: string) => /^[A-Z][a-z]/.test(text) ? text.charAt(0).toLowerCase() + text.slice(1) : text
+
+/** Why the venue is worth showing up in, and what else the company knows about it. The title and subline already say what
+ * it is and where, so details that repeat them (its platform, subreddit and priority) do not show. */
+function WhyCard({ venue }: { venue: Venue }) {
   const howTo = Object.entries(venue.how_to_post).filter(([, value]) => value).map(([name, value]) => name === 'text' ? String(value) : `${name}: ${String(value)}`).join(' · ')
   const details = Object.entries(venue.details).filter(([name, value]) => name !== 'subreddit' && value !== null && value !== '')
     .map(([name, value]) => [DETAIL_LABELS[name] ?? name, Array.isArray(value) ? value.join(', ') : String(value)] as const)
-  const lines = [...details, ['Who reads it', venue.audience], ['What readers get', venue.reader_value], ['How to post', howTo || null], ['Reception', venue.reception], ['Notes', venue.notes]] as const
-  if (!venue.url && !venue.why && !lines.some(([, value]) => value)) return null
-  const link = (value: string) => /^https?:\/\//.test(value) ? <a href={value} target="_blank" rel="noreferrer noopener">{value.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')} ↗</a> : value
-  return <div className="st-venue-about">
-    {venue.url ? <p className="st-meta">{link(venue.url)}</p> : null}
-    {venue.why ? <p className="st-meta">{venue.why}</p> : null}
-    {lines.filter(([, value]) => value).map(([label, value]) => <p className="st-meta" key={label}>{label}: {link(value!)}</p>)}
-  </div>
+  const lines = ([...details, ['Who reads it', venue.audience], ['What readers get', venue.reader_value], ['How to post', howTo || null], ['Reception', venue.reception], ['Notes', venue.notes]] as const)
+    .filter(([, value]) => value)
+  if (!venue.why && !lines.length) return null
+  const link = (value: string) => /^https?:\/\//.test(value) ? <a href={value} target="_blank" rel="noreferrer noopener">{bare(value)} ↗</a> : value
+  return <section className="st-card" aria-labelledby="why-title">
+    <h2 className="st-panel-title" id="why-title"><Disc icon="check" />{venue.why ? 'Why it fits' : 'About'}</h2>
+    {venue.why ? <p className="st-venue-why">{venue.why}</p> : null}
+    {lines.length ? <dl className="st-venue-facts">{lines.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{link(value!)}</dd></div>)}</dl> : null}
+  </section>
+}
+
+/** Each product the venue serves, with its fit and how many items aim here, then those items with what holds them (STUMP-VENUE-001.6). */
+function ProductsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
+  if (!venue.products.length && !items.length) return null
+  const names = new Map(venue.products.map(product => [product.product_id, product.name ?? 'Product']))
+  return <section className="st-card" aria-labelledby="products-title">
+    <h2 className="st-panel-title" id="products-title"><Disc icon="chart" />{venue.products.length ? 'Products' : 'Items aimed here'}</h2>
+    {venue.products.length ? <ul className="st-list">{venue.products.map(product => <li className="st-row" key={product.product_id}>
+      <div className="st-row-main"><div className="st-name">{product.name ?? 'Product'}</div>
+        <div className="st-meta">{[product.fit !== null ? `fit ${product.fit}` : null, `${product.items} ${product.items === 1 ? 'item' : 'items'} here`].filter(Boolean).join(' · ')}</div></div>
+    </li>)}</ul> : null}
+    {items.length ? <>
+      {venue.products.length ? <h3 className="st-venue-sub">Items aimed here</h3> : null}
+      <ul className="st-list">{items.map(item => <li className="st-row" key={item.id}>
+        <div className="st-row-main"><div className="st-name">{[cap(item.format), item.product_id ? names.get(item.product_id) : null].filter(Boolean).join(' · ')}</div>
+          <div className="st-meta">{itemWords(venue, item)}</div></div>
+      </li>)}</ul>
+    </> : null}
+  </section>
+}
+
+const cap = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
+
+/** Where an item aimed here stands, in words: the rule that holds it, never its code. */
+function itemWords(venue: Venue, item: VenueItem): string {
+  if (item.state === 'held' || item.hold) {
+    const rule = item.hold?.rule ?? null
+    if (rule === 'self_promotion') return `Held: outside the ${venue.rules.self_promotion ? threadWords(venue.rules.self_promotion) : 'promotion thread'}`
+    if (rule === 'links') return 'Held: links are not allowed here'
+    if (rule === 'posting') return 'Held: members post here, so it goes to a member'
+    if (rule) return `Held by the ${words(rule)} rule`
+    return item.hold?.reason && !/^[a-z_]+$/.test(item.hold.reason) ? `Held: ${item.hold.reason}` : 'Held'
+  }
+  if (item.state === 'scheduled' && item.scheduled_at) return `Scheduled for ${when(item.scheduled_at)}`
+  return cap(words(item.state))
 }

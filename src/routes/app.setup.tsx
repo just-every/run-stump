@@ -66,22 +66,25 @@ function SetupPage() {
         <ol className="st-setup-steps">
           <li>
             <span className="st-setup-num" aria-hidden="true">1</span>
-            <div>
-              <h2 id="setup-company">Company</h2>
-              <input className="st-setup-value" aria-labelledby="setup-company" key={`c-${company}`} defaultValue={company} placeholder="Your company" maxLength={120} autoComplete="organization"
-                onBlur={event => void saveCompany(event.target.value.trim())} />
-              <label className="st-setup-site"><span className="st-sr">Company site</span>
-                <input value={site} placeholder="Company site, to fill these in" inputMode="url" autoComplete="url" maxLength={2048}
+            <div className="st-setup-fields">
+              <h2>Company</h2>
+              {/* URL first (L5): the site fills the names below, which stay editable. */}
+              <label className="st-field">Company site
+                <input value={site} placeholder="brightwell.com" inputMode="url" autoComplete="url" maxLength={2048}
                   onChange={event => setSite(event.target.value)} onBlur={() => void readSite()} onKeyDown={event => { if (event.key === 'Enter') void readSite() }} />
+              </label>
+              <label className="st-field">Company name
+                <input key={`c-${company}`} defaultValue={company} maxLength={120} autoComplete="organization" onBlur={event => void saveCompany(event.target.value.trim())} />
               </label>
             </div>
           </li>
           <li>
             <span className="st-setup-num" aria-hidden="true">2</span>
-            <div>
-              <h2 id="setup-product">Product</h2>
-              <input className="st-setup-value" aria-labelledby="setup-product" key={`p-${productName}`} defaultValue={productName} placeholder="Your product" maxLength={120}
-                onBlur={event => void saveProduct(event.target.value.trim())} />
+            <div className="st-setup-fields">
+              <h2>Product</h2>
+              <label className="st-field">Product name
+                <input key={`p-${productName}`} defaultValue={productName} maxLength={120} onBlur={event => void saveProduct(event.target.value.trim())} />
+              </label>
             </div>
           </li>
           <li>

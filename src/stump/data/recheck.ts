@@ -9,11 +9,13 @@ import { readPerson } from '../people/store.ts'
  */
 export async function recheckItems(db: D1Database, ids: string[], now: number): Promise<void> {
   if (!ids.length) return
-  const rows = (await db.prepare(`SELECT id,format,network,account_id,venue_id,person_id,product_id,master_id,text,parts FROM stump_items WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids)
-    .all<{ id: string; format: string; network: string | null; account_id: string | null; venue_id: string | null; person_id: string; product_id: string | null; master_id: string | null; text: string | null; parts: string | null }>()).results
+  const rows = (await db.prepare(`SELECT id,format,network,account_id,venue_id,person_id,product_id,master_id,text,parts,reply_to,options FROM stump_items WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids)
+    .all<{ id: string; format: string; network: string | null; account_id: string | null; venue_id: string | null; person_id: string; product_id: string | null; master_id: string | null; text: string | null; parts: string | null; reply_to: string | null; options: string | null }>()).results
   const brand = await loadBrand(db), statements: D1PreparedStatement[] = []
   for (const row of rows) {
-    const check = await checkDraft(db, brand, { ...row, parts: row.parts ? JSON.parse(row.parts) as string[] : null }, await readPerson(db, row.person_id), now)
+    // Where the item is aimed (the post it answers, its thread) is read as the check reads it on every save.
+    const check = await checkDraft(db, brand, { ...row, parts: row.parts ? JSON.parse(row.parts) as string[] : null, reply_to: row.reply_to ? JSON.parse(row.reply_to) as unknown : null,
+      options: row.options ? JSON.parse(row.options) as Record<string, unknown> : null }, await readPerson(db, row.person_id), now)
     statements.push(db.prepare('UPDATE stump_items SET flags=?,claims_used=? WHERE id=?').bind(JSON.stringify(check.flags), JSON.stringify(check.claims_used), row.id))
   }
   if (statements.length) await db.batch(statements)

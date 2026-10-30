@@ -33,9 +33,7 @@ export const inboxStyles = `
 .st-inbox .st-inbox-checks li { display: flex; gap: 8px; align-items: baseline; }
 .st-inbox .st-inbox-checks li.bad { color: var(--stump-danger); }
 .st-inbox .st-inbox-checks li.ok { color: var(--stump-emerald-text); }
-.st-inbox .st-inbox-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.st-inbox .st-inbox-link { font: inherit; font-size: var(--stump-size-small); color: var(--stump-emerald-text); background: none; border: 0; padding: 10px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-.st-inbox .st-inbox-link:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; border-radius: 4px; }
+.st-inbox .st-inbox-count { justify-self: end; }
 .st-inbox .st-inbox-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .st-inbox .st-inbox-actions .st-button { min-height: 48px; padding: 0 32px; }
 .st-inbox .st-inbox-reply { background: var(--stump-focus-tint); border-radius: 12px; padding: 16px 18px; display: grid; gap: 8px; }
@@ -54,6 +52,8 @@ export const inboxStyles = `
   .st-inbox .st-inbox-open { padding: 16px; gap: 16px; }
   .st-inbox .st-inbox-text { font-size: 17px; line-height: 25px; }
   .st-inbox .st-inbox-actions { position: sticky; bottom: 0; margin: 0 -16px -16px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--stump-white); box-shadow: inset 0 1px 0 var(--stump-hairline); border-radius: 0 0 var(--stump-radius) var(--stump-radius); }
-  .st-inbox .st-inbox-actions .st-button { flex: 1 1 0; padding: 0 16px; min-height: 52px; }
+  .st-inbox .st-inbox-actions { gap: 8px; flex-wrap: nowrap; }
+  .st-inbox .st-inbox-actions .st-button { flex: 1 1 auto; padding: 0 14px; min-height: 52px; }
+  .st-inbox .st-inbox-row.st-inbox-first[aria-current="true"] { background: var(--stump-white); }
 }
 `

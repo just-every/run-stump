@@ -50,13 +50,9 @@
 .docs-copy::before { content: "Copy"; }
 .docs-copy[data-done]::before { content: "Copied"; }
 .docs-copy:hover { background: rgba(255,255,255,.18); }
-.docs-code pre { margin: 0; padding: 10px 20px 20px; overflow-x: auto; }
-.docs-code code { background: none; padding: 0; color: inherit; font: 15px/1.6 var(--mono); overflow-wrap: normal; }
-/* On a phone the one line a block exists for wraps inside the card instead of scrolling; Copy still copies it exactly. */
-@media (max-width: 599px) {
-  .docs-code pre { white-space: pre-wrap; overflow-x: visible; }
-  .docs-code code { overflow-wrap: anywhere; }
-}
+/* The one line a block exists for wraps inside the card at every width instead of scrolling out of sight; Copy still copies it exactly. */
+.docs-code pre { margin: 0; padding: 10px 20px 20px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.docs-code code { background: none; padding: 0; color: inherit; font: 15px/1.6 var(--mono); overflow-wrap: anywhere; }
 .docs-table { overflow-x: auto; margin: 20px 0 24px; background: var(--white); border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); padding: 4px 20px; }
 .docs-table table { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.45; }
 .docs-table th { text-align: left; color: var(--muted); font: 600 13px/18px var(--font); letter-spacing: .06em; text-transform: uppercase; padding: 14px 16px 10px 0; }
