@@ -396,7 +396,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "d29eac4525d816d3ccf03791f47f45cd24e34b8b8cdec6e8b767efbb68eb7533",
+      "sha256": "ecc52ec4992774df6a7a3d5d7f7c7e15d10540a6e34a52aa4f03c8efae00e248",
       "executable": false
     },
     "AGENTS.md": {
@@ -2164,7 +2164,7 @@
       "executable": false
     },
     "src/routes/app.settings.team.tsx": {
-      "sha256": "74ffebb33fa203178a9e3e8d5613a31f75f7bda62fb75804124ac571d341708f",
+      "sha256": "21164c137498b01da1396b3461821da326a6cc572ace58f1f28042cbe2f20b65",
       "executable": false
     },
     "src/routes/app.tsx": {
@@ -2280,7 +2280,7 @@
       "executable": false
     },
     "src/stump/tools/team.ts": {
-      "sha256": "14d88da8cb47a94e68236767387b96c9f9baff60c97759495a29180da1c2e0ac",
+      "sha256": "0021a67ffcb14a59078020f16df54ac5ee7095dad3fad0a51e249fba42ba2ef3",
       "executable": false
     },
     "src/stump/ui/api.ts": {
@@ -2300,7 +2300,7 @@
       "executable": false
     },
     "src/stump/ui/types.ts": {
-      "sha256": "75091c133f7ab84efc279a66a4511ec13b6fe40cd4ba32612c062de136d24a30",
+      "sha256": "124f77346994f810a3e1363f40f01784c2b6309a60e4d1b990acd61c1f1d8fe0",
       "executable": false
     },
     "tests/agent/fixtures.mjs": {
@@ -2320,7 +2320,7 @@
       "executable": false
     },
     "tests/stump/team.test.mjs": {
-      "sha256": "8658d0d27579a42e54abe5219204517b401e097763662e823810ea1f35631d57",
+      "sha256": "b8f4d9f6ad622bd0834ef7138e80bf324f0b88bcdf01d7ece5473ce46f89a608",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

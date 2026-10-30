@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
 import { Outcome, useLoaded, useRun, when, words } from '../stump/ui/kit.tsx'
-import type { Team, TeamPerson } from '../stump/ui/types.ts'
+import type { RemovedPerson, RoleChange, Team, TeamPerson } from '../stump/ui/types.ts'
 
 export const Route = createFileRoute('/app/settings/team')({ component: TeamPage })
 
@@ -14,6 +14,8 @@ const key = () => crypto.randomUUID()
 function TeamPage() {
   const { data, error, refresh } = useLoaded(async () => ({ me: await me(), team: await runAction<Team>('stump.team.manage', { action: 'list' }) }))
   const [inviting, setInviting] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  const changed = (text: string) => { setNote(text); void refresh() }
   const manage = data ? ['owner', 'admin'].includes(data.me.person.role) : false
   const members = data?.team.items.filter(person => person.status === 'active') ?? []
   const invited = data?.team.items.filter(person => person.status === 'invited') ?? []
@@ -22,29 +24,30 @@ function TeamPage() {
       <h1 id="team-title">Team</h1>
       <p className="st-lead">Everyone who works in Stump, with their role and their connection to the company.</p>
       {error ? <p className="st-error">{error}</p> : null}
-      {manage && !inviting ? <button className="st-button primary" type="button" onClick={() => setInviting(true)}>Invite someone</button> : null}
-      {manage && inviting ? <Invite onDone={() => { setInviting(false); void refresh() }} onCancel={() => setInviting(false)} /> : null}
+      {note ? <p className="st-note" role="status">{note}</p> : null}
+      {manage && !inviting ? <button className="st-button primary" type="button" onClick={() => { setNote(null); setInviting(true) }}>Invite someone</button> : null}
+      {manage && inviting ? <Invite onDone={person => { setInviting(false); changed(`Invitation sent to ${person.email}.`) }} onCancel={() => setInviting(false)} /> : null}
       <h2>People</h2>
       <ul className="st-list">
-        {data ? members.map(person => <Person key={person.id} person={person} manage={manage} owner={data.me.person.role === 'owner'} self={person.id === data.me.person.id} onChange={refresh} />) : null}
+        {data ? members.map(person => <Person key={person.id} person={person} manage={manage} owner={data.me.person.role === 'owner'} self={person.id === data.me.person.id} onChange={changed} />) : null}
       </ul>
       {invited.length ? <>
         <h2>Waiting to sign in</h2>
-        <ul className="st-list">{invited.map(person => <Pending key={person.id} person={person} manage={manage} onChange={refresh} />)}</ul>
+        <ul className="st-list">{invited.map(person => <Pending key={person.id} person={person} manage={manage} onChange={changed} />)}</ul>
       </> : null}
     </section>
   </HydrationUnit>
 }
 
-function Invite({ onDone, onCancel }: { onDone(): void; onCancel(): void }) {
+function Invite({ onDone, onCancel }: { onDone(person: TeamPerson): void; onCancel(): void }) {
   const { busy, message, run } = useRun()
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const line = String(form.get('disclosure') ?? '').trim()
-    const done = await run(() => runAction('stump.team.manage', { action: 'invite', idempotency_key: key(), email: form.get('email'), display_name: form.get('name'),
+    const invited = await run(() => runAction<TeamPerson>('stump.team.manage', { action: 'invite', idempotency_key: key(), email: form.get('email'), display_name: form.get('name'),
       role: form.get('role'), connection: form.get('connection'), ...(line ? { disclosure_lines: [line] } : {}) }))
-    if (done) onDone()
+    if (invited) onDone(invited)
   }
   return <form className="st-panel" onSubmit={submit} aria-label="Invite someone">
     <div className="st-form">
@@ -62,7 +65,15 @@ function Invite({ onDone, onCancel }: { onDone(): void; onCancel(): void }) {
   </form>
 }
 
-function Person({ person, manage, owner, self, onChange }: { person: TeamPerson; manage: boolean; owner: boolean; self: boolean; onChange(): void }) {
+/** What a removal left to answer, read from the removed person's record. */
+function removedNote(person: RemovedPerson) {
+  const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+  const left = [person.open_handoffs.length ? `${count(person.open_handoffs.length, 'open hand-off needs', 'open hand-offs need')} someone new` : null,
+    person.unscheduled_items.length ? `${count(person.unscheduled_items.length, 'scheduled item is', 'scheduled items are')} back in draft` : null].filter(Boolean)
+  return `${person.display_name} removed.${left.length ? ` ${left.join('; ')}.` : ''}`
+}
+
+function Person({ person, manage, owner, self, onChange }: { person: TeamPerson; manage: boolean; owner: boolean; self: boolean; onChange(note: string): void }) {
   const { busy, message, run } = useRun()
   const [confirming, setConfirming] = useState(false)
   const choices = owner && !self ? ['owner', ...ROLES] : ROLES
@@ -75,17 +86,19 @@ function Person({ person, manage, owner, self, onChange }: { person: TeamPerson;
     </div>
     {manage && person.role !== 'owner' ? <div className="st-actions">
       <select className="st-select" aria-label={`Role for ${person.display_name}`} value={person.role} disabled={busy}
-        onChange={event => void run(() => runAction('stump.team.manage', { action: 'set_role', idempotency_key: key(), person_id: person.id, role: event.target.value })).then(onChange)}>
+        onChange={event => void run(() => runAction<RoleChange>('stump.team.manage', { action: 'set_role', idempotency_key: key(), person_id: person.id, role: event.target.value }))
+          .then(changed => { if (changed) onChange(`${changed.display_name} is now ${words(changed.role)}.`) })}>
         {choices.map(role => <option key={role} value={role}>{role === 'owner' ? 'owner (transfer)' : words(role)}</option>)}
       </select>
       {confirming
-        ? <button className="st-button danger" type="button" disabled={busy} onClick={() => void run(() => runAction('stump.team.manage', { action: 'remove', idempotency_key: key(), person_id: person.id })).then(onChange)}>Confirm removal</button>
+        ? <button className="st-button danger" type="button" disabled={busy} onClick={() => void run(() => runAction<RemovedPerson>('stump.team.manage', { action: 'remove', idempotency_key: key(), person_id: person.id }))
+          .then(removed => { if (removed) onChange(removedNote(removed)) })}>Confirm removal</button>
         : <button className="st-button danger" type="button" onClick={() => setConfirming(true)}>Remove</button>}
     </div> : null}
   </li>
 }
 
-function Pending({ person, manage, onChange }: { person: TeamPerson; manage: boolean; onChange(): void }) {
+function Pending({ person, manage, onChange }: { person: TeamPerson; manage: boolean; onChange(note: string): void }) {
   const { busy, message, run } = useRun()
   return <li className="st-row">
     <div className="st-row-main">
@@ -94,6 +107,7 @@ function Pending({ person, manage, onChange }: { person: TeamPerson; manage: boo
       <Outcome message={message} />
     </div>
     {manage ? <button className="st-button danger" type="button" disabled={busy}
-      onClick={() => void run(() => runAction('stump.team.manage', { action: 'remove', idempotency_key: key(), person_id: person.id })).then(onChange)}>Cancel invitation</button> : null}
+      onClick={() => void run(() => runAction<RemovedPerson>('stump.team.manage', { action: 'remove', idempotency_key: key(), person_id: person.id }))
+        .then(removed => { if (removed) onChange(`Invitation to ${removed.email} cancelled.`) })}>Cancel invitation</button> : null}
   </li>
 }

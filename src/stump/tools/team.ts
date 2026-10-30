@@ -37,7 +37,7 @@ function mayChange(ctx: ActionContext, target: StumpPerson, role?: Role) {
 export const teamTools: StumpTool[] = [{
   name: 'stump.team.manage', title: 'Manage the team',
   description: 'Invite people with a role and their connection to the company, list the team, change roles and remove people. A person exists only through an accepted invitation.',
-  scope: 'stump:team', classes: ['access'], clauses: ['STUMP-TEAM-001', 'STUMP-TRUTH-001'],
+  scope: 'stump:team', classes: ['access'], clauses: ['STUMP-TEAM-001'],
   refused: { create: NO_PERSONAS, add: NO_PERSONAS, import_person: NO_PERSONAS },
   actions: {
     invite: {
@@ -67,7 +67,7 @@ export const teamTools: StumpTool[] = [{
         if (!invited) refuse('already_member', { person_id: id })
         await (await history(ctx, 'invite', { id, email: address }, { role: args.role, connection: args.connection ?? null })).run()
         ctx.emit('team.invited', `stump://people/${id}`, { role: args.role })
-        return { person: publicPerson((await readPerson(ctx.db, id))!) }
+        return publicPerson((await readPerson(ctx.db, id))!)
       },
     },
     list: {
@@ -93,7 +93,7 @@ export const teamTools: StumpTool[] = [{
       async run(args, ctx) {
         const target = await teammate(ctx, args.person_id), role = args.role as Role, now = ctx.now()
         mayChange(ctx, target, role)
-        if (target.role === role) return { person: publicPerson(target) }
+        if (target.role === role) return publicPerson(target)
         if (role === 'owner') {
           // Ownership moves to another person; the previous owner stays on as an admin, and the transfer is recorded.
           await ctx.db.batch([
@@ -107,7 +107,7 @@ export const teamTools: StumpTool[] = [{
           await (await history(ctx, 'set_role', target, { from: target.role, to: role })).run()
         }
         ctx.emit('team.role_changed', `stump://people/${target.id}`, { role })
-        return { person: publicPerson((await readPerson(ctx.db, target.id))!), changed_at: new Date(now).toISOString() }
+        return { ...publicPerson((await readPerson(ctx.db, target.id))!), changed_at: new Date(now).toISOString() }
       },
     },
     update: {
@@ -132,7 +132,7 @@ export const teamTools: StumpTool[] = [{
           ctx.db.prepare('UPDATE stump_people SET display_name=?,connection=?,disclosure_lines=?,revision=revision+1 WHERE id=?').bind(next.display_name, next.connection, JSON.stringify(next.disclosure_lines), target.id),
           await history(ctx, 'update', target, { fields: Object.keys(args).filter(key => key !== 'action' && key !== 'person_id') }),
         ])
-        return { person: publicPerson((await readPerson(ctx.db, target.id))!) }
+        return publicPerson((await readPerson(ctx.db, target.id))!)
       },
     },
     remove: {
@@ -161,7 +161,8 @@ export const teamTools: StumpTool[] = [{
           await history(ctx, target.status === 'invited' ? 'cancel_invitation' : 'remove', target, { open_handoffs: handoffs.length, unscheduled_items: scheduled.length }),
         ])
         ctx.emit('team.removed', `stump://people/${target.id}`)
-        return { person_id: target.id, removed: true, open_handoffs: handoffs, unscheduled_items: scheduled.map(item => item.id) }
+        // The removed person's record, with the open hand-offs and unscheduled items that now need an answer.
+        return { ...publicPerson((await readPerson(ctx.db, target.id))!), open_handoffs: handoffs, unscheduled_items: scheduled.map(item => item.id) }
       },
     },
   },
