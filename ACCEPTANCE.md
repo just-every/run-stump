@@ -13,7 +13,7 @@ The primary journey: load the venues worth showing up in with their rules, teach
 | Later | 0 | 0 | 8 | 8 |
 | Full target | 0 | 17 | 163 | 180 |
 
-Judged from the code and tests at commit `f22bbec3274f66430b3d2a5e49ec8b3d67cea91e` (30 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
+Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c9a` (30 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
 ## Core
 
