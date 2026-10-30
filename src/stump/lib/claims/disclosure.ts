@@ -28,7 +28,7 @@
 
 import { extractUrls } from '../text/urls'
 import { escapeRegExp, sentenceSpans } from './sentences'
-import type { MentionSet } from './mentions'
+import { namePattern, type MentionSet } from './mentions'
 import type { Connection } from './types'
 
 export interface DisclosureMatch {
@@ -84,7 +84,7 @@ function termAlternation(terms: readonly string[]): string | undefined {
   const parts = terms
     .map((t) => t.trim())
     .filter(Boolean)
-    .map((t) => t.split(/\s+/).map(escapeRegExp).join('\\s+'))
+    .map(namePattern)
   return parts.length > 0 ? `(?:${parts.join('|')})` : undefined
 }
 

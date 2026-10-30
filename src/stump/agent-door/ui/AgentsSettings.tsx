@@ -3,33 +3,34 @@
 // sends here, and its approval pages stay where Base keeps them.
 import { useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
-import { credentials, explain, issueCredential, me, revokeCredential } from '../../ui/api.ts'
+import { ActionError, credentials, explain, issueCredential, me, revokeCredential } from '../../ui/api.ts'
 import { Icon } from '../../ui/icons.tsx'
 import { Outcome, PanelTitle, Saved, useLoaded, useRun, useSaved, when } from '../../ui/kit.tsx'
 import {
-  ANSWERS, actionName, agentState, answerOf, approvals, classHelp, className, markReview, narrower, outcomeWords, policyClasses, principal,
-  readPolicy, recentActivity, reviews, savePolicy, setPaused, withAnswer, type Disposition,
+  ANSWERS, actionName, agentOverview, agentState, answerOf, approvals, classHelp, className, decisionName, markReview, narrower, outcomeWords, policyClasses, principal,
+  recentActivity, reviews, savePolicy, setPaused, withAnswer, type Disposition, type PolicyDocument,
 } from './policy.ts'
 
 export function AgentsSettings() {
   const { data, error, refresh } = useLoaded(async () => {
     const who = await me()
+    // Base's state, policy and audit doors answer only the people who answer for agents; everyone else sees their own agents and approvals.
     const role = who.person.role, owner = role === 'owner', auditor = owner || role === 'admin' || role === 'editor'
-    const [creds, state, policy, waiting, toReview, activity] = await Promise.all([
-      credentials(), agentState(), owner ? readPolicy().catch(() => null) : Promise.resolve(null),
+    const [creds, state, overview, waiting, toReview, activity] = await Promise.all([
+      credentials(), auditor ? agentState() : Promise.resolve(null), auditor ? agentOverview() : Promise.resolve(null),
       approvals().then(answer => answer.approvals.filter(item => item.state === 'pending')),
       reviews().then(answer => answer.reviews.filter(item => item.state === 'open' || item.state === 'flagged')),
       auditor ? recentActivity() : Promise.resolve(null),
     ])
-    return { owner, creds, state, policy, waiting, toReview, activity }
+    return { owner, creds, state, overview, waiting, toReview, activity }
   })
   return <HydrationUnit>
     <section className="st-page st-agents" aria-labelledby="agents-title">
       <h1 id="agents-title" className="st-sr">Agents</h1>
       {error ? <p className="st-error">{error}</p> : null}
       <Connect items={data?.creds.items ?? null} refresh={refresh} />
-      {data ? <Policy owner={data.owner} state={data.state} policy={data.policy} refresh={refresh} /> : null}
-      {data ? <PausePanel owner={data.owner} paused={data.state.paused} refresh={refresh} /> : null}
+      {data?.state ? <Policy owner={data.owner} state={data.state} document={data.overview?.document ?? null} refresh={refresh} /> : null}
+      {data?.state ? <PausePanel owner={data.owner} paused={data.state.paused} refresh={refresh} /> : null}
       {data && (data.waiting.length || data.toReview.length) ? <Waiting approvals={data.waiting} reviews={data.toReview} refresh={refresh} /> : null}
       {data?.activity ? <section className="st-panel" aria-labelledby="activity-title">
         <PanelTitle icon="clock" id="activity-title">Recent activity</PanelTitle>
@@ -39,6 +40,15 @@ export function AgentsSettings() {
             <div className="st-meta">{row.agent.name} for {row.sponsor.name} · {outcomeWords(row)} · {when(row.at)}</div>
           </div>
         </li>)}</ul> : <p className="st-meta">No agent activity yet.</p>}
+      </section> : null}
+      {data?.overview?.week.counts.length ? <section className="st-panel" aria-labelledby="week-title">
+        <PanelTitle icon="clock" id="week-title">This week</PanelTitle>
+        <table className="st-table" aria-labelledby="week-title">
+          <thead><tr><th scope="col">Kind of action</th><th scope="col">Handled</th><th scope="col">Calls</th></tr></thead>
+          <tbody>{data.overview.week.counts.map(row => <tr key={`${row.class}:${row.decision}`}>
+            <td><span className="st-name">{className(row.class)}</span></td><td className="st-meta">{decisionName(row.decision)}</td><td>{row.count}</td>
+          </tr>)}</tbody>
+        </table>
       </section> : null}
     </section>
   </HydrationUnit>
@@ -85,12 +95,11 @@ function Connect({ items, refresh }: { items: Array<{ client_id: string; name: s
 }
 
 /** What agents may do, one answer per kind of action. Each answer saves as it changes; agents wait until every kind has one. */
-function Policy({ owner, state, policy, refresh }: { owner: boolean; state: Awaited<ReturnType<typeof agentState>>; policy: Awaited<ReturnType<typeof readPolicy>> | null; refresh(): Promise<void> }) {
+function Policy({ owner, state, document, refresh }: { owner: boolean; state: Awaited<ReturnType<typeof agentState>>; document: PolicyDocument | null; refresh(): Promise<void> }) {
   const [pending, setPending] = useState<Record<string, Disposition>>({})
   const [failure, setFailure] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const { shown, saved } = useSaved()
-  const document = policy?.document ?? null
   const classes = policyClasses(document, state.policy.unanswered)
   const answer = (cls: string) => pending[cls] ?? answerOf(document, cls)
   const left = classes.filter(cls => !answer(cls)).length
@@ -125,7 +134,33 @@ function Policy({ owner, state, policy, refresh }: { owner: boolean; state: Awai
     {narrower(document) ? <p className="st-meta">The policy also has {narrower(document)} narrower {narrower(document) === 1 ? 'rule' : 'rules'} for particular agents or amounts.</p> : null}
     {owner && !business ? <p className="st-meta st-agents-foot">Ask first goes to the owner, who has a day to answer. Agents use no paid AI.</p> : null}
     {failure ? <p className="st-error" role="alert">{failure}</p> : null}
+    {owner && !business ? <PolicyDocumentEditor document={document} refresh={refresh} /> : null}
   </section>
+}
+
+/** The whole policy document, for rules the answers above cannot say: reviewers, approvers, waits and narrower rules for particular agents or amounts. */
+function PolicyDocumentEditor({ document, refresh }: { document: PolicyDocument | null; refresh(): Promise<void> }) {
+  const { busy, message, run } = useRun()
+  const text = JSON.stringify(document ?? withAnswer(null, {}), null, 2)
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const source = String(new FormData(event.currentTarget).get('document') ?? '')
+    const saved = await run(() => {
+      let parsed: PolicyDocument
+      // Text that is not JSON is refused as Base refuses a document it cannot read.
+      try { parsed = JSON.parse(source) as PolicyDocument } catch { throw new ActionError('policy_document_invalid', { path: '$' }, 400) }
+      return savePolicy(parsed)
+    }, () => 'Policy saved.')
+    if (saved) await refresh()
+  }
+  return <details className="st-agents-document">
+    <summary className="st-meta">Edit policy document</summary>
+    <form className="st-form" onSubmit={submit}>
+      <label className="st-field">Policy document<textarea key={text} name="document" rows={16} spellCheck={false} defaultValue={text} required /></label>
+      <div><button className="st-button" type="submit" disabled={busy}>Save policy document</button></div>
+      <Outcome message={message} />
+    </form>
+  </details>
 }
 
 function PausePanel({ owner, paused, refresh }: { owner: boolean; paused: { business: boolean; local: boolean }; refresh(): Promise<void> }) {
