@@ -4439,6 +4439,10 @@
       "sha256": "124f77346994f810a3e1363f40f01784c2b6309a60e4d1b990acd61c1f1d8fe0",
       "executable": false
     },
+    "src/stump/ui/zones.ts": {
+      "sha256": "2ba1bd35fb6438f00a76ed196b8b778e628dfd176b8670a19db619d9c3c44cf4",
+      "executable": false
+    },
     "src/stump/venues/import/changes.ts": {
       "sha256": "96ca9697530fa159a9e6ecc628ed26a818e57734571b43d368816e43839c603c",
       "executable": false
