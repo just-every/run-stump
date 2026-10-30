@@ -120,7 +120,7 @@
 
 /* 900 and wider: section headings fill their lines as the plates set them ("Know where to / show up."), the first line the longer; 390 keeps balance. */
 @media (min-width: 900px) {
-  .lp-band h2, .lp-details h2 { text-wrap: wrap; }
+  .lp-band h2, .lp-details h2 { text-wrap: pretty; }
 }
 
 /* 1100 and wider: the picked image's scale (SPEC preamble, style process step 3), which runs larger than §3.2's table */

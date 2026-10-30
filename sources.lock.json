@@ -3476,7 +3476,7 @@
       "executable": false
     },
     "src/site/styles/landing.css": {
-      "sha256": "acd983fc99a430669eaa2dd4d0265feacfc48ccad87b5a0a131e96eae1071786",
+      "sha256": "6a55389b2828f43871edafac5de15dea7c9df4ec451ac4429eea557b091f96fb",
       "executable": false
     },
     "src/site/styles/site.css": {
@@ -3529,6 +3529,14 @@
     },
     "src/stump/agent-door/index.ts": {
       "sha256": "b899e2c32864507df2b9102dce567c9cdb91586263aa71a80a454381e320cc90",
+      "executable": false
+    },
+    "src/stump/agent-door/ui/AgentsSettings.tsx": {
+      "sha256": "9ae3555746349de006fd9966e47ae444a66d5080ca2b420a2ff1fd1c059f4de4",
+      "executable": false
+    },
+    "src/stump/agent-door/ui/policy.ts": {
+      "sha256": "82879591c45f615c54ef57fecc7a48fbd3e178e0c739a9b2e4cace9a76c24a8e",
       "executable": false
     },
     "src/stump/data/erase.ts": {
