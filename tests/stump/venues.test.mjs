@@ -22,13 +22,17 @@ test('the register keeps one venue per place, and its rules decide the routes an
   assert.equal(journalist.result.structuredContent.details.publication, 'Synthetic Times')
   const newsletter = (await manage('owner', { action: 'create', kind: 'newsletter', name: 'Synthetic Weekly', url: 'https://synthetic-stump-2.example/news', status: 'editorial' })).body.result
 
-  for (const [kind, extra, field] of [['slack', { workspace: 'Synthetic', channel: '#demos' }, 'channel'], ['podcast', { details: { host: 'Synthetic Host' }, guest_intake_url: 'https://synthetic-stump-podcast.example/guests', topics: ['clinics', 'scheduling'] }, 'topics'], ['directory', { details: { price_usd: 49 } }, 'price_usd']]) {
+  for (const [kind, extra, field] of [['slack', { workspace: 'Synthetic', channel: '#demos' }, 'channel'], ['podcast', { details: { host: 'Synthetic Host' }, guest_intake: 'https://synthetic-stump-podcast.example/guests', topics: ['clinics', 'scheduling'] }, 'guest_intake'], ['directory', { details: { price_usd: 49 } }, 'price_usd']]) {
     const venue = (await manage('owner', { action: 'create', kind, name: `Synthetic ${kind}`, url: `https://synthetic-stump-${kind}.example/`, status: 'candidate', ...extra })).body.result
     assert.equal(venue.kind, kind); assert.ok(Object.hasOwn(venue.details, field) && venue.details[field] !== null, kind)
   }
   // What a person gives is kept or refused by name, never dropped: an exclusion's reason belongs to exclude.
   const unknown = await app.mcp(token, 'stump.venues.manage', { action: 'create', kind: 'podcast', name: 'Synthetic Show', url: 'https://synthetic-stump-show.example/', reason: 'Not ours.' })
   assert.deepEqual([unknown.error?.code, unknown.error?.field], ['invalid_arguments', 'reason'])
+  // An argument no venue action takes is refused by name at both doors, and nothing is created.
+  const stray = { action: 'create', kind: 'forum', name: 'Synthetic Stray', url: 'https://synthetic-stump-stray.example/', colour: 'red' }
+  assert.deepEqual([(await app.mcp(token, 'stump.venues.manage', stray)).error?.field, (await manage('owner', stray)).body.field], ['colour', 'colour'])
+  assert.equal((await manage('owner', { action: 'list', q: 'synthetic-stump-stray.example/' })).body.result.total, 0)
   const listed = (await manage('owner', { action: 'list', status: 'editorial' })).body.result
   assert.deepEqual(listed.items.map(venue => venue.name).sort(), ['Synthetic Reporter', 'Synthetic Weekly'])
   assert.equal(listed.total, listed.items.length)

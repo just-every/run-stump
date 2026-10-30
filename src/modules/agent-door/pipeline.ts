@@ -79,6 +79,9 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
     if (!tool.readOnly && !key) return refuse('idempotency_key_required')
     if (tool.widens === false && row.ignored_arguments.length) return refuse('invalid_arguments')
     if (tool.authority === 'none' && row.ignored_arguments.length) return refuse('undeclared_arguments')
+    // A tool that closes its input schema (additionalProperties: false) refuses an argument it does not declare, naming it, instead of dropping it.
+    const undeclared = tool.inputSchema.additionalProperties === false ? row.ignored_arguments.filter(key => key !== 'idempotency_key' && key !== 'expected_revision') : []
+    if (undeclared.length) return refuse('invalid_arguments', { field: undeclared[0] })
     let previous: { outcome: string | null; decision_id: string } | undefined
     const requestDigest = await digest({ name, arguments: declared, ...(principal.clientId === undefined ? {} : { client_id: principal.clientId }) })
     if (tool.readOnly && requestState !== undefined) {

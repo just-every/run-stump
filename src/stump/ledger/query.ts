@@ -30,9 +30,10 @@ export function select(args: Args, ctx: ActionContext, extra: Partial<Record<typ
     if (typeof value === 'string') { filters.push(`${field}=?`); values.push(value) }
   }
   if (typeof args.q === 'string' && args.q.trim()) {
-    const like = `%${args.q.trim().replace(/[\\%_]/g, c => `\\${c}`)}%`
-    filters.push("(text LIKE ? ESCAPE '\\' OR url LIKE ? ESCAPE '\\' OR campaign LIKE ? ESCAPE '\\' OR by_label LIKE ? ESCAPE '\\' OR venue_id IN (SELECT id FROM stump_venues WHERE name LIKE ? ESCAPE '\\'))")
-    values.push(like, like, like, like, like)
+    // instr, not LIKE: D1 refuses a LIKE pattern over 50 bytes, and a search may be any length.
+    const q = args.q.trim(), has = (column: string) => `instr(lower(COALESCE(${column},'')),lower(?))>0`
+    filters.push(`(${has('text')} OR ${has('url')} OR ${has('campaign')} OR ${has('by_label')} OR venue_id IN (SELECT id FROM stump_venues WHERE ${has('name')}))`)
+    values.push(q, q, q, q, q)
   }
   const from = moment(args.from, 'from', false), to = moment(args.to, 'to', true)
   if (from !== null) { filters.push(`${WHEN}>=?`); values.push(from) }
