@@ -9,7 +9,8 @@ import { htmlToText } from '../lib/mastodon/index.ts'
 import { stumpFetch } from '../net/fetch.ts'
 import type { VenueRow } from '../venues/model.ts'
 
-const ALIASES: Record<string, string> = { 'old.reddit.com': 'reddit.com', 'new.reddit.com': 'reddit.com', 'np.reddit.com': 'reddit.com', 'twitter.com': 'x.com', 'mobile.twitter.com': 'x.com', 'mobile.x.com': 'x.com' }
+const ALIASES: Record<string, string> = { 'old.reddit.com': 'reddit.com', 'new.reddit.com': 'reddit.com', 'np.reddit.com': 'reddit.com', 'twitter.com': 'x.com', 'mobile.twitter.com': 'x.com', 'mobile.x.com': 'x.com',
+  'discordapp.com': 'discord.com', 'ptb.discord.com': 'discord.com', 'canary.discord.com': 'discord.com' }
 const hostOf = (url: URL) => { const host = url.hostname.toLowerCase().replace(/^www\./, ''); return ALIASES[host] ?? host }
 
 export function parseLink(value: string): URL {
@@ -19,13 +20,45 @@ export function parseLink(value: string): URL {
   return url
 }
 
-/** The link's place, compared the way a person would: the same site, and for a subreddit the same subreddit. */
-export function onVenue(venue: Pick<VenueRow, 'url'>, link: URL): boolean {
+/**
+ * A Discord server's id, from the venue's recorded Server (the id, or a
+ * discord.com/channels/<server> address) or from its own address when that is a
+ * discord.com/channels/<server> link. An invite link (discord.gg/<code>) names no server.
+ */
+export function discordServer(venue: Pick<VenueRow, 'url' | 'details'>): string | null {
+  const fromUrl = (value: string) => { try { const url = new URL(value); return hostOf(url) === 'discord.com' ? /^\/channels\/(\d{5,25})(?:\/|$)/.exec(url.pathname)?.[1] ?? null : null } catch { return null } }
+  let recorded: unknown = null
+  try { recorded = (JSON.parse(venue.details || '{}') as { server?: unknown }).server } catch { recorded = null }
+  if (typeof recorded === 'string') {
+    const text = recorded.trim()
+    if (/^\d{5,25}$/.test(text)) return text
+    const server = fromUrl(text)
+    if (server) return server
+  }
+  return venue.url ? fromUrl(venue.url) : null
+}
+
+/** The link's place, compared the way a person would: the same site, for a subreddit the same subreddit, and for a Discord server the same server. */
+export function onVenue(venue: Pick<VenueRow, 'url' | 'kind' | 'details'>, link: URL): boolean {
   if (!venue.url) return false
   const home = new URL(venue.url)
+  if (venue.kind === 'discord' || hostOf(home) === 'discord.gg' || hostOf(home) === 'discord.com') {
+    // A message link is discord.com/channels/<server>/<channel>/<message>; the venue is usually recorded by its invite link.
+    const server = discordServer(venue), linked = hostOf(link) === 'discord.com' ? /^\/channels\/(\d{5,25})\//.exec(link.pathname)?.[1] ?? null : null
+    return !!server && server === linked
+  }
   if (hostOf(home) !== hostOf(link)) return false
   const subreddit = /^\/r\/([A-Za-z0-9_]+)/.exec(home.pathname)?.[1]?.toLowerCase()
   return !subreddit || /^\/r\/([A-Za-z0-9_]+)/.exec(link.pathname)?.[1]?.toLowerCase() === subreddit
+}
+
+/** Why a link is not on the venue, in words: for a Discord server recorded only by its invite, how to record the server. */
+export function notOnVenueReason(venue: Pick<VenueRow, 'url' | 'kind' | 'details' | 'name'>, link: URL): string {
+  if ((venue.kind === 'discord' || /discord\.(gg|com)$/.test(venue.url ? new URL(venue.url).hostname : '')) && !discordServer(venue)) {
+    return `${venue.name} is recorded by its invite link, which names no server. Edit the venue and set Server to the server's id (the first number in a discord.com/channels/<server>/… link), then record the link again.`
+  }
+  if (venue.kind === 'discord') return `That link is not a message in ${venue.name}'s server. Copy the message link (discord.com/channels/…) from that server.`
+  return `That link is not on ${venue.name}.`
 }
 
 /** The same post, whatever the tracking query or trailing slash. */

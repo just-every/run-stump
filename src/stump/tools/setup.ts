@@ -1,13 +1,16 @@
 import { refuse } from '../actions/refusals.ts'
 import type { StumpTool } from '../actions/types.ts'
 import { APP_NETWORKS, checkKeys, checkPrices, describeApps, saveKeys, savePrices, type AppNetwork } from '../accounts/apps.ts'
-import { ADMINS } from '../people/roles.ts'
+import { checkProvider, clearProvider, describeProvider, saveProvider } from '../drafting/provider.ts'
+import { ADMINS, EVERYONE } from '../people/roles.ts'
 
 // stump.setup.apps: the company's own network apps and the X price table
-// (STUMP-CONNECT-002, STUMP-SURFACE-004). Keys are sealed and read back masked.
+// (STUMP-CONNECT-002, STUMP-SURFACE-004). stump.setup.ai: the company's AI
+// provider, model and key (STUMP-DRAFT-006). Keys are sealed and read back masked.
 
 const security = (setting: string, measure = 1) => ({ class: 'security' as const, facts: { measure, setting } })
 const price = { type: 'number', minimum: 0, maximum: 1000 }
+const hostOf = (value: unknown) => { try { return new URL(String(value)).host } catch { return 'not set' } }
 
 export const setupTools: StumpTool[] = [{
   name: 'stump.setup.apps', title: 'Set up network apps',
@@ -51,6 +54,42 @@ export const setupTools: StumpTool[] = [{
         if (!checked.ok) refuse('invalid_arguments', { field: checked.field ?? 'prices', reason: checked.error })
         await savePrices(ctx.db, checked.table, ctx.person.id, ctx.now())
         return { app: (await describeApps(ctx.db, ctx.env)).find(app => app.network === 'x') }
+      },
+    },
+  },
+}, {
+  name: 'stump.setup.ai', title: 'Choose the AI provider',
+  description: 'Read which AI provider drafts for the company, and choose it: an OpenAI-compatible address (OpenAI, OpenRouter, a Cloudflare AI Gateway or your own), the exact model and the key. The key is sealed and never answered back. A provider saved here is used instead of one the installation sets through its AI_* settings.',
+  scope: 'stump:setup', classes: ['security', 'standard'], clauses: ['STUMP-DRAFT-006'],
+  actions: {
+    get: {
+      // Reading which provider is set changes nothing, so it is standard work: a policy that blocks security changes still lets an agent read it.
+      roles: EVERYONE, read: true,
+      classify: () => [{ class: 'standard' as const, facts: { measure: 0 } }],
+      run: (_args, ctx) => describeProvider(ctx.env, ctx.db),
+    },
+    set: {
+      roles: ADMINS,
+      properties: { base_url: { type: 'string', minLength: 1, maxLength: 2048 }, model: { type: 'string', minLength: 1, maxLength: 200 }, api_key: { type: 'string', minLength: 1, maxLength: 4096 } },
+      required: ['base_url', 'model'],
+      classify: args => [{ class: 'security' as const, facts: { measure: 1, setting: 'ai_provider', provider: hostOf(args.base_url) } }],
+      summary: args => ({ target: { name: `Draft with ${String(args.model)} at ${hostOf(args.base_url)}` } }),
+      target: () => ({ kind: 'ai_provider', id: 'company' }),
+      async run(args, ctx) {
+        await saveProvider(ctx.env, ctx.db, checkProvider(args), ctx.person.id, ctx.now())
+        ctx.emit('setup.ai_provider', 'stump://setup/ai', { host: hostOf(args.base_url) })
+        return describeProvider(ctx.env, ctx.db)
+      },
+    },
+    clear: {
+      roles: ADMINS,
+      classify: () => [{ class: 'security' as const, facts: { measure: 1, setting: 'ai_provider' } }],
+      summary: () => ({ target: { name: 'Remove the AI provider saved in Settings' } }),
+      target: () => ({ kind: 'ai_provider', id: 'company' }),
+      async run(_args, ctx) {
+        await clearProvider(ctx.db)
+        ctx.emit('setup.ai_provider', 'stump://setup/ai', { cleared: true })
+        return describeProvider(ctx.env, ctx.db)
       },
     },
   },

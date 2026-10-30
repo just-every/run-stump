@@ -35,15 +35,17 @@ const toRow = (destination: string, kind: Kind, row: Read): TargetRow => ({
 function writeVenue(row: TargetRow, value: Value): D1Sql[] {
   const id = nativeId(row.targetId), products = (value.products as Array<{ product_id: string }>) ?? []
   return [
-    sql(`INSERT INTO stump_venues(id,kind,name,url,url_key,platform,status,priority,rules,shared_limit,archived,excluded,notes,created_by,created_at,updated_at,details,audience,how_to_post,requirements,reception)
-      VALUES(?,?,?,?,?,?,?,?,?,?,0,?,?,?,${NOW},${NOW},?,?,?,'{}',?)
+    sql(`INSERT INTO stump_venues(id,kind,name,url,url_key,platform,status,priority,rules,shared_limit,archived,excluded,notes,created_by,created_at,updated_at,details,audience,how_to_post,requirements,reception,why,reader_value)
+      VALUES(?,?,?,?,?,?,?,?,?,?,0,?,?,?,${NOW},${NOW},?,?,?,?,?,?,?)
       ON CONFLICT(id) DO UPDATE SET kind=excluded.kind,name=excluded.name,url=excluded.url,url_key=excluded.url_key,platform=excluded.platform,status=excluded.status,
         priority=excluded.priority,rules=excluded.rules,shared_limit=excluded.shared_limit,excluded=excluded.excluded,notes=excluded.notes,details=excluded.details,
-        audience=excluded.audience,how_to_post=excluded.how_to_post,reception=excluded.reception,revision=stump_venues.revision+1,updated_at=excluded.updated_at`,
+        audience=excluded.audience,how_to_post=excluded.how_to_post,requirements=excluded.requirements,reception=excluded.reception,why=excluded.why,reader_value=excluded.reader_value,
+        revision=stump_venues.revision+1,updated_at=excluded.updated_at`,
       id, value.kind, value.name, value.url, value.url_key, value.platform, value.status, value.priority === null ? null : ['low', 'medium', 'high', 'top'].indexOf(String(value.priority)) + 1,
       JSON.stringify(value.rules ?? {}), value.shared_limit ? JSON.stringify(value.shared_limit) : null, value.excluded ? JSON.stringify(value.excluded) : null,
       [value.notes, value.limit_text ? `Shared limit as the list states it: ${String(value.limit_text)}` : null].filter(Boolean).join('\n') || null, value.created_by,
-      JSON.stringify(value.details ?? {}), value.audience, JSON.stringify(value.how_to_post ?? {}), value.reception),
+      JSON.stringify(value.details ?? {}), value.audience, JSON.stringify(value.how_to_post ?? {}), JSON.stringify(value.requirements ?? {}), value.reception,
+      value.why ?? null, value.reader_value ?? null),
     sql('DELETE FROM stump_venue_products WHERE venue_id=?', id),
     ...products.map(item => sql('INSERT INTO stump_venue_products(venue_id,product_id,fit) VALUES(?,?,NULL)', id, item.product_id)),
     sql(`INSERT INTO stump_venue_history(id,venue_id,action,person_id,agent_id,detail,at) VALUES(lower(hex(randomblob(16))),?,'import',?,NULL,?,${NOW})`, id, value.created_by, JSON.stringify({ source: value.namespace })),

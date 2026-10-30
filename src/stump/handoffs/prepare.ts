@@ -9,13 +9,13 @@ import type { ActionContext, Args } from '../actions/types.ts'
 import { loadBrand, type Brand } from '../drafting/check.ts'
 import { saveItem } from '../drafting/items.ts'
 import { createItem, draftingClasses, screen } from '../drafting/write.ts'
-import { readPerson, type StumpPerson } from '../people/store.ts'
+import { notActiveReason, readPerson, type StumpPerson } from '../people/store.ts'
 import { handoffEligibility } from '../venues/members.ts'
 import { rulesOf, venueOrRefuse, type VenueRow } from '../venues/model.ts'
 import { routesFor } from '../venues/rules.ts'
 import { disclosureFor, factsFor, nextOpening, outsideVoice, talkingPoints } from './brief.ts'
 import { duplicateHold, limitHold, ruleHold, ruleHoldJson, type RuleHold } from './holds.ts'
-import { onVenue, parseLink } from './link.ts'
+import { notOnVenueReason, onVenue, parseLink } from './link.ts'
 import { history } from './model.ts'
 
 export const TOOL = 'stump.handoffs.prepare'
@@ -30,7 +30,7 @@ export interface Plan {
 /** Someone on the team who has signed in and may post by hand: everyone but a viewer (D-1, STUMP-TEAM-001). */
 async function poster(ctx: ActionContext, id: unknown): Promise<StumpPerson> {
   const person = await readPerson(ctx.db, String(id))
-  if (!person || person.status !== 'active') return refuseAct(ctx, TOOL, 'prepare', { rule: 'D-1', source: 'STUMP-TRUTH-001' }, { person_id: String(id) })
+  if (!person || person.status !== 'active') return refuseAct(ctx, TOOL, 'prepare', { rule: 'D-1', source: 'STUMP-TRUTH-001' }, { person_id: String(id), reason: notActiveReason(person) })
   if (person.role === 'viewer') refuse('person_cannot_act', { person_id: person.id, role: person.role, reason: `${person.display_name} reads Stump and does not post.` })
   return person
 }
@@ -57,7 +57,7 @@ export async function plan(ctx: ActionContext, args: Args): Promise<Plan> {
   }
   const due = Date.parse(String(args.due_at))
   if (!Number.isFinite(due) || due <= ctx.now()) refuse('invalid_arguments', { field: 'due_at', reason: 'Give a time in the future.' })
-  if (typeof args.thread_url === 'string' && !onVenue(venue, parseLink(args.thread_url))) refuse('link_not_on_venue', { field: 'thread_url', venue_id: venue.id, venue: venue.name, url: args.thread_url })
+  if (typeof args.thread_url === 'string' && !onVenue(venue, parseLink(args.thread_url))) refuse('link_not_on_venue', { field: 'thread_url', venue_id: venue.id, venue: venue.name, url: args.thread_url, reason: notOnVenueReason(venue, parseLink(args.thread_url)) })
 
   // D-8: an outside voice recommending the product, or one Stump would write about it for, gets talking points and facts only.
   const d8 = outsideVoice(person) && (args.recommends === true || args.generate === true)
@@ -99,7 +99,7 @@ const draftArgs = (args: Args): Args => ({
 /** A hand-off is a step the venue keeps for a person: gated, with the venue and "a member posts" (STUMP-SURFACE-005.1); an AI draft adds the provider. */
 export async function classes(args: Args, ctx: ActionContext) {
   const planned = await plan(ctx, args)
-  return [{ class: 'gated' as const, facts: { measure: 1, provider: planned.venue.name, step: 'a member posts' } }, ...draftingClasses(ctx.env, args.generate === true && planned.route === 'handoff_draft' ? 1 : 0, 1)]
+  return [{ class: 'gated' as const, facts: { measure: 1, provider: planned.venue.name, step: 'a member posts' } }, ...await draftingClasses(ctx, args.generate === true && planned.route === 'handoff_draft' ? 1 : 0, 1)]
 }
 
 /** Writes the hand-off: the draft item through the drafting module where the route takes one, then the brief. */

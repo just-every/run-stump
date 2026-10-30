@@ -24,4 +24,4 @@ Search every entry by text, and filter by venue, network, person, product, campa
 
 ## Signups
 
-With [tracked links](/docs/links) and Vane, each entry shows the signups it brought.
+Every link to your own site in a post carries [UTM tags](/docs/links), and its `utm_content` is that post's own id, so any analytics tool that reads UTM tags can count the visits and signups each post brought. With [Vane](/docs/stack) connected, each post is also marked on its day in Vane, linked to its entry, and Vane's attribution shows the signups by post. Stump itself does not yet show signup counts on an entry.

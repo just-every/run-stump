@@ -16,8 +16,8 @@ When a source fails, the watch shows the error and its time, and keeps what it f
 
 ## Ranking with reasons
 
-Findings rank by fit to your products, each with its reasons: the terms it matched, freshness, and whether the thread asks a question you can answer. A finding's own text never changes its rank.
+Findings rank by fit to your products, each with its reasons: the terms it matched, freshness, and whether the thread asks a question you can answer. A term in a thread's title (or in the post itself, for Bluesky and Mastodon) counts in full; a term found only deep in a long thread about something else counts little, and so does a question asked there. Each finding shows the terms it matched ("matches invoicing") and, when you open it, every reason. A finding's own text never changes its rank.
 
 ## Answering
 
-Stump has no feature that comments on or votes on Hacker News, so a Hacker News finding goes to a [hand-off](/docs/handoffs) with a brief and facts, and the named person answers in their own words. People who engaged with your accounts first are answered from the [inbox](/docs/inbox).
+Stump has no feature that comments on or votes on Hacker News, so a Hacker News finding goes to a [hand-off](/docs/handoffs) with a brief and facts, and the named person answers in their own words. A hand-off goes to a member of a venue: record the site (for example `news.ycombinator.com`) as a venue with its members, and its findings offer **Hand off**; until then a finding offers to add the venue. People who engaged with your accounts first are answered from the [inbox](/docs/inbox).

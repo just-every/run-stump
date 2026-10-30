@@ -148,6 +148,9 @@ function wordClip(text: string, max = 110): string {
   return `${(space > max * 0.5 ? head.slice(0, space) : head).replace(/[\s,.;:–—-]+$/, '')}…`
 }
 
+/** The site a finding is on, as a person names it: news.ycombinator.com. */
+const siteOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, '') } catch { return 'its site' } }
+
 function Finding({ finding, rank, watch, focal, act, may, context, onFocus, onChange }: { finding: FindingView; rank: number; watch: WatchView; focal: boolean; act: boolean; may: boolean; context: Context; onFocus(): void; onChange(): Promise<void> }) {
   const { run } = useRun()
   const job = context.role === 'viewer' ? null : jobOf(finding)
@@ -168,6 +171,8 @@ function Finding({ finding, rank, watch, focal, act, may, context, onFocus, onCh
       </ul> : null}
       {focal ? <div className="st-finding-actions">
         {job && !working ? <button type="button" className="st-button primary" onClick={() => setWorking(true)}>{JOB_WORDS[job]} <Icon name="arrowRight" /></button> : null}
+        {/* A hand-off goes to a member of a venue: with no venue recorded for this thread's site, the way there is to add it. */}
+        {!job && context.role !== 'viewer' && !finding.venue && finding.routes.some(route => route.startsWith('handoff')) ? <a className="st-quiet-link" href="/app/venues?add=1">Add {siteOf(finding.url)} as a venue to hand this off</a> : null}
         <a className="st-open-link" href={finding.url} target="_blank" rel="noopener noreferrer">Open thread ↗</a>
       </div> : null}
       {focal && working && job === 'reply' ? <ReplyForm finding={finding} context={context} onClose={() => setWorking(false)} /> : null}

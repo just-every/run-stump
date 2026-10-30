@@ -153,21 +153,49 @@ export function parseSharedLimit(text: string): JsonObject | null {
   return { text: trimmed, posts, per };
 }
 
-export interface AiRuleInput { banned: boolean; rulesUrls: string[]; readAt: string | null; origin: string }
+export interface AiRuleInput { banned: boolean; allowed: boolean; rulesUrls: string[]; readAt: string | null; origin: string }
 
-/** The AI-writing rule the list states: a venue that requires human-written posts bans AI text. */
+/** A rule the list states, sourced from its one rules page and the day it was read (a rule needs both to be sourced). */
+function listedRule(value: Json, rulesUrls: string[], readAt: string | null, origin: string): JsonObject {
+  const single = rulesUrls.length === 1 ? rulesUrls[0]! : null;
+  return { value, source_url: single, source_urls: rulesUrls, read_at: readAt, sourced: single !== null && readAt !== null, origin: 'import', origin_detail: origin };
+}
+
+/**
+ * The AI-writing rule the list states: a venue that requires human-written posts
+ * bans AI text, and one the list says does not require them allows it. A list
+ * that says nothing records no rule.
+ */
 export function aiTextRule(input: AiRuleInput): JsonObject | null {
-  if (!input.banned) return null;
-  const single = input.rulesUrls.length === 1 ? input.rulesUrls[0]! : null;
-  return {
-    value: 'banned',
-    source_url: single,
-    source_urls: input.rulesUrls,
-    read_at: input.readAt,
-    sourced: single !== null,
-    origin: 'import',
-    origin_detail: input.origin,
-  };
+  if (!input.banned && !input.allowed) return null;
+  return listedRule(input.banned ? 'banned' : 'allowed', input.rulesUrls, input.readAt, input.origin);
+}
+
+const DAYS: Record<string, number> = { day: 1, week: 7, month: 30, year: 365 };
+
+/**
+ * The gates a requirements line plainly states: a karma floor ("100 karma",
+ * "karma 100+"), an account age ("account 30 days old", "90-day-old account"),
+ * moderator approval and membership. Anything else stays as text only.
+ */
+export function parseGates(text: string | null): JsonObject | null {
+  if (!text) return null;
+  const gates: JsonObject = {};
+  const plain = text.replace(/(\d),(\d{3})/g, '$1$2');
+  const karma = /(\d{1,7})\s*\+?\s*(?:comment\s+|post\s+|link\s+|combined\s+)?karma\b/i.exec(plain) ?? /\bkarma\s*(?:of|at least|over|above|>=|≥|:|-)?\s*(\d{1,7})/i.exec(plain);
+  if (karma) gates.karma = Number(karma[1]);
+  const age = /(\d{1,4})[\s-]*(day|week|month|year)s?[\s-]*old\s+account/i.exec(plain)
+    ?? /\baccount(?:\s+age)?\s*(?:of|at least|over|older than|>=|≥|:|-|must be|is)?\s*(\d{1,4})\s*\+?\s*(day|week|month|year)s?/i.exec(plain);
+  if (age) gates.account_age_days = Number(age[1]) * DAYS[age[2]!.toLowerCase()]!;
+  if (/\b(?:moderators?|mods?|admins?)\s+(?:must\s+)?approve|\bapproval\b|\bapproved\s+(?:members|accounts|users)\b/i.test(plain)) gates.approval = true;
+  if (/\bmembers?\s+only\b|\bmust\s+(?:be\s+a\s+member|join)\b|\bjoin\s+(?:first|before)\b/i.test(plain)) gates.membership = true;
+  return Object.keys(gates).length ? gates : null;
+}
+
+/** The gates rule the list states, from its requirements. */
+export function gatesRule(requirements: string | null, rulesUrls: string[], readAt: string | null): JsonObject | null {
+  const gates = parseGates(requirements);
+  return gates ? listedRule(gates, rulesUrls, readAt, 'requirements') : null;
 }
 
 export const str = (value: string | undefined): string | null => (value && value.trim() ? value.trim() : null);

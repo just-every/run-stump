@@ -35,8 +35,14 @@ interface Block {
 }
 
 const PROSE_SECTIONS = new Set(['overview', 'how to use', 'posting rhythm', 'start here', 'index']);
-const KEY_LINE = /^- ([a-z][a-z0-9_]*):(?:[ \t]+(.*))?$/;
-const EMDASH = ' — ';
+// `- key: value`, also written `* Key name: value`; the key reads lower-case with underscores.
+const KEY_LINE = /^[-*] ([A-Za-z][A-Za-z0-9_ ]*?):(?:[ \t]+(.*))?$/;
+const keyName = (key: string) => key.trim().toLowerCase().replace(/\s+/g, '_');
+// The id and the name are split by an em dash, as the format writes it; an en dash or a spaced hyphen reads the same.
+const SEPARATORS = [' — ', ' – ', ' -- ', ' - '];
+const VENUE_SECTIONS = new Set(['venue directory', 'venues', 'venue list', 'directory']);
+const EXCLUDED_SECTIONS = new Set(['not recommended', 'excluded', 'excluded venues']);
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function parseOutreachMarkdown(input: string, limits: Partial<ImportLimits> = {}): ParsedVenueList {
   const max = { ...DEFAULT_LIMITS, ...limits };
@@ -88,7 +94,7 @@ export function parseOutreachMarkdown(input: string, limits: Partial<ImportLimit
     if (raw.startsWith('## ')) {
       flush();
       const title = raw.slice(3).trim().toLowerCase();
-      mode = title === 'venue directory' ? 'venues' : title === 'not recommended' ? 'excluded' : PROSE_SECTIONS.has(title) ? 'prose' : 'entries';
+      mode = VENUE_SECTIONS.has(title) ? 'venues' : EXCLUDED_SECTIONS.has(title) ? 'excluded' : PROSE_SECTIONS.has(title) ? 'prose' : 'entries';
       continue;
     }
     if (raw.startsWith('### ')) {
@@ -112,7 +118,7 @@ export function parseOutreachMarkdown(input: string, limits: Partial<ImportLimit
     if (block.sub === 'keys') {
       const match = KEY_LINE.exec(raw.trimEnd());
       if (match) {
-        const key = match[1]!;
+        const key = keyName(match[1]!);
         if (block.keys.has(key)) block.duplicateKeys.push(key);
         else block.keys.set(key, (match[2] ?? '').trim());
         block.lastKey = key;
@@ -138,7 +144,7 @@ export function parseOutreachMarkdown(input: string, limits: Partial<ImportLimit
   if (fence) warnings.push({ code: 'unterminated_fence', message: 'A fenced block was still open at the end of the file; its text was dropped.' });
   flush();
 
-  if (!sawStructure) throw new ImportInputError('not_venue_list', 'No entries, venues or exclusions were found. This is not a venue list in the outreach format.');
+  if (!sawStructure) throw new ImportInputError('not_venue_list', 'No venues were found. Put them under a "## Venue directory" heading, each as "### <venue_id> — <name>" followed by "- url: https://…" and "- status: ready" lines (other keys are optional). Excluded venues go under "## Not recommended" with "- reason:". Entries with drafts go under a heading named for the product. docs/import-venues.md has a full example.');
 
   const result = assembleVenueList({ source: 'outreach-md', listDate: header.date, venues, excluded, entries, rejected, warnings });
   compareHeaderCounts(header, result, result.warnings);
@@ -200,9 +206,11 @@ const reject = (rejected: RejectedRow[], id: string, kind: string, line: number,
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 function splitHeading(heading: string): { id: string; location: string } | null {
-  const at = heading.indexOf(EMDASH);
-  if (at < 0) return null;
-  return { id: heading.slice(0, at).trim(), location: heading.slice(at + EMDASH.length).trim() };
+  for (const separator of SEPARATORS) {
+    const at = heading.indexOf(separator);
+    if (at >= 0) return { id: heading.slice(0, at).trim(), location: heading.slice(at + separator.length).trim() };
+  }
+  return null;
 }
 
 function finishEntry(block: Block, entries: EntryDraft[], rejected: RejectedRow[]): void {
@@ -281,12 +289,19 @@ function finishVenue(block: Block, venues: VenueDraft[], rejected: RejectedRow[]
     lists[key] = parsed ?? [];
   }
   checkUrlList('rules_urls', lists.rules_urls!, errors);
+  const human = get('human_written_required').trim() ? parseBool(get('human_written_required')) : false;
+  if (human === null) errors.push(`human_written_required "${get('human_written_required')}" is not true or false`);
+  const readAt = str(get('rules_read_at'));
+  if (readAt && !DATE.test(readAt)) errors.push(`rules_read_at "${readAt}" is not a date (YYYY-MM-DD)`);
+  const priority = get('priority').trim() ? normalizePriority(get('priority')) : null;
+  if (get('priority').trim() && !priority) errors.push(`priority "${get('priority')}" is not one of top, high, strong, medium, low or fallback`);
   if (errors.length) { reject(rejected, id, 'venue', block.line, errors); return; }
   venues.push({
-    line: block.line, externalId: parts!.id, name: parts!.location, url, platform: str(get('platform')), explicitKind: '', status: status!,
-    audience: str(get('audience')), promotionRoute: str(get('promotion_route')), rulesText: str(get('rules')), rulesUrls: lists.rules_urls!,
-    sharedLimit: str(get('shared_limit')), reception: str(get('reception')), products: uniqueFolded(lists.seeds!), humanWritten: false,
-    priority: null, excluded: null, sources: [], listedEntryIds: lists.entries!,
+    line: block.line, externalId: parts!.id, name: parts!.location, url, platform: str(get('platform')), explicitKind: get('kind'), status: status!,
+    audience: str(get('audience')), promotionRoute: str(get('promotion_route')) ?? str(get('how_to_post')), rulesText: str(get('rules')), rulesUrls: lists.rules_urls!,
+    sharedLimit: str(get('shared_limit')), reception: str(get('reception')), products: uniqueFolded(lists.seeds!), humanWritten: human === true,
+    humanWrittenStated: get('human_written_required').trim() !== '', priority, excluded: null, sources: [], listedEntryIds: lists.entries!,
+    requirements: str(get('requirements')), why: str(get('why')), readerValue: str(get('reader_value')), rulesReadAt: readAt,
   });
 }
 
@@ -307,7 +322,7 @@ function finishExcluded(block: Block, excluded: VenueDraft[], rejected: Rejected
   if (errors.length) { reject(rejected, name || `line ${block.line}`, 'excluded', block.line, errors); return; }
   excluded.push({
     line: block.line, externalId: null, name, url, platform: null, explicitKind: '', status: 'excluded', audience: null, promotionRoute: null,
-    rulesText: null, rulesUrls: [], sharedLimit: null, reception: null, products: uniqueFolded(seeds ?? []), humanWritten: false, priority: null,
-    excluded: { reason: reason!, alternative: str(get('alternative')) }, sources: sources ?? [], listedEntryIds: [],
+    rulesText: null, rulesUrls: [], sharedLimit: null, reception: null, products: uniqueFolded(seeds ?? []), humanWritten: false, humanWrittenStated: false, priority: null,
+    excluded: { reason: reason!, alternative: str(get('alternative')) }, sources: sources ?? [], listedEntryIds: [], requirements: null, why: null, readerValue: null, rulesReadAt: null,
   });
 }

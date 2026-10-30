@@ -2,21 +2,29 @@
 // STUMP-DRAFT-002, STUMP-DRAFT-006, STUMP-BRAND-002.2). A request carries only
 // what the draft needs, the record lists those fields, the model, the provider's
 // host and the USD cost the provider reported, and a failure leaves no draft.
-import { aiConfig, AiError, createAiClient } from '../../modules/ai/index.mjs'
+import { AiError, createAiClient } from '../../modules/ai/index.mjs'
 import { refuse } from '../actions/refusals.ts'
 import type { StumpEnv } from '../env.ts'
 import { claimsForRequest, type Claim } from '../lib/claims/index.ts'
 import { stumpFetch } from '../net/fetch.ts'
+import { providerConfig, providerMessage } from './provider.ts'
 import type { ProductRecord, VoiceRecord } from './records.ts'
 
-/** The ai.provider.v1 bindings (Base modules/ai); absent until the company sets its provider. */
-type AiEnv = StumpEnv & { AI_ENABLED?: string; AI_BASE_URL?: string; AI_API_KEY?: string; AI_MODEL?: string; MODELS_SERVICE?: string; MODELS_KEY?: string }
+export { aiHost } from './provider.ts'
 
-/** The provider's host, which the record and the external class name. */
-export function aiHost(env: StumpEnv): string {
-  const config = aiConfig(env as AiEnv as unknown as Record<string, unknown>)
-  const base = config.direct?.baseUrl ?? config.models?.baseUrl
-  try { return base ? new URL(base).host : 'not set' } catch { return 'not set' }
+/** A provider failure in plain words: what went wrong, and the provider's own message where it gave one (STUMP-DRAFT-006.2). */
+function failure(code: string, host: string, said: string | null): string {
+  const quoted = said ? ` It said: "${said}"` : ''
+  switch (code) {
+    case 'ai_disabled': return 'No AI provider is set. An owner or admin sets one in Settings › Connections › AI provider.'
+    case 'ai_misconfigured': return 'The AI provider setting is incomplete: it needs an https address, a model and a key. An owner or admin fixes it in Settings › Connections.'
+    case 'ai_invalid_request': return 'The AI provider has no model set. An owner or admin sets one in Settings › Connections.'
+    case 'upstream_auth': return `${host} refused the key.${quoted}`
+    case 'upstream_limited': return `${host} is limiting requests or is out of credit.${quoted}`
+    case 'upstream_unavailable': return `${host} is unavailable right now. Try again later.${quoted}`
+    case 'upstream_uncertain': return `${host} did not answer in time. Nothing was drafted; try again.`
+    default: return `${host} refused the request.${quoted}`
+  }
 }
 
 export interface Source { url: string; title: string | null; text: string; read_at: string; sha256: string }
@@ -141,32 +149,40 @@ function reportedCost(response: Response, usage: Record<string, unknown> | null)
 
 const strings = (value: unknown) => Array.isArray(value) && value.every(item => typeof item === 'string' && item.trim()) ? (value as string[]).map(item => item.trim()) : null
 
-/** One drafting request to the company's provider; any failure refuses with the provider's code and leaves nothing behind. */
-export async function draftWithAi(env: StumpEnv, request: DraftRequest): Promise<Drafted> {
-  const config = aiConfig(env as AiEnv as unknown as Record<string, unknown>)
+/** One drafting request to the company's provider; any failure refuses with the provider's code and its own words, and leaves nothing behind. */
+export async function draftWithAi(ctx: { env: StumpEnv; db: D1Database }, request: DraftRequest): Promise<Drafted> {
+  const env = ctx.env
+  const { config, host, apiKey } = await providerConfig(env, ctx.db)
   const { fields, claims_sent } = brief(request)
+  let said: string | null = null
+  // The client keeps only a fixed code for a refused request; the provider's own message is read here, with the key scrubbed from it.
+  const send: typeof fetch = async (input, init) => {
+    const response = await stumpFetch(env)(input, init)
+    if (!response.ok) said = await providerMessage(response.clone(), apiKey)
+    return response
+  }
   let response: Response
   try {
-    response = await createAiClient(config, { fetch: stumpFetch(env) }).chat({
+    response = await createAiClient(config, { fetch: send }).chat({
       messages: [{ role: 'system', content: INSTRUCTIONS }, { role: 'user', content: JSON.stringify(fields) }],
       response_format: { type: 'json_object' },
     }, { feature: 'drafting', signal: AbortSignal.timeout(90_000) })
   } catch (error) {
-    if (error instanceof AiError) refuse('ai_failed', { provider_code: error.code, status: error.status, host: aiHost(env) })
+    if (error instanceof AiError) refuse('ai_failed', { provider_code: error.code, status: error.status, host, reason: failure(error.code, host, said), ...(said ? { provider_message: said } : {}) })
     throw error
   }
   let answer: Awaited<ReturnType<typeof completion>>
-  try { answer = await completion(response) } catch { refuse('ai_failed', { provider_code: 'ai_invalid_response', host: aiHost(env) }) }
+  try { answer = await completion(response) } catch { refuse('ai_failed', { provider_code: 'ai_invalid_response', host, reason: `${host} answered something that is not a chat completion.` }) }
   let output: Record<string, unknown> = {}
-  try { output = JSON.parse(answer.content) as Record<string, unknown> } catch { refuse('ai_failed', { provider_code: 'ai_invalid_output', host: aiHost(env), reason: 'The provider did not answer the JSON the request asked for.' }) }
+  try { output = JSON.parse(answer.content) as Record<string, unknown> } catch { refuse('ai_failed', { provider_code: 'ai_invalid_output', host, reason: `${host} did not answer the JSON the request asked for.` }) }
   const text = typeof output.text === 'string' && output.text.trim() ? output.text.trim() : null
   const parts = strings(output.parts)
   const subject = typeof output.subject === 'string' && output.subject.trim() ? output.subject.trim() : null
-  if (request.format === 'thread' ? !parts && !text : !text) refuse('ai_failed', { provider_code: 'ai_invalid_output', host: aiHost(env), reason: 'The provider answered no draft text.' })
+  if (request.format === 'thread' ? !parts && !text : !text) refuse('ai_failed', { provider_code: 'ai_invalid_output', host, reason: `${host} answered no draft text.` })
   const input = answer.usage?.prompt_tokens ?? answer.usage?.input_tokens, output_tokens = answer.usage?.completion_tokens ?? answer.usage?.output_tokens
   return {
     text, parts: request.format === 'thread' ? parts : null, subject,
-    ai: { model: answer.model ?? config.model ?? 'unknown', cost_usd: reportedCost(response, answer.usage), fields_sent: Object.keys(fields), host: aiHost(env), claims_sent,
+    ai: { model: answer.model ?? config.model ?? 'unknown', cost_usd: reportedCost(response, answer.usage), fields_sent: Object.keys(fields), host, claims_sent,
       tokens: { input: typeof input === 'number' ? input : null, output: typeof output_tokens === 'number' ? output_tokens : null } },
   }
 }

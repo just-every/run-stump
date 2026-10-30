@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
 import { Disc, Outcome, Tip, monthYear, useLoaded, useRun, when, words } from '../../ui/kit.tsx'
@@ -8,6 +8,7 @@ import { DETAIL_LABELS } from '../kinds.ts'
 import { kindLabel, limitWords, nextOpen, routeLabel, statusLabel, statusTone } from './labels.ts'
 import { openingWords } from '../../today/sections.ts'
 import { STATE as HANDOFF_STATE } from '../../handoffs/ui/words.ts'
+import { HandoffStart } from '../../handoffs/ui/HandoffStart.tsx'
 import { RulesCard, threadWords } from './RulesCard.tsx'
 import type { Members, RouteAnswer, Venue, VenueItem } from './types.ts'
 import { VenueForm } from './VenueForm.tsx'
@@ -40,7 +41,7 @@ export function VenuePage({ venueId }: { venueId: string }) {
           <h1 id="venue-title" style={{ flex: '1 1 auto', overflowWrap: 'anywhere' }}>{venue.name}</h1>
           {editor ? <VenueMenu venue={venue} onEdit={() => setEditing(true)} onChanged={changed} /> : null}
         </div>
-        <p className="st-sub"><span className={`st-dot${statusTone(venue.status) === 'ok' ? '' : ' open'}`} aria-hidden="true" style={{ color: 'var(--stump-accent)' }} />{kindLabel(venue.kind)} · {statusLabel(venue.status)}{venue.archived ? ' · Archived' : ''}
+        <p className="st-sub"><span className={`st-dot${statusTone(venue.status) === 'ok' ? '' : ' open'}`} aria-hidden="true" style={{ color: 'var(--stump-accent)' }} />{kindLabel(venue.kind, venue.platform)} · {statusLabel(venue.status)}{venue.priority ? ` · ${venue.priority.charAt(0).toUpperCase()}${venue.priority.slice(1)} priority` : ''}{venue.archived ? ' · Archived' : ''}
           {venue.url ? <> · <a className="st-venue-link" href={venue.url} target="_blank" rel="noreferrer noopener">{bare(venue.url)} ↗</a></> : null}</p>
         {venue.excluded ? <div className="st-panel" role="note"><strong>Excluded.</strong> {venue.excluded.reason}{venue.excluded.alternative ? ` Instead: ${venue.excluded.alternative}` : ''}</div> : null}
         {editing ? <VenueForm venue={venue} onDone={() => { setEditing(false); changed() }} onCancel={() => setEditing(false)} /> : null}
@@ -54,7 +55,8 @@ export function VenuePage({ venueId }: { venueId: string }) {
             <ProductsCard venue={venue} items={data.items} />
           </div>
           <div className="st-aside">
-            <RoutesCard venue={venue} routes={data.routes} editor={editor} onChanged={changed} />
+            <RoutesCard venue={venue} routes={data.routes} editor={editor} onChanged={changed}
+              handoff={<HandoffStart venue={venue} routes={data.routes.routes} members={data.members} team={data.team} me={data.who.person} />} />
             <MembersCard venue={venue} members={data.members} team={data.team} me={data.who.person} editor={editor} onChanged={changed} />
             {venue.why ? <WhyCard venue={venue} /> : null}
           </div>
@@ -90,7 +92,7 @@ function VenueMenu({ venue, onEdit, onChanged }: { venue: Venue; onEdit(): void;
   </div>
 }
 
-function RoutesCard({ venue, routes, editor, onChanged }: { venue: Venue; routes: RouteAnswer; editor: boolean; onChanged(): void }) {
+function RoutesCard({ venue, routes, editor, onChanged, handoff }: { venue: Venue; routes: RouteAnswer; editor: boolean; onChanged(): void; handoff: ReactNode }) {
   const [limiting, setLimiting] = useState(false)
   const { busy, message, run } = useRun()
   async function setLimit(event: FormEvent<HTMLFormElement>) {
@@ -104,6 +106,7 @@ function RoutesCard({ venue, routes, editor, onChanged }: { venue: Venue; routes
     <h2 className="st-panel-title" id="routes-title"><Disc icon="arrows" />Routes</h2>
     {routes.routes.length ? <div className="st-chips">{routes.routes.map(route => <span className="st-chip ok" key={route}>{routeLabel(route)}</span>)}</div> : <p>No route is open.</p>}
     {closed.length ? <ul className="st-list">{closed.map(reason => <li className="st-meta" key={reason.route} style={{ padding: '2px 0' }}>{CLOSED[reason.route] ?? routeLabel(reason.route)}: {lower(reason.because)}</li>)}</ul> : null}
+    {handoff}
     <div style={{ borderTop: '1px solid var(--stump-line)', marginTop: 16, paddingTop: 16 }}>
       <div className="st-meta">Next open</div>
       <div style={{ fontWeight: 560 }}>{venue.shared_limit ? nextOpen(venue.next_open_at) ?? 'Not within a year' : 'Any time'}</div>
@@ -176,12 +179,13 @@ const CLOSED: Record<string, string> = { publish: 'No direct posts', handoff_dra
 const lower = (text: string) => /^[A-Z][a-z]/.test(text) ? text.charAt(0).toLowerCase() + text.slice(1) : text
 
 /** Why the venue is worth showing up in, and what else the company knows about it. The title and subline already say what
- * it is and where, so details that repeat them (its platform, subreddit and priority) do not show. */
+ * it is, where, on which platform and at what priority, so details that repeat them do not show. */
 function WhyCard({ venue }: { venue: Venue }) {
   const howTo = howToWords(venue)
   const details = Object.entries(venue.details).filter(([name, value]) => name !== 'subreddit' && value !== null && value !== '')
     .map(([name, value]) => [DETAIL_LABELS[name] ?? name, Array.isArray(value) ? value.join(', ') : String(value)] as const)
-  const lines = ([...details, ['Who reads it', venue.audience], ['What readers get', venue.reader_value], ['How to post', howTo || null], ['Reception', venue.reception], ['Notes', venue.notes]] as const)
+  const needs = typeof venue.requirements.text === 'string' && venue.requirements.text.trim() ? venue.requirements.text.trim() : null
+  const lines = ([...details, ['Who reads it', venue.audience], ['What readers get', venue.reader_value], ['How to post', howTo || null], ['What posting takes', needs], ['Reception', venue.reception], ['Notes', venue.notes]] as const)
     .filter(([, value]) => value)
   if (!venue.why && !lines.length) return null
   const link = (value: string) => /^https?:\/\//.test(value) ? <a href={value} target="_blank" rel="noreferrer noopener">{bare(value)} ↗</a> : value

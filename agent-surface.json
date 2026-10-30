@@ -25,10 +25,11 @@
     {"name": "stump.ledger.search", "scope": "stump:ledger", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001", "STUMP-LEDGER-002"]},
     {"name": "stump.links.manage", "scope": "stump:links", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-LINK-001"]},
     {"name": "stump.press.contacts", "scope": "stump:press", "readOnly": false, "classes": ["standard", "sensitive"], "clauses": ["STUMP-PITCH-001"]},
+    {"name": "stump.setup.ai", "scope": "stump:setup", "readOnly": false, "classes": ["security", "standard"], "clauses": ["STUMP-DRAFT-006"], "sponsorEscalation": false},
     {"name": "stump.setup.apps", "scope": "stump:setup", "readOnly": false, "classes": ["security", "gated"], "clauses": ["STUMP-CONNECT-002", "STUMP-SURFACE-004"], "sponsorEscalation": false},
     {"name": "stump.stack.connect", "scope": "stump:stack", "readOnly": false, "classes": ["security"], "clauses": ["STUMP-STACK-002", "STUMP-STACK-004"], "sponsorEscalation": false},
     {"name": "stump.stack.send", "scope": "stump:stack", "readOnly": false, "classes": ["standard", "sensitive"], "clauses": ["STUMP-STACK-002", "STUMP-STACK-004", "STUMP-SURFACE-015"]},
-    {"name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001"]},
+    {"name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access", "standard"], "clauses": ["STUMP-TEAM-001"]},
     {"name": "stump.venues.fit", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-003"]},
     {"name": "stump.venues.manage", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-001"]},
     {"name": "stump.venues.members", "scope": "stump:venues", "readOnly": false, "classes": ["standard", "gated"], "clauses": ["STUMP-VENUE-006"]},
@@ -101,7 +102,11 @@
     {"id": "x-schedule", "tool": "stump.items.schedule", "args": {"action": "schedule", "item_id": {"$from": "x-post", "pointer": "/id"}, "account_id": {"$from": "finish-x", "pointer": "/account/id"}, "at": {"$fixture": "scheduleAt", "pointer": ""}, "time_zone": "America/New_York"}, "expect": [{"class": "external", "facts": {"measure": 2400, "counterparty": "public"}}, {"class": "money", "facts": {"measure": 0.2, "currency": "usd", "counterparty": "x"}}]},
     {"id": "x-master", "tool": "stump.drafts.write", "args": {"action": "master", "text": {"$fixture": "xLong", "pointer": ""}, "account_ids": [{"$from": "finish-x", "pointer": "/account/id"}], "person_id": {"$sponsor": "id"}}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
     {"id": "x-master-schedule", "tool": "stump.items.schedule", "args": {"action": "schedule_master", "master_id": {"$from": "x-master", "pointer": "/master/id"}, "at": {"$fixture": "scheduleAt", "pointer": ""}}, "expect": [{"class": "external", "facts": {"measure": 0, "counterparty": "public"}}, {"class": "gated", "facts": {"measure": 1, "provider": "stump", "step": "rewrite_flagged_variant"}}]},
-    {"id": "erase-engager", "tool": "stump.data.erase", "args": {"action": "erase", "subject": {"kind": "engager", "handles": {"x": "synthetic-stump-engager", "hn": "synthetic-stump-engager"}}}, "expect": [{"class": "destructive", "facts": {"measure": 0}}, {"class": "sensitive", "facts": {"measure": 1, "kind": "public handles and post links"}}, {"class": "external", "facts": {"measure": 0, "counterparty": "public"}}]}
+    {"id": "erase-engager", "tool": "stump.data.erase", "args": {"action": "erase", "subject": {"kind": "engager", "handles": {"x": "synthetic-stump-engager", "hn": "synthetic-stump-engager"}}}, "expect": [{"class": "destructive", "facts": {"measure": 0}}, {"class": "sensitive", "facts": {"measure": 1, "kind": "public handles and post links"}}, {"class": "external", "facts": {"measure": 0, "counterparty": "public"}}]},
+    {"id": "team-list", "tool": "stump.team.manage", "args": {"action": "list"}, "expect": [{"class": "standard", "facts": {"measure": 0}}]},
+    {"id": "ai-get", "tool": "stump.setup.ai", "args": {"action": "get"}, "expect": [{"class": "standard", "facts": {"measure": 0}}]},
+    {"id": "ai-set", "tool": "stump.setup.ai", "args": {"action": "set", "base_url": "https://ai.synthetic-stump.example/v1", "model": "synthetic-stump-model", "api_key": {"$fixture": "aiKey", "pointer": ""}}, "expect": [{"class": "security", "facts": {"measure": 1, "setting": "ai_provider", "provider": "ai.synthetic-stump.example"}}]},
+    {"id": "ai-clear", "tool": "stump.setup.ai", "args": {"action": "clear"}, "expect": [{"class": "security", "facts": {"measure": 1, "setting": "ai_provider"}}]}
   ],
   "verification": {
     "owner": {"bindings": {"INSTALLATION_KEY": {"module": "tests/agent/installation-key.mjs"}, "AI_ENABLED": {"module": "tests/agent/ai-enabled.mjs"}, "AI_BASE_URL": {"module": "tests/agent/ai-base-url.mjs"}, "AI_API_KEY": {"module": "tests/agent/ai-key.mjs"}, "AI_MODEL": {"module": "tests/agent/ai-model.mjs"}}},

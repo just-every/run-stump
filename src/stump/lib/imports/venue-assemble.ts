@@ -3,7 +3,7 @@
 // readers go through here so the Markdown and the CSV make the same venues.
 import type { ImportRow, ImportWarning, Json, JsonObject, ParsedVenueList, RejectedRow } from './types.ts';
 import { foldName, normalizeVenueUrl } from './url.ts';
-import { aiTextRule, inferKind, jsonList, parseSharedLimit, strongestPriority, type VenueStatus } from './venue-fields.ts';
+import { aiTextRule, gatesRule, inferKind, jsonList, parseSharedLimit, strongestPriority, type VenueStatus } from './venue-fields.ts';
 
 export interface VenueDraft {
   line: number;
@@ -21,10 +21,18 @@ export interface VenueDraft {
   reception: string | null;
   products: string[];
   humanWritten: boolean;
+  /** The list says outright whether human-written text is required (true or false), not just left it empty. */
+  humanWrittenStated: boolean;
   priority: string | null;
   excluded: { reason: string; alternative: string | null } | null;
   sources: string[];
   listedEntryIds: string[];
+  /** What posting there takes ("100 karma, account 30 days old"), why it matters, and what readers get. */
+  requirements: string | null;
+  why: string | null;
+  readerValue: string | null;
+  /** The day the rules pages were read; the Markdown list's own date when it has none. */
+  rulesReadAt: string | null;
 }
 
 export interface AlternateDraft { label: string; title: string | null; text: string }
@@ -198,9 +206,16 @@ function venueValue(venue: VenueDraft, exclusionOf: VenueDraft | null, entries: 
   if (kind.guessed && !isExcluded) warnings.push({ code: 'kind_guessed', message: `"${venue.name}" has no recognizable kind; it arrives as a forum`, id: venue.externalId ?? venue.name });
   const bannedBy = entries.filter(e => e.humanWritten).map(e => e.id);
   const banned = venue.humanWritten || bannedBy.length > 0;
+  // An entry always states it; a venue row states it when its cell is not empty.
+  const allowed = !banned && (venue.humanWrittenStated || entries.length > 0);
+  const readAt = venue.rulesReadAt ?? listDate;
+  const rulesUrls = venue.rulesUrls.length ? venue.rulesUrls : [...new Set(entries.flatMap(e => e.rulesUrls))];
   const rules: JsonObject = {};
-  const ai = aiTextRule({ banned, rulesUrls: venue.rulesUrls, readAt: listDate, origin: bannedBy.length ? `human_written_required on ${bannedBy.join(', ')}` : 'human_written_required' });
+  const ai = aiTextRule({ banned, allowed, rulesUrls, readAt, origin: bannedBy.length ? `human_written_required on ${bannedBy.join(', ')}` : 'human_written_required' });
   if (ai) rules.ai_text = ai;
+  const requirements = venue.requirements ?? entries.map(e => e.requirements).find((text): text is string => !!text) ?? null;
+  const gates = gatesRule(requirements, rulesUrls, readAt);
+  if (gates) rules.gates = gates;
   const priorities = [...(venue.priority ? [venue.priority] : []), ...entries.map(e => e.priority).filter((p): p is string => p !== null)];
   const products = [...new Set([...venue.products, ...entries.map(e => e.product)].map(p => p.trim()).filter(Boolean))];
   return {
@@ -216,8 +231,11 @@ function venueValue(venue: VenueDraft, exclusionOf: VenueDraft | null, entries: 
     audience: venue.audience,
     how_to_post: venue.promotionRoute,
     rules_text: venue.rulesText,
-    rules_urls: jsonList(venue.rulesUrls),
+    rules_urls: jsonList(rulesUrls),
     rules,
+    requirements,
+    why: venue.why ?? entries.map(e => e.why).find((text): text is string => !!text) ?? null,
+    reader_value: venue.readerValue ?? entries.map(e => e.readerValue).find((text): text is string => !!text) ?? null,
     shared_limit: venue.sharedLimit ? parseSharedLimit(venue.sharedLimit) : null,
     reception: venue.reception,
     products: products.map(name => ({ name })),

@@ -2,7 +2,7 @@ import { refuse, refuseAct } from '../actions/refusals.ts'
 import type { ActionContext, StumpTool } from '../actions/types.ts'
 import { claimStaleness, isIsoDate, validateClaim, type Claim } from '../lib/claims/index.ts'
 import { EDITORS, EVERYONE, type Role } from '../people/roles.ts'
-import { readPerson } from '../people/store.ts'
+import { notActiveReason, readPerson } from '../people/store.ts'
 import { readSource } from '../drafting/ai.ts'
 import { claimRecord, libProof, parse, productRecord, today, voiceRecord, type ClaimRecord, type Row } from '../drafting/records.ts'
 
@@ -18,7 +18,9 @@ const url = { type: 'string', minLength: 1, maxLength: 2048 }
 const proof = { anyOf: [{ type: 'string', minLength: 1, maxLength: 2048 }, { type: 'object', properties: { url, document: long, number: { type: ['string', 'number'] }, unit: { type: 'string', minLength: 1, maxLength: 24 }, date, text: long }, additionalProperties: false, minProperties: 1 }] }
 
 // A product's profile, exactly the interface's fields (V1 stump.brand.manage).
-const productFields = { name: short, other_names: words(20, 120), description: long, audience: long, urls: words(10, 2048), competitors: words(20, 120),
+// A description or audience can be cleared with null.
+const clearable = { type: ['string', 'null'], minLength: 1, maxLength: 1000 }
+const productFields = { name: short, other_names: words(20, 120), description: clearable, audience: clearable, urls: words(10, 2048), competitors: words(20, 120),
   words_use: words(50, 60), words_avoid: words(50, 60), tone: { type: 'string', minLength: 1, maxLength: 280 } }
 const PROFILE_KEYS = ['name', 'other_names', 'description', 'audience', 'urls', 'competitors', 'words_use', 'words_avoid', 'tone'] as const
 /** A word list as stored: trimmed, without blanks or repeats. */
@@ -67,7 +69,7 @@ async function checkClaim(ctx: ActionContext, value: Partial<ClaimRecord>) {
 /** The voice guide's person: only a real person on the team who has signed in (D-1, STUMP-TRUTH-001.5). */
 async function voicePerson(ctx: ActionContext, personId: unknown, action: string) {
   const person = await readPerson(ctx.db, String(personId))
-  if (!person || person.status !== 'active') return refuseAct(ctx, 'stump.brand.manage', action, { rule: 'D-1', source: 'STUMP-TRUTH-001' }, { person_id: String(personId) })
+  if (!person || person.status !== 'active') return refuseAct(ctx, 'stump.brand.manage', action, { rule: 'D-1', source: 'STUMP-TRUTH-001' }, { person_id: String(personId), reason: notActiveReason(person) })
   return person
 }
 /** A guide is read and kept by its own person and by editors (STUMP-BRAND-002.4). */

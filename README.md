@@ -4,7 +4,19 @@ Find where your customers gather, show up in your own voice, and see what it bri
 
 Open-source alternative to Hootsuite, Buffer and Typefully.
 
-Stump is an earned-channels marketing desk: a register of the communities, newsletters, podcasts, directories and journalists where your customers already are, with each venue's rules; drafts written in a real person's voice; a hand-off queue for venues that ban automation, where the agent drafts and a named person posts; publishing to your own accounts; and a ledger of every post. Stump is a new seed on the Base foundation. The product is a build target: nothing beyond the foundation is built yet, and `CONTRACT.md` is still the foundation's placeholder until Stump's target contract lands.
+Stump is an earned-channels marketing desk: a register of the communities, newsletters, podcasts, directories and journalists where your customers already are, with each venue's rules; drafts written in a real person's voice; a hand-off queue for venues that ban automation, where the agent drafts and a named person posts; publishing to your own accounts; and a ledger of every post.
+
+What works today:
+
+- **Venues**: the register with each rule's source and read date, the routes those rules allow, members and gates, shared limits, and import from Markdown or CSV ([docs/import-venues.md](docs/import-venues.md)).
+- **Brand**: products, claims with proof, banned and comparative claims, voice guides, and the claim check on every draft.
+- **Compose**: one post with a variant per account, drafts from a changelog through your own AI provider (set it in Settings › Connections; [docs/ai-provider.md](docs/ai-provider.md)), scheduling and the queue.
+- **Publishing** to Mastodon and Bluesky for real, and to X and LinkedIn with your own app keys, each post read back onto the **ledger** with UTM-tagged links.
+- **Hand-offs** to the named member who posts by hand, started from a venue's page, with the posted link checked and recorded.
+- **Listening** on Hacker News, feeds, Bluesky and Mastodon, ranked with reasons; the **inbox** on X; Orbit and Vane connections; Pause; export and erasure.
+- **Agents** through one MCP door under your company's policy ([docs/agents.md](docs/agents.md)).
+
+[CONTRACT.md](CONTRACT.md) is the target contract, with each clause's status; [docs/](docs/) is the guide a person reads.
 
 ## Run locally
 

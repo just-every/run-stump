@@ -4,8 +4,9 @@
 // must then agree on the venue's own fields).
 //
 // Venue columns:  venue_id, name, url, platform, kind, status, priority, audience,
-//   promotion_route, rules, rules_urls, shared_limit, reception, seeds (or products),
-//   human_written_required, reason, alternative, sources.
+//   promotion_route, rules, rules_urls, rules_read_at, shared_limit, reception, seeds
+//   (or products), human_written_required, requirements, why, reader_value, reason,
+//   alternative, sources.
 // Entry columns:  entry_id, product, post_type, post_url, community_url, how_to_post,
 //   requirements, why, reader_value, notes, draft_title, draft.
 // A row with a `reason`, or status "excluded", is an excluded venue.
@@ -21,7 +22,10 @@ const ALIASES: Record<string, string> = {
   id: 'venue_id', venue: 'name', title: 'name', link: 'url', website: 'url', type: 'kind',
   seed: 'product', products: 'seeds', rule: 'rules', limit: 'shared_limit', route: 'promotion_route',
   draft_text: 'draft', human_written: 'human_written_required', reasons: 'reason',
+  rules_url: 'rules_urls', rule_url: 'rules_urls', rules_link: 'rules_urls', rules_links: 'rules_urls', why_it_matters: 'why',
+  read_at: 'rules_read_at', rules_read_on: 'rules_read_at', read_on: 'rules_read_at', requirement: 'requirements',
 };
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const normalizeHeader = (h: string): string => {
   const key = h.trim().toLowerCase().replace(/[\s-]+/g, '_');
@@ -58,7 +62,7 @@ export function parseVenuesCsv(input: string, limits: Partial<ImportLimits> = {}
     if (!name && url) name = normalizeVenueUrl(url);
     if (!name) errors.push('name is empty');
     if (url && !normalizeVenueUrl(url)) errors.push(`url "${url}" is not an http(s) URL`);
-    if (!url && !isExcluded) errors.push('url is empty');
+    if (!url && !isExcluded) errors.push(get('community_url') ? 'url is empty: put the venue\'s address in the url column (community_url is an entry\'s own link)' : 'url is empty');
     if (isExcluded && !reason) errors.push('an excluded venue needs a reason');
     if (!isExcluded && !status) errors.push(`status "${get('status')}" is not one of candidate, join-first, ready, editorial, paid, hold or excluded`);
     const priority = get('priority') ? normalizePriority(get('priority')) : null;
@@ -72,6 +76,8 @@ export function parseVenuesCsv(input: string, limits: Partial<ImportLimits> = {}
       lists[key] = parsed ?? [];
     }
     checkUrlList('rules_urls', lists.rules_urls!, errors);
+    const readAt = str(get('rules_read_at'));
+    if (readAt && !DATE.test(readAt)) errors.push(`rules_read_at "${readAt}" is not a date (YYYY-MM-DD)`);
 
     const entryId = str(get('entry_id'));
     let entry: EntryDraft | null = null;
@@ -99,8 +105,9 @@ export function parseVenuesCsv(input: string, limits: Partial<ImportLimits> = {}
       line: row.line, externalId, name: name!, url, platform: str(get('platform')), explicitKind: get('kind'), status: isExcluded ? 'excluded' : status!,
       audience: str(get('audience')), promotionRoute: str(get('promotion_route')) ?? (entryId ? null : str(get('how_to_post'))), rulesText: str(get('rules')),
       rulesUrls: lists.rules_urls!, sharedLimit: str(get('shared_limit')), reception: str(get('reception')), products: uniqueFolded(lists.seeds!),
-      humanWritten: human === true, priority: entryId ? null : priority, excluded: isExcluded ? { reason: reason!, alternative: str(get('alternative')) } : null,
-      sources: lists.sources!, listedEntryIds: [],
+      humanWritten: human === true, humanWrittenStated: get('human_written_required') !== '', priority: entryId ? null : priority,
+      excluded: isExcluded ? { reason: reason!, alternative: str(get('alternative')) } : null, sources: lists.sources!, listedEntryIds: [],
+      requirements: str(get('requirements')), why: str(get('why')), readerValue: str(get('reader_value')), rulesReadAt: readAt,
     };
     if (!draft) { rejected.push({ id, kind: entryId ? 'entry' : isExcluded ? 'excluded' : 'venue', line: row.line, reason: errors.join('; '), reasons: errors }); continue; }
 
@@ -134,5 +141,10 @@ function mergeVenueRow(first: VenueDraft, later: VenueDraft): string | null {
   first.products = uniqueFolded([...first.products, ...later.products]);
   first.sources = [...new Set([...first.sources, ...later.sources])];
   first.humanWritten = first.humanWritten || later.humanWritten;
+  first.humanWrittenStated = first.humanWrittenStated || later.humanWrittenStated;
+  first.requirements ??= later.requirements;
+  first.why ??= later.why;
+  first.readerValue ??= later.readerValue;
+  first.rulesReadAt ??= later.rulesReadAt;
   return null;
 }

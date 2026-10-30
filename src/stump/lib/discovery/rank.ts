@@ -3,8 +3,11 @@
  *
  * Score 0 to 100 from five factors, each reported with the points it gave, plus a bounded
  * adjustment learned from the person's marks:
- *   matched terms 30 : distinct watch terms and product names found, in the title, text or a podcast transcript
- *   question      30 : the thread asks for help, and what it asks is something the company can answer
+ *   matched terms 30 : distinct watch terms and product names found. A term in the headline (the title, or the
+ *                      post itself where a source has no titles) or a podcast transcript counts in full; one
+ *                      found only deep in a titled thread's text counts little, since the thread is about something else
+ *   question      30 : the thread asks for help, and what it asks is something the company can answer: in full when
+ *                      the question or the headline carries a watch term; a little when only the text does
  *   venue fit     15 : the venue's recorded fit (supplied by the caller)
  *   standing      10 : the author's standing where the source gives one
  *   freshness     15 : half-life decay from the post time
@@ -77,21 +80,29 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
   const hay = { title: title.text, text: body.text, links: f.links.join('\n'), transcript: spoken.text }
   const reasons: Reason[] = []
 
-  // Matched terms: 12 for any positive match, +6 in the title, +6 for a product name, +3 each for up to two more distinct terms.
+  // Matched terms: 12 for a match in the headline or a transcript and +12 more in a title; 4 for a match only deep in a
+  // titled thread's text or links (a comment under a story about something else); +6 for a product name, +3 each for
+  // up to two more distinct terms.
   const m = matchTerms(terms, hay)
   const productHit = matchTerms(products, hay)
   const positives = m.matched_terms.length
+  const hasTitle = title.text.trim().length > 0
+  const inHeadline = hasTitle ? m.matched_in.includes('title') : m.matched_in.includes('text')
+  const inTranscript = m.matched_in.includes('transcript')
   let termPoints = 0
   const bits: string[] = []
   if (positives > 0 || m.unconstrained) {
-    termPoints += 12
     const named = m.matched_terms.slice(0, 4).map((t) => `"${t}"`).join(', ')
-    const inTranscript = m.matched_in.includes('transcript')
     if (positives > 0 && inTranscript && m.matched_in.length === 1) bits.push(`matches your terms in the episode transcript: ${named}`)
     else if (positives > 0) bits.push(`matched ${named}${inTranscript ? ', also in the episode transcript' : ''}`)
     else bits.push('every item of this source')
-    if (m.matched_in.includes('title')) {
-      termPoints += 6
+    if (m.unconstrained || inHeadline || inTranscript) termPoints += 12
+    else {
+      termPoints += 4
+      bits.push('only in the text, under a title about something else')
+    }
+    if (positives > 0 && hasTitle && m.matched_in.includes('title')) {
+      termPoints += 12
       bits.push('in the title')
     }
     termPoints += 3 * Math.min(2, Math.max(0, positives - 1))
@@ -115,16 +126,22 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
     matchTerms(products, { text: s }).matched_terms.length > 0 ||
     matchTerms(topics, { text: s }).matched_terms.length > 0
   const helpSeeking = questions.filter(asksForHelp)
-  const titleCarriesTerm = m.matched_in.includes('title') || matchTerms(topics, { text: title.text }).matched_terms.length > 0
+  const headline = hasTitle ? title.text : body.text
+  const titleCarriesTerm = inHeadline || matchTerms(topics, { text: headline }).matched_terms.length > 0
+  // A question asked in the headline itself (an "Ask HN" title, a short post) is what the thread is about.
+  const headlineQuestions = new Set(questionSentences(headline).filter((q) => !isAboutTheRanking(q)))
   let questionPoints = 0
   let answerable = false
   let questionLabel = questions.length > 0 ? 'asks nothing the company can answer' : 'no question asked'
-  if (questions.some(touches) || (titleCarriesTerm && helpSeeking.length > 0)) {
+  if (questions.some((q) => touches(q) && (titleCarriesTerm || headlineQuestions.has(q))) || (titleCarriesTerm && helpSeeking.length > 0)) {
     answerable = true
     questionPoints = 30
     questionLabel = 'asks a question the company can answer'
+  } else if (questions.some(touches)) {
+    questionPoints = 8
+    questionLabel = 'asks about a watch term deep in its text, under a headline about something else'
   } else if (helpSeeking.length > 0) {
-    questionPoints = 12
+    questionPoints = 4
     questionLabel = 'asks for help, not about a watch term'
   }
   reasons.push({ factor: 'question', label: questionLabel, points: questionPoints, max: WEIGHTS.question })

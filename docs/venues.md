@@ -4,7 +4,7 @@ A venue is any place the company could show up: a subreddit, a forum, a Slack or
 
 - Its kind, name, URL, platform and audience, and the products it fits.
 - Its status: candidate, join first, ready, editorial, paid, hold or excluded.
-- Its priority, why it matters and what its readers get.
+- Its priority, why it matters and what its readers get. Its kind reads with its platform: a Mastodon instance or an X community is a forum on that platform.
 - How to post there, and what it requires: karma, account age, membership or a price.
 - The members of your team who belong there, with their handles.
 
@@ -23,7 +23,11 @@ Every rule is a field with the URL it came from and the date it was read:
 | Disclosure line | The line the venue asks for |
 | Gates | Karma, account age or approval |
 
-A rule with no source reads as unsourced.
+A rule is sourced only with both its source page and the date you read it. A rule with either missing reads as unsourced, and the rule editor says which half is missing. In the editor, choose the rule's value first; its source and date save with it as you type.
+
+## Discord servers
+
+Discord message links look like `https://discord.com/channels/<server id>/<channel id>/<message id>`. To record a hand-off's link at a Discord venue, Stump needs the server: record the venue by a `https://discord.com/channels/<server id>` address, or keep its invite link (`discord.gg/…`) as the address and set **Server** to the server id (the first number in any message link from it). A message link from another server is refused, naming the venue.
 
 ## Routes
 

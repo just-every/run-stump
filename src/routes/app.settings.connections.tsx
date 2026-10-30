@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useRef, useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
+import { AiProviderPanel } from '../stump/drafting/AiProviderPanel.tsx'
 import { screenStyles } from '../stump/ledger/screen-styles.ts'
 import type { ConnectionView, OfferView, PreviewView, RulesView } from '../stump/stack/view.ts'
 import { me, runAction } from '../stump/ui/api.ts'
@@ -30,6 +31,7 @@ function ConnectionsPage() {
       <h1 id="connections-title" className="st-sr">Connections</h1>
       {error ? <p className="st-error">{error}</p> : null}
       {data ? <>
+        <AiProviderPanel admin={data.admin} />
         {data.editor ? <>
           <Seed seed="orbit" connection={data.connections.find(item => item.seed === 'orbit')} admin={data.admin} offers={data.offers.filter(offer => offer.seed === 'orbit')} onChange={refresh}
             line="People who ask a question or reply to you reach Orbit as a contact signal with their public handle and the link to their post." />

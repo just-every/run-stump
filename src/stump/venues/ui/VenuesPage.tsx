@@ -12,7 +12,7 @@ import { VenueForm } from './VenueForm.tsx'
 
 interface Filters { kind?: string; status?: string; priority?: string; product_id?: string; include_excluded?: boolean; include_archived?: boolean }
 const FILTER_WORDS: Record<keyof Filters, (value: string, products: Map<string, string>) => string> = {
-  kind: kindLabel, status: statusLabel, priority: value => `${value[0]!.toUpperCase()}${value.slice(1)} priority`,
+  kind: value => kindLabel(value), status: statusLabel, priority: value => `${value[0]!.toUpperCase()}${value.slice(1)} priority`,
   product_id: (value, products) => products.get(value) ?? 'Product', include_excluded: () => 'Excluded shown', include_archived: () => 'Archived shown',
 }
 
@@ -91,9 +91,9 @@ function Row({ venue, open }: { venue: Venue; open(): void }) {
     <td>
       <Link to="/app/venues/$venueId" params={{ venueId: venue.id }} onClick={event => event.stopPropagation()}>{venue.name}</Link>
       {venue.archived ? <span className="st-chip" style={{ marginLeft: 8 }}>Archived</span> : null}
-      <div className="st-rowline">{[kindLabel(venue.kind), statusLabel(venue.status), route].filter(Boolean).join(' · ')}</div>
+      <div className="st-rowline">{[kindLabel(venue.kind, venue.platform), statusLabel(venue.status), route].filter(Boolean).join(' · ')}</div>
     </td>
-    <td className="st-cell">{kindLabel(venue.kind)}</td>
+    <td className="st-cell">{kindLabel(venue.kind, venue.platform)}</td>
     <td className="st-cell"><StatusChip status={venue.status} /></td>
     <td className="st-cell">{route ? <span className="st-chip ok">{route}</span> : '–'}</td>
     <td className="st-cell">{next ?? '–'}</td>

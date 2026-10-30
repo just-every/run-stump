@@ -7,6 +7,7 @@
 //     state expired, the accounts module's state for an account that needs reconnecting;
 //   - scheduled items are paused until a person schedules them again;
 //   - Orbit and Vane connections and alert destinations wait to be entered again;
+//   - the AI provider keeps its address and model, and its key waits to be entered again;
 //   - agent credentials are revoked, and a person issues new ones.
 // Pure, synchronous and idempotent: the transfer runs it on every row.
 const reconnectPath = id => `/app/settings/accounts?reconnect=${encodeURIComponent(id)}`
@@ -29,6 +30,9 @@ const rows = {
     const alerts = JSON.parse(row.alerts)
     if (alerts.slack === null && alerts.webhook === null) return row
     return { ...row, alerts: JSON.stringify({ ...alerts, slack: null, webhook: null }) }
+  },
+  stump_ai_provider(row) {
+    return { ...row, api_key: null }
   },
   stump_agent_credentials(row) {
     return { ...row, token_hash: `revoked:${row.client_id}`, revoked_at: row.revoked_at ?? row.created_at }

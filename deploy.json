@@ -45,6 +45,26 @@
     {
       "binding": "MAIL_API_KEY",
       "environment": "MAIL_API_KEY"
+    },
+    {
+      "binding": "AI_ENABLED",
+      "environment": "AI_ENABLED",
+      "optional": true
+    },
+    {
+      "binding": "AI_BASE_URL",
+      "environment": "AI_BASE_URL",
+      "optional": true
+    },
+    {
+      "binding": "AI_MODEL",
+      "environment": "AI_MODEL",
+      "optional": true
+    },
+    {
+      "binding": "AI_API_KEY",
+      "environment": "AI_API_KEY",
+      "optional": true
     }
   ]
 }

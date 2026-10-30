@@ -38,7 +38,7 @@ function mayChange(ctx: ActionContext, target: StumpPerson, role?: Role) {
 export const teamTools: StumpTool[] = [{
   name: 'stump.team.manage', title: 'Manage the team',
   description: 'Invite people with a role and their connection to the company, list the team, change roles and remove people. A person exists only through an accepted invitation.',
-  scope: 'stump:team', classes: ['access'], clauses: ['STUMP-TEAM-001'],
+  scope: 'stump:team', classes: ['access', 'standard'], clauses: ['STUMP-TEAM-001'],
   refused: { create: NO_PERSONAS, add: NO_PERSONAS, import_person: NO_PERSONAS },
   actions: {
     invite: {
@@ -73,7 +73,8 @@ export const teamTools: StumpTool[] = [{
     },
     list: {
       roles: EVERYONE, read: true,
-      classify: () => access('narrows', 0),
+      // Reading the team changes no one's access: standard work, so a policy that blocks access changes still lets an agent find the person ids drafts need.
+      classify: () => [{ class: 'standard' as const, facts: { measure: 0 } }],
       async run(_args, ctx) {
         const items = (await listPeople(ctx.db)).map(publicPerson)
         return { items, total: items.length }

@@ -12,7 +12,7 @@ import { memberOf } from '../venues/members.ts'
 import { rulesOf, venueOrRefuse, type VenueRow } from '../venues/model.ts'
 import { recordedDisclosure } from './disclosure.ts'
 import { recordHandedOff } from './ledger.ts'
-import { authorMatches, checkLink, methodFor, onVenue, parseLink, sameLink, venueMethod, type Checked } from './link.ts'
+import { authorMatches, checkLink, methodFor, notOnVenueReason, onVenue, parseLink, sameLink, venueMethod, type Checked } from './link.ts'
 import { handoffOrRefuse, move, type HandoffRow, type Hold } from './model.ts'
 import { refreshed } from './refresh.ts'
 
@@ -60,7 +60,7 @@ export async function record(args: Args, ctx: ActionContext) {
     const hold = row!.hold ? JSON.parse(row!.hold) as Hold : null
     refuse('handoff_not_open', { handoff_id: row!.id, state: row!.state, ...(hold ? { rule: hold.rule, reason: hold.reason, ...(hold.matches ? { matches: hold.matches } : {}) } : {}), ...(row!.state === 'join_first' ? { join_steps: JSON.parse(row!.join_steps) } : {}) })
   }
-  if (!onVenue(venue, link)) refuse('link_not_on_venue', { handoff_id: row!.id, venue_id: venue.id, venue: venue.name, url: link.href, reason: `That link is not on ${venue.name}.` })
+  if (!onVenue(venue, link)) refuse('link_not_on_venue', { handoff_id: row!.id, venue_id: venue.id, venue: venue.name, url: link.href, reason: notOnVenueReason(venue, link) })
   // D-8: the person attests their words are their own.
   if (row!.attestation_required === 1 && args.attest_own_words !== true) refuse('attestation_required', { handoff_id: row!.id, rule: 'D-8', reason: 'Attest that the words you posted are your own.' })
   const ownWords = typeof args.own_words === 'string' && args.own_words.trim() ? args.own_words.trim() : null

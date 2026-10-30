@@ -64,7 +64,7 @@ export const draftTools: StumpTool[] = [{
   actions: {
     create: {
       roles: CONTRIBUTORS, properties: writeFields, required: ['format', 'person_id'],
-      async classify(args, ctx) { await screen(ctx, args, 'create'); return draftingClasses(ctx.env, args.generate === true ? 1 : 0, 1) },
+      async classify(args, ctx) { await screen(ctx, args, 'create'); return draftingClasses(ctx, args.generate === true ? 1 : 0, 1) },
       summary: args => ({ target: { name: `Draft a ${String(args.format)}${args.generate === true ? ' through the AI provider' : ''}` } }),
       async run(args, ctx) {
         await screen(ctx, args, 'create')
@@ -76,7 +76,7 @@ export const draftTools: StumpTool[] = [{
       // The call's person, product and voice apply to every target that does not name its own.
       roles: CONTRIBUTORS, properties: { source_url: url, targets: { type: 'array', minItems: 1, maxItems: 10, items: targetSchema }, person_id: id, product_id: id, voice_id: id, prompt: writeFields.prompt, campaign: writeFields.campaign },
       required: ['source_url', 'targets'],
-      async classify(args, ctx) { await screen(ctx, args, 'from_source'); return draftingClasses(ctx.env, (args.targets as unknown[]).length, (args.targets as unknown[]).length) },
+      async classify(args, ctx) { await screen(ctx, args, 'from_source'); return draftingClasses(ctx, (args.targets as unknown[]).length, (args.targets as unknown[]).length) },
       summary: args => ({ target: { name: `Draft ${(args.targets as unknown[]).length} items from ${String(args.source_url)}` } }),
       async run(args, ctx) {
         await screen(ctx, args, 'from_source')
@@ -88,7 +88,7 @@ export const draftTools: StumpTool[] = [{
     master: {
       roles: CONTRIBUTORS, properties: { text: writeFields.text, account_ids: ids(12), person_id: id, product_id: id, generate: writeFields.generate, source_url: url, prompt: writeFields.prompt, voice_id: id },
       required: ['account_ids'],
-      async classify(args, ctx) { await screen(ctx, { ...args, person_id: args.person_id ?? ctx.person.id }, 'master'); return draftingClasses(ctx.env, args.generate === true ? 1 : 0, (args.account_ids as unknown[]).length) },
+      async classify(args, ctx) { await screen(ctx, { ...args, person_id: args.person_id ?? ctx.person.id }, 'master'); return draftingClasses(ctx, args.generate === true ? 1 : 0, (args.account_ids as unknown[]).length) },
       summary: args => ({ target: { name: `Open a post for ${(args.account_ids as unknown[]).length} accounts` } }),
       async run(args, ctx) {
         await screen(ctx, { ...args, person_id: args.person_id ?? ctx.person.id }, 'master')

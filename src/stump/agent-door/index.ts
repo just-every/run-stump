@@ -1,4 +1,5 @@
 import { createAgentDoor, operatorAuthPeople, type PeopleAdapter, type Person, type ToolContext, type Trust } from '../../modules/agent-door/index.ts'
+import { versions } from '../../modules/agent-door/wire.ts'
 import { operatorAuth, runtimeBindings } from '../../auth.server'
 import { doorTool } from '../actions/runner.ts'
 import type { ActionContext } from '../actions/types.ts'
@@ -67,6 +68,22 @@ export function stumpAgentDoor(original: StumpEnv) {
       { clauses: ['STUMP-MOBILE-001', 'STUMP-MOBILE-002', 'STUMP-DRAFT-013'], reason: 'device' },
     ],
   })
+}
+
+const PROTOCOL_HINT = 'Send the MCP-Protocol-Version header: 2026-07-28, or 2025-11-25 (an initialize that names 2025-11-25 in params.protocolVersion needs no header). With 2026-07-28 also send Mcp-Method (the JSON-RPC method), Mcp-Name (the tool name, for tools/call) and params._meta["io.modelcontextprotocol/protocolVersion"]. See /docs/agents.'
+
+/**
+ * The door refuses a request whose protocol headers are missing or disagree
+ * (-32020 HeaderMismatch) or whose version it does not speak (-32022). The code
+ * and message stay Base's; Stump adds data.hint saying exactly what to send.
+ */
+export async function withProtocolHint(response: Response): Promise<Response> {
+  if (response.status < 400 || !(response.headers.get('content-type') ?? '').includes('json')) return response
+  const body = await response.clone().json().catch(() => null) as { error?: { code?: number; data?: Record<string, unknown> } } | null
+  if (!body?.error || (body.error.code !== -32020 && body.error.code !== -32022)) return response
+  body.error.data = { ...(body.error.data ?? {}), supported: versions, hint: PROTOCOL_HINT }
+  const headers = new Headers(response.headers); headers.delete('content-length')
+  return new Response(JSON.stringify(body), { status: response.status, statusText: response.statusText, headers })
 }
 
 export const AGENT_PATHS = (path: string) => path === '/mcp' || path === '/agents' || path.startsWith('/agents/') || path === '/api/rer/agent-policy' || path.startsWith('/.well-known/oauth-protected-resource')

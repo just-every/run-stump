@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { runAction } from '../../ui/api.ts'
 import { Disc, Outcome, pageName, useRun } from '../../ui/kit.tsx'
 import { readOn } from './labels.ts'
@@ -73,16 +73,32 @@ function RuleEditor({ venue, name, rule, onSaved, onClose }: { venue: Venue; nam
   const [source, setSource] = useState(rule?.source_url ?? ''), [readAt, setReadAt] = useState(rule?.read_at ?? '')
   const [detail, setDetail] = useState(rule?.detail ?? ''), [thread, setThread] = useState(rule?.thread_url ?? '')
   const [gate, setGate] = useState({ karma: gates.karma?.toString() ?? '', age: gates.account_age_days?.toString() ?? '', approval: gates.approval === true })
-  const save = (next: Partial<{ value: unknown; source: string; readAt: string; detail: string; thread: string }> = {}, remove = false) => run(async () => {
-    const chosen = next.value ?? (name === 'gates'
-      ? Object.fromEntries(Object.entries({ karma: gate.karma ? Number(gate.karma) : undefined, account_age_days: gate.age ? Number(gate.age) : undefined, approval: gate.approval || undefined }).filter(([, item]) => item !== undefined))
-      : value)
-    const src = (next.source ?? source).trim(), date = next.readAt ?? readAt, extra = (next.detail ?? detail).trim(), threadUrl = (next.thread ?? thread).trim()
-    if (!remove && (chosen === '' || (typeof chosen === 'object' && !Object.keys(chosen as object).length))) return
-    await runAction('stump.venues.rules', { action: 'set', idempotency_key: key(), venue_id: venue.id, expected_revision: venue.revision,
-      rules: { [name]: remove ? null : { value: chosen, source_url: src || null, read_at: date || null, ...(extra ? { detail: extra } : {}), ...(chosen === 'thread' && threadUrl ? { thread_url: threadUrl } : {}) } } })
-    onSaved()
-  }, () => 'Saved.')
+  // Saves as you go, one at a time and each on the revision the last one left, so a value, its source and its read date
+  // typed in one pass all land, even when a later field's save starts before the page has re-read the venue.
+  const revision = useRef(venue.revision), queue = useRef<Promise<unknown>>(Promise.resolve())
+  if (venue.revision > revision.current) revision.current = venue.revision
+  // The latest fields typed, read when each queued save runs, so a save never sends a value an earlier keystroke replaced.
+  const latest = useRef({ value, source, readAt, detail, thread, gate })
+  latest.current = { value, source, readAt, detail, thread, gate }
+  const gateValue = (state: typeof gate) => Object.fromEntries(Object.entries({ karma: state.karma ? Number(state.karma) : undefined, account_age_days: state.age ? Number(state.age) : undefined,
+    approval: state.approval || undefined }).filter(([, item]) => item !== undefined))
+  const save = (next: Partial<{ value: unknown; source: string; readAt: string; detail: string; thread: string }> = {}, remove = false) => {
+    const step = queue.current.then(() => run(async () => {
+      const now = latest.current
+      const chosen = next.value ?? (name === 'gates' ? gateValue(now.gate) : now.value)
+      const src = (next.source ?? now.source).trim(), date = next.readAt ?? now.readAt, extra = (next.detail ?? now.detail).trim(), threadUrl = (next.thread ?? now.thread).trim()
+      if (!remove && (chosen === '' || (typeof chosen === 'object' && !Object.keys(chosen as object).length))) return src || date ? 'Choose the rule first; its source saves with it.' : undefined
+      const saved = await runAction<{ venue: { revision: number } }>('stump.venues.rules', { action: 'set', idempotency_key: key(), venue_id: venue.id, expected_revision: revision.current,
+        rules: { [name]: remove ? null : { value: chosen, source_url: src || null, read_at: date || null, ...(extra ? { detail: extra } : {}), ...(chosen === 'thread' && threadUrl ? { thread_url: threadUrl } : {}) } } })
+      revision.current = saved.venue.revision
+      onSaved()
+      // A rule is sourced only with both its page and the day it was read (STUMP-VENUE-002.5): say which half is missing.
+      if (remove) return 'Saved.'
+      return src && !date ? 'Saved. Add the day you read the source; until then the rule reads unsourced.' : date && !src ? 'Saved. Add the source page; until then the rule reads unsourced.' : 'Saved.'
+    }, text => text))
+    queue.current = step
+    return step
+  }
   return <div className="st-panel" role="group" aria-label={`Edit ${LABELS[name]}`}>
     <div className="st-form">
       {CHOICES[name] ? <label className="st-field">Rule<select value={value} disabled={busy} onChange={event => { setValue(event.target.value); void save({ value: event.target.value }) }}>
@@ -93,10 +109,10 @@ function RuleEditor({ venue, name, rule, onSaved, onClose }: { venue: Venue; nam
       {name === 'gates' ? <>
         <label className="st-field">Karma at least<input type="number" min={0} value={gate.karma} onChange={event => setGate({ ...gate, karma: event.target.value })} onBlur={() => void save()} /></label>
         <label className="st-field">Account age in days<input type="number" min={0} value={gate.age} onChange={event => setGate({ ...gate, age: event.target.value })} onBlur={() => void save()} /></label>
-        <label className="st-field"><span><input type="checkbox" checked={gate.approval} onChange={event => { const next = { ...gate, approval: event.target.checked }; setGate(next); void save({ value: Object.fromEntries(Object.entries({ karma: next.karma ? Number(next.karma) : undefined, account_age_days: next.age ? Number(next.age) : undefined, approval: next.approval || undefined }).filter(([, item]) => item !== undefined)) }) }} /> Moderators approve new members</span></label>
+        <label className="st-field"><span><input type="checkbox" checked={gate.approval} onChange={event => { const next = { ...gate, approval: event.target.checked }; setGate(next); void save({ value: gateValue(next) }) }} /> Moderators approve new members</span></label>
       </> : null}
       <label className="st-field">Source page<input type="url" value={source} placeholder="https://" maxLength={2048} onChange={event => setSource(event.target.value)} onBlur={() => void save()} /></label>
-      <label className="st-field">Read on<input type="date" value={readAt} onChange={event => { setReadAt(event.target.value); void save({ readAt: event.target.value }) }} /></label>
+      <label className="st-field">Read on<input type="date" value={readAt} onChange={event => setReadAt(event.target.value)} onBlur={event => void save({ readAt: event.target.value })} /></label>
     </div>
     <Outcome message={message} />
     <div className="st-actions">

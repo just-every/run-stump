@@ -5,7 +5,7 @@ import { refuse, refuseAct } from '../actions/refusals.ts'
 import type { ActionContext, Args } from '../actions/types.ts'
 import { bannedAct, screenDraftRequest } from '../lib/claims/index.ts'
 import { NETWORK_LIMITS, splitThread } from '../lib/text/index.ts'
-import { readPerson, type StumpPerson } from '../people/store.ts'
+import { notActiveReason, readPerson, type StumpPerson } from '../people/store.ts'
 import { aiHost, draftWithAi, readSource, type Drafted, type Source } from './ai.ts'
 import { counted, loadBrand, namesCompany, readAccount, type Account } from './check.ts'
 import { insertItems, mayWrite, type NewItem } from './items.ts'
@@ -16,16 +16,16 @@ const FORMATS = ['post', 'thread', 'reply', 'pitch'] as const
 type Format = typeof FORMATS[number]
 
 /** The class of a drafting call: standard by hand, external when it sends text to the AI provider (STUMP-SURFACE-002, -003.3). */
-export function draftingClasses(env: ActionContext['env'], aiCalls: number, items: number) {
+export async function draftingClasses(ctx: Pick<ActionContext, 'env' | 'db'>, aiCalls: number, items: number) {
   return aiCalls > 0
-    ? [{ class: 'external' as const, facts: { measure: aiCalls, counterparty: 'known' as const, provider: aiHost(env) } }]
+    ? [{ class: 'external' as const, facts: { measure: aiCalls, counterparty: 'known' as const, provider: await aiHost(ctx.env, ctx.db) } }]
     : [{ class: 'standard' as const, facts: { measure: items } }]
 }
 
 /** The person an item speaks for: someone on the team who has signed in (D-1). */
 async function speaker(ctx: ActionContext, personId: unknown, action: string): Promise<StumpPerson> {
   const person = await readPerson(ctx.db, String(personId))
-  if (!person || person.status !== 'active') return refuseAct(ctx, TOOL, action, { rule: 'D-1', source: 'STUMP-TRUTH-001' }, { person_id: String(personId) })
+  if (!person || person.status !== 'active') return refuseAct(ctx, TOOL, action, { rule: 'D-1', source: 'STUMP-TRUTH-001' }, { person_id: String(personId), reason: notActiveReason(person) })
   return person
 }
 
@@ -157,7 +157,7 @@ async function aiDraft(ctx: ActionContext, args: Args, item: Target, source: Sou
     item.venue_id ? venueRow(ctx, item.venue_id) : null, item.format === 'pitch' && args.recipient ? contactFor(ctx, args.recipient) : null])
   const voice = await voiceFor(ctx, person!, args.voice_id, 'create')
   const product = item.product_id ? brand.products.find(entry => entry.id === item.product_id) ?? null : null
-  return draftWithAi(ctx.env, {
+  return draftWithAi(ctx, {
     format: item.format, network: item.network, limit: counted(item.network) ? NETWORK_LIMITS[item.network] : null, product, voice, claims: brand.claims.map(libClaim),
     venue: venue ? { name: venue.name, rules: venue.rules } : null, source, prompt: (args.prompt as string | undefined) ?? null,
     reply_to: (args.reply_to as { url?: string } | undefined)?.url ?? null,

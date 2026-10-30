@@ -6,7 +6,9 @@ When a person who can be identified engages with substance on your account, by a
 
 ## Vane
 
-Each published post adds a dated note in Vane, linked to its ledger entry, so changes in traffic line up with what went out. With [tracked links](/docs/links), Vane's attribution shows the signups each post brought.
+Each published post adds a dated note in Vane, linked to its ledger entry, so changes in traffic line up with what went out. With [tracked links](/docs/links), Vane's attribution shows the signups each post brought, by the post's `utm_content`.
+
+Vane is Run Edit Run's own analytics. To run it beside Stump on your computer: `rer dev just-every/run-vane`, then in Vane add your site and, in its settings, create the **Annotation webhook** key (shown once). Enter Vane's address, the site id and that key in Stump under **Settings › Connections › Vane**. Without Vane, the tagged links still reach whatever analytics your site uses.
 
 ## Connecting them
 
