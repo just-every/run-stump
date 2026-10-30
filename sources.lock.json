@@ -396,7 +396,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "abc3cbb2a08e37bd1c1092c172da6123c60027175429e7325e75870ff4325dcc",
+      "sha256": "f8a2907e70b8833d2a7f6714163dd4fa5bb52de67219c6f09ba079fe4a0eefce",
       "executable": false
     },
     "AGENTS.md": {
@@ -701,6 +701,10 @@
     },
     "migrations/core/0110_stump_venue_register.sql": {
       "sha256": "970965bb75232aea22d089f0463aa9d41514fda46e437a4b4458aedda63e32d3",
+      "executable": false
+    },
+    "migrations/core/0111_stump_venue_guest_intake.sql": {
+      "sha256": "a837a74644c9e3c051fcd9d803c236f618782178d8bf0faba05443b2af7cbb6e",
       "executable": false
     },
     "migrations/core/0200_stump_drafting.sql": {
