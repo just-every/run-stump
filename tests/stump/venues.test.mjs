@@ -26,9 +26,9 @@ test('the register keeps one venue per place, and its rules decide the routes an
     const venue = (await manage('owner', { action: 'create', kind, name: `Synthetic ${kind}`, url: `https://synthetic-stump-${kind}.example/`, status: 'candidate', ...extra })).body.result
     assert.equal(venue.kind, kind); assert.ok(Object.hasOwn(venue.details, field) && venue.details[field] !== null, kind)
   }
-  // What a person gives is kept or refused by name, never dropped.
-  const unknown = await app.mcp(token, 'stump.venues.manage', { action: 'create', kind: 'podcast', name: 'Synthetic Show', url: 'https://synthetic-stump-show.example/', pitch_deck: 'x' })
-  assert.deepEqual([unknown.error?.code, unknown.error?.field], ['invalid_arguments', 'pitch_deck'])
+  // What a person gives is kept or refused by name, never dropped: an exclusion's reason belongs to exclude.
+  const unknown = await app.mcp(token, 'stump.venues.manage', { action: 'create', kind: 'podcast', name: 'Synthetic Show', url: 'https://synthetic-stump-show.example/', reason: 'Not ours.' })
+  assert.deepEqual([unknown.error?.code, unknown.error?.field], ['invalid_arguments', 'reason'])
   const listed = (await manage('owner', { action: 'list', status: 'editorial' })).body.result
   assert.deepEqual(listed.items.map(venue => venue.name).sort(), ['Synthetic Reporter', 'Synthetic Weekly'])
   assert.equal(listed.total, listed.items.length)

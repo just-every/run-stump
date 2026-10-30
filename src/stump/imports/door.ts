@@ -29,13 +29,15 @@ interface ImportSource {
   rejected(): Array<{ kind: string; sourceId: string; reason: string }> | null
   /** Each replaced or conflicting row of a plan, with the fields it changes before and after. */
   changes(rows: PlanRow[]): Promise<unknown[]>
+  /** Rows the file names that are already the seed's own records, kept as they are. */
+  existing(): unknown[]
 }
 type SourceFactory = (db: D1Database, ownerId: string) => Promise<ImportSource>
 
 const venueList = (namespace: 'outreach-md' | 'venues-csv'): SourceFactory => async (db, ownerId) => {
-  const { source, summary, rejected, mapped } = await venueListSource(db, namespace, ownerId)
+  const { source, summary, rejected, mapped, existing } = await venueListSource(db, namespace, ownerId)
   return {
-    destination: VENUE_DESTINATION, targets: venueListTargets, source, rejected,
+    destination: VENUE_DESTINATION, targets: venueListTargets, source, rejected, existing,
     summary: () => summary() as unknown as Record<string, number> | null,
     changes: rows => rowChanges(db, rows, mapped),
   }
@@ -153,6 +155,7 @@ export async function importDoorResponse(request: Request, original: StumpEnv): 
     const rows: PlanRow[] = [...d.replacements.map(key => ({ ...keyed(key), conflict: false })), ...d.conflicts.map(key => ({ ...keyed(key), conflict: true }))]
       .filter(row => row.kind !== REJECTED_KIND).map(row => ({ ...row, reason: reasons.get(`${row.kind}|${row.sourceId}`) ?? null }))
     result.changes = await entry.changes(rows)
+    result.existing = entry.existing()
     const nothing = !d.additions.length && !d.replacements.length && !rows.some(row => row.conflict)
     if (catchup && nothing) {
       // Nothing to write: drop this catch-up and answer the applied import's own plan.

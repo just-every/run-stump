@@ -20,6 +20,8 @@ const MAPPING_VERSION = 'stump-venue-list-1'
 export const nativeId = (targetId: string) => `${targetId.split(':')[0]!.slice(0, 3)}_${sha256(targetId).slice(0, 24)}`
 export const productTarget = (name: string) => `product:${foldName(name)}`
 
+/** A row of the list that is already Stump's own record. */
+export interface Existing { kind: 'venue' | 'product' | 'entry'; source_id: string; id: string; name: string | null; reason: string }
 interface Known { id: string; namespace: string | null; name: string; rules?: string; status?: string; archived?: number }
 
 /** What Stump holds now that the import could meet: products, places and imported entries, read once per request. */
@@ -64,6 +66,12 @@ export async function venueListSource(db: D1Database, namespace: VenueSource, ow
   const mapped = new Map<string, Record<string, unknown>>()
   // The list's own venues, by target, as the reader read them: their rules decide their drafts' routes.
   const listedVenues = new Map<string, { status: string; rules: Record<string, Json> }>()
+  // Rows the list names that are already Stump's own records: kept as they are, named in the plan.
+  const existing = new Map<string, Existing>()
+  const keep = (kind: Existing['kind'], sourceId: string, id: string, name: string | null, reason: string): MappingResult => {
+    existing.set(`${kind}|${sourceId}`, { kind, source_id: sourceId, id, name, reason })
+    return { effects: [], unmapped: [{ reason }] }
+  }
   const productRef = (name: string) => {
     const found = state.products.get(foldName(name))
     return found && found.namespace !== namespace ? { product_id: found.id, target: null } : { product_id: nativeId(productTarget(name)), target: productTarget(name) }
@@ -76,7 +84,7 @@ export async function venueListSource(db: D1Database, namespace: VenueSource, ow
   function mapVenue(record: SourceRecord): MappingResult {
     const p = record.payload as Record<string, Json>, key = String(p.url_key)
     const found = state.venues.get(key)
-    if (found && found.namespace !== namespace) return { effects: [], unmapped: [{ reason: `Already in the register as "${found.name}" (${found.id}); it is kept as it is and the list's entries attach to it.` }] }
+    if (found && found.namespace !== namespace) return keep('venue', record.sourceId, found.id, found.name, `Already in the register as "${found.name}" (${found.id}); it is kept as it is and the list's entries attach to it.`)
     const kind = p.kind as VenueKind, products = (p.products as Array<{ name: string }>).map(item => ({ name: item.name, ...productRef(item.name) }))
     const limit = p.shared_limit as { text: string; posts: number | null; per: string | null } | null
     const value: Record<string, Json> = {
@@ -94,15 +102,16 @@ export async function venueListSource(db: D1Database, namespace: VenueSource, ow
 
   function mapProduct(record: SourceRecord): MappingResult {
     const name = String((record.payload as { name: string }).name), found = state.products.get(foldName(name))
-    if (found && found.namespace !== namespace) return { effects: [], unmapped: [{ reason: `The product "${found.name}" is already in Stump (${found.id}).` }] }
+    if (found && found.namespace !== namespace) return keep('product', record.sourceId, found.id, found.name, `The product "${found.name}" is already in Stump (${found.id}).`)
     return { effects: [{ targetKind: 'product', targetId: record.sourceId, value: { namespace, created_by: ownerId, name } }] }
   }
 
   function mapDraft(record: SourceRecord): MappingResult {
     const p = record.payload as Record<string, Json>
-    const existing = state.items.get(record.sourceId)
-    if (existing && existing.namespace !== namespace) return { effects: [], unmapped: [{ reason: `This entry was already imported from ${existing.namespace}.` }] }
-    if (!existing && state.released.has(nativeId(record.sourceId))) return { effects: [], unmapped: [{ reason: `Already in Stump (${nativeId(record.sourceId)}), kept by an earlier Undo; it is kept as it is.` }] }
+    const imported = state.items.get(record.sourceId)
+    const title = typeof p.title === 'string' ? p.title : typeof p.text === 'string' ? p.text.slice(0, 80) : null
+    if (imported && imported.namespace !== namespace) return keep('entry', record.sourceId, imported.id, title, `This entry was already imported from ${imported.namespace}.`)
+    if (!imported && state.released.has(nativeId(record.sourceId))) return keep('entry', record.sourceId, nativeId(record.sourceId), title, 'Already in Stump, kept by an earlier Undo; it is kept as it is.')
     const venue = venueRef(String(p.venue_key)), product = productRef(String(p.product_name))
     const options: Record<string, Json> = {}
     for (const key of ['title', 'alternates', 'extra_copy', 'own_words_required', 'post_type', 'listed_status', 'priority', 'post_url', 'community_url', 'rules_urls',
@@ -148,5 +157,5 @@ export async function venueListSource(db: D1Database, namespace: VenueSource, ow
       return [...products, ...records as ParsedRecord[]]
     },
   }
-  return { source, summary: () => summary, rejected: () => rejected, mapped }
+  return { source, summary: () => summary, rejected: () => rejected, mapped, existing: () => [...existing.values()] }
 }

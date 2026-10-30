@@ -31,6 +31,8 @@ export interface Plan {
   /** The file is the applied import itself: nothing to write. */
   applied?: boolean
   changes: Change[]
+  /** Rows of the file already in Stump as its own records: the import keeps them as they are. */
+  existing?: Array<{ kind: 'venue' | 'product' | 'entry'; source_id: string; id: string; name: string | null; reason: string }>
   summary: { sourceRecords: number; created: number; updated: number; unchanged: number; gone: number; venues?: number; entries?: number; excluded?: number }
   rejected: Array<{ kind: string; sourceId: string; reason: string }>
   differences: { additions: string[]; replacements: string[]; unchanged: string[]; gone: string[]; conflicts: string[] }

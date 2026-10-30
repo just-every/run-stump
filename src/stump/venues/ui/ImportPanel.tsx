@@ -62,6 +62,8 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
   const changes = plan?.changes ?? [], conflicts = changes.filter(change => change.conflict), replaced = changes.filter(change => !change.conflict)
   const nothing = plan && (plan.applied || (plan.summary.created === 0 && plan.summary.updated === 0 && conflicts.length === 0))
   const gone = plan?.differences.gone.length ?? 0
+  // Products are bookkeeping here; the venues and entries are what a person recognises.
+  const already = (plan?.existing ?? []).filter(row => row.kind !== 'product')
 
   return <section className="st-card" aria-labelledby="import-title">
     <h2 id="import-title">Import a venue list</h2>
@@ -94,6 +96,11 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
         <h3>Changed here since the last import</h3>
         <p className="st-note">These were edited in Stump. The import leaves them as they are; edit them yourself to take the file's values.</p>
         <ul className="st-list">{conflicts.map(change => <ChangeRow key={change.source_id} change={change} />)}</ul>
+      </> : null}
+      {already.length && !applied && !kept ? <>
+        <h3>Already in Stump</h3>
+        <p className="st-note">The import keeps these as they are, and the list's entries attach to them.</p>
+        <ul className="st-list">{already.map(row => <li className="st-row" key={row.source_id}><span className="st-row-main" style={{ overflowWrap: 'anywhere' }}>{row.name ?? row.id}<div className="st-meta">{row.kind}</div></span></li>)}</ul>
       </> : null}
       {plan.rejected.length ? <>
         <h3>Refused rows</h3>
