@@ -15,6 +15,8 @@ function TeamPage() {
   const { data, error, refresh } = useLoaded(async () => ({ me: await me(), team: await runAction<Team>('stump.team.manage', { action: 'list' }) }))
   const [inviting, setInviting] = useState(false)
   const manage = data ? ['owner', 'admin'].includes(data.me.person.role) : false
+  const members = data?.team.items.filter(person => person.status === 'active') ?? []
+  const invited = data?.team.items.filter(person => person.status === 'invited') ?? []
   return <HydrationUnit>
     <section className="st-page" aria-labelledby="team-title">
       <h1 id="team-title">Team</h1>
@@ -24,11 +26,11 @@ function TeamPage() {
       {manage && inviting ? <Invite onDone={() => { setInviting(false); void refresh() }} onCancel={() => setInviting(false)} /> : null}
       <h2>People</h2>
       <ul className="st-list">
-        {data?.team.items.map(person => <Person key={person.id} person={person} manage={manage} owner={data.me.person.role === 'owner'} self={person.id === data.me.person.id} onChange={refresh} />)}
+        {data ? members.map(person => <Person key={person.id} person={person} manage={manage} owner={data.me.person.role === 'owner'} self={person.id === data.me.person.id} onChange={refresh} />) : null}
       </ul>
-      {data?.team.invitations.length ? <>
+      {invited.length ? <>
         <h2>Waiting to sign in</h2>
-        <ul className="st-list">{data.team.invitations.map(invitation => <Pending key={invitation.id} invitation={invitation} onChange={refresh} />)}</ul>
+        <ul className="st-list">{invited.map(person => <Pending key={person.id} person={person} manage={manage} onChange={refresh} />)}</ul>
       </> : null}
     </section>
   </HydrationUnit>
@@ -83,15 +85,15 @@ function Person({ person, manage, owner, self, onChange }: { person: TeamPerson;
   </li>
 }
 
-function Pending({ invitation, onChange }: { invitation: Team['invitations'][number]; onChange(): void }) {
+function Pending({ person, manage, onChange }: { person: TeamPerson; manage: boolean; onChange(): void }) {
   const { busy, message, run } = useRun()
   return <li className="st-row">
     <div className="st-row-main">
-      <div className="st-name">{invitation.display_name}</div>
-      <div className="st-meta">{[words(invitation.role), invitation.connection, invitation.email, `invited ${when(invitation.created_at)}`].filter(Boolean).join(' · ')}</div>
+      <div className="st-name">{person.display_name}</div>
+      <div className="st-meta">{[words(person.role), person.connection, person.email, person.invited_at ? `invited ${when(person.invited_at)}` : null].filter(Boolean).join(' · ')}</div>
       <Outcome message={message} />
     </div>
-    <button className="st-button danger" type="button" disabled={busy}
-      onClick={() => void run(() => runAction('stump.team.manage', { action: 'cancel_invitation', idempotency_key: key(), invitation_id: invitation.id })).then(onChange)}>Cancel invitation</button>
+    {manage ? <button className="st-button danger" type="button" disabled={busy}
+      onClick={() => void run(() => runAction('stump.team.manage', { action: 'remove', idempotency_key: key(), person_id: person.id })).then(onChange)}>Cancel invitation</button> : null}
   </li>
 }

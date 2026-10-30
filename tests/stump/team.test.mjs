@@ -18,11 +18,18 @@ test('people join only by invitation, with the invited role, through the person 
   assert.equal(app.sentTo(stranger).length, 0, 'an uninvited email gets no way in')
 
   const email = app.email('friend')
-  const invited = await app.action('owner', 'stump.team.manage', { action: 'invite', email, display_name: 'Synthetic Friend', role: 'poster', connection: 'friend' })
-  assert.equal(invited.status, 200); assert.equal(invited.body.result.invitation.state, 'pending')
+  const invited = await app.action('owner', 'stump.team.manage', { action: 'invite', email, display_name: 'Synthetic Friend', role: 'contributor', connection: 'friend' })
+  assert.equal(invited.status, 200); assert.equal(invited.body.result.person.status, 'invited')
+  // The invited person has their id before they sign in; it is the one they keep.
+  const id = invited.body.result.person.id
+  assert.equal((await app.action('owner', 'stump.team.manage', { action: 'set_role', person_id: id, role: 'poster' })).body.result.person.role, 'poster')
+  const team = async () => (await app.action('owner', 'stump.team.manage', { action: 'list' })).body.result.items.find(item => item.id === id)
+  assert.equal((await team()).status, 'invited')
+  // Signing in accepts the invitation at that moment, before they open Stump.
   assert.equal(await app.signIn('friend', email), 303)
+  assert.equal((await team()).status, 'active')
   const me = await app.json('friend', '/app/api/me')
-  assert.equal(me.body.person.role, 'poster'); assert.equal(me.body.person.connection, 'friend')
+  assert.equal(me.body.person.id, id); assert.equal(me.body.person.role, 'poster'); assert.equal(me.body.person.connection, 'friend')
 
   const denied = await app.action('friend', 'stump.team.manage', { action: 'invite', email: app.email('other'), display_name: 'Other', role: 'viewer' })
   assert.equal(denied.status, 403); assert.equal(denied.body.code, 'forbidden')
@@ -70,9 +77,15 @@ test('an agent credential acts for its person with exactly their role, follows r
   const persona = await app.mcp(issued.body.token, 'stump.team.manage', { action: 'create', email: app.email('persona'), display_name: 'Persona' })
   assert.equal(persona.error?.code, 'act_refused'); assert.equal(persona.error?.rule, 'D-1')
 
+  // An editor's agent cannot widen its own person, though an editor may not change roles at all.
+  await app.action('owner', 'stump.team.manage', { action: 'set_role', person_id: person.id, role: 'editor' })
+  const promoted = await app.mcp(issued.body.token, 'stump.team.manage', { action: 'set_role', person_id: person.id, role: 'admin' })
+  assert.equal(promoted.error?.code, 'self_escalation')
+  assert.equal((await app.json('contractor', '/app/api/me')).body.person.role, 'editor')
+
   await app.action('owner', 'stump.team.manage', { action: 'set_role', person_id: person.id, role: 'admin' })
   const asAdmin = await app.mcp(issued.body.token, 'stump.team.manage', { action: 'invite', email: app.email('y'), display_name: 'Y', role: 'viewer' })
-  assert.ok(!asAdmin.result.isError, asAdmin.error?.code); assert.equal(asAdmin.result.structuredContent.invitation.state, 'pending')
+  assert.ok(!asAdmin.result.isError, asAdmin.error?.code); assert.equal(asAdmin.result.structuredContent.person.status, 'invited')
   // Pause and resume through the agent are recorded with its person and the time.
   for (const action of ['pause', 'resume']) assert.ok(!(await app.mcp(issued.body.token, 'stump.calendar.pause', { action, scope: 'all' })).result.isError, action)
   const history = (await app.action('owner', 'stump.calendar.pause', { action: 'state' })).body.result.history

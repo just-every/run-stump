@@ -2757,8 +2757,8 @@ Agent surface · target · **partial** · From new · Cites BASE-AGENT-005, BASE
 3. Narrowing a person's grants to one company account computes access that narrows, and turning sign-off off for an account computes access that widens.
 4. A call that would widen the calling agent's own grant, its sponsor's role or its sponsor's delegation returns `self_escalation` and changes nothing, under every company policy.
 
-**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify); `tests/stump/team.test.mjs` "the owner cannot be removed or demoted until ownership is transferred, and the transfer is recorded"
-**Gap.** Inviting computes access that widens, and self-widening returns self_escalation through both doors; delegation, grants, sign-off paths and security settings are not built.
+**Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify); `tests/stump/team.test.mjs` "the owner cannot be removed or demoted until ownership is transferred, and the transfer is recorded", "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked"
+**Gap.** Inviting computes access that widens, and self-widening returns self_escalation through both doors, before the role check; delegation, grants, sign-off paths and security settings are not built.
 
 #### STUMP-SURFACE-008 — Destructive and live
 

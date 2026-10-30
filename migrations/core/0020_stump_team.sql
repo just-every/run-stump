@@ -1,5 +1,7 @@
--- Stump's people: a person exists only through an accepted invitation (D-1).
--- id is the Base operator id (oa_operators.id); the role and connection are Stump's.
+-- Stump's people. id is the Base operator id (oa_operators.id); the role and
+-- connection are Stump's. An invitation creates the person as 'invited', holding
+-- nothing (D-1); they become 'active' once that operator has signed in since the
+-- invitation, which is the moment the invitation is accepted.
 CREATE TABLE stump_people (
   id TEXT PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,
@@ -7,30 +9,18 @@ CREATE TABLE stump_people (
   role TEXT NOT NULL CHECK(role IN ('owner','admin','editor','contributor','poster','viewer')),
   connection TEXT CHECK(connection IS NULL OR connection IN ('founder','employee','contractor','investor','advisor','friend','family')),
   disclosure_lines TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(disclosure_lines)),
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','removed')),
-  invitation_id TEXT,
-  joined_at INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('invited','active','removed')),
+  invited_at INTEGER,
+  invited_by TEXT,
+  invited_by_agent TEXT,
+  joined_at INTEGER CHECK(status <> 'active' OR joined_at IS NOT NULL),
   removed_at INTEGER,
-  revision INTEGER NOT NULL DEFAULT 1
+  revision INTEGER NOT NULL DEFAULT 1,
+  CHECK(status <> 'invited' OR (invited_at IS NOT NULL AND role <> 'owner'))
 );
 -- Exactly one active owner at a time.
 CREATE UNIQUE INDEX stump_people_one_owner ON stump_people(role) WHERE role = 'owner' AND status = 'active';
-
-CREATE TABLE stump_invitations (
-  id TEXT PRIMARY KEY,
-  email TEXT NOT NULL,
-  display_name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK(role IN ('admin','editor','contributor','poster','viewer')),
-  connection TEXT CHECK(connection IS NULL OR connection IN ('founder','employee','contractor','investor','advisor','friend','family')),
-  disclosure_lines TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(disclosure_lines)),
-  state TEXT NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','accepted','cancelled')),
-  invited_by TEXT NOT NULL,
-  invited_by_agent TEXT,
-  created_at INTEGER NOT NULL,
-  accepted_at INTEGER,
-  person_id TEXT
-);
-CREATE UNIQUE INDEX stump_invitations_pending ON stump_invitations(email) WHERE state = 'pending';
+CREATE INDEX stump_people_invited ON stump_people(status) WHERE status = 'invited';
 
 -- Every team change, with the person and the agent that made it.
 CREATE TABLE stump_team_history (

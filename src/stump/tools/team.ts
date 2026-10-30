@@ -1,7 +1,7 @@
 import { refuse, NO_PERSONAS } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
-import { ADMINS, CONNECTIONS, EVERYONE, ROLES, rank, type Role } from '../people/roles.ts'
-import { readPerson, type StumpPerson } from '../people/store.ts'
+import { ADMINS, CONNECTIONS, EVERYONE, ROLES, isRole, rank, type Role } from '../people/roles.ts'
+import { listPeople, readPerson, type StumpPerson } from '../people/store.ts'
 
 const email = { type: 'string', format: 'email', minLength: 3, maxLength: 254 }
 const personId = { type: 'string', minLength: 1, maxLength: 64 }
@@ -10,17 +10,19 @@ const lines = { type: 'array', maxItems: 10, items: { type: 'string', minLength:
 const access = (direction: 'widens' | 'narrows', measure = 1) => [{ class: 'access' as const, facts: { measure, direction } }]
 
 const normalEmail = (value: unknown) => String(value).trim().toLowerCase()
+const iso = (at: number | null) => at === null ? null : new Date(at).toISOString()
 const publicPerson = (person: StumpPerson) => ({ id: person.id, email: person.email, display_name: person.display_name, role: person.role,
-  connection: person.connection, disclosure_lines: person.disclosure_lines, status: person.status, joined_at: new Date(person.joined_at).toISOString() })
+  connection: person.connection, disclosure_lines: person.disclosure_lines, status: person.status, invited_at: iso(person.invited_at), joined_at: iso(person.joined_at) })
 
 async function history(ctx: ActionContext, action: string, person: { id?: string | null; email?: string | null }, detail: Record<string, unknown>) {
   return ctx.db.prepare('INSERT INTO stump_team_history(id,action,person_id,email,actor_id,agent_id,detail,at) VALUES(?,?,?,?,?,?,?,?)')
     .bind(crypto.randomUUID(), action, person.id ?? null, person.email ?? null, ctx.person.id, ctx.agent?.id ?? null, JSON.stringify(detail), ctx.now())
 }
 
+/** A person on the team: active, or invited and still to sign in. */
 async function teammate(ctx: ActionContext, id: unknown): Promise<StumpPerson> {
   const person = await readPerson(ctx.db, String(id))
-  if (!person || person.status !== 'active') refuse('not_found', { person_id: String(id) })
+  if (!person || person.status === 'removed') refuse('not_found', { person_id: String(id) })
   return person
 }
 
@@ -28,6 +30,7 @@ async function teammate(ctx: ActionContext, id: unknown): Promise<StumpPerson> {
 function mayChange(ctx: ActionContext, target: StumpPerson, role?: Role) {
   if (target.role === 'owner') refuse('owner_protected', { person_id: target.id, reason: 'Transfer ownership to another person first.' })
   if (role === 'owner' && ctx.person.role !== 'owner') refuse('forbidden', { action: 'set_role', role: ctx.person.role })
+  if (role === 'owner' && target.status !== 'active') refuse('conflict', { person_id: target.id, reason: 'Ownership moves only to someone who has signed in.' })
   if (ctx.person.role === 'admin' && target.role === 'admin' && target.id !== ctx.person.id) refuse('forbidden', { action: 'set_role', role: ctx.person.role })
 }
 
@@ -50,30 +53,29 @@ export const teamTools: StumpTool[] = [{
         if (args.role === 'owner') refuse('invalid_arguments', { field: 'role', reason: 'Invite as admin, then transfer ownership.' })
         const member = await ctx.db.prepare("SELECT id FROM stump_people WHERE email=? AND status='active'").bind(address).first<{ id: string }>()
         if (member) refuse('already_member', { person_id: member.id })
-        await ctx.admin.invite({ email: address, displayName: String(args.display_name) })
-        const id = crypto.randomUUID(), now = ctx.now()
-        // A pending invitation for the same address is replaced, so the newest role and connection apply.
-        await ctx.db.batch([
-          ctx.db.prepare("UPDATE stump_invitations SET state='cancelled' WHERE email=? AND state='pending'").bind(address),
-          ctx.db.prepare('INSERT INTO stump_invitations(id,email,display_name,role,connection,disclosure_lines,invited_by,invited_by_agent,created_at) VALUES(?,?,?,?,?,?,?,?,?)')
-            .bind(id, address, String(args.display_name), String(args.role), (args.connection as string | undefined) ?? null, JSON.stringify(args.disclosure_lines ?? []), ctx.person.id, ctx.agent?.id ?? null, now),
-          await history(ctx, 'invite', { email: address }, { invitation_id: id, role: args.role, connection: args.connection ?? null }),
-        ])
-        ctx.emit('team.invited', `stump://people/invitations/${id}`, { role: args.role })
-        return { invitation: { id, email: address, display_name: String(args.display_name), role: String(args.role), connection: (args.connection as string | undefined) ?? null, state: 'pending', created_at: new Date(now).toISOString() } }
+        // The person is Base's operator for this email, invited and holding nothing until they sign in (D-1).
+        // Inviting someone already invited replaces the invitation, so the newest role and connection apply.
+        const id = await ctx.admin.invite({ email: address, displayName: String(args.display_name) }), now = ctx.now()
+        const invited = await ctx.db.prepare(`INSERT INTO stump_people(id,email,display_name,role,connection,disclosure_lines,status,invited_at,invited_by,invited_by_agent)
+          VALUES(?,?,?,?,?,?,'invited',?,?,?)
+          ON CONFLICT(id) DO UPDATE SET email=excluded.email,display_name=excluded.display_name,role=excluded.role,connection=excluded.connection,
+            disclosure_lines=excluded.disclosure_lines,status='invited',invited_at=excluded.invited_at,invited_by=excluded.invited_by,
+            invited_by_agent=excluded.invited_by_agent,joined_at=NULL,removed_at=NULL,revision=stump_people.revision+1
+          WHERE stump_people.status<>'active' RETURNING id`)
+          .bind(id, address, String(args.display_name), String(args.role), (args.connection as string | undefined) ?? null, JSON.stringify(args.disclosure_lines ?? []), now, ctx.person.id, ctx.agent?.id ?? null)
+          .first<{ id: string }>()
+        if (!invited) refuse('already_member', { person_id: id })
+        await (await history(ctx, 'invite', { id, email: address }, { role: args.role, connection: args.connection ?? null })).run()
+        ctx.emit('team.invited', `stump://people/${id}`, { role: args.role })
+        return { person: publicPerson((await readPerson(ctx.db, id))!) }
       },
     },
     list: {
       roles: EVERYONE, read: true,
       classify: () => access('narrows', 0),
       async run(_args, ctx) {
-        const people = (await ctx.db.prepare("SELECT id FROM stump_people WHERE status='active' ORDER BY joined_at,id").all<{ id: string }>()).results
-        const items = (await Promise.all(people.map(row => readPerson(ctx.db, row.id)))).filter((p): p is StumpPerson => !!p).map(publicPerson)
-        const invitations = ['owner', 'admin'].includes(ctx.person.role)
-          ? (await ctx.db.prepare("SELECT id,email,display_name,role,connection,created_at FROM stump_invitations WHERE state='pending' ORDER BY created_at").all<Record<string, unknown>>()).results
-            .map(row => ({ ...row, state: 'pending', created_at: new Date(Number(row.created_at)).toISOString() }))
-          : []
-        return { items, total: items.length, invitations }
+        const items = (await listPeople(ctx.db)).map(publicPerson)
+        return { items, total: items.length }
       },
     },
     set_role: {
@@ -83,7 +85,11 @@ export const teamTools: StumpTool[] = [{
       async classify(args, ctx) { const target = await teammate(ctx, args.person_id); return access(rank(args.role as Role) > rank(target.role) ? 'widens' : 'narrows') },
       async summary(args, ctx) { const target = await teammate(ctx, args.person_id); return { target: { id: target.id, name: target.display_name, email: target.email }, role: String(args.role) } },
       target: args => ({ kind: 'person', id: String(args.person_id) }),
-      async authority(args, ctx) { const target = await teammate(ctx, args.person_id); return { subject: target.id, widens: rank(args.role as Role) > rank(target.role) } },
+      // Read before the role check, so a caller without the role who would widen their own reach is told self_escalation.
+      async authority(args, ctx) {
+        const target = await readPerson(ctx.db, String(args.person_id))
+        return target && target.status !== 'removed' && isRole(args.role) ? { subject: target.id, widens: rank(args.role) > rank(target.role) } : null
+      },
       async run(args, ctx) {
         const target = await teammate(ctx, args.person_id), role = args.role as Role, now = ctx.now()
         mayChange(ctx, target, role)
@@ -96,7 +102,7 @@ export const teamTools: StumpTool[] = [{
             await history(ctx, 'transfer_ownership', target, { from: ctx.person.id, to: target.id }),
           ])
         } else {
-          const changed = await ctx.db.prepare("UPDATE stump_people SET role=?,revision=revision+1 WHERE id=? AND role=? AND status='active' AND role<>'owner'").bind(role, target.id, target.role).run()
+          const changed = await ctx.db.prepare("UPDATE stump_people SET role=?,revision=revision+1 WHERE id=? AND role=? AND status=? AND role<>'owner'").bind(role, target.id, target.role, target.status).run()
           if (!changed.meta.changes) refuse('conflict', { person_id: target.id })
           await (await history(ctx, 'set_role', target, { from: target.role, to: role })).run()
         }
@@ -144,31 +150,18 @@ export const teamTools: StumpTool[] = [{
         const scheduled = (await ctx.db.prepare("SELECT id,state FROM stump_items WHERE person_id=? AND state IN ('scheduled','paused') ORDER BY scheduled_at,id").bind(target.id).all<{ id: string; state: string }>()).results
         // Their scheduled items go back to draft (nothing posts as someone who left), and their agents stop.
         await ctx.db.batch([
-          ctx.db.prepare("UPDATE stump_people SET status='removed',removed_at=?,revision=revision+1 WHERE id=? AND status='active' AND role<>'owner'").bind(now, target.id),
+          ctx.db.prepare("UPDATE stump_people SET status='removed',removed_at=?,revision=revision+1 WHERE id=? AND status=? AND role<>'owner'").bind(now, target.id, target.status),
           ctx.db.prepare('UPDATE stump_agent_credentials SET revoked_at=? WHERE person_id=? AND revoked_at IS NULL').bind(now, target.id),
           ...scheduled.flatMap(item => [
             ctx.db.prepare("UPDATE stump_items SET state='draft',scheduled_at=NULL,updated_at=? WHERE id=? AND state=?").bind(now, item.id, item.state),
             ctx.db.prepare("INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at) VALUES(?,?,?,'draft',?,?,'person removed',?)")
               .bind(crypto.randomUUID(), item.id, item.state, ctx.person.id, ctx.agent?.id ?? null, now),
           ]),
-          await history(ctx, 'remove', target, { open_handoffs: handoffs.length, unscheduled_items: scheduled.length }),
+          // Removing someone still to sign in cancels their invitation.
+          await history(ctx, target.status === 'invited' ? 'cancel_invitation' : 'remove', target, { open_handoffs: handoffs.length, unscheduled_items: scheduled.length }),
         ])
         ctx.emit('team.removed', `stump://people/${target.id}`)
         return { person_id: target.id, removed: true, open_handoffs: handoffs, unscheduled_items: scheduled.map(item => item.id) }
-      },
-    },
-    cancel_invitation: {
-      roles: ADMINS,
-      properties: { invitation_id: personId },
-      required: ['invitation_id'],
-      classify: () => access('narrows'),
-      summary: args => ({ target: { id: String(args.invitation_id) } }),
-      authority: async args => ({ subject: String(args.invitation_id), widens: false }),
-      async run(args, ctx) {
-        const row = await ctx.db.prepare("UPDATE stump_invitations SET state='cancelled' WHERE id=? AND state='pending' RETURNING email").bind(String(args.invitation_id)).first<{ email: string }>()
-        if (!row) refuse('not_found', { invitation_id: String(args.invitation_id) })
-        await (await history(ctx, 'cancel_invitation', { email: row.email }, { invitation_id: args.invitation_id })).run()
-        return { invitation_id: String(args.invitation_id), state: 'cancelled' }
       },
     },
   },

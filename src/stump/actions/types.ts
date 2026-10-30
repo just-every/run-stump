@@ -6,8 +6,8 @@ import type { RuleSource } from './refusals.ts'
 
 /** Base operator administration, bound to the door the call came through. */
 export interface TeamAdmin {
-  /** Sends Base's invitation for a new email; an existing operator keeps theirs. */
-  invite(input: { email: string; displayName: string }): Promise<void>
+  /** Sends Base's invitation for a new email (an existing operator keeps theirs) and answers the operator id. */
+  invite(input: { email: string; displayName: string }): Promise<string>
 }
 
 /** What every action handler receives, whichever door the call came through. */

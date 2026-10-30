@@ -29,10 +29,15 @@ export function declaredArgs(tool: StumpTool, input: Args): Args {
   return Object.fromEntries(Object.entries(input).filter(([key]) => Object.hasOwn(properties, key)))
 }
 
+const widensOwn = (authority: { subject: string; widens: boolean } | null, ctx: ActionContext) =>
+  !!authority?.widens && [ctx.person.id, ctx.person.email, ctx.agent?.id].some(id => id?.toLowerCase() === authority.subject.trim().toLowerCase())
+
 /**
  * The action a call names, after the checks every door applies in the same
- * order: refused acts (act_refused with rule and source), unknown actions, the
- * person's role, then the action's own argument schema.
+ * order: refused acts (act_refused with rule and source), unknown actions, a
+ * call that would widen the caller's own authority (self_escalation, whatever
+ * their role or the company policy), the person's role, then the action's own
+ * argument schema.
  */
 export async function resolveAction(tool: StumpTool, args: Args, ctx: ActionContext): Promise<StumpAction> {
   const name = String(args.action ?? '')
@@ -42,13 +47,11 @@ export async function resolveAction(tool: StumpTool, args: Args, ctx: ActionCont
     if (rule) await refuseAct(ctx, tool.name, name, rule, { action: name })
     refuse('unknown_action', { action: name, actions: Object.keys(tool.actions) })
   }
+  if (action.authority && widensOwn(await action.authority(args, ctx), ctx)) refuse('self_escalation')
   if (!action.roles.includes(ctx.person.role)) refuse('forbidden', { action: name, role: ctx.person.role })
   if (!validateSchema(actionSchema(action), args)) refuse('invalid_arguments', { action: name })
   return action
 }
-
-const widensOwn = (authority: { subject: string; widens: boolean } | null, ctx: ActionContext) =>
-  !!authority?.widens && [ctx.person.id, ctx.person.email, ctx.agent?.id].some(id => id?.toLowerCase() === authority.subject.trim().toLowerCase())
 
 /** The person door: the same action, arguments, refusals and result as the MCP tool. */
 export async function runAsPerson(tool: StumpTool, input: Args, ctx: ActionContext): Promise<unknown> {
@@ -58,7 +61,6 @@ export async function runAsPerson(tool: StumpTool, input: Args, ctx: ActionConte
     const current = await action.revision(args, ctx)
     if (input.expected_revision !== current) refuse('revision_conflict', { current_revision: current })
   }
-  if (widensOwn(action.authority ? await action.authority(args, ctx) : null, ctx)) refuse('self_escalation')
   await action.classify(args, ctx)
   return action.run(args, ctx)
 }
