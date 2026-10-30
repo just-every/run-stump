@@ -44,13 +44,19 @@ export function VenuePage({ venueId }: { venueId: string }) {
           {venue.url ? <> · <a className="st-venue-link" href={venue.url} target="_blank" rel="noreferrer noopener">{bare(venue.url)} ↗</a></> : null}</p>
         {venue.excluded ? <div className="st-panel" role="note"><strong>Excluded.</strong> {venue.excluded.reason}{venue.excluded.alternative ? ` Instead: ${venue.excluded.alternative}` : ''}</div> : null}
         {editing ? <VenueForm venue={venue} onDone={() => { setEditing(false); changed() }} onCancel={() => setEditing(false)} /> : null}
+        {/* Rules is the focal panel; what the company aims here (its products, items, and About when nothing says why it fits)
+            follows it in the left column, and the rail holds Routes, Members and Why it fits. At 760 and under the two columns
+            open into one, in the order Rules, Routes, Members, Why it fits or About, then Products. */}
         <div className="st-columns">
-          <RulesCard venue={venue} editor={editor} onSaved={changed} />
+          <div className="st-venue-main">
+            <RulesCard venue={venue} editor={editor} onSaved={changed} />
+            {venue.why ? null : <WhyCard venue={venue} />}
+            <ProductsCard venue={venue} items={data.items} />
+          </div>
           <div className="st-aside">
             <RoutesCard venue={venue} routes={data.routes} editor={editor} onChanged={changed} />
             <MembersCard venue={venue} members={data.members} team={data.team} me={data.who.person} editor={editor} onChanged={changed} />
-            <WhyCard venue={venue} />
-            <ProductsCard venue={venue} items={data.items} />
+            {venue.why ? <WhyCard venue={venue} /> : null}
           </div>
         </div>
       </> : null}
@@ -94,7 +100,7 @@ function RoutesCard({ venue, routes, editor, onChanged }: { venue: Venue; routes
     if (done) { setLimiting(false); onChanged() }
   }
   const closed = routes.reasons.filter(reason => !reason.open)
-  return <section className="st-card" aria-labelledby="routes-title">
+  return <section className="st-card st-venue-routes" aria-labelledby="routes-title">
     <h2 className="st-panel-title" id="routes-title"><Disc icon="arrows" />Routes</h2>
     {routes.routes.length ? <div className="st-chips">{routes.routes.map(route => <span className="st-chip ok" key={route}>{routeLabel(route)}</span>)}</div> : <p>No route is open.</p>}
     {closed.length ? <ul className="st-list">{closed.map(reason => <li className="st-meta" key={reason.route} style={{ padding: '2px 0' }}>{CLOSED[reason.route] ?? routeLabel(reason.route)}: {lower(reason.because)}</li>)}</ul> : null}
@@ -131,7 +137,7 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
   const gateWords = (gate: { gate: string; need: number | boolean }) => gate.gate === 'karma' ? `needs ${gate.need}\u00a0karma` : gate.gate === 'account_age' ? `account needs ${gate.need}\u00a0days` : gate.gate === 'approval' ? 'needs approval' : 'join first'
   const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
   const pending = members.applications.filter(application => application.state === 'applied')
-  return <section className="st-card" aria-labelledby="members-title">
+  return <section className="st-card st-venue-members" aria-labelledby="members-title">
     <h2 className="st-panel-title" id="members-title"><Disc icon="people" />Members</h2>
     {members.items.length ? <ul className="st-list">{members.items.map(member => <li className="st-row" key={member.person_id}>
       <div className="st-row-main">
@@ -179,7 +185,7 @@ function WhyCard({ venue }: { venue: Venue }) {
     .filter(([, value]) => value)
   if (!venue.why && !lines.length) return null
   const link = (value: string) => /^https?:\/\//.test(value) ? <a href={value} target="_blank" rel="noreferrer noopener">{bare(value)} ↗</a> : value
-  return <section className="st-card" aria-labelledby="why-title">
+  return <section className="st-card st-venue-why-card" aria-labelledby="why-title">
     <h2 className="st-panel-title" id="why-title"><Disc icon="check" />{venue.why ? 'Why it fits' : 'About'}</h2>
     {venue.why ? <p className="st-venue-why">{venue.why}</p> : null}
     {lines.length ? <dl className="st-venue-facts">{lines.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{link(value!)}</dd></div>)}</dl> : null}
@@ -212,7 +218,7 @@ function howToWords(venue: Venue): string {
 function ProductsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
   if (!venue.products.length && !items.length) return null
   const names = new Map(venue.products.map(product => [product.product_id, product.name ?? 'Product']))
-  return <section className="st-card" aria-labelledby="products-title">
+  return <section className="st-card st-venue-products" aria-labelledby="products-title">
     <h2 className="st-panel-title" id="products-title"><Disc icon="chart" />{venue.products.length ? 'Products' : 'Items aimed here'}</h2>
     {venue.products.length ? <ul className="st-list">{venue.products.map(product => <li className="st-row" key={product.product_id}>
       <div className="st-row-main"><div className="st-name">{product.name ?? 'Product'}</div>

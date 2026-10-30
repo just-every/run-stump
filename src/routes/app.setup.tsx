@@ -121,7 +121,10 @@ function SetupPage() {
               <h2>Bring your venues</h2>
               {data?.venues ? <p className="st-setup-done"><span className="st-tick" aria-hidden="true"><Icon name="check" /></span>{data.venues} {data.venues === 1 ? 'venue' : 'venues'}</p> : null}
               <div className="st-setup-pills">
-                <a className="st-setup-pill" href="/app/venues?import=1">Import a venue list <span className="st-setup-pill-keep">(Markdown or CSV)</span></a>
+                <span className="st-setup-pill-noted">
+                  <a className="st-setup-pill" href="/app/venues?import=1">Import a venue list<span className="st-setup-pill-keep"> (Markdown or CSV)</span></a>
+                  <span className="st-setup-pill-note" aria-hidden="true">Markdown or CSV</span>
+                </span>
                 <a className="st-setup-pill" href="/app/settings/import">Switch from Buffer</a>
               </div>
             </div>
@@ -130,7 +133,7 @@ function SetupPage() {
         <div className="st-setup-foot">
           <Outcome message={message?.error ? message : null} />
           <Saved shown={shown && !busy} />
-          <a className="st-button primary large" href="/app">Open Today <span aria-hidden="true">→</span></a>
+          <a className="st-button primary large" href="/app">Open Today <Icon name="arrowRight" /></a>
         </div>
       </section>
     </div>

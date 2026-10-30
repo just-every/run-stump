@@ -34,7 +34,15 @@ function shortTime(iso: string | null) {
   if (sameDay(date, yesterday)) return 'Yesterday'
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)
 }
-const longTime = (iso: string | null) => at(iso) ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(at(iso)!) : ''
+/** An open item's time: "12:10 PM" today, "Yesterday, 4:10 PM", else "Oct 28, 4:10 PM". */
+function longTime(iso: string | null) {
+  const date = at(iso)
+  if (!date) return ''
+  const now = new Date(), clock = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date)
+  if (sameDay(date, now)) return clock
+  if (sameDay(date, new Date(now.getTime() - 86_400_000))) return `Yesterday, ${clock}`
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date)
+}
 const handle = (value: string | null) => value ? `@${value}` : 'Someone'
 const usd = (value: number) => Math.round(value * 100) === value * 100 ? `$${value.toFixed(2)}` : `$${value.toFixed(3)}`
 /** The post as a person reads it: X writes a reply's leading @handles before its words. */

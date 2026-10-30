@@ -56,12 +56,16 @@
 .docs-code pre { margin: 0; padding: 10px 20px 20px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .docs-code code { background: none; padding: 0; color: inherit; font: 15px/1.6 var(--mono); overflow-wrap: anywhere; }
 .docs-code .docs-keep { white-space: nowrap; }
+/* A shell command's wrapped tail hangs 2ch in under it, so it never reads as a second command. */
+.docs-code--shell code { line-height: 1.5; }
+.docs-code--shell .docs-line { display: block; min-height: 1.5em; padding-left: 2ch; text-indent: -2ch; }
 /* At 1200 and wider a code card takes the article's full width, so a command keeps one line; prose stays at 38em. */
 @media (min-width: 1200px) {
   .docs-prose { max-width: none; }
   .docs-prose > :not(.docs-code) { max-width: 684px; }
   .docs-code pre { padding-inline: 18px; }
   .docs-code code { font-size: 14px; }
+  .docs-code--shell code { font-size: 13.5px; }
 }
 .docs-table { overflow-x: auto; margin: 20px 0 24px; background: var(--white); border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); padding: 4px 20px; }
 .docs-table table { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.45; }
