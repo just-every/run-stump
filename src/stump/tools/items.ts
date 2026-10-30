@@ -7,7 +7,7 @@ import { moveItem, pauseFor } from '../items/state.ts'
 import { CONTRIBUTORS, EDITORS } from '../people/roles.ts'
 import { itemView, readItem, type FullItemRow } from '../publish/items.ts'
 import { agentRuleBroken } from '../publish/rules.ts'
-import { blockingFlags, commit, holdOwner, item, mayPublishTo, mover, prepare, resolveUncertain, scheduleClasses, sendNow, SCHEDULABLE, type Plan } from '../publish/schedule.ts'
+import { blockingFlags, commit, holdOwner, item, mayPublishTo, mover, prepare, money, publishClasses, remaining, resolveUncertain, scheduleClasses, sendNow, SCHEDULABLE, type Plan } from '../publish/schedule.ts'
 
 // stump.items.schedule and stump.items.media: schedule, publish, resume and
 // settle items on connected accounts, one master's variants at once, and the
@@ -20,14 +20,15 @@ const MEDIA_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
 /** A D1 row holds about 2 MB; an image stays under it. */
 const MEDIA_MAX_BYTES = 1_900_000
 
-const money = (plans: Plan[]) => {
-  const micro = plans.reduce((sum, plan) => sum + plan.charge_micro, 0)
-  return micro > 0 ? { amount: { value: micro / 1e6, currency: 'USD' }, payee: 'X' } : {}
-}
 const summary = (plans: Plan[], verb: string) => ({
   target: { name: `${verb} ${plans.length === 1 ? `on ${plans[0]!.account.network} ${shownHandle(plans[0]!.account)}` : `${plans.length} posts`}` },
-  items: plans.map(plan => plan.item.id), ...money(plans),
+  items: plans.map(plan => plan.item.id), ...money(plans.reduce((sum, plan) => sum + plan.charge_micro, 0)),
 })
+/** What sending the rest of one item computes: its remaining posts and their charge. */
+async function rest(ctx: ActionContext, row: FullItemRow, verb: string) {
+  const left = await remaining(ctx, row)
+  return { left, summary: { target: { id: row.id, name: `${verb} ${left.posts === 1 ? 'one post' : `${left.posts} posts`}${row.network ? ` on ${row.network}` : ''}` }, items: [row.id], ...money(left.charge_micro) } }
+}
 
 /** May this person settle an uncertain item: whoever holds it, the account's owner, or an admin. */
 async function maySettle(ctx: ActionContext, row: FullItemRow) {
@@ -106,9 +107,12 @@ export const itemTools: StumpTool[] = [{
       async classify(args, ctx) {
         const { row, plan } = await resumable(ctx, args)
         if (plan) return scheduleClasses([plan])
-        const done = await ctx.db.prepare('SELECT COUNT(*) AS n FROM stump_item_parts WHERE item_id=?').bind(row.id).first<{ n: number }>()
-        const total = row.parts ? (JSON.parse(row.parts) as string[]).length : 1
-        return [{ class: 'external', facts: { measure: Math.max(0, total - (done?.n ?? 0)), counterparty: 'public' } }]
+        const { left } = await rest(ctx, row, 'Resume')
+        return publishClasses(left.posts, left.charge_micro)
+      },
+      async summary(args, ctx) {
+        const { row, plan } = await resumable(ctx, args)
+        return plan ? summary([plan], 'Resume') : (await rest(ctx, row, 'Resume')).summary
       },
       target: args => ({ kind: 'item', id: String(args.item_id) }),
       async run(args, ctx) {
@@ -127,8 +131,16 @@ export const itemTools: StumpTool[] = [{
         const row = await item(ctx, args.item_id)
         if (row.state !== 'uncertain') refuse('not_uncertain', { item_id: row.id, state: row.state })
         await maySettle(ctx, row)
-        return [{ class: 'gated', facts: { measure: 1, provider: row.network ?? 'network', step: 'uncertain_outcome' } },
-          ...(args.decision === 'retry' ? [{ class: 'external' as const, facts: { measure: 1, counterparty: 'public' as const } }] : [])]
+        const gated = { class: 'gated' as const, facts: { measure: 1, provider: row.network ?? 'network', step: 'uncertain_outcome' } }
+        if (args.decision !== 'retry') return [gated]
+        // Sending it again posts what the network has not confirmed, and X charges for it.
+        const { left } = await rest(ctx, row, 'Send again')
+        return [gated, ...publishClasses(left.posts, left.charge_micro)]
+      },
+      async summary(args, ctx) {
+        const row = await item(ctx, args.item_id)
+        if (args.decision === 'retry') return (await rest(ctx, row, 'Send again')).summary
+        return { target: { id: row.id, name: args.decision === 'posted' ? 'Confirm it posted' : 'Record it did not post' }, items: [row.id] }
       },
       target: args => ({ kind: 'item', id: String(args.item_id) }),
       async run(args, ctx) {

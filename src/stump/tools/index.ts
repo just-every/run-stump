@@ -1,9 +1,12 @@
 import { toolSchema } from '../actions/runner.ts'
 import type { StumpTool } from '../actions/types.ts'
 import { accountTools } from './accounts.ts'
+import { brandTools } from './brand.ts'
 import { calendarTools } from './calendar.ts'
+import { draftTools } from './drafts.ts'
 import { itemTools } from './items.ts'
 import { ledgerTools } from './ledger.ts'
+import { pressTools } from './press.ts'
 import { setupTools } from './setup.ts'
 import { teamTools } from './team.ts'
 
@@ -11,9 +14,12 @@ import { teamTools } from './team.ts'
 // and the MCP door both read this list; nothing else registers tools.
 export const stumpTools: readonly StumpTool[] = [
   ...accountTools,
+  ...brandTools,
   ...calendarTools,
+  ...draftTools,
   ...itemTools,
   ...ledgerTools,
+  ...pressTools,
   ...setupTools,
   ...teamTools,
 ]

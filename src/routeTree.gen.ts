@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppComposeRouteImport } from './routes/app.compose'
 import { Route as AppConnectedNetworkRouteImport } from './routes/app.connected.$network'
 import { Route as AppSettingsAccountsRouteImport } from './routes/app.settings.accounts'
 import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
+import { Route as AppSettingsBrandRouteImport } from './routes/app.settings.brand'
 import { Route as AppSettingsPublishingRouteImport } from './routes/app.settings.publishing'
 import { Route as AppSettingsTeamRouteImport } from './routes/app.settings.team'
 import { Route as OauthBlueskyClientMetadataDotjsonRouteImport } from './routes/oauth.bluesky.client-metadata[.]json'
@@ -26,6 +28,11 @@ const AppRoute = AppRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppComposeRoute = AppComposeRouteImport.update({
+  id: '/compose',
+  path: '/compose',
   getParentRoute: () => AppRoute,
 } as any)
 const AppConnectedNetworkRoute = AppConnectedNetworkRouteImport.update({
@@ -41,6 +48,11 @@ const AppSettingsAccountsRoute = AppSettingsAccountsRouteImport.update({
 const AppSettingsAgentsRoute = AppSettingsAgentsRouteImport.update({
   id: '/settings/agents',
   path: '/settings/agents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsBrandRoute = AppSettingsBrandRouteImport.update({
+  id: '/settings/brand',
+  path: '/settings/brand',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsPublishingRoute = AppSettingsPublishingRouteImport.update({
@@ -62,19 +74,23 @@ const OauthBlueskyClientMetadataDotjsonRoute =
 
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
+  '/app/compose': typeof AppComposeRoute
   '/app/': typeof AppIndexRoute
   '/app/connected/$network': typeof AppConnectedNetworkRoute
   '/app/settings/accounts': typeof AppSettingsAccountsRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/oauth/bluesky/client-metadata.json': typeof OauthBlueskyClientMetadataDotjsonRoute
 }
 export interface FileRoutesByTo {
+  '/app/compose': typeof AppComposeRoute
   '/app': typeof AppIndexRoute
   '/app/connected/$network': typeof AppConnectedNetworkRoute
   '/app/settings/accounts': typeof AppSettingsAccountsRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/oauth/bluesky/client-metadata.json': typeof OauthBlueskyClientMetadataDotjsonRoute
@@ -82,10 +98,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/app': typeof AppRouteWithChildren
+  '/app/compose': typeof AppComposeRoute
   '/app/': typeof AppIndexRoute
   '/app/connected/$network': typeof AppConnectedNetworkRoute
   '/app/settings/accounts': typeof AppSettingsAccountsRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/oauth/bluesky/client-metadata.json': typeof OauthBlueskyClientMetadataDotjsonRoute
@@ -94,29 +112,35 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/app'
+    | '/app/compose'
     | '/app/'
     | '/app/connected/$network'
     | '/app/settings/accounts'
     | '/app/settings/agents'
+    | '/app/settings/brand'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/oauth/bluesky/client-metadata.json'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/app/compose'
     | '/app'
     | '/app/connected/$network'
     | '/app/settings/accounts'
     | '/app/settings/agents'
+    | '/app/settings/brand'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/oauth/bluesky/client-metadata.json'
   id:
     | '__root__'
     | '/app'
+    | '/app/compose'
     | '/app/'
     | '/app/connected/$network'
     | '/app/settings/accounts'
     | '/app/settings/agents'
+    | '/app/settings/brand'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/oauth/bluesky/client-metadata.json'
@@ -143,6 +167,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/compose': {
+      id: '/app/compose'
+      path: '/compose'
+      fullPath: '/app/compose'
+      preLoaderRoute: typeof AppComposeRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/connected/$network': {
       id: '/app/connected/$network'
       path: '/connected/$network'
@@ -162,6 +193,13 @@ declare module '@tanstack/react-router' {
       path: '/settings/agents'
       fullPath: '/app/settings/agents'
       preLoaderRoute: typeof AppSettingsAgentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings/brand': {
+      id: '/app/settings/brand'
+      path: '/settings/brand'
+      fullPath: '/app/settings/brand'
+      preLoaderRoute: typeof AppSettingsBrandRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/settings/publishing': {
@@ -189,19 +227,23 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppComposeRoute: typeof AppComposeRoute
   AppIndexRoute: typeof AppIndexRoute
   AppConnectedNetworkRoute: typeof AppConnectedNetworkRoute
   AppSettingsAccountsRoute: typeof AppSettingsAccountsRoute
   AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
+  AppSettingsBrandRoute: typeof AppSettingsBrandRoute
   AppSettingsPublishingRoute: typeof AppSettingsPublishingRoute
   AppSettingsTeamRoute: typeof AppSettingsTeamRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppComposeRoute: AppComposeRoute,
   AppIndexRoute: AppIndexRoute,
   AppConnectedNetworkRoute: AppConnectedNetworkRoute,
   AppSettingsAccountsRoute: AppSettingsAccountsRoute,
   AppSettingsAgentsRoute: AppSettingsAgentsRoute,
+  AppSettingsBrandRoute: AppSettingsBrandRoute,
   AppSettingsPublishingRoute: AppSettingsPublishingRoute,
   AppSettingsTeamRoute: AppSettingsTeamRoute,
 }
@@ -216,12 +258,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

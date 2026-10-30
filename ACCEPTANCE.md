@@ -8,10 +8,10 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 0 | 6 | 138 | 144 |
-| Agent surface | 0 | 14 | 14 | 28 |
+| Core | 0 | 19 | 125 | 144 |
+| Agent surface | 0 | 17 | 11 | 28 |
 | Later | 0 | 0 | 8 | 8 |
-| Full target | 0 | 20 | 160 | 180 |
+| Full target | 0 | 36 | 144 | 180 |
 
 Judged from the code and tests at commit `e2429d3b71ed35a0915430ab1a0907846db81c9a` (30 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
@@ -532,7 +532,7 @@ Core · published · **partial** · From new · Cites BASE-DATA-004, BASE-INSTAL
 
 #### STUMP-BRAND-001 — Products and brand profile
 
-Core · published · **missing** · From new
+Core · published · **partial** · From new
 
 **Requirement.** The company records each product it markets: name and other names, a one-line description, audience, positioning, URLs, the competitors it is compared with, the words it uses and avoids, and its tone. Drafting, disclosure and listening read this profile, so a mention of a product or a competitor is recognised wherever it appears.
 
@@ -542,12 +542,12 @@ Core · published · **missing** · From new
 3. A word on the avoid list is flagged in a draft before it can be marked ready.
 4. Changing the profile changes the next draft and leaves existing drafts as they were.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"; `tests/stump/drafting.test.mjs` "a draft from a changelog goes through the company's AI provider with the voice guide and current claims, and a failure leaves no draft"
+**Gap.** Products with names, competitors, use and avoid words and tone, and their recognition in drafts, are built through the person door and MCP; the tone and profile reach each AI request. Not yet asserted in a repo test: two tones from one source (.1), the avoid-word flag (.3) and profile changes (.4); recognition in a finding (.2) waits for the watches lane.
 
 #### STUMP-BRAND-002 — A real person's voice
 
-Core · published · **missing** · From new · Rules D-1
+Core · published · **partial** · From new · Rules D-1
 
 **Requirement.** Each person may have a voice guide built from writing they choose: their own past posts (pasted, or imported under STUMP-IMPORT-007), with notes on what they say and never say. A voice guide drafts only that person's items. The person and editors can read and edit it; nobody else can draft from it, and it never transfers to another person.
 
@@ -558,12 +558,12 @@ Core · published · **missing** · From new · Rules D-1
 4. A person's guide is not readable by a role without access to it.
 5. A removed person's guide is archived with them and drafts nothing.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/drafting.test.mjs` "a draft from a changelog goes through the company's AI provider with the voice guide and current claims, and a failure leaves no draft"; `agent-surface.json` journey (stump shard of `verification.json`) step "voice"
+**Gap.** Voice guides for a signed-in person only, edited by that person and editors, sent with every AI request for that person, refused for another person's item and archived with a removed person are built. Points .1, .3-.5 are not yet asserted in a repo test; .2 is request side only (adherence is not measured).
 
 #### STUMP-BRAND-003 — Fact and claim memory
 
-Core · published · **missing** · From new
+Core · published · **partial** · From new
 
 **Requirement.** The company keeps the claims it may make, each with its proof (a URL, document, number or date), an owner and a review date; the claims it must not make, each with the reason; and comparative claims against named competitors, each with a dated source. A claim past its review date reads as stale until its owner renews it. US truth-in-advertising sits behind this record: a product claim needs evidence before it goes out.
 
@@ -574,12 +574,12 @@ Core · published · **missing** · From new
 4. A claim past its review date reads as stale and its owner is notified.
 5. Every draft that used a claim is listed on it.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"; `tests/stump/drafting.test.mjs` "a draft from a changelog goes through the company's AI provider with the voice guide and current claims, and a failure leaves no draft"
+**Gap.** Claims with proof, owner and review date, banned claims with reason, comparative claims refused without a dated source, stale reading and the drafts that used a claim are built. Repo tests assert stale claims are left out of AI requests and claims used on drafts; .2, .3 and .5 are not yet asserted in a repo test, and .4's notice to the owner is not built.
 
 #### STUMP-BRAND-004 — Claim check on every draft
 
-Core · published · **missing** · From new · Rules D-7
+Core · published · **partial** · From new · Rules D-7
 
 **Requirement.** Before an item can be marked ready, Stump extracts its factual product claims and matches each to a current claim. An unmatched claim is flagged for a person to back or remove; a banned claim stops the item; a stale claim is flagged; and a number that differs from its proof is flagged with the proof's number. The check runs the same way for people and agents.
 
@@ -591,14 +591,14 @@ Core · published · **missing** · From new · Rules D-7
 5. A person and an agent submitting the same draft get the same result.
 6. On the labelled claims fixture, extraction finds at least 90% of the labelled product claims and flags at most 5% of the labelled non-claims, and the measured rates are published in `docs/measures.md`.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"
+**Gap.** Point .2 (banned claim cannot be marked ready) and .5 (person and agent get the same result) are asserted. Number mismatches (.3) and backing an unmatched claim (.4) are built and not yet asserted in a repo test; .6 needs the labelled fixture and docs/measures.md.
 
 ### Drafting
 
 #### STUMP-DRAFT-010 — One post, every network
 
-Core · published · **missing** · From new · Rules D-3
+Core · published · **partial** · From new · Rules D-3
 
 **Requirement.** A person writes one master item and Stump opens a variant for each account they pick, edited side by side: each variant starts from the master, can be changed on its own, and shows its network's preview, with every preview on screen at once. Each variant is counted and checked against its own network's limits and formats and its venue's rules, and its flags show on that variant only. One action schedules or queues every variant, each at its account's time; a variant that fails a check holds alone and the rest go ahead. Changing the master updates the variants nobody has edited and marks the edited ones.
 
@@ -611,12 +611,12 @@ Core · published · **missing** · From new · Rules D-3
 6. A variant that fails a check holds with its flag, and the other variants are scheduled.
 7. Each variant reads back from its network with the text its preview showed.
 
-**Evidence.** None.
-**Gap.** The scheduling side is built: `stump.items.schedule` schedule_master schedules every passing variant and holds a flagged one alone (`src/stump/tools/items.ts`). Opening and editing variants, and the proving test, need `stump.drafts.write`.
+**Evidence.** `agent-surface.json` journey (stump shard of `verification.json`)
+**Gap.** The master post opens one variant item per account with master_id, counts and flags each on its own network, follows the master unless edited (differs_from_master), and previews every variant. Not in a repo test yet; scheduling every variant with one action (.5-.7) belongs to the publishing lane.
 
 #### STUMP-DRAFT-001 — Formats and network limits
 
-Core · published · **missing** · From new
+Core · published · **partial** · From new
 
 **Requirement.** Stump drafts posts, threads, replies, articles, pitches, launch copy and newsletter sections. Each format knows the limits of the account or venue it is for, counted the way the network counts (graphemes on Bluesky, weighted characters on X, the instance's limit on Mastodon). A long post splits into a thread at sentence boundaries, with optional numbering.
 
@@ -627,12 +627,12 @@ Core · published · **missing** · From new
 4. A pitch draft carries its recipient and subject.
 5. Switching a draft's account rechecks its limits.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"
+**Gap.** Posts, threads split at sentence boundaries by network count, replies with reply_to and pitches with recipient and subject are built; .3 (a reply carries its thread) is asserted. Counting (.1), thread fit (.2) and pitches (.4) are not yet asserted in a repo test; .5 (recheck on switching account) is not built.
 
 #### STUMP-DRAFT-002 — Drafts from a source
 
-Core · published · **missing** · From new
+Core · published · **partial** · From new
 
 **Requirement.** From a source (a changelog entry, docs page, blog post or any URL) Stump drafts a set of items for the accounts and venues the person picks. Each item links its source and the claims it used. When the source changes, the items drafted from it are flagged with what changed.
 
@@ -642,12 +642,12 @@ Core · published · **missing** · From new
 3. A change to the source flags its unposted items with the change.
 4. A source the AI provider cannot read leaves no draft and shows why.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/drafting.test.mjs` "a draft from a changelog goes through the company's AI provider with the voice guide and current claims, and a failure leaves no draft"
+**Gap.** Point .4 (an unreadable source leaves no draft) is asserted, and .1-.2 for a Bluesky post and an X thread with claims used. .3 (source changes flag items) is not built.
 
 #### STUMP-DRAFT-003 — Revisions and comments
 
-Core · published · **missing** · From new
+Core · published · **partial** · From new
 
 **Requirement.** Every save of an item makes a revision. People see the differences between revisions, comment and mention colleagues, and restore an earlier revision as a new one. What publishes or is handed off is always one exact revision.
 
@@ -657,8 +657,8 @@ Core · published · **missing** · From new
 3. Restoring revision 1 makes revision 4 with revision 1's text.
 4. The ledger entry names the exact revision that went out.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"
+**Gap.** Revisions with expected_revision, diff and restore are built; restore making a new revision with the earlier text (.3) is asserted. .1 diff is not yet asserted in a repo test, .2 comments are not built, and .4 needs the publishing lane's ledger write.
 
 #### STUMP-DRAFT-004 — Network previews
 
@@ -677,7 +677,7 @@ Core · published · **missing** · From new
 
 #### STUMP-DRAFT-006 — AI provider, cost and failure
 
-Core · published · **missing** · From new · Cites BASE-DATA-004
+Core · published · **partial** · From new · Cites BASE-DATA-004
 
 **Requirement.** Drafting uses the company's own AI provider and model through `ai.provider.v1`. A request sends only what the draft needs: the source, the voice guide, the claims, and the venue's rules. Each request records its cost in USD and its model. A provider failure shows on the item with the provider's error; Stump never substitutes generic copy. Output that fails the claim check or the venue check stays a draft with its flags.
 
@@ -688,8 +688,8 @@ Core · published · **missing** · From new · Cites BASE-DATA-004
 4. Usage shows AI cost by person, product and month.
 5. Each draft's record lists the fields sent to the provider and the provider's host, and they match the installation's declared outbound flow.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/drafting.test.mjs` "a draft from a changelog goes through the company's AI provider with the voice guide and current claims, and a failure leaves no draft"
+**Gap.** Points .1 (declared fields, model and USD cost recorded) and .2 (a provider failure leaves no draft and says why) are asserted; .5 records fields sent and host on each item. .3 is built (output that fails the check stays a flagged draft) and not yet asserted; .4 usage by person, product and month is not built.
 
 ### Calendar and queue
 
@@ -824,11 +824,11 @@ Core · published · **partial** · From new · Cites BASE-ACCESS-001, BASE-SIGN
 6. The app's help and `/docs/agents` list these refusals and their reasons.
 
 **Evidence.** `tests/stump/team.test.mjs` "people join only by invitation, with the invited role, through the person door", "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked"
-**Gap.** Point 1 holds through the person door, sign-in and MCP; the import door is not built. Points 2 to 6 need imports, voice guides, scheduling, accounts and /docs/agents.
+**Gap.** Point 1 holds through the person door, sign-in and MCP; the import door is not built. Voice guides and drafts for someone not signed in, and another person's voice, answer act_refused D-1 through both doors (built, not yet asserted in a repo test). Points 2, 4 and 6 need imports, scheduling and /docs/agents.
 
 #### STUMP-TRUTH-002 — Disclosure enforced
 
-Core · published · **missing** · From new · Rules D-2 · Register R-9
+Core · published · **partial** · From new · Rules D-2 · Register R-9
 
 **Requirement.** Each person records their connection to the company (founder, employee, contractor, investor, advisor, friend or family) and their disclosure lines. Stump recognises the company, its products and competitors from the brand profile (STUMP-BRAND-001). An item that mentions them, from a connected person, anywhere other than the company's own accounts, discloses the connection before it moves on (D-2), with a disclosure line or its own plain words ("we", "our", "I built"); a bio line never counts. Where a network hides the end of a post behind "see more", the disclosure sits above the cut.
 
@@ -842,12 +842,12 @@ Core · published · **missing** · From new · Rules D-2 · Register R-9
 7. Editing the disclosure out of a scheduled item returns it to draft and unschedules it.
 8. An agent's call to mark an item ready without the disclosure is refused through MCP as through the app.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"
+**Gap.** Points .1 and .8 are asserted (an employee's item naming the product is refused act_refused D-2 by the person door and MCP until it discloses). Disclosure lines, own words, company accounts, the LinkedIn see-more cut and return to draft on an edit are built and not yet asserted in a repo test; .2 needs hand-offs.
 
 #### STUMP-TRUTH-003 — No features for platform-banned acts
 
-Core · published · **missing** · From new · Cites BASE-DOCS-001 · Rules D-4 · Register R-9
+Core · published · **partial** · From new · Cites BASE-DOCS-001 · Rules D-4 · Register R-9
 
 **Requirement.** Stump offers no feature, to people or to agents, for the acts D-4 names. Its tool list, API, automations and launch plans have no step for them, and its drafting refuses to write them: a review or testimonial for someone else to post, or a request for votes. Each refusal names the rule and its source: Hacker News's guidelines and Show HN page, Product Hunt's launch page, X's developer guidelines, LinkedIn's prohibited-software help page, and the FTC's rule on fake reviews and testimonials (16 CFR Part 465).
 
@@ -859,12 +859,12 @@ Core · published · **missing** · From new · Cites BASE-DOCS-001 · Rules D-4
 5. Draft text that asks readers to upvote is flagged before it can be marked ready for an HN or Product Hunt venue.
 6. `/docs/agents` lists each refusal with its rule, source and read date.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/team.test.mjs` "people join only by invitation, with the invited role, through the person door"; `agent-surface.json` journey (stump shard of `verification.json`)
+**Gap.** Banned acts by name answer act_refused with rule and source on every tool (spine hook); drafting refuses review and vote requests citing the FTC and platform rules, and flags vote requests for HN and Product Hunt venues. Only the by-name refusal is asserted in a repo test; launch plans (.3) and /docs/agents (.6) are not built.
 
 #### STUMP-TRUTH-004 — Near-duplicate blocking
 
-Core · published · **missing** · From new
+Core · published · **partial** · From new
 
 **Requirement.** Before an item can be marked ready, scheduled or handed off, Stump compares it with the ledger and the queue. An item that nearly repeats one posted or queued in another community, or on the same account, within the window the company sets, is held with links to its matches, because platforms treat near-identical posts as spam. The company's own announcement adapted for each of its own accounts on different networks is not a near-duplicate. Rewriting clears the hold; nothing posts the duplicate unchanged.
 
@@ -877,8 +877,8 @@ Core · published · **missing** · From new
 6. The hold names its matches, and only a rewrite clears it.
 7. On the labelled near-duplicate fixture, at least 95% of near-duplicate pairs are held and at most 5% of distinct pairs, and the measured rates are published in `docs/measures.md`.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"
+**Gap.** Near-duplicates of queued items and ledger entries in the company's window are held naming the match until rewritten (.6 asserted); the company's own announcement across its networks and variants of one master are exempt. .1-.5 are built and not each asserted in a repo test; .7 needs the labelled fixture.
 
 ### Venue upkeep and reception
 
@@ -1782,7 +1782,7 @@ Core · target · **missing** · From new · Rules D-3
 
 #### STUMP-PITCH-001 — Journalists, publications and podcasts
 
-Core · target · **missing** · From new
+Core · target · **partial** · From new
 
 **Requirement.** Journalists, publications, newsletters and podcasts are venues with their beats or topics, audience, submission routes and past coverage. A contact address or handle is recorded only when it appeared in full on a public page, and the page and the date it was read are kept; otherwise the record names the public route instead (a form, a guest intake, a public handle). Stump never guesses an address.
 
@@ -1792,8 +1792,8 @@ Core · target · **missing** · From new
 3. A podcast record holds its guest intake route and topics.
 4. A publication lists its journalists and past coverage of the company.
 
-**Evidence.** None.
-**Gap.** Not built: no Stump code exists yet, and the seed starts from the Base foundation.
+**Evidence.** `agent-surface.json` journey (stump shard of `verification.json`) step "journalist"
+**Gap.** Journalist, publication and podcast records with beat, topics and a contact route kept only with its source page and read date (an address without a source is refused) are built, and a pitch names its recipient. Not yet in a repo test; .4 (a publication's journalists and coverage) is not built.
 
 #### STUMP-PITCH-002 — Pitches sent through Orbit
 
@@ -2547,7 +2547,7 @@ Agent surface · target · **partial**
 8. A policy document with a bad signature or another Business's id is rejected, and the door keeps the last valid revision.
 
 **Evidence.** `agent-surface.json` journey in the stump shard of `verification.json` (also run by rer verify)
-**Gap.** Proven for Stump's spine tools (team, Pause, ledger read); the rest of the registry, resources and events arrive with later lanes.
+**Gap.** Proven for Stump's spine tools and the drafting tools (brand, drafts, press), including an approval bound to the item's revision; the rest of the registry, resources and events arrive with later lanes.
 
 #### BASE-AGENT-008 — Truthful attribution
 
@@ -2670,7 +2670,7 @@ Agent surface · target · **partial** · From new · Cites BASE-AGENT-002, BASE
 
 #### STUMP-SURFACE-002 — Internal work computes standard
 
-Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE-AGENT-007 · Rules D-7
+Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE-AGENT-007 · Rules D-7
 
 **Requirement.** Venue, rule, brand, claim, draft, revision, check, hand-off preparation, ledger correction and finding calls compute standard from their actual effect when nothing leaves the company.
 
@@ -2678,12 +2678,12 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 1. Creating a venue, editing a rule, drafting without an AI call, saving a revision, running the checks and correcting a ledger entry each compute standard with item counts.
 2. A found post's text or an argument claiming another class changes none of those facts.
 
-**Evidence.** None.
-**Gap.** Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet.
+**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"; `agent-surface.json` journey (stump shard of `verification.json`)
+**Gap.** Brand, claim, draft, revision, check and preview calls compute standard with item counts from records; the journey asserts each drafting tool's standard class. Venue, rule and ledger correction calls belong to other lanes.
 
 #### STUMP-SURFACE-003 — Public posts and outside exposure compute external
 
-Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE-AGENT-007 · Rules D-7
+Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE-AGENT-007 · Rules D-7
 
 **Requirement.** Publishing, replying, editing at a network, submitting to a directory, sending an outside webhook, routing an inbox item out, sending text to the AI provider or a supplier, and fetching a venue's page to check a hand-off link or re-read its rules compute external with counterparty and audience.
 
@@ -2694,8 +2694,8 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 4. A hand-off link check and a venue rule-page fetch compute external with the venue as counterparty.
 5. An argument or item text calling the post internal leaves external in place.
 
-**Evidence.** None.
-**Gap.** Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet.
+**Evidence.** `agent-surface.json` journey (stump shard of `verification.json`) step "ai-draft"
+**Gap.** A drafting call that reaches the AI provider computes external with counterparty known and the provider host (.3), whatever its arguments say. Publishing (.1), replies (.2) and link and rule-page fetches (.4) belong to other lanes.
 
 #### STUMP-SURFACE-004 — Network spend and paid listings compute money
 
@@ -2793,7 +2793,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 
 #### STUMP-SURFACE-009 — Saved items under company policy
 
-Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE-AGENT-007, BASE-AGENT-008, BASE-AGENT-012 · Rules D-5
+Agent surface · target · **partial** · From new · Cites BASE-AGENT-006, BASE-AGENT-007, BASE-AGENT-008, BASE-AGENT-012 · Rules D-5
 
 **Requirement.** When a company's policy holds an agent's publication, Stump saves the exact revision, account, venue, time, media and disclosure, and publishes only that revision.
 
@@ -2804,8 +2804,8 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 4. After a person approves an agent's prepared post, the ledger shows the person as approver and the agent as preparer.
 5. An agent's edit to an approved item that carries a stale expected revision returns `revision_conflict`, and the approved revision stays the one that publishes.
 
-**Evidence.** None.
-**Gap.** Not built: Stump has not adopted the Base agent door, and no Stump tool exists yet.
+**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"
+**Gap.** Drafting side: a save with a stale expected_revision answers revision_conflict (.5), an approval is bound to the revision it was asked for, and a save after approval returns a ready or scheduled item to draft with its approval cleared. Scheduling and publishing the approved revision (.1-.4) belong to the publishing lane.
 
 #### STUMP-SURFACE-010 — Product refusals under every policy
 

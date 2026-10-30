@@ -5,7 +5,7 @@ import { readAccount, type AccountRow } from '../accounts/store.ts'
 import { CONTRIBUTORS, EDITORS, EVERYONE } from '../people/roles.ts'
 import { moveItem, pauseFor, type ItemState } from '../items/state.ts'
 import { readItem } from '../publish/items.ts'
-import { commit, item as readSchedulable, mover, prepare } from '../publish/schedule.ts'
+import { commit, item as readSchedulable, money, mover, prepare, publishClasses, remaining, scheduleClasses } from '../publish/schedule.ts'
 import { checkSlots, nextOpen, saveSlots, slotsView } from '../publish/slots.ts'
 
 const scope = { enum: ['all', 'account'] }
@@ -24,6 +24,17 @@ async function queued(ctx: ActionContext, args: Args) {
   const at = await nextOpen(ctx.db, String(args.account_id), ctx.now() + 60_000, row.id)
   if (at === null) refuse('no_open_slot', { account_id: String(args.account_id) })
   return prepare(ctx, 'queue', { item_id: row.id, account_id: args.account_id, at: new Date(at).toISOString() })
+}
+/** The imported posts a release would put back on the schedule, and what X charges for them when they go out. */
+async function releasable(ctx: ActionContext, args: Args) {
+  let posts = 0, charge_micro = 0
+  for (const id of args.item_ids as string[]) {
+    const row = await readItem(ctx.db, id)
+    if (!row || row.state !== 'paused' || !(JSON.parse(row.options) as { imported_from?: unknown }).imported_from) continue
+    const left = await remaining(ctx, row)
+    posts += left.posts; charge_micro += left.charge_micro
+  }
+  return { posts, charge_micro }
 }
 const accountId = { type: 'string', minLength: 1, maxLength: 64 }
 const iso = (ms: number | null) => ms === null ? null : new Date(ms).toISOString()
@@ -114,7 +125,7 @@ export const calendarTools: StumpTool[] = [{
 }, {
   name: 'stump.calendar.plan', title: 'Plan the queue',
   description: 'Keep each account\'s queue slots in its own time zone, add an item to the account\'s next open slot, and release imported posts once their old tool\'s queue is cleared.',
-  scope: 'stump:calendar', classes: ['standard', 'live'], clauses: ['STUMP-PLAN-002', 'STUMP-PLAN-007', 'STUMP-IMPORT-001'],
+  scope: 'stump:calendar', classes: ['standard', 'live', 'external', 'money'], clauses: ['STUMP-PLAN-002', 'STUMP-PLAN-007', 'STUMP-IMPORT-001', 'STUMP-SURFACE-004'],
   actions: {
     set_slots: {
       roles: CONTRIBUTORS,
@@ -144,7 +155,12 @@ export const calendarTools: StumpTool[] = [{
     queue: {
       roles: CONTRIBUTORS,
       properties: { item_id: accountId, account_id: accountId }, required: ['item_id', 'account_id'],
-      async classify(args, ctx) { await queued(ctx, args); return [{ class: 'live', facts: { measure: 1, service: 'publishing queue' } }] },
+      // A queued post goes out in public at its slot and X charges for it, as any schedule does.
+      async classify(args, ctx) { return [{ class: 'live', facts: { measure: 1, service: 'publishing queue' } }, ...scheduleClasses([await queued(ctx, args)])] },
+      async summary(args, ctx) {
+        const plan = await queued(ctx, args)
+        return { target: { id: plan.item.id, name: `Queue on ${plan.account.network} ${shownHandle(plan.account)} for ${new Date(plan.at).toISOString()}` }, items: [plan.item.id], ...money(plan.charge_micro) }
+      },
       target: args => ({ kind: 'item', id: String(args.item_id) }),
       async run(args, ctx) { return { item: await commit(ctx, await queued(ctx, args), { queued: true }) } },
     },
@@ -152,7 +168,14 @@ export const calendarTools: StumpTool[] = [{
       roles: EDITORS,
       properties: { item_ids: { type: 'array', minItems: 1, maxItems: 500, items: accountId }, confirm_source_cleared: { type: 'boolean' } },
       required: ['item_ids', 'confirm_source_cleared'],
-      classify: args => [{ class: 'live', facts: { measure: Array.isArray(args.item_ids) ? args.item_ids.length : 0, service: 'publishing queue' } }],
+      async classify(args, ctx) {
+        const { posts, charge_micro } = await releasable(ctx, args)
+        return [{ class: 'live', facts: { measure: (args.item_ids as string[]).length, service: 'publishing queue' } }, ...publishClasses(posts, charge_micro)]
+      },
+      async summary(args, ctx) {
+        const { charge_micro } = await releasable(ctx, args)
+        return { target: { name: `Release ${(args.item_ids as string[]).length} imported posts` }, items: args.item_ids as string[], ...money(charge_micro) }
+      },
       async run(args, ctx) {
         // Imported queued posts stay paused until the person confirms the old tool's queue is cleared, so nothing posts twice.
         if (args.confirm_source_cleared !== true) refuse('confirm_source_cleared', { reason: 'Clear the queue in the tool you switched from first.' })
