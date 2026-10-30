@@ -45,8 +45,16 @@ export interface Finding {
   language?: string
   /** Set when the match came from a podcast transcript: the transcript's URL. */
   transcript_url?: string
+  /** What matched in that transcript: the watch terms found there and the passages around them. */
+  transcript_match?: TranscriptMatch
   /** True when the date was missing in the source and the fetch time stands in. */
   date_estimated?: boolean
+}
+
+/** Where a podcast transcript matched a watch's terms. The excerpts are sanitised spoken text, a few per finding. */
+export interface TranscriptMatch {
+  terms: string[]
+  excerpts: string[]
 }
 
 export type SourceErrorKind =

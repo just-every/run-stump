@@ -3,6 +3,7 @@ import type { StumpEnv } from '../env.ts'
 import { stumpFetch } from '../net/fetch.ts'
 import { canonicalUrl, describeError, scoreFinding, screenFindings, type Finding, type DropReason } from '../lib/discovery/index.ts'
 import { sendImmediateAlerts } from './alerts.ts'
+import { blockedAuthors, blockRefs } from './blocks.ts'
 import { loadProducts, mentionsOf, rankContext, teamHandles } from './context.ts'
 import { filtersFor, runSource } from './sources.ts'
 import {
@@ -62,6 +63,7 @@ export async function pollWatch(ctx: PollContext, watch: WatchRow, options: { ma
   const states = await readSourceStates(db, watch.id)
   const products = await loadProducts(db)
   const team = await teamHandles(db)
+  const blocked = blockRefs(await blockedAuthors(db))
   const rank = rankContext(watch, products, now)
   const fetch = stumpFetch(ctx.env)
   const outcome: PollOutcome = { watch_id: watch.id, added: 0, alerts: 0, sources: [], next_poll_at: null }
@@ -101,7 +103,7 @@ export async function pollWatch(ctx: PollContext, watch: WatchRow, options: { ma
       continue
     }
     const stored = await storedKeys(db, watch.id, run.findings.map(item => canonicalUrl(item.url)))
-    const screened = screenFindings(run.findings, { terms: watch.terms, filters: filtersFor(source), team_handles: team, blocked_authors: watch.blocked_authors, known_urls: stored })
+    const screened = screenFindings(run.findings, { terms: watch.terms, filters: filtersFor(source), team_handles: team, blocked_authors: blocked, known_urls: stored })
     const dropped: Partial<Record<DropReason, number>> = {}
     for (const item of screened.dropped) dropped[item.reason] = (dropped[item.reason] ?? 0) + 1
     const added = await store(ctx, watch, source.key, screened.kept, { products, rank, backfill }, fresh)

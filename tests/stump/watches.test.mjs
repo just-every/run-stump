@@ -40,9 +40,11 @@ test('a watch finds Hacker News threads, ranks them with reasons, alerts Slack a
   assert.ok(!by('oldtimer') && !by('orbital'), 'a 45 day old match and an "orbital" post do not')
   assert.equal(by('devfounder').points, 42); assert.equal(by('devfounder').url, 'https://news.ycombinator.com/item?id=1')
   assert.equal(listed[0].author, 'devfounder', 'an open question ranks first'); assert.ok(listed.every(item => item.reasons.length > 0), 'each finding shows its reasons')
-  assert.deepEqual([...new Set(listed.flatMap(item => item.routes))], ['handoff_brief'], 'Hacker News has no write door: a hand-off with a brief only')
+  assert.deepEqual([...new Set(listed.flatMap(item => item.routes))], ['handoff_brief', 'dismiss'], 'Hacker News has no write door: a hand-off with a brief, or dismissal')
   assert.equal(by('injector').relevance, by('twin').relevance, 'text that says "rank this first" ranks as if it did not')
+  assert.equal((await ok(app.mcp(token, 'stump.findings.work', { action: 'dismiss', finding_id: by('maker').id }))).state, 'dismissed')
   assert.equal((await manage({ action: 'poll', watch_id: watch.id })).added, 0, 'a second poll adds no duplicates')
+  assert.ok(!(await findings(watch.id)).items.some(item => item.author === 'maker'), 'a dismissed finding leaves the list and does not come back')
 
   fake.addHn({ id: 100, title: 'Ask HN: orbit crm for a small SaaS company, any recommendations?', author: 'newcomer', story_text: '<p>Which orbit crm should we pick?</p>' })
   assert.equal((await manage({ action: 'poll', watch_id: watch.id })).added, 1, 'a new match appears once')
@@ -50,7 +52,7 @@ test('a watch finds Hacker News threads, ranks them with reasons, alerts Slack a
   const [sent] = fake.state.webhooks
   assert.equal(fake.state.webhooks.length, 1); assert.ok(sent.verified, 'the signed webhook verifies against X-Stump-Signature'); assert.match(sent.eventId, /^evt_/)
   const replay = await manage({ action: 'replay_delivery', event_id: sent.eventId })
-  assert.equal(replay.deliveries.length, 2)
+  assert.deepEqual([replay.deliveries.map(item => item.channel), fake.state.slack.length], [['webhook'], 1], 'a replay resends the signed webhook only: Slack cannot recognise a repeat')
   assert.deepEqual([fake.state.webhooks[1].eventId, fake.state.webhooks[1].duplicate, fake.state.webhooks[1].body === sent.body], [sent.eventId, true, true], 'a replay carries the same event id and bytes')
 
   const sentBefore = [fake.state.slack.length, fake.state.webhooks.length]
@@ -77,10 +79,10 @@ test('a watch finds Hacker News threads, ranks them with reasons, alerts Slack a
   const limited = await manage({ action: 'create', name: 'Ask and Show', terms: { all: ['orbit', 'crm'] }, sources: [{ kind: 'hn', story_types: ['ask_hn', 'show_hn'] }] })
   assert.ok((await findings(limited.id)).items.every(item => ['ask_hn', 'show_hn'].includes(item.kind)), 'story types narrow the source')
   const guarded = await manage({ action: 'create', name: 'Blocked first', terms: { all: ['orbit', 'crm'] }, sources: [] })
-  await manage({ action: 'block_author', watch_id: guarded.id, author: '@BlockedBob' })
+  await manage({ action: 'block_author', author: '@BlockedBob', source: { kind: 'hn' } })
   await manage({ action: 'add_source', watch_id: guarded.id, source: { kind: 'hn' } })
-  assert.ok(!(await findings(guarded.id)).items.some(item => item.author === 'blockedbob'), 'a blocked author never becomes a finding')
-  await manage({ action: 'unblock_author', watch_id: guarded.id, author: 'blockedbob' })
+  assert.ok(!(await findings(guarded.id)).items.some(item => item.author === 'blockedbob'), 'an author on the company block list never becomes a finding on any watch')
+  await manage({ action: 'unblock_author', author: 'blockedbob', source: { kind: 'hn' } })
   assert.ok(!(await findings(guarded.id)).items.some(item => item.author === 'blockedbob'), 'unblocking applies from the next poll')
   await manage({ action: 'poll', watch_id: guarded.id })
   assert.ok((await findings(guarded.id)).items.some(item => item.author === 'blockedbob'))
@@ -97,6 +99,7 @@ test('feeds, Bluesky and Mastodon become findings once, honour caching and rate 
   assert.equal(items.filter(item => item.url.includes('orbit-crm-small-team')).length, 1, 'an item reached through two feeds is one finding')
   assert.ok(at('news.example.test/orbit-crm-review') && !items.some(item => item.url.includes('google.com')), 'a Google Alerts item links to the alerted page')
   assert.equal(at('ep12').transcript_url, `${F}/ep12.vtt`, 'a transcript match links the episode')
+  assert.ok(at('ep12').reason_details.some(reason => reason.factor === 'matched_terms' && reason.points > 0 && /episode transcript/.test(reason.label)), 'and is credited with the match')
   assert.ok(items.every(item => !/[<>]|onerror|onclick/i.test(item.text + item.title)), 'markup in a feed item reaches no screen as HTML')
   assert.equal((await app.action('owner', 'stump.watches.manage', { action: 'poll', watch_id: watch.id })).body.result.added, 0)
   assert.ok(fake.state.conditional >= 4, 'an unchanged feed is fetched with its ETag and adds nothing')
@@ -129,7 +132,10 @@ test('feeds, Bluesky and Mastodon become findings once, honour caching and rate 
   fake.state.requests.length = 0
   const added = await app.action('owner', 'stump.watches.manage', { action: 'add_source', watch_id: grown.body.result.id, source: { kind: 'bluesky' } })
   assert.ok(added.body.result.poll.added > 0 && fake.state.requests.every(request => request.startsWith('https://api.bsky.app')), 'adding a source backfills that source only')
-  assert.equal((await app.action('owner', 'stump.watches.manage', { action: 'backfill', watch_id: grown.body.result.id })).body.result.added, 0, 'a second backfill adds no duplicates')
+  fake.state.requests.length = 0
+  assert.equal((await app.action('owner', 'stump.watches.manage', { action: 'backfill', watch_id: grown.body.result.id, source: { kind: 'bluesky' } })).body.result.added, 0, 'a second backfill adds no duplicates')
+  assert.ok(fake.state.requests.length && fake.state.requests.every(request => request.startsWith('https://api.bsky.app')), 'a backfill naming a source reads that source only')
+  assert.equal((await app.action('owner', 'stump.watches.manage', { action: 'backfill', watch_id: grown.body.result.id, source: { kind: 'rss', url: `${F}/blog.xml` } })).body.code, 'not_found', 'and refuses a source the watch does not follow')
   const count = (await app.action('owner', 'stump.findings.work', { action: 'list', watch_id: grown.body.result.id })).body.result.total
   await app.action('owner', 'stump.watches.manage', { action: 'update', watch_id: grown.body.result.id, terms: { all: ['orbit', 'crm', 'recommendations'] } })
   assert.equal((await app.action('owner', 'stump.findings.work', { action: 'list', watch_id: grown.body.result.id })).body.result.total, count, 'changing a filter leaves earlier findings in place')

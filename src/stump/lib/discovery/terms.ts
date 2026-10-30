@@ -140,6 +140,33 @@ export function matchTerms(terms: CompiledTerms, hay: Haystack): TermMatch {
 }
 
 /**
+ * Short passages of `text` around the first place each matched term appears, in the order the terms
+ * matched, overlapping passages merged. Used to keep what a podcast transcript matched on, since the
+ * transcript itself is not stored.
+ */
+export function matchExcerpts(terms: CompiledTerms, text: string, max = 4, radius = 90): string[] {
+  const norm = normalizeForMatch(text)
+  // NFKC can change lengths; slice the original only when offsets still line up.
+  const shown = norm.length === text.length ? text : norm
+  const spans: Array<[number, number]> = []
+  for (const t of [...terms.all, ...terms.any]) {
+    const hit = t.re.exec(norm)
+    if (!hit) continue
+    let start = Math.max(0, hit.index - radius)
+    let end = Math.min(shown.length, hit.index + hit[0].length + radius)
+    const space = shown.lastIndexOf(' ', start)
+    if (start > 0 && space >= 0 && hit.index - space < radius + 20) start = space + 1
+    const after = shown.indexOf(' ', end)
+    if (end < shown.length && after >= 0 && after - hit.index < radius * 2) end = after
+    const overlapping = spans.find(([a, b]) => start <= b && end >= a)
+    if (overlapping) { overlapping[0] = Math.min(overlapping[0], start); overlapping[1] = Math.max(overlapping[1], end) }
+    else spans.push([start, end])
+    if (spans.length >= max) break
+  }
+  return spans.map(([a, b]) => `${a > 0 ? '…' : ''}${shown.slice(a, b).replace(/\s+/g, ' ').trim()}${b < shown.length ? '…' : ''}`)
+}
+
+/**
  * Search strings for a remote index: one query per `any` term joined with every `all` term, or a
  * single query of the `all` terms. Phrases are quoted. Remote results are candidates only.
  */

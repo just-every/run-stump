@@ -9,7 +9,7 @@ interface DeliveryRow { event_id: string; channel: Channel; finding_id: string |
 /** A watch as the doors answer it. Alert addresses and secrets are never part of it: only where they point and that they are set. */
 export async function presentWatch(db: D1Database, watch: WatchRow, now: number) {
   const states = await readSourceStates(db, watch.id)
-  const counts = await db.prepare('SELECT COUNT(*) AS total, COALESCE(SUM(backfill),0) AS backfill FROM stump_findings WHERE watch_id=?').bind(watch.id).first<{ total: number; backfill: number }>()
+  const counts = await db.prepare("SELECT COUNT(*) AS total, COALESCE(SUM(backfill),0) AS backfill FROM stump_findings WHERE watch_id=? AND state<>'dismissed'").bind(watch.id).first<{ total: number; backfill: number }>()
   const deliveries = (await db.prepare('SELECT event_id,channel,finding_id,state,attempts,last_error,last_attempt_at,delivered_at,created_at FROM stump_watch_deliveries WHERE watch_id=? ORDER BY created_at DESC,event_id,channel LIMIT 20').bind(watch.id).all<DeliveryRow>()).results
     .map(row => ({ event_id: row.event_id, channel: row.channel, finding_id: row.finding_id, state: row.state, attempts: row.attempts, last_error: shownError(row.last_error ? JSON.parse(row.last_error) as RecordedError : null),
       last_attempt_at: iso(row.last_attempt_at), delivered_at: iso(row.delivered_at), created_at: iso(row.created_at) }))
@@ -28,7 +28,6 @@ export async function presentWatch(db: D1Database, watch: WatchRow, now: number)
     } : null,
     interval_minutes: watch.interval_minutes,
     muted: isMuted(watch, now), muted_until: iso(watch.muted_until),
-    blocked_authors: watch.blocked_authors,
     last_error: shownError(watch.last_error), next_poll_at: iso(watch.next_poll_at),
     findings: { total: counts?.total ?? 0, backfill: counts?.backfill ?? 0 },
     deliveries,

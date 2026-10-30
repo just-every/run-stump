@@ -4,7 +4,7 @@
   "specialist": "earned-channels-marketer",
   "capabilities": ["tools", "policy", "pause", "audit", "idempotency"],
   "tools": [
-    { "name": "stump.findings.work", "scope": "stump:findings", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-WATCH-005"] },
+    { "name": "stump.findings.work", "scope": "stump:findings", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-WATCH-001", "STUMP-WATCH-005"] },
     { "name": "stump.calendar.pause", "scope": "stump:calendar", "readOnly": false, "classes": ["live"], "clauses": ["STUMP-PLAN-007"] },
     { "name": "stump.ledger.search", "scope": "stump:ledger", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001", "STUMP-LEDGER-002"] },
     { "name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001"] },

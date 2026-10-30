@@ -19,7 +19,6 @@ export interface WatchRow {
   terms: TermLogic
   sources: WatchSource[]
   alerts: StoredAlerts | null
-  blocked_authors: string[]
   muted: boolean
   muted_until: number | null
   last_error: RecordedError | null
@@ -33,7 +32,7 @@ export interface WatchRow {
 }
 
 interface Raw {
-  id: string; name: string; product_ids: string; terms: string; sources: string; alerts: string | null; blocked_authors: string
+  id: string; name: string; product_ids: string; terms: string; sources: string; alerts: string | null
   muted: number; muted_until: number | null; last_error: string | null; next_poll_at: number | null; interval_minutes: number; lease_until: number | null
   revision: number; created_by: string; created_at: number; updated_at: number
 }
@@ -41,7 +40,7 @@ interface Raw {
 const parse = <T>(value: string | null): T | null => value === null ? null : JSON.parse(value) as T
 const toWatch = (row: Raw): WatchRow => ({
   id: row.id, name: row.name, product_ids: parse<string[]>(row.product_ids) ?? [], terms: parse<TermLogic>(row.terms) ?? {}, sources: parse<WatchSource[]>(row.sources) ?? [],
-  alerts: parse<StoredAlerts>(row.alerts), blocked_authors: parse<string[]>(row.blocked_authors) ?? [], muted: row.muted === 1, muted_until: row.muted_until,
+  alerts: parse<StoredAlerts>(row.alerts), muted: row.muted === 1, muted_until: row.muted_until,
   last_error: parse<RecordedError>(row.last_error), next_poll_at: row.next_poll_at, interval_minutes: row.interval_minutes, lease_until: row.lease_until,
   revision: row.revision, created_by: row.created_by, created_at: row.created_at, updated_at: row.updated_at,
 })

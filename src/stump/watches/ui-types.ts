@@ -9,7 +9,7 @@ export interface WatchView {
   terms: { all?: string[]; any?: string[]; none?: string[] }
   sources: WatchSourceView[]
   alerts: { immediate_min_relevance: number; slack: { configured: boolean; host: string; last_error: ShownError | null } | null; webhook: { configured: boolean; host: string; secret_set: boolean; last_error: ShownError | null } | null } | null
-  interval_minutes: number; muted: boolean; muted_until: string | null; blocked_authors: string[]
+  interval_minutes: number; muted: boolean; muted_until: string | null
   last_error: ShownError | null; next_poll_at: string | null
   findings: { total: number; backfill: number }
   revision: number
@@ -18,9 +18,11 @@ export interface FindingView {
   id: string; watch_id: string; source: string; kind: string | null; url: string; title: string; text: string; author: string; points: number | null
   published_at: string | null; relevance: number; reasons: string[]; answerable: boolean
   reason_details: Array<{ factor: string; label: string; points: number; max: number }>
-  routes: Array<'publish' | 'handoff_draft' | 'handoff_brief'>; venue: { id: string; name: string } | null
+  routes: Array<'publish' | 'handoff_draft' | 'handoff_brief' | 'dismiss'>; venue: { id: string; name: string } | null
+  transcript_match: { terms: string[]; excerpts: string[] } | null
   backfill: boolean; mentions: Array<{ kind: 'product' | 'competitor'; product: string; matched: string }>
 }
-export interface WatchList { items: WatchView[]; total: number }
+export interface BlockedAuthor { handle: string; source: WatchSourceView['kind'] | null }
+export interface WatchList { items: WatchView[]; total: number; blocked_authors: BlockedAuthor[] }
 export interface FindingList { watch: { id: string; name: string }; items: FindingView[]; total: number }
 export interface PollView { added: number; alerts_sent: number; sources: Array<{ source: string; status: string; added: number; error?: ShownError }> }

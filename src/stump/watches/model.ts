@@ -61,6 +61,8 @@ export const schemas = {
   interval_minutes: { type: 'integer', minimum: 5, maximum: 1440 },
   author: { type: 'string', minLength: 1, maxLength: 300 },
   event_id: { type: 'string', minLength: 1, maxLength: 100 },
+  finding_id: { type: 'string', minLength: 1, maxLength: 64 },
+  source_key: { type: 'string', minLength: 1, maxLength: 2100 },
 } as const
 
 const TYPE_ALIASES: Record<string, HnStoryType> = { ask: 'ask_hn', show: 'show_hn', stories: 'story', comments: 'comment', polls: 'poll' }

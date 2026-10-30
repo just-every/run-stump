@@ -85,11 +85,17 @@ export async function sendImmediateAlerts(ctx: AlertContext, watch: WatchRow, su
 
 export interface Replayed { channel: Channel; outcome: DeliveryResult['outcome']; status: number | null; detail: string }
 
-/** Sends an event again with the same event id and body: a receiver that handled the id has no second effect (STUMP-WATCH-004.5). */
-export async function replayEvent(ctx: AlertContext, eventId: string, channel?: Channel): Promise<{ event_id: string; watch_id: string; deliveries: Replayed[] }> {
-  const rows = (await ctx.db.prepare('SELECT event_id,channel,watch_id,finding_id,message,state,attempts FROM stump_watch_deliveries WHERE event_id=?').bind(eventId).all<DeliveryRow>()).results
-    .filter(row => !channel || row.channel === channel)
-  if (!rows.length) refuse('not_found', { event_id: eventId })
+/**
+ * Sends an event again with the same event id and body: a receiver that handled the id has no second
+ * effect (STUMP-WATCH-004.5). Only the signed webhook carries an event id, so a replay resends that
+ * delivery; a Slack incoming webhook cannot recognise a repeat, so Slack is posted again only when the
+ * call names `channel: 'slack'`.
+ */
+export async function replayEvent(ctx: AlertContext, eventId: string, channel: Channel = 'webhook'): Promise<{ event_id: string; watch_id: string; deliveries: Replayed[] }> {
+  const all = (await ctx.db.prepare('SELECT event_id,channel,watch_id,finding_id,message,state,attempts FROM stump_watch_deliveries WHERE event_id=?').bind(eventId).all<DeliveryRow>()).results
+  if (!all.length) refuse('not_found', { event_id: eventId })
+  const rows = all.filter(row => row.channel === channel)
+  if (!rows.length) refuse('not_found', { event_id: eventId, channel, reason: channel === 'webhook' ? 'This alert went to Slack only. Name channel "slack" to post it to Slack again.' : 'This alert did not go to Slack.' })
   const watch = await readWatch(ctx.db, rows[0]!.watch_id)
   if (!watch) refuse('not_found', { watch_id: rows[0]!.watch_id })
   if (isMuted(watch, ctx.now())) refuse('watch_muted', { watch_id: watch.id, reason: 'A muted watch sends nothing. Unmute it to replay.' })

@@ -4,7 +4,7 @@ import { HydrationUnit } from '../base/hydration/unit'
 import { ActionError, explain, me, runAction } from '../stump/ui/api.ts'
 import { Outcome, Tip, useLoaded, useRun } from '../stump/ui/kit.tsx'
 import { listeningStyles } from '../stump/watches/styles.ts'
-import type { FindingList, FindingView, PollView, WatchList, WatchView } from '../stump/watches/ui-types.ts'
+import type { BlockedAuthor, FindingList, FindingView, PollView, WatchList, WatchView } from '../stump/watches/ui-types.ts'
 
 export const Route = createFileRoute('/app/listening')({
   validateSearch: (search: Record<string, unknown>): { watch?: string; finding?: string } => ({
@@ -77,7 +77,7 @@ function Listening() {
         </div>
         <div className="st-card" aria-label={editing ? 'Watch' : 'Top findings'}>
           {editing === 'new' ? <Editor role={role} onDone={async id => { setEditing(null); await reload(); choose(id) }} onCancel={() => setEditing(null)} /> : null}
-          {editing === 'edit' && selected ? <Editor role={role} watch={selected} onDone={async () => { setEditing(null); await reload() }} onCancel={() => setEditing(null)} /> : null}
+          {editing === 'edit' && selected ? <Editor role={role} watch={selected} blocked={watches.data?.list.blocked_authors ?? []} onDone={async () => { setEditing(null); await reload() }} onCancel={() => setEditing(null)} /> : null}
           {!editing ? <Findings watch={selected} data={findings.data?.watch.id === selected?.id ? findings.data : null} error={findings.error} focus={search.finding} may={mayEdit}
             onEdit={() => setEditing('edit')} onChange={reload} /> : null}
         </div>
@@ -119,7 +119,7 @@ function Findings({ watch, data, error, focus, may, onEdit, onChange }: { watch:
 function chipsFor(finding: FindingView): Array<{ label: string; title: string }> {
   const chips: Array<{ label: string; title: string }> = []
   for (const reason of finding.reason_details) {
-    if (reason.factor === 'matched_terms' && reason.points > 0) chips.push({ label: 'matches your terms', title: reason.label })
+    if (reason.factor === 'matched_terms' && reason.points > 0) chips.push({ label: finding.transcript_match && /episode transcript:/.test(reason.label) ? 'matches the transcript' : 'matches your terms', title: reason.label })
     else if (reason.factor === 'question' && reason.points > 0) chips.push({ label: reason.points >= reason.max ? 'asks a question' : 'asks for help', title: reason.label })
     else if (reason.factor === 'venue_fit' && !/no venue fit/.test(reason.label) && reason.points >= reason.max / 2) chips.push({ label: finding.venue ? `fits ${finding.venue.name}` : 'fits a venue', title: reason.label })
     else if (reason.factor === 'author_standing' && !/unknown/.test(reason.label) && reason.points >= reason.max * 0.6) chips.push({ label: 'known author', title: reason.label })
@@ -138,7 +138,7 @@ function Finding({ finding, rank, watch, focal, may, onChange }: { finding: Find
       <div className="st-meta">{KINDS[finding.source] ?? finding.source} · {ago(finding.published_at)}{finding.author ? ` · ${finding.author}` : ''}{finding.points !== null && finding.source === 'hn' ? ` · ${finding.points} points` : ''}</div>
       <ul className="st-chips" aria-label="Why it ranks here">
         {chipsFor(finding).map(chip => <li className="st-chip" key={chip.label} title={chip.title}>{chip.label}</li>)}
-        {finding.routes.slice(0, 1).map(route => <li className="st-chip route" key={route}>{ROUTES[route]}</li>)}
+        {finding.routes.filter(route => route !== 'dismiss').slice(0, 1).map(route => <li className="st-chip route" key={route}>{ROUTES[route]}</li>)}
         {finding.backfill ? <li className="st-chip quiet">from the last 30 days</li> : null}
       </ul>
       <div className="st-finding-actions">
@@ -147,12 +147,13 @@ function Finding({ finding, rank, watch, focal, may, onChange }: { finding: Find
     </div>
     {may ? <MoreMenu items={[
       { label: watch.muted ? 'Unmute watch' : 'Mute watch', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'mute', watch_id: watch.id, muted: !watch.muted, idempotency_key: key() })); await onChange() } },
-      ...(finding.author ? [{ label: 'Block author', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'block_author', watch_id: watch.id, author: finding.author, idempotency_key: key() })); await onChange() } }] : []),
+      ...(finding.author ? [{ label: 'Block author', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'block_author', watch_id: watch.id, author: finding.author, source: { kind: finding.source }, idempotency_key: key() })); await onChange() } }] : []),
+      ...(finding.routes.includes('dismiss') ? [{ label: 'Dismiss', run: async () => { await run(() => runAction('stump.findings.work', { action: 'dismiss', finding_id: finding.id, idempotency_key: key() })); await onChange() } }] : []),
     ]} /> : <span />}
   </li>
 }
 
-/** The row's one menu (the design keeps Mute and Block author here, not printed in the row). */
+/** The row's one menu (the design keeps Mute, Block author and Dismiss here, not printed in the row). */
 function MoreMenu({ items }: { items: Array<{ label: string; run(): Promise<void> }> }) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
@@ -188,7 +189,7 @@ function draftOf(watch?: WatchView): Draft {
   }
 }
 
-function Editor({ watch, role, onDone, onCancel }: { watch?: WatchView; role: string; onDone(id: string): Promise<void>; onCancel(): void }) {
+function Editor({ watch, role, blocked = [], onDone, onCancel }: { watch?: WatchView; role: string; blocked?: BlockedAuthor[]; onDone(id: string): Promise<void>; onCancel(): void }) {
   const [draft, setDraft] = useState(() => draftOf(watch))
   const { busy, message, run } = useRun()
   const admin = role === 'owner' || role === 'admin'
@@ -214,9 +215,9 @@ function Editor({ watch, role, onDone, onCancel }: { watch?: WatchView; role: st
     const done = await run(() => runAction('stump.watches.manage', { action: 'update', watch_id: watch.id, idempotency_key: key(), alerts: { [channel]: {} } }), () => 'Removed.')
     if (done !== undefined) await onDone(watch.id)
   }
-  async function unblock(author: string) {
+  async function unblock(author: BlockedAuthor) {
     if (!watch) return
-    const done = await run(() => runAction('stump.watches.manage', { action: 'unblock_author', watch_id: watch.id, author, idempotency_key: key() }), () => 'Unblocked. Their posts count from the next check.')
+    const done = await run(() => runAction('stump.watches.manage', { action: 'unblock_author', author: author.handle, ...(author.source ? { source: { kind: author.source } } : {}), idempotency_key: key() }), () => 'Unblocked. Their posts count from the next check.')
     if (done !== undefined) await onDone(watch.id)
   }
   return <form className="st-editor" onSubmit={submit} aria-label={watch ? 'Edit watch' : 'New watch'}>
@@ -270,9 +271,10 @@ function Editor({ watch, role, onDone, onCancel }: { watch?: WatchView; role: st
         <span className="st-note">Addresses and secrets are stored sealed and never shown again.</span>
       </> : <span className="st-note">Owners and admins set Slack and webhook alerts.</span>}
     </fieldset>
-    {watch?.blocked_authors.length ? <fieldset>
+    {watch && blocked.length ? <fieldset>
       <legend>Blocked authors</legend>
-      <div className="st-blocked">{watch.blocked_authors.map(author => <button className="st-button" type="button" key={author} disabled={busy} onClick={() => void unblock(author)}>{author} · Unblock</button>)}</div>
+      <span className="st-note">Blocked on every watch.</span>
+      <div className="st-blocked">{blocked.map(author => <button className="st-button" type="button" key={`${author.source ?? ''}:${author.handle}`} disabled={busy} onClick={() => void unblock(author)}>{author.handle}{author.source ? ` on ${KINDS[author.source]}` : ''} · Unblock</button>)}</div>
     </fieldset> : null}
     <Outcome message={message} />
     <div className="st-actions">

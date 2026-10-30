@@ -3,7 +3,7 @@
  * STUMP-WATCH-001, -002, -003, -004, -005, -013. Pure TypeScript for the Workers runtime; every
  * network call takes the caller's `fetch`. No storage, no routes, no screens.
  */
-export type { CommonOptions, DeliveryResult, FetchFn, Finding, HandleRef, SourceErrorKind, SourceKind, SourceWarning } from './types.ts'
+export type { CommonOptions, DeliveryResult, FetchFn, Finding, HandleRef, SourceErrorKind, SourceKind, SourceWarning, TranscriptMatch } from './types.ts'
 export { SourceError, describeError, type ErrorDescription } from './errors.ts'
 
 export { compileTerms, matchTerms, hasPositiveTerms, remoteQueries, normalizeForMatch, TermError } from './terms.ts'

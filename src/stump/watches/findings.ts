@@ -1,4 +1,5 @@
-import { scoreFinding, type Finding } from '../lib/discovery/index.ts'
+import { isListedAuthor, scoreFinding, type Finding, type SourceKind } from '../lib/discovery/index.ts'
+import { blockedAuthors, blockRefs } from './blocks.ts'
 import { loadProducts, mentionsOf, rankContext } from './context.ts'
 import { loadVenues, routesFor } from './routes.ts'
 import type { WatchRow } from './store.ts'
@@ -14,16 +15,21 @@ const CANDIDATES = 500
  * A watch's findings, ranked now: from the finding as its source gave it, the watch's current terms, the
  * company's products and the clock, so freshness and mentions are true on every read and a finding's own
  * text never changes its rank by instruction (D-7, STUMP-WATCH-005.5). Routes come from the venue's rules.
+ * A dismissed finding and a finding by an author on the company's block list are not listed.
  */
 export async function rankedFindings(db: D1Database, watch: WatchRow, now: number, limit: number) {
-  const rows = (await db.prepare('SELECT id,watch_id,source,url,title,text,author,points,published_at,relevance,backfill,state,created_at,raw,source_key FROM stump_findings WHERE watch_id=? ORDER BY relevance DESC,published_at DESC,id LIMIT ?').bind(watch.id, CANDIDATES).all<Row>()).results
-  const total = (await db.prepare('SELECT COUNT(*) AS n FROM stump_findings WHERE watch_id=?').bind(watch.id).first<{ n: number }>())?.n ?? 0
+  const blocked = blockRefs(await blockedAuthors(db))
+  const listed = (finding: Finding | null) => !finding || !isListedAuthor(finding, blocked)
+  const rows = (await db.prepare("SELECT id,watch_id,source,url,title,text,author,points,published_at,relevance,backfill,state,created_at,raw,source_key FROM stump_findings WHERE watch_id=? AND state<>'dismissed' ORDER BY relevance DESC,published_at DESC,id LIMIT ?").bind(watch.id, CANDIDATES).all<Row>()).results
+  const authors = (await db.prepare("SELECT source,author,json_extract(raw,'$.source_ref') AS source_ref,json_extract(raw,'$.author_id') AS author_id FROM stump_findings WHERE watch_id=? AND state<>'dismissed'").bind(watch.id)
+    .all<{ source: SourceKind; author: string | null; source_ref: string | null; author_id: string | null }>()).results
+  const total = blocked.length ? authors.filter(row => !isListedAuthor({ source: row.source, author: row.author ?? '', source_ref: row.source_ref ?? '', ...(row.author_id ? { author_id: row.author_id } : {}) } as Finding, blocked)).length : authors.length
   const products = await loadProducts(db), venues = await loadVenues(db), context = rankContext(watch, products, now)
   const scored = rows.map(row => {
     const finding = row.raw ? JSON.parse(row.raw) as Finding : null
     const ranked = finding ? scoreFinding(finding, context) : null
     return { row, finding, ranked }
-  }).sort((a, b) => (b.ranked?.relevance ?? b.row.relevance ?? 0) - (a.ranked?.relevance ?? a.row.relevance ?? 0) || (b.row.published_at ?? 0) - (a.row.published_at ?? 0) || (a.row.id < b.row.id ? -1 : 1))
+  }).filter(item => listed(item.finding)).sort((a, b) => (b.ranked?.relevance ?? b.row.relevance ?? 0) - (a.ranked?.relevance ?? a.row.relevance ?? 0) || (b.row.published_at ?? 0) - (a.row.published_at ?? 0) || (a.row.id < b.row.id ? -1 : 1))
   const items = []
   for (const { row, finding, ranked } of scored.slice(0, limit)) {
     const where = finding ? routesFor(venues, finding) : { routes: [], venue: null }
@@ -38,7 +44,7 @@ export async function rankedFindings(db: D1Database, watch: WatchRow, now: numbe
       routes: where.routes, venue: where.venue,
       backfill: row.backfill === 1,
       mentions: finding ? mentionsOf(finding, products) : [],
-      transcript_url: finding?.transcript_url ?? null, thread_url: finding?.thread_url ?? null,
+      transcript_url: finding?.transcript_url ?? null, transcript_match: finding?.transcript_match ?? null, thread_url: finding?.thread_url ?? null,
       counts: finding?.counts ?? {},
       found_at: new Date(row.created_at).toISOString(),
     })

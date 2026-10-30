@@ -1,6 +1,6 @@
 import { canonicalUrl, parseHttpUrl, type Finding } from '../lib/discovery/index.ts'
 
-export type Route = 'publish' | 'handoff_draft' | 'handoff_brief'
+export type Route = 'publish' | 'handoff_draft' | 'handoff_brief' | 'dismiss'
 export interface FindingRoutes { routes: Route[]; venue: { id: string; name: string } | null }
 
 export interface VenueRow { id: string; name: string; url: string | null; url_key: string | null; status: string; rules: string }
@@ -22,20 +22,21 @@ function homes(finding: Pick<Finding, 'source' | 'source_ref' | 'url'>): { exact
  * and from nothing the finding says (D-7): a venue that bans AI-written text, keeps posting for its members,
  * or has no sourced rule gets a hand-off with a brief and no generated text; only a venue that records
  * posting from the company's account as allowed also offers publish. Hacker News has no write door at all.
+ * Every finding can also be dismissed (STUMP-WATCH-001.3).
  */
 export function routesFor(venues: readonly VenueRow[], finding: Pick<Finding, 'source' | 'source_ref' | 'url'>): FindingRoutes {
   const place = homes(finding)
   const venue = venues.find(row => place.exact.includes(canonicalUrl(row.url ?? '')) || (row.url_key !== null && place.exact.includes(row.url_key)))
     ?? venues.find(row => { const host = hostOf(row.url); return host !== null && place.hosts.includes(host) })
-  if (finding.source === 'hn') return { routes: ['handoff_brief'], venue: venue ? { id: venue.id, name: venue.name } : null }
-  if (!venue) return { routes: ['handoff_brief'], venue: null }
+  if (finding.source === 'hn') return { routes: ['handoff_brief', 'dismiss'], venue: venue ? { id: venue.id, name: venue.name } : null }
+  if (!venue) return { routes: ['handoff_brief', 'dismiss'], venue: null }
   const rules = JSON.parse(venue.rules) as Record<string, unknown>
   const ai = word(rules.ai_text), posting = word(rules.posting)
   const aiAllowed = ai !== '' && !/^(banned|ban|no|none|forbidden|human|human_only|not_allowed)/.test(ai)
   const apiPosting = /^(api|account|company|company_account|software|bot|open|allowed|anyone)$/.test(posting)
   const routes: Route[] = []
   if (apiPosting && aiAllowed) routes.push('publish')
-  routes.push(aiAllowed ? 'handoff_draft' : 'handoff_brief')
+  routes.push(aiAllowed ? 'handoff_draft' : 'handoff_brief', 'dismiss')
   return { routes, venue: { id: venue.id, name: venue.name } }
 }
 
