@@ -230,3 +230,6 @@
   .lp-row-text { flex-direction: column; align-items: flex-start; gap: 2px; }
   .lp-rows .lp-row-text .lp-row-meta::before { content: none; }
 }
+
+/* A heading's closing phrase that stays whole, so the line breaks at the comma as the plate does. */
+.lp-keep { white-space: nowrap; }

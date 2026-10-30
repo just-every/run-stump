@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
 import { Icon } from '../stump/ui/icons.tsx'
-import { Chip, Initials, MoreMenu, Outcome, useLoaded, useRun, when, words } from '../stump/ui/kit.tsx'
+import { Chip, Initials, MoreMenu, Outcome, PanelTitle, useLoaded, useRun, when, words } from '../stump/ui/kit.tsx'
 import { rowTitle, shortWhen, type Handoff } from '../stump/handoffs/ui/words.ts'
 import type { RemovedPerson, RoleChange, Team, TeamPerson } from '../stump/ui/types.ts'
 
@@ -29,7 +29,7 @@ function TeamPage() {
       {note ? <p className="st-note" role="status">{note}</p> : null}
       <div className="st-panel">
         <div className="st-panel-head">
-          <h2 className="st-panel-title" id="people-title">People</h2>
+          <PanelTitle icon="people" id="people-title">People</PanelTitle>
           {manage && !inviting ? <button className="st-button primary" type="button" onClick={() => { setNote(null); setInviting(true) }}><Icon name="plus" />Invite</button> : null}
         </div>
         {manage && inviting ? <Invite onDone={person => { setInviting(false); changed(`Invitation sent to ${person.email}.`) }} onCancel={() => setInviting(false)} /> : null}
@@ -39,7 +39,7 @@ function TeamPage() {
         </table>
       </div>
       {invited.length ? <div className="st-panel">
-        <div className="st-panel-head"><h2 className="st-panel-title" id="waiting-title">Waiting to sign in</h2></div>
+        <div className="st-panel-head"><PanelTitle icon="clock" id="waiting-title">Waiting to sign in</PanelTitle></div>
         <table className="st-table" aria-labelledby="waiting-title">
           <thead><tr><th scope="col">Name</th><th scope="col">Role</th><th scope="col">Invited</th>{manage ? <th scope="col"><span className="st-sr">Actions</span></th> : null}</tr></thead>
           <tbody>{invited.map(person => <Pending key={person.id} person={person} manage={manage} onChange={changed} label={label} />)}</tbody>

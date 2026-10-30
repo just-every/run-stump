@@ -15,9 +15,9 @@ An agent and the app run the same action through the same checks: the person's r
 
 ## Company policy
 
-The company's policy decides which classes of action an agent runs at once and which wait for a person to approve. When a policy holds an agent's post, Stump saves the exact revision, account, venue and time, and publishes only that revision once it is approved.
+The company's policy decides which classes of action an agent runs at once and which wait for a person to approve. In **Settings, Agents**, the owner answers each kind of action: Allow, Allow then review, Ask first or Block. Each answer saves as it is given, and agents wait until every kind has one. When a policy holds an agent's post, Stump saves the exact revision, account, venue and time, and publishes only that revision once it is approved.
 
-In **Settings, Agents**, the owner answers each class of action, and can edit the whole policy document for reviewers, approvers and narrower rules. Owners, admins and editors see the answers, this week's agent calls by class and how the policy handled them, and recent agent activity. Everyone sees their own agents and what waits for them.
+The owner can also edit the whole policy document for reviewers, approvers and narrower rules. Owners, admins and editors see the answers, this week's agent calls by class and how the policy handled them, and recent agent activity. Everyone sees their own agents and what waits for them.
 
 ## Attribution
 

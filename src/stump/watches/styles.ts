@@ -5,7 +5,9 @@ export const listeningStyles = `
 .st-listen-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: calc(var(--stump-space) * 3); align-items: start; margin-top: calc(var(--stump-space) * 3); }
 .st-listen .st-card { border: 1px solid var(--stump-hairline); border-radius: var(--stump-radius); padding: calc(var(--stump-space) * 3); background: var(--stump-white); min-width: 0; margin: 0; }
 .st-listen .st-card h2 { margin: 0 0 calc(var(--stump-space) * 2); }
-.st-listen .st-card-head { display: flex; align-items: center; justify-content: space-between; gap: calc(var(--stump-space) * 2); flex-wrap: wrap; margin-bottom: calc(var(--stump-space) * 2); }
+/* The findings heading sits level with Your watches: the row top-aligns, and the ··· button's extra height hangs below it, so the next-check line sits just under the heading. */
+.st-listen .st-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: calc(var(--stump-space) * 2); flex-wrap: wrap; margin-bottom: 6px; }
+.st-listen .st-card-head .st-more-menu { margin-bottom: -18px; }
 .st-listen .st-card-head h2 { margin: 0; }
 .st-listen .st-watches { list-style: none; margin: 0 0 calc(var(--stump-space) * 2); padding: 0; display: grid; gap: 4px; }
 .st-listen .st-watch { display: flex; align-items: center; gap: calc(var(--stump-space) * 1.5); width: 100%; text-align: left; font: inherit; color: inherit; background: transparent; border: 0; border-radius: var(--stump-radius-row); padding: calc(var(--stump-space) * 1.25); cursor: pointer; min-height: 56px; }

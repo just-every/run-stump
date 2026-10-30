@@ -63,7 +63,8 @@ export const handoffStyles = `
   .st-handoffs .st-ho-side h2 { display: none; }
   .st-handoffs .st-ho-toggle { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 6px 0; background: none; border: 0; font: inherit; font-size: var(--stump-size-section); font-weight: 600; color: var(--stump-ink); text-align: left; cursor: pointer; }
   .st-handoffs .st-ho-toggle:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; border-radius: 6px; }
-  .st-handoffs .st-ho-toggle .st-ho-chevron { margin-left: auto; transition: transform var(--stump-motion); }
+  .st-handoffs .st-ho-toggle .st-ho-chevron { display: inline-flex; flex: none; margin-left: auto; color: var(--stump-muted); transition: transform var(--stump-motion); }
+  .st-handoffs .st-ho-toggle .st-ho-chevron svg { width: 20px; height: 20px; }
   .st-handoffs .st-ho-toggle[aria-expanded="true"] .st-ho-chevron { transform: rotate(90deg); }
   .st-handoffs .st-ho-side .st-ho-card:not(.open) .st-ho-body { display: none; }
   .st-handoffs .st-ho-side .st-ho-body { margin: 4px 0 16px; }

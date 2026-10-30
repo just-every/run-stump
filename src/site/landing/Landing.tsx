@@ -174,7 +174,7 @@ export function Landing() {
     <main id="main">
       <Hero />
       <Band id="lp-venues" eyebrow="VENUES" title="Know where to show up." card={<Venues />} tuft="right">Every community, newsletter, podcast and journalist worth your time, with its rules and their sources. Stump reads the rules before every post and picks the route they allow.</Band>
-      <Band id="lp-composer" eyebrow="COMPOSER" title="One post, every network." card={<Composer />} flip tuft="left">Write it once. Stump opens a variant for Bluesky, X, LinkedIn and Mastodon, counts each the way the network does, and schedules them all with one press.</Band>
+      <Band id="lp-composer" eyebrow="COMPOSER" title={<>One post, <span className="lp-keep">every network.</span></>} card={<Composer />} flip tuft="left">Write it once. Stump opens a variant for Bluesky, X, LinkedIn and Mastodon, counts each the way the network does, and schedules them all with one press.</Band>
       <Band id="lp-handoffs" eyebrow="HAND-OFFS" title="Members post by hand." card={<Handoff />} tuft="right">Where a venue keeps posting for its members, the named member gets a brief, the facts with proof and a draft in their own voice. They paste the link back; the ledger has it.</Band>
       <Band id="lp-inbox" eyebrow="INBOX & LISTENING" title="Answer the people who asked." card={<Inbox />} flip tuft="left">Stump watches Hacker News, feeds, Bluesky and Mastodon for threads worth answering, and brings replies from people who engaged with you first.</Band>
       <Band id="lp-ledger" eyebrow="LEDGER" title="See which posts paid off." card={<Ledger />} tuft="right">Every post and hand-off is on the record with its link, author and tagged links. With Vane, each one shows the signups it brought.</Band>

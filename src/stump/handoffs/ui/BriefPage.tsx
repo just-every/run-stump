@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
 import { Chip, Disc, Outcome, pageName, useLoaded } from '../../ui/kit.tsx'
-import type { IconName } from '../../ui/icons.tsx'
+import { Icon, type IconName } from '../../ui/icons.tsx'
 import { handoffStyles } from './styles.ts'
 import { briefTitle, dayOf, dueLine, LAPSE_AT, ruleLines, say, STATE, type Handoff } from './words.ts'
 
@@ -31,7 +31,7 @@ function Side({ icon, title, children }: { icon: IconName | 'shield'; title: str
   const disc = icon === 'shield' ? <Shield /> : <Disc icon={icon} />
   return <section className={`st-ho-card${open ? ' open' : ''}`} aria-labelledby={id}>
     <button className="st-ho-toggle" type="button" aria-expanded={open} aria-controls={`${id}-body`} onClick={() => setOpen(!open)}>
-      {disc}{title}<span className="st-ho-chevron" aria-hidden="true">›</span></button>
+      {disc}{title}<span className="st-ho-chevron" aria-hidden="true"><Icon name="chevronRight" /></span></button>
     <h2 className="st-panel-title" id={id}>{disc}{title}</h2>
     <div className="st-ho-body" id={`${id}-body`}>{children}</div>
   </section>

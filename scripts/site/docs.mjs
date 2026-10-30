@@ -58,7 +58,7 @@ function render(markdown) {
         const language = (lang ?? '').trim().split(/\s+/)[0].toLowerCase();
         if (!language) problems.push('has a code block without a language');
         const name = languages[language] ?? language.toUpperCase();
-        return `<div class="docs-code" data-copy-scope><div class="docs-code-head"><span>${escapeHtml(name || 'Code')}</span><button type="button" class="docs-copy" data-copy aria-label="Copy code" hidden></button></div><pre><code>${escapeHtml(code.replace(/\n$/, ''))}</code></pre></div>\n`;
+        return `<div class="docs-code" data-copy-scope><div class="docs-code-head"><span>${escapeHtml(name || 'Code')}</span><button type="button" class="docs-copy" data-copy aria-label="Copy code" hidden></button></div><pre><code>${keepSlugs(escapeHtml(code.replace(/\n$/, '')))}</code></pre></div>\n`;
       },
       html({ text: raw }) { return escapeHtml(raw); },
       link({ href, title, tokens }) {
@@ -73,6 +73,9 @@ function render(markdown) {
     .replace(/<\/table>/g, '</table></div>');
   return { html, toc, ids, links, problems };
 }
+
+/** A repository slug in a command ("just-every/run-stump") never breaks at its hyphen: the line breaks at the space before it. */
+const keepSlugs = html => html.replace(/(^|[ \t])([A-Za-z0-9][\w.-]*\/[\w.-]*[A-Za-z0-9])(?=[ \t]|$)/gm, '$1<span class="docs-keep">$2</span>');
 
 /** The id the docs article gives its h1 (src/site/docs/Docs.tsx); search links a page's opening text to it. */
 export const TITLE_ID = 'docs-title';

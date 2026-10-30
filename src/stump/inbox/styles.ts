@@ -2,11 +2,10 @@
 // only from the app's tokens in src/stump/ui/styles.ts; it adds no colours.
 export const inboxStyles = `
 .st-inbox { max-width: 1120px; }
-/* Reply stays the row's ink primary while the field is empty: ink at 40 %, never the grey fill (hierarchy rule). */
-.st-inbox .st-inbox-actions .st-button.primary:disabled, .st-inbox .st-inbox-actions .st-button.primary:disabled:hover { opacity: .4; background: var(--stump-ink); border-color: var(--stump-ink); color: var(--stump-white); }
 .st-inbox .st-inbox-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -16px 0 24px; }
 .st-inbox .st-inbox-bar .st-meta { margin-right: auto; }
 .st-inbox .st-inbox-bar .st-button { margin-left: auto; }
+.st-inbox .st-inbox-bar .st-inbox-check-icon { display: none; }
 .st-inbox .st-inbox-grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 16px; align-items: start; }
 .st-inbox .st-inbox-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--stump-hairline); border-radius: var(--stump-radius); overflow: hidden; background: var(--stump-white); }
 .st-inbox .st-inbox-list li + li { border-top: 1px solid var(--stump-hairline); }
@@ -57,5 +56,11 @@ export const inboxStyles = `
   .st-inbox .st-inbox-actions { gap: 8px; flex-wrap: nowrap; }
   .st-inbox .st-inbox-actions .st-button { flex: 1 1 auto; padding: 0 14px; min-height: 52px; }
   .st-inbox .st-inbox-row.st-inbox-first[aria-current="true"] { background: var(--stump-white); }
+}
+@media (max-width: 480px) {
+  .st-inbox .st-inbox-bar { flex-wrap: nowrap; gap: 8px; }
+  .st-inbox .st-inbox-bar .st-meta { min-width: 0; }
+  .st-inbox .st-inbox-bar .st-inbox-check { display: none; }
+  .st-inbox .st-inbox-bar .st-inbox-check-icon { display: inline-flex; flex: none; margin-left: auto; }
 }
 `

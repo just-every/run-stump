@@ -21,7 +21,20 @@ export function primaryRoute(venue: Pick<Venue, 'kind' | 'status' | 'routes' | '
 }
 
 const short = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })
-export const nextOpen = (iso: string | null) => iso ? short.format(new Date(iso)).replace(',', '') : null
+const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'UTC' })
+const DAY = 86_400_000
+/**
+ * When a venue's shared limit next lets the company post, in the limit's own UTC days, worded as Hand-offs words its dates:
+ * "Today" (open now), "Tomorrow", a weekday up to six days out ("Thu"), else "Mon Nov 2".
+ */
+export function nextOpen(iso: string | null, now = Date.now()): string | null {
+  if (!iso) return null
+  const at = new Date(iso).getTime(), days = Math.floor(at / DAY) - Math.floor(now / DAY)
+  if (at <= now || days <= 0) return 'Today'
+  if (days === 1) return 'Tomorrow'
+  if (days <= 6) return weekday.format(new Date(at))
+  return short.format(new Date(at)).replace(',', '')
+}
 export const readOn = (date: string | null) => date ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`)) : null
 export const limitWords = (limit: { posts: number; per: string } | null) => limit ? `${limit.posts === 1 ? 'One post' : `${limit.posts} posts`} a ${limit.per}` : null
 

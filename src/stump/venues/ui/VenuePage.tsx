@@ -6,6 +6,7 @@ import { Disc, Outcome, Tip, monthYear, useLoaded, useRun, when, words } from '.
 import type { Team } from '../../ui/types.ts'
 import { DETAIL_LABELS } from '../kinds.ts'
 import { kindLabel, limitWords, nextOpen, routeLabel, statusLabel, statusTone } from './labels.ts'
+import { openingWords } from '../../today/sections.ts'
 import { RulesCard, threadWords } from './RulesCard.tsx'
 import type { Members, RouteAnswer, Venue, VenueItem } from './types.ts'
 import { VenueForm } from './VenueForm.tsx'
@@ -170,7 +171,7 @@ const lower = (text: string) => /^[A-Z][a-z]/.test(text) ? text.charAt(0).toLowe
 /** Why the venue is worth showing up in, and what else the company knows about it. The title and subline already say what
  * it is and where, so details that repeat them (its platform, subreddit and priority) do not show. */
 function WhyCard({ venue }: { venue: Venue }) {
-  const howTo = Object.entries(venue.how_to_post).filter(([, value]) => value).map(([name, value]) => name === 'text' ? String(value) : `${name}: ${String(value)}`).join(' · ')
+  const howTo = howToWords(venue)
   const details = Object.entries(venue.details).filter(([name, value]) => name !== 'subreddit' && value !== null && value !== '')
     .map(([name, value]) => [DETAIL_LABELS[name] ?? name, Array.isArray(value) ? value.join(', ') : String(value)] as const)
   const lines = ([...details, ['Who reads it', venue.audience], ['What readers get', venue.reader_value], ['How to post', howTo || null], ['Reception', venue.reception], ['Notes', venue.notes]] as const)
@@ -182,6 +183,28 @@ function WhyCard({ venue }: { venue: Venue }) {
     {venue.why ? <p className="st-venue-why">{venue.why}</p> : null}
     {lines.length ? <dl className="st-venue-facts">{lines.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{link(value!)}</dd></div>)}</dl> : null}
   </section>
+}
+
+/** An article for a word: "a launch post", "an AMA". */
+const article = (word: string) => /^[aeiou]/i.test(word) ? `an ${word}` : `a ${word}`
+/**
+ * How to post here, in words, never the record's field names: "Post in the weekly thread", "Post as a launch post". The thread
+ * line is left out when the Self-promotion rule already names that thread.
+ */
+function howToWords(venue: Venue): string {
+  const how = venue.how_to_post, text = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim() : null
+  const promo = venue.rules.self_promotion
+  const bareThread = (words: string) => words.toLowerCase().replace(/^the\s+/, '')
+  const promoThread = promo?.value === 'thread' ? bareThread(threadWords(promo)) : null
+  const thread = text(how.thread)
+  return [
+    text(how.text),
+    thread && !(promoThread && promoThread.includes(bareThread(thread))) ? `Post in the ${thread.replace(/^the\s+/i, '')}` : null,
+    text(how.channel) ? `Post as ${article(text(how.channel)!)}` : null,
+    text(how.flair) ? `Use the ${text(how.flair)} flair` : null,
+    text(how.day) ? `Post on ${text(how.day)}` : null,
+    text(how.template) ? `Follow its template: ${text(how.template)}` : null,
+  ].filter(Boolean).join(' · ')
 }
 
 /** Each product the venue serves, with its fit and how many items aim here, then those items with what holds them (STUMP-VENUE-001.6). */
@@ -196,8 +219,8 @@ function ProductsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
     </li>)}</ul> : null}
     {items.length ? <>
       {venue.products.length ? <h3 className="st-venue-sub">Items aimed here</h3> : null}
-      <ul className="st-list">{items.map(item => <li className="st-row" key={item.id}>
-        <div className="st-row-main"><div className="st-name">{[cap(item.format), item.product_id ? names.get(item.product_id) : null].filter(Boolean).join(' · ')}</div>
+      <ul className="st-list st-venue-items">{items.map(item => <li className="st-row" key={item.id}>
+        <div className="st-row-main"><div className="st-name">{itemName(item, names)}</div>
           <div className="st-meta">{itemWords(venue, item)}</div></div>
       </li>)}</ul>
     </> : null}
@@ -205,6 +228,12 @@ function ProductsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
 }
 
 const cap = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
+/** An item aimed here, named as Today names it: by its product ("Brightwell Rooms post"), else a post by its opening words. */
+function itemName(item: VenueItem, names: Map<string, string>): string {
+  const product = item.product_id ? names.get(item.product_id) : null
+  if (product) return `${product} ${item.format}`
+  return item.format === 'post' && item.text ? openingWords(item.text) : cap(item.format)
+}
 
 /** Where an item aimed here stands, in words: the rule that holds it, never its code. */
 function itemWords(venue: Venue, item: VenueItem): string {

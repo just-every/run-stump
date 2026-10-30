@@ -7,8 +7,8 @@ import { ActionError, credentials, explain, issueCredential, me, revokeCredentia
 import { Icon } from '../../ui/icons.tsx'
 import { Outcome, PanelTitle, Saved, useLoaded, useRun, useSaved, when } from '../../ui/kit.tsx'
 import {
-  ANSWERS, actionName, agentOverview, agentState, answerOf, approvals, classHelp, className, decisionName, markReview, narrower, outcomeWords, policyClasses, principal,
-  recentActivity, reviews, savePolicy, setPaused, withAnswer, type Disposition, type PolicyDocument,
+  ANSWERS, actionName, agentOverview, agentState, answerOf, approvals, classHelp, className, clearAnswers, decisionName, markReview, narrower, outcomeWords,
+  policyClasses, principal, readAnswers, recentActivity, reviews, saveAnswer, savePolicy, setPaused, withAnswer, type Disposition, type PolicyDocument,
 } from './policy.ts'
 
 export function AgentsSettings() {
@@ -16,20 +16,21 @@ export function AgentsSettings() {
     const who = await me()
     // Base's state, policy and audit doors answer only the people who answer for agents; everyone else sees their own agents and approvals.
     const role = who.person.role, owner = role === 'owner', auditor = owner || role === 'admin' || role === 'editor'
-    const [creds, state, overview, waiting, toReview, activity] = await Promise.all([
+    const [creds, state, overview, answers, waiting, toReview, activity] = await Promise.all([
       credentials(), auditor ? agentState() : Promise.resolve(null), auditor ? agentOverview() : Promise.resolve(null),
+      owner ? readAnswers().then(answer => answer.answers) : Promise.resolve({} as Record<string, Disposition>),
       approvals().then(answer => answer.approvals.filter(item => item.state === 'pending')),
       reviews().then(answer => answer.reviews.filter(item => item.state === 'open' || item.state === 'flagged')),
       auditor ? recentActivity() : Promise.resolve(null),
     ])
-    return { owner, creds, state, overview, waiting, toReview, activity }
+    return { owner, creds, state, overview, answers, waiting, toReview, activity }
   })
   return <HydrationUnit>
     <section className="st-page st-agents" aria-labelledby="agents-title">
       <h1 id="agents-title" className="st-sr">Agents</h1>
       {error ? <p className="st-error">{error}</p> : null}
       <Connect items={data?.creds.items ?? null} refresh={refresh} />
-      {data?.state ? <Policy owner={data.owner} state={data.state} document={data.overview?.document ?? null} refresh={refresh} /> : null}
+      {data?.state ? <Policy owner={data.owner} state={data.state} document={data.overview?.document ?? null} stored={data.answers} refresh={refresh} /> : null}
       {data?.state ? <PausePanel owner={data.owner} paused={data.state.paused} refresh={refresh} /> : null}
       {data && (data.waiting.length || data.toReview.length) ? <Waiting approvals={data.waiting} reviews={data.toReview} refresh={refresh} /> : null}
       {data?.activity ? <section className="st-panel" aria-labelledby="activity-title">
@@ -94,23 +95,34 @@ function Connect({ items, refresh }: { items: Array<{ client_id: string; name: s
   </>
 }
 
-/** What agents may do, one answer per kind of action. Each answer saves as it changes; agents wait until every kind has one. */
-function Policy({ owner, state, document, refresh }: { owner: boolean; state: Awaited<ReturnType<typeof agentState>>; document: PolicyDocument | null; refresh(): Promise<void> }) {
+/**
+ * What agents may do, one answer per kind of action. Each answer saves as it changes (L15): Stump keeps the answers given so far,
+ * agents wait until every kind has one, and the last answer sends the whole policy to Base. A complete policy changes in Base directly.
+ */
+function Policy({ owner, state, document, stored, refresh }: { owner: boolean; state: Awaited<ReturnType<typeof agentState>>; document: PolicyDocument | null
+  stored: Record<string, Disposition>; refresh(): Promise<void> }) {
   const [pending, setPending] = useState<Record<string, Disposition>>({})
   const [failure, setFailure] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const { shown, saved } = useSaved()
-  const classes = policyClasses(document, state.policy.unanswered)
-  const answer = (cls: string) => pending[cls] ?? answerOf(document, cls)
+  const classes = policyClasses(document, [...state.policy.unanswered, ...Object.keys(stored)])
+  const answer = (cls: string) => pending[cls] ?? stored[cls] ?? answerOf(document, cls)
   const left = classes.filter(cls => !answer(cls)).length
   const business = state.policy.source === 'business'
+  const inBase = state.policy.complete && !Object.keys(stored).length
   async function choose(cls: string, value: Disposition) {
     const next = { ...pending, [cls]: value }
-    setPending(next); setFailure(null)
-    if (classes.some(item => !(next[item] ?? answerOf(document, item)))) return
-    setBusy(true)
-    try { await savePolicy(withAnswer(document, next)); setPending({}); saved(); await refresh() }
-    catch (cause) { setFailure(explain(cause)) }
+    setPending(next); setFailure(null); setBusy(true)
+    try {
+      const answers = { ...stored, ...next }
+      // A complete policy changes in Base at once; until then each answer waits in Stump, and the last one sends them all.
+      if (!inBase) await saveAnswer(cls, value)
+      if (classes.every(item => answers[item] ?? answerOf(document, item))) {
+        await savePolicy(withAnswer(document, answers))
+        if (!inBase) await clearAnswers()
+      }
+      saved(); await refresh(); setPending({})
+    } catch (cause) { setFailure(explain(cause)) }
     finally { setBusy(false) }
   }
   return <section className="st-panel st-agents-policy" aria-labelledby="policy-title">
@@ -118,7 +130,7 @@ function Policy({ owner, state, document, refresh }: { owner: boolean; state: Aw
       <PanelTitle icon="list" id="policy-title">What agents may do</PanelTitle>
       <Saved shown={shown && !busy} />
     </div>
-    <p className="st-meta">{business ? 'Managed in Business.' : left ? `Agents wait until every kind has an answer, and the answers save then: ${left} left.` : 'Every kind of action has an answer. Each change saves at once.'}</p>
+    <p className="st-meta">{business ? 'Managed in Business.' : left ? `${classes.length - left} of ${classes.length} answered · agents start once every kind has an answer` : `All ${classes.length} answered · each change applies at once`}</p>
     <ul className="st-list">{classes.map(cls => {
       const value = answer(cls)
       return <li className="st-row" key={cls}>
@@ -134,12 +146,12 @@ function Policy({ owner, state, document, refresh }: { owner: boolean; state: Aw
     {narrower(document) ? <p className="st-meta">The policy also has {narrower(document)} narrower {narrower(document) === 1 ? 'rule' : 'rules'} for particular agents or amounts.</p> : null}
     {owner && !business ? <p className="st-meta st-agents-foot">Ask first goes to the owner, who has a day to answer. Agents use no paid AI.</p> : null}
     {failure ? <p className="st-error" role="alert">{failure}</p> : null}
-    {owner && !business ? <PolicyDocumentEditor document={document} refresh={refresh} /> : null}
+    {owner && !business ? <PolicyDocumentEditor document={document} stored={Object.keys(stored).length > 0} refresh={refresh} /> : null}
   </section>
 }
 
 /** The whole policy document, for rules the answers above cannot say: reviewers, approvers, waits and narrower rules for particular agents or amounts. */
-function PolicyDocumentEditor({ document, refresh }: { document: PolicyDocument | null; refresh(): Promise<void> }) {
+function PolicyDocumentEditor({ document, stored, refresh }: { document: PolicyDocument | null; stored: boolean; refresh(): Promise<void> }) {
   const { busy, message, run } = useRun()
   const text = JSON.stringify(document ?? withAnswer(null, {}), null, 2)
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -149,7 +161,8 @@ function PolicyDocumentEditor({ document, refresh }: { document: PolicyDocument 
       let parsed: PolicyDocument
       // Text that is not JSON is refused as Base refuses a document it cannot read.
       try { parsed = JSON.parse(source) as PolicyDocument } catch { throw new ActionError('policy_document_invalid', { path: '$' }, 400) }
-      return savePolicy(parsed)
+      // The whole document replaces any answers still waiting in Stump.
+      return savePolicy(parsed).then(async result => { if (stored) await clearAnswers(); return result })
     }, () => 'Policy saved.')
     if (saved) await refresh()
   }

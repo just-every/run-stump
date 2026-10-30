@@ -2,6 +2,7 @@ import { runtimeBindings } from '../../auth.server'
 import { allowedTools, runAsPerson } from '../actions/runner.ts'
 import { issueCredential, listCredentials, revokeCredential } from '../agent-door/credentials.ts'
 import { agentOverview } from '../agent-door/overview.ts'
+import { policyAnswersResponse } from '../agent-door/policy-answers.ts'
 import type { StumpEnv } from '../env.ts'
 import { stumpTools } from '../tools/index.ts'
 import { answer, json, personContext, refusal, signedIn } from './person.ts'
@@ -61,6 +62,7 @@ export async function personDoorResponse(request: Request, original: StumpEnv): 
       if (!['owner', 'admin', 'editor'].includes(person.role)) return refusal('forbidden')
       return json(await agentOverview(env, Date.now()))
     }
+    if (path === '/app/api/agent-policy/answers') return policyAnswersResponse(request, env.DB, person)
     const revoke = /^\/app\/api\/agent-credentials\/([A-Za-z0-9_-]{1,80})\/revoke$/.exec(path)
     if (revoke) {
       if (request.method !== 'POST') return refusal('method_not_allowed')
