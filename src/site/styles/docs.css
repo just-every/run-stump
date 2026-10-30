@@ -21,6 +21,8 @@
 .docs-toc ul ul, .docs-toc-compact ul ul { padding-left: 14px; }
 .docs-toc a, .docs-toc-compact a { display: block; padding: 7px 0; color: var(--ink); text-decoration: none; font-size: 15.5px; line-height: 1.35; }
 .docs-toc a:hover, .docs-toc-compact a:hover { color: var(--emerald-text); }
+/* The section in view, marked by the page's scroll script (src/site/shell/document.ts) */
+.docs-toc a[aria-current="location"], .docs-toc-compact a[aria-current="location"] { color: var(--emerald-text); font-weight: 600; }
 .docs-toc-compact { display: none; margin-top: 14px; }
 .docs-toc-compact summary, .docs-menu summary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--outline); border-radius: 999px; background: var(--white); color: var(--ink); font: 500 15px/20px var(--font); cursor: pointer; list-style: none; }
 .docs-toc-compact summary::-webkit-details-marker, .docs-menu summary::-webkit-details-marker { display: none; }

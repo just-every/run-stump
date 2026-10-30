@@ -31,7 +31,13 @@ function AccountsPage() {
   const [connecting, setConnecting] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
-  useEffect(() => { const wanted = new URLSearchParams(window.location.search).get('reconnect'); if (wanted) setOpen(wanted) }, [])
+  // ?connect=<network> (from first-run setup) opens the connect form on that network.
+  const [network, setNetwork] = useState<string | null>(null)
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search), wanted = query.get('reconnect'), connect = query.get('connect')
+    if (wanted) setOpen(wanted)
+    if (connect && Object.hasOwn(NAMES, connect)) { setNetwork(connect); setConnecting(true) }
+  }, [])
   // An account the network refused opens on its reconnect step for whoever can reconnect it.
   useEffect(() => {
     if (!data || open) return
@@ -56,7 +62,7 @@ function AccountsPage() {
           mine={account.owner.kind === 'company' ? admin : account.owner.person_id === data?.me.person.id}
           onChange={text => { setNote(text); void refresh() }} />)}
       </ul> : null}
-      {showForm && data ? <Connect admin={admin} apps={data.accounts.apps} onCancel={accounts.length ? () => setConnecting(false) : null} />
+      {showForm && data ? <Connect key={network ?? 'any'} initial={network ?? 'bluesky'} admin={admin} apps={data.accounts.apps} onCancel={accounts.length ? () => setConnecting(false) : null} />
         : !viewer ? <p><button className="st-button primary" type="button" onClick={() => { setNote(null); setConnecting(true) }}>+ Connect an account</button></p> : null}
     </section>
   </HydrationUnit>
@@ -120,9 +126,9 @@ function AccountRow({ account, owner, connectedBy, open, mine, onToggle, onChang
   </li>
 }
 
-function Connect({ admin, apps, onCancel }: { admin: boolean; apps: App[]; onCancel: (() => void) | null }) {
+function Connect({ initial, admin, apps, onCancel }: { initial: string; admin: boolean; apps: App[]; onCancel: (() => void) | null }) {
   const { busy, message, run } = useRun()
-  const [network, setNetwork] = useState('bluesky')
+  const [network, setNetwork] = useState(initial)
   const [password, setPassword] = useState<Started | null>(null)
   const app = apps.find(item => item.network === network)
   const needsApp = app?.state === 'not_created'

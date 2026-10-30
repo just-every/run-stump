@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { screenStyles } from '../stump/ledger/screen-styles.ts'
 import type { ConnectionView, OfferView, PreviewView, RulesView } from '../stump/stack/view.ts'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
+import { Outcome, Saved, handleWord, networkWord, useLoaded, useRun, useSaved, when } from '../stump/ui/kit.tsx'
 
 export const Route = createFileRoute('/app/settings/connections')({ component: ConnectionsPage })
 
@@ -25,7 +25,7 @@ function ConnectionsPage() {
   })
   return <HydrationUnit>
     <style>{screenStyles}</style>
-    <section className="st-page" aria-labelledby="connections-title">
+    <section className="st-page st-ledger-screen" aria-labelledby="connections-title">
       <h1 id="connections-title">Connections</h1>
       <p className="st-lead">Where people who engage with you go, where each post is marked on your traffic, and how your links are tagged.</p>
       {error ? <p className="st-error">{error}</p> : null}
@@ -91,8 +91,8 @@ function Waiting({ offers, onChange }: { offers: OfferView[]; onChange(): Promis
     <p className="st-meta">{offers.length} waiting to send</p>
     <ul className="st-list">{offers.map(offer => <li className="st-row" key={offer.id}>
       <div className="st-row-main">
-        <div className="st-name">{offer.kind === 'engager' ? offer.handle : offer.post_url ?? 'A post'}</div>
-        <div className="st-meta">{offer.kind === 'engager' ? `${offer.network} · ${offer.engagement ?? 'engaged'}` : 'Annotation'}{(offer.outcome as { ok?: boolean } | null)?.ok === false ? ` · last send failed: ${(offer.outcome as { error?: string }).error ?? 'try again'}` : ''}</div>
+        <div className="st-name">{offer.kind === 'engager' ? [handleWord(String(offer.handle ?? ''), offer.network), networkWord(offer.network), offer.engagement ?? 'engaged'].filter(Boolean).join(' · ') : offer.post_url?.replace(/^https?:\/\/(www\.)?/, '') ?? 'A post'}</div>
+        <div className="st-meta">{offer.kind === 'engager' ? when(offer.occurred_at ?? offer.created_at) : 'Annotation'}{(offer.outcome as { ok?: boolean } | null)?.ok === false ? ` · last send failed: ${(offer.outcome as { error?: string }).error ?? 'try again'}` : ''}</div>
       </div>
       <button className="st-button" type="button" disabled={busy} onClick={() => void run(() => runAction<{ sent: boolean; outcome: { error?: string } | null }>('stump.stack.send', { action: 'send', idempotency_key: key(), offer_id: offer.id }), done => done.sent ? 'Sent.' : `Not sent: ${done.outcome?.error ?? 'try again'}`).then(onChange)}>Send</button>
     </li>)}</ul>
@@ -102,14 +102,17 @@ function Waiting({ offers, onChange }: { offers: OfferView[]; onChange(): Promis
 
 function Links({ rules, admin, onChange }: { rules: RulesView; admin: boolean; onChange(): Promise<void> }) {
   const { busy, message, run } = useRun()
+  const { shown, saved } = useSaved()
   const [sample, setSample] = useState<PreviewView | null>(null)
+  const form = useRef<HTMLFormElement>(null)
   const set = rules.mediums !== null
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    const own_domains = String(form.get('domains')).split(/[\s,]+/).filter(Boolean)
-    await run(() => runAction('stump.links.manage', { action: 'set_rules', idempotency_key: key(), own_domains, mediums: { published: form.get('published'), handoff: form.get('handoff') } }), () => 'Saved. The next item uses these rules; posted links stay as they were.')
-    await onChange()
+  /** Settings save as you go (L15): each change saves the rules as they now stand; a failed save keeps what was typed. */
+  async function save() {
+    const data = new FormData(form.current!)
+    const own_domains = String(data.get('domains')).split(/[\s,]+/).filter(Boolean)
+    if (!own_domains.length) return
+    const done = await run(() => runAction('stump.links.manage', { action: 'set_rules', idempotency_key: key(), own_domains, mediums: { published: data.get('published'), handoff: data.get('handoff') } }))
+    if (done !== undefined) { saved(); await onChange() }
   }
   async function preview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -119,15 +122,14 @@ function Links({ rules, admin, onChange }: { rules: RulesView; admin: boolean; o
   }
   return <>
     <h2>Link tags</h2>
-    <p className="st-meta">Links to your own sites get utm_source (the network or venue), utm_medium, utm_campaign and utm_content. Other sites are never tagged.</p>
-    {admin ? <form className="st-panel" onSubmit={save} aria-label="Link tagging rules">
+    {admin ? <form className="st-panel" ref={form} onSubmit={event => { event.preventDefault(); void save() }} aria-label="Link tagging rules">
       <div className="st-form">
-        <label className="st-field">Your domains<input name="domains" required defaultValue={rules.own_domains.join(', ')} placeholder="example.com, docs.example.com" autoComplete="off" /></label>
-        <label className="st-field">Medium for posts Stump publishes<select name="published" defaultValue={rules.mediums?.published ?? 'social'}>{MEDIUMS.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
-        <label className="st-field">Medium for hand-offs<select name="handoff" defaultValue={rules.mediums?.handoff ?? 'community'}>{MEDIUMS.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="st-field">Your domains<input name="domains" required defaultValue={rules.own_domains.join(', ')} placeholder="example.com, docs.example.com" autoComplete="off"
+          onBlur={event => { if (event.target.value.trim() !== rules.own_domains.join(', ')) void save() }} /></label>
+        <label className="st-field">Medium for posts Stump publishes<select name="published" defaultValue={rules.mediums?.published ?? 'social'} onChange={() => void save()}>{MEDIUMS.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="st-field">Medium for hand-offs<select name="handoff" defaultValue={rules.mediums?.handoff ?? 'community'} onChange={() => void save()}>{MEDIUMS.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
       </div>
-      <Outcome message={message} />
-      <div className="st-actions"><button className="st-button primary" type="submit" disabled={busy}>Save link rules</button></div>
+      <div className="st-actions"><Outcome message={message?.error ? message : null} /><Saved shown={shown && !busy} /></div>
     </form> : set ? <p>{rules.own_domains.join(', ')} · posts {rules.mediums?.published}, hand-offs {rules.mediums?.handoff}</p> : <p className="st-meta">The company has not set its link rules yet.</p>}
     {set ? <>
       <h2>Try a link</h2>
@@ -139,7 +141,10 @@ function Links({ rules, admin, onChange }: { rules: RulesView; admin: boolean; o
           <label className="st-field">Campaign<input name="campaign" placeholder="launch" /></label>
         </div>
         <div className="st-actions"><button className="st-button" type="submit" disabled={busy}>Show tags</button></div>
-        {sample ? <div className="st-secret" style={{ marginTop: 12 }}>{sample.text}</div> : null}
+        {sample ? <>
+          <div className="st-secret" style={{ marginTop: 12 }}>{sample.text}</div>
+          <p className="st-meta">Links to {rules.own_domains.join(', ')} get utm_source (where it goes), utm_medium, utm_campaign and utm_content (the post). Links to other sites stay as they are.</p>
+        </> : null}
       </form>
     </> : null}
   </>

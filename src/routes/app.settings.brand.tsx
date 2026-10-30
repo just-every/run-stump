@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, type ReactNode } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, useLoaded, useRun, words } from '../stump/ui/kit.tsx'
+import { Outcome, Saved, pageName, useLoaded, useRun, useSaved, words } from '../stump/ui/kit.tsx'
 import type { Team } from '../stump/ui/types.ts'
 import { Disc } from '../stump/drafting/disc.tsx'
 import type { ClaimView, Product, VoiceView } from '../stump/drafting/view.ts'
@@ -15,11 +15,11 @@ const shortDate = (value: string | null) => value ? new Intl.DateTimeFormat(unde
 const bare = (value: string) => value.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
 /** A proof in a few words: its own label, else its number and where it lives. */
 const proofText = (proof: unknown) => {
-  if (typeof proof === 'string') return bare(proof)
+  if (typeof proof === 'string') return /^https?:\/\//.test(proof) ? pageName(proof) : bare(proof)
   if (!proof || typeof proof !== 'object') return ''
   const { text, document, number, unit, url, date } = proof as Record<string, string | number | undefined>
   const amount = number === undefined ? undefined : unit === undefined ? number : /^[$€£¥]$/u.test(String(unit)) ? `${unit}${number}` : /^(%|x|×)$/iu.test(String(unit)) ? `${number}${unit}` : `${number} ${unit}`
-  return [text ?? document, amount, text || document ? null : url ? bare(String(url)) : null, date].filter(item => item !== undefined && item !== null && item !== '').join(' · ')
+  return [text ?? document, amount, text || document ? null : url ? pageName(String(url)) : null, date].filter(item => item !== undefined && item !== null && item !== '').join(' · ')
 }
 
 function BrandPage() {
@@ -31,12 +31,14 @@ function BrandPage() {
     return { who, products: products.items, claims: claims.items, voices: voices.items, team: team.items }
   })
   const { busy, message, run } = useRun()
+  const { shown, saved } = useSaved()
   const editor = data ? ['owner', 'admin', 'editor'].includes(data.who.person.role) : false
   const writer = data ? data.who.person.role !== 'viewer' : false
   const name = (id: string) => data?.team.find(person => person.id === id)?.display_name ?? 'Someone who left'
 
-  async function act(args: Record<string, unknown>, done = 'Saved') {
+  async function act(args: Record<string, unknown>, done?: string) {
     const result = await run(() => runAction('stump.brand.manage', { ...args, idempotency_key: key() }), () => done)
+    if (result !== undefined) saved()
     await refresh()
     return result
   }
@@ -52,9 +54,9 @@ function BrandPage() {
           <div className="st-name">{product.name}{product.other_names.length ? <div className="st-meta">also {product.other_names.join(', ')}</div> : null}</div>
           {editor ? <div className="st-profile">
             <ProfileField label="tone" product={product.name} value={product.tone} onSave={tone => act({ action: 'product_update', product_id: product.id, tone })} />
-            <ProfileField label="use" product={product.name} value={product.words_use.join(', ')} placeholder="words the product says"
+            <ProfileField label="use" product={product.name} value={product.words_use.join(', ')} add="Add words to use"
               onSave={value => act({ action: 'product_update', product_id: product.id, words_use: list(value) })} allowEmpty />
-            <ProfileField label="avoid" product={product.name} value={product.words_avoid.join(', ')} placeholder="words a draft may not use"
+            <ProfileField label="avoid" product={product.name} value={product.words_avoid.join(', ')} add="Add words to avoid"
               onSave={value => act({ action: 'product_update', product_id: product.id, words_avoid: list(value) })} allowEmpty />
           </div> : <span className="st-meta">tone: {product.tone || 'not set'}{product.words_use.length ? ` · use: ${product.words_use.join(', ')}` : ''}{product.words_avoid.length ? ` · avoid: ${product.words_avoid.join(', ')}` : ''}</span>}
         </li>)}</ul>
@@ -83,16 +85,18 @@ function BrandPage() {
         {writer && data ? <VoiceForm open={!data.voices.length} busy={busy} people={editor ? data.team.filter(person => person.status === 'active') : data.team.filter(person => person.id === data.who.person.id)}
           onAdd={args => act({ action: 'voice_create', ...args }, 'Voice added')} /> : null}
       </section>
-      <div className="st-saved"><Outcome message={message} /></div>
+      <div className="st-saved"><Outcome message={message?.error || (message && message.text !== 'Saved') ? message : null} /><Saved shown={shown && !busy} /></div>
     </section>
   </HydrationUnit>
 }
 
-/** One profile field edited in place: it saves when the field loses focus, with no Save button. */
-function ProfileField({ label, product, value, placeholder, allowEmpty = false, onSave }: { label: string; product: string; value: string; placeholder?: string; allowEmpty?: boolean; onSave: (value: string) => unknown }) {
+/** One profile field edited in place: it saves when the field loses focus, with no Save button. An empty one is an "Add words" action, never a hint that reads as a value. */
+function ProfileField({ label, product, value, add, allowEmpty = false, onSave }: { label: string; product: string; value: string; add?: string; allowEmpty?: boolean; onSave: (value: string) => unknown }) {
+  const [adding, setAdding] = useState(false)
+  if (!value && add && !adding) return <div className="st-inline st-inline-add"><button className="st-add-words" type="button" onClick={() => setAdding(true)}>{add}</button></div>
   return <label className="st-inline">{label}:
-    <input defaultValue={value} placeholder={placeholder} aria-label={`${product} ${label}`}
-      onBlur={event => { const next = event.target.value.trim(); if (next !== value && (next || allowEmpty)) void onSave(next) }} />
+    <input defaultValue={value} aria-label={`${product} ${label}`} autoFocus={adding}
+      onBlur={event => { const next = event.target.value.trim(); if (next !== value && (next || allowEmpty)) void onSave(next); if (!next) setAdding(false) }} />
   </label>
 }
 

@@ -13,11 +13,10 @@ export const navigation: readonly NavEntry[] = [
   { group: 'work', to: '/app/inbox', label: 'Inbox' },
   { group: 'work', to: '/app/ledger', label: 'Ledger' },
   { group: 'settings', to: '/app/settings/brand', label: 'Brand' },
-  { group: 'settings', to: '/app/settings/team', label: 'Team' },
   { group: 'settings', to: '/app/settings/accounts', label: 'Accounts' },
+  { group: 'settings', to: '/app/settings/team', label: 'Team' },
   { group: 'settings', to: '/app/settings/import', label: 'Import' },
   { group: 'settings', to: '/app/settings/publishing', label: 'Publishing' },
   { group: 'settings', to: '/app/settings/connections', label: 'Connections' },
-  { group: 'settings', to: '/app/pause', label: 'Pause' },
   { group: 'settings', to: '/app/settings/agents', label: 'Agents' },
 ]

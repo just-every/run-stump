@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { runAction } from '../../ui/api.ts'
-import { Outcome, useRun } from '../../ui/kit.tsx'
+import { Outcome, Tip, pageName, useRun } from '../../ui/kit.tsx'
 import { readOn } from './labels.ts'
 import type { Rule, RuleKey, Venue } from './types.ts'
 
@@ -22,9 +22,16 @@ export function ruleWords(key: RuleKey, rule: Rule | null): string {
     return parts.join(', ') || 'none'
   }
   if (key === 'disclosure_line') return String(rule.value)
+  if (key === 'self_promotion' && rule.value === 'thread') return threadWords(rule)
   const word = CHOICES[key]?.[String(rule.value)] ?? String(rule.value)
-  const where = rule.thread_url ? rule.thread_url.replace(/^https?:\/\/(www\.)?/, '') : rule.detail
-  return where ? `${word} (${where})` : word
+  return rule.detail ? `${word} (${rule.detail})` : word
+}
+
+/** A self-promotion thread in words: its own description, else what its address says ("weekly thread"). */
+export function threadWords(rule: Pick<Rule, 'detail' | 'thread_url'>): string {
+  if (rule.detail) return rule.detail
+  const cadence = /(daily|weekly|monthly)/i.exec(rule.thread_url ?? '')?.[1]?.toLowerCase()
+  return cadence ? `${cadence} thread` : 'its thread'
 }
 
 const key = () => crypto.randomUUID()
@@ -40,10 +47,13 @@ export function RulesCard({ venue, editor, onSaved }: { venue: Venue; editor: bo
         <div className="st-rule">
           <span className="st-rule-label">{LABELS[name]}</span>
           {/* A thread address is long: it wraps inside the card rather than widening the page. */}
-          {editor ? <button className="st-value" type="button" style={{ overflowWrap: 'anywhere', minWidth: 0, textAlign: 'left' }} aria-expanded={editing === name} onClick={() => setEditing(editing === name ? null : name)}>{ruleWords(name, rule)}</button>
-            : <span style={{ overflowWrap: 'anywhere', minWidth: 0 }}>{ruleWords(name, rule)}</span>}
+          <span className="st-rule-value">
+            {editor ? <button className="st-value" type="button" aria-expanded={editing === name} onClick={() => setEditing(editing === name ? null : name)}>{ruleWords(name, rule)}</button>
+              : <span>{ruleWords(name, rule)}</span>}
+            {name === 'self_promotion' && rule?.thread_url ? <Tip label="Open the thread"><a className="st-rule-thread" href={rule.thread_url} target="_blank" rel="noreferrer noopener" aria-label="Open the thread">↗</a></Tip> : null}
+          </span>
           <span className="st-rule-source">{rule ? rule.sourced
-            ? <><a href={rule.source_url!} target="_blank" rel="noreferrer noopener">source ↗</a> · read {readOn(rule.read_at)}</>
+            ? <><a href={rule.source_url!} target="_blank" rel="noreferrer noopener">{pageName(rule.source_url!)} ↗</a> · read {readOn(rule.read_at)}</>
             : <span className="st-chip held">unsourced</span> : null}</span>
         </div>
         {editing === name ? <RuleEditor venue={venue} name={name} rule={rule} onSaved={onSaved} onClose={() => setEditing(null)} /> : null}

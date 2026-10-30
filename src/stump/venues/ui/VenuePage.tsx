@@ -2,11 +2,11 @@ import { Link } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
-import { Outcome, Tip, useLoaded, useRun } from '../../ui/kit.tsx'
+import { Outcome, Tip, monthYear, networkWord, useLoaded, useRun, words } from '../../ui/kit.tsx'
 import type { Team } from '../../ui/types.ts'
 import { DETAIL_LABELS } from '../kinds.ts'
 import { kindLabel, limitWords, nextOpen, routeLabel, statusLabel, statusTone } from './labels.ts'
-import { RulesCard } from './RulesCard.tsx'
+import { RulesCard, threadWords } from './RulesCard.tsx'
 import type { Members, RouteAnswer, Venue, VenueItem } from './types.ts'
 import { VenueForm } from './VenueForm.tsx'
 
@@ -131,7 +131,7 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
     {members.items.length ? <ul className="st-list">{members.items.map(member => <li className="st-row" key={member.person_id}>
       <div className="st-row-main">
         <div className="st-name">{member.display_name ?? names.get(member.person_id) ?? 'Teammate'}</div>
-        <div className="st-meta">{[member.handle, member.karma !== null ? `${member.karma.toLocaleString('en-US')} karma` : null, member.joined_on ? `joined ${member.joined_on}` : null].filter(Boolean).join(' · ')}</div>
+        <div className="st-meta">{[member.handle, member.karma !== null ? `${member.karma.toLocaleString('en-US')} karma` : null, member.joined_on ? `joined ${monthYear(member.joined_on)}` : null].filter(Boolean).join(' · ')}</div>
       </div>
       {member.eligible ? <span className="st-chip ok">Can post</span> : <span className="st-chip held">{member.unmet.map(gateWords).join(', ')}</span>}
     </li>)}</ul> : <p className="st-meta">No one on the team is a member yet.</p>}
@@ -159,7 +159,7 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
 function DetailsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
   const howTo = Object.entries(venue.how_to_post).filter(([, value]) => value).map(([name, value]) => name === 'text' ? String(value) : `${name}: ${String(value)}`).join(' · ')
   const rows: Array<[string, string | null]> = [
-    ['Address', venue.url], ['Platform', venue.platform], ['Priority', venue.priority],
+    ['Address', venue.url], ['Platform', venue.platform ? networkWord(venue.platform) : null], ['Priority', venue.priority ? `${venue.priority[0]!.toUpperCase()}${venue.priority.slice(1)}` : null],
     ...Object.entries(venue.details).filter(([, value]) => value !== null && value !== '').map(([name, value]) => [DETAIL_LABELS[name] ?? name, Array.isArray(value) ? value.join(', ') : String(value)] as [string, string]),
     ['Who reads it', venue.audience], ['Why it matters', venue.why], ['What readers get', venue.reader_value], ['How to post', howTo || null],
     ['Reception', venue.reception], ['Notes', venue.notes],
@@ -174,8 +174,19 @@ function DetailsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
     </> : null}
     {items.length ? <>
       <h3 style={{ fontSize: 'var(--stump-size-body)', margin: '16px 0 4px' }}>Items aimed here</h3>
-      <ul className="st-list">{items.map(item => <li className="st-row" key={item.id}><div className="st-row-main"><div className="st-name">{item.format[0]!.toUpperCase() + item.format.slice(1)} · {item.state}</div>
-        <div className="st-meta">{item.hold?.reason ?? item.history[0]?.reason ?? ''}</div></div></li>)}</ul>
+      <ul className="st-list">{items.map(item => <li className="st-row" key={item.id}><div className="st-row-main"><div className="st-name">{item.format[0]!.toUpperCase() + item.format.slice(1)} · {words(item.state)}</div>
+        <div className="st-meta">{holdWords(venue, item)}</div></div></li>)}</ul>
     </> : null}
   </section>
+}
+
+/** Why an item aimed here waits, in words: the rule that holds it, never its code. */
+function holdWords(venue: Venue, item: VenueItem): string {
+  const rule = item.hold?.rule ?? (item.hold?.reason && /^[a-z_]+$/.test(item.hold.reason) ? item.hold.reason : null)
+  if (rule === 'self_promotion') return `Held: outside the ${venue.rules.self_promotion ? threadWords(venue.rules.self_promotion) : 'promotion thread'}`
+  if (rule === 'links') return 'Held: links are not allowed here'
+  if (rule === 'posting') return 'Held: members post here, so it goes to a member'
+  if (rule) return `Held by the ${words(rule)} rule`
+  const reason = item.hold?.reason ?? item.history[0]?.reason ?? ''
+  return /^[a-z_]+$/.test(reason) ? words(reason) : reason
 }

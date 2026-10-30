@@ -3,7 +3,8 @@ import { useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
 import { Icon } from '../stump/ui/icons.tsx'
-import { Chip, Initials, Outcome, useLoaded, useRun, when, words } from '../stump/ui/kit.tsx'
+import { Chip, Initials, MoreMenu, Outcome, useLoaded, useRun, when, words } from '../stump/ui/kit.tsx'
+import { rowTitle, shortWhen, type Handoff } from '../stump/handoffs/ui/words.ts'
 import type { RemovedPerson, RoleChange, Team, TeamPerson } from '../stump/ui/types.ts'
 
 export const Route = createFileRoute('/app/settings/team')({ component: TeamPage })
@@ -83,40 +84,63 @@ function removedNote(person: RemovedPerson) {
   return `${person.display_name} removed.${left.length ? ` ${left.join('; ')}.` : ''}`
 }
 
+/** A teammate's row: the role as text with a dot (SPEC §4.2); changing the role and removing them live in the row's ⋯ menu (H13, H15). */
 function Person({ person, manage, owner, self, onChange, label }: { person: TeamPerson; manage: boolean; owner: boolean; self: boolean; onChange(note: string): void; label(value: string): string }) {
   const { busy, message, run } = useRun()
-  const [confirming, setConfirming] = useState(false)
+  const [mode, setMode] = useState<'role' | 'remove' | null>(null)
+  const [open, setOpen] = useState<Handoff[] | null>(null)
   const choices = owner && !self ? ['owner', ...ROLES] : ROLES
   const editable = manage && person.role !== 'owner'
+  async function askRemove() {
+    setMode('remove')
+    // Removing someone lists their open hand-offs first, so nobody is surprised by who must pick them up.
+    const queue = await run(() => runAction<{ items: Handoff[] }>('stump.handoffs.manage', { action: 'queue' }))
+    setOpen(queue ? queue.items.filter(item => item.person_id === person.id && ['open', 'join_first', 'held'].includes(item.state)) : [])
+  }
   return <tr>
     <td><div className="st-cell-person"><Initials name={person.display_name} /><div className="st-row-main">
-      <div className="st-name">{person.display_name}{self ? ' (you)' : ''}</div><div className="st-meta">{person.email}</div><Outcome message={message} />
+      <div className="st-name">{person.display_name}{self ? ' (you)' : ''}</div><div className="st-meta">{person.email}</div>
+      {mode === 'role' ? <div className="st-team-edit">
+        <label className="st-field">Role<select className="st-select" value={person.role} disabled={busy}
+          onChange={event => void run(() => runAction<RoleChange>('stump.team.manage', { action: 'set_role', idempotency_key: key(), person_id: person.id, role: event.target.value }))
+            .then(changed => { if (changed) { setMode(null); onChange(`${changed.display_name} is now ${words(changed.role)}.`) } })}>
+          {choices.map(role => <option key={role} value={role}>{role === 'owner' ? 'Owner (transfer)' : label(role)}</option>)}
+        </select></label>
+        <button className="st-button quiet small" type="button" onClick={() => setMode(null)}>Done</button>
+      </div> : null}
+      {mode === 'remove' ? <div className="st-team-edit" role="group" aria-label={`Remove ${person.display_name}`}>
+        <p className="st-team-confirm">{open === null ? `Remove ${person.display_name}?` : open.length
+          ? `${open.length} open ${open.length === 1 ? 'hand-off needs' : 'hand-offs need'} someone new when ${person.display_name} goes:`
+          : `${person.display_name} has no open hand-offs.`}</p>
+        {open?.length ? <ul className="st-team-handoffs">{open.map(item => <li key={item.id}><a href={`/app/handoffs/${item.id}`}>{rowTitle(item)}</a> <span className="st-meta">· {shortWhen(item)}</span></li>)}</ul> : null}
+        <div className="st-actions">
+          <button className="st-button danger small" type="button" disabled={busy || open === null} onClick={() => void run(() => runAction<RemovedPerson>('stump.team.manage', { action: 'remove', idempotency_key: key(), person_id: person.id }))
+            .then(removed => { if (removed) onChange(removedNote(removed)) })}>Remove {person.display_name}</button>
+          <button className="st-button quiet small" type="button" onClick={() => { setMode(null); setOpen(null) }}>Keep</button>
+        </div>
+      </div> : null}
+      <Outcome message={message?.error ? message : null} />
     </div></div></td>
-    <td>{editable
-      ? <select className="st-select" aria-label={`Role for ${person.display_name}`} value={person.role} disabled={busy}
-        onChange={event => void run(() => runAction<RoleChange>('stump.team.manage', { action: 'set_role', idempotency_key: key(), person_id: person.id, role: event.target.value }))
-          .then(changed => { if (changed) onChange(`${changed.display_name} is now ${words(changed.role)}.`) })}>
-        {choices.map(role => <option key={role} value={role}>{role === 'owner' ? 'Owner (transfer)' : label(role)}</option>)}
-      </select>
-      : <span><span className="st-dot" aria-hidden="true" />{label(person.role)}</span>}</td>
+    <td><span className="st-team-role"><span className="st-dot" aria-hidden="true" />{label(person.role)}</span></td>
     <td>{person.connection ? <Chip>{label(person.connection)}</Chip> : <span className="st-meta">Not set</span>}</td>
-    {manage ? <td>{editable ? confirming
-      ? <button className="st-button danger small" type="button" disabled={busy} onClick={() => void run(() => runAction<RemovedPerson>('stump.team.manage', { action: 'remove', idempotency_key: key(), person_id: person.id }))
-        .then(removed => { if (removed) onChange(removedNote(removed)) })}>Confirm removal</button>
-      : <button className="st-button danger small" type="button" onClick={() => setConfirming(true)}>Remove</button> : null}</td> : null}
+    {manage ? <td className="st-team-more">{editable ? <MoreMenu label={`More actions for ${person.display_name}`} items={[
+      { label: 'Change role', run: () => setMode('role') },
+      { label: 'Remove…', danger: true, run: () => void askRemove() },
+    ]} /> : null}</td> : null}
   </tr>
 }
 
 function Pending({ person, manage, onChange, label }: { person: TeamPerson; manage: boolean; onChange(note: string): void; label(value: string): string }) {
-  const { busy, message, run } = useRun()
+  const { message, run } = useRun()
   return <tr>
     <td><div className="st-cell-person"><Initials name={person.display_name} /><div className="st-row-main">
       <div className="st-name">{person.display_name}</div><div className="st-meta">{[person.email, person.connection ? label(person.connection) : null].filter(Boolean).join(' · ')}</div><Outcome message={message} />
     </div></div></td>
-    <td><span className="st-dot muted" aria-hidden="true" />{label(person.role)}</td>
+    <td><span className="st-team-role"><span className="st-dot muted" aria-hidden="true" />{label(person.role)}</span></td>
     <td className="st-meta">{person.invited_at ? when(person.invited_at) : ''}</td>
-    {manage ? <td><button className="st-button danger small" type="button" disabled={busy}
-      onClick={() => void run(() => runAction<RemovedPerson>('stump.team.manage', { action: 'remove', idempotency_key: key(), person_id: person.id }))
-        .then(removed => { if (removed) onChange(`Invitation to ${removed.email} cancelled.`) })}>Cancel invitation</button></td> : null}
+    {manage ? <td className="st-team-more"><MoreMenu label={`More actions for ${person.display_name}`} items={[
+      { label: 'Cancel invitation', danger: true, run: () => void run(() => runAction<RemovedPerson>('stump.team.manage', { action: 'remove', idempotency_key: key(), person_id: person.id }))
+        .then(removed => { if (removed) onChange(`Invitation to ${removed.email} cancelled.`) }) },
+    ]} /></td> : null}
   </tr>
 }

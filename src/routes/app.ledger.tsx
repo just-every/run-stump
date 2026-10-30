@@ -5,7 +5,7 @@ import type { LedgerEntry } from '../stump/ledger/entry.ts'
 import { screenStyles } from '../stump/ledger/screen-styles.ts'
 import { NETWORK_OPTIONS, ROUTE_WORDS, STATE_WORDS, networkName } from '../stump/ledger/words.ts'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
+import { Chip, Outcome, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
 import type { Team } from '../stump/ui/types.ts'
 
 export const Route = createFileRoute('/app/ledger')({ component: LedgerPage })
@@ -50,7 +50,7 @@ function LedgerPage() {
 
   return <HydrationUnit>
     <style>{screenStyles}</style>
-    <section className="st-page" aria-labelledby="ledger-title" style={{ maxWidth: 1100 }}>
+    <section className="st-page st-ledger-screen" aria-labelledby="ledger-title">
       <h1 id="ledger-title">Ledger</h1>
       <div className="st-bar" role="search">
         <input className="st-search" type="search" aria-label="Search ledger" placeholder="Search ledger…" value={typed} onChange={event => setTyped(event.target.value)} />
@@ -93,17 +93,30 @@ function LedgerPage() {
               <td className="who">{entry.person_id
                 ? <button className="st-row-button" type="button" onClick={() => set('person_id', entry.person_id!)}>{entry.by}</button> : entry.by}</td>
               <td className="route">{ROUTE_WORDS[entry.route as string] ?? String(entry.route)}</td>
-              <td className="state"><span className={`st-chip${entry.state === 'posted' ? ' good' : entry.state === 'failed' ? ' bad' : ''}`}>{STATE_WORDS[entry.state as string] ?? String(entry.state)}</span>
+              <td className="state"><StateChip state={String(entry.state)} />
                 {entry.confirmation === 'person' && entry.state === 'posted' ? <span className="st-quiet">confirmed by {person(entry.person_id) ?? 'the member'}</span> : null}</td>
               <td className="link">{entry.url ? <a href={String(entry.url)} target="_blank" rel="noreferrer noopener" aria-label={`View post on ${networkName(entry.network) || 'the network'}`}>View ↗</a> : null}</td>
+              <td className="st-phone">
+                <button className="st-row-button" type="button" aria-expanded={open} aria-controls={`entry-${entry.id}`} onClick={() => setOpenId(open ? null : entry.id)}>
+                  <span className="st-phone-main">{[entry.venue_name ?? networkName(entry.network), entry.by].filter(Boolean).join(' · ')}</span>
+                  <span className="st-phone-meta">{[at ? when(at) : 'Not posted', ROUTE_WORDS[entry.route as string] ?? entry.route, STATE_WORDS[entry.state as string] ?? entry.state].filter(Boolean).join(' · ')}</span>
+                </button>
+                {entry.url ? <a href={String(entry.url)} target="_blank" rel="noreferrer noopener" aria-label={`View post on ${networkName(entry.network) || 'the network'}`}>View ↗</a> : null}
+              </td>
             </tr>
-            {open ? <tr className="detail-row" id={`entry-${entry.id}`}><td colSpan={6}><Detail entry={entry} mayCorrect={mayCorrect} admin={admin} person={person} onChange={() => void refresh()} /></td></tr> : null}
+            {open ? <tr className="detail-row" id={`entry-${entry.id}`}><td colSpan={7}><Detail entry={entry} mayCorrect={mayCorrect} admin={admin} person={person} onChange={() => void refresh()} /></td></tr> : null}
           </Fragment>
         })}</tbody>
       </table> : null}
-      {data && data.items.length < data.total ? <div className="st-more"><button className="st-button" type="button" onClick={() => setLimit(current => current + STEP)}>Show more</button></div> : null}
+      {data && data.items.length < data.total ? <div className="st-show-more"><button className="st-button" type="button" onClick={() => setLimit(current => current + STEP)}>Show more</button></div> : null}
     </section>
   </HydrationUnit>
+}
+
+/** A ledger state as a chip: Posted on the success tint with its dot, a failure on the danger tint, the rest neutral. */
+function StateChip({ state }: { state: string }) {
+  const tone = state === 'posted' ? 'success' : state === 'failed' ? 'danger' : state === 'uncertain' || state === 'removed' ? 'held' : 'neutral'
+  return <Chip tone={tone}>{tone === 'success' ? <span className="st-dot" aria-hidden="true" /> : null}{STATE_WORDS[state] ?? state}</Chip>
 }
 
 function Detail({ entry, mayCorrect, admin, person, onChange }: { entry: LedgerEntry; mayCorrect: boolean; admin: boolean; person(id: string | null): string | null; onChange(): void }) {

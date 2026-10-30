@@ -17,6 +17,9 @@ const paths = {
   clock: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>,
   arrowRight: <><path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5" /></>,
   close: <><path d="M6 6l12 12M18 6 6 18" /></>,
+  more: <><circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" /><circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none" /></>,
+  calendar: <><rect x="4" y="5.5" width="16" height="14.5" rx="2" /><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" /></>,
+  chevronDown: <><path d="m7 10 5 5 5-5" /></>,
   key: <><circle cx="8" cy="15" r="3.5" /><path d="m10.5 12.5 8-8M15.5 7.5l2.5 2.5" /></>,
 } as const
 
@@ -33,7 +36,7 @@ export function Icon({ name, label }: { name: IconName; label?: string }) {
  */
 const byPath: ReadonlyArray<readonly [string, IconName]> = [
   ['/app/compose', 'pencil'], ['/app/handoffs', 'arrows'], ['/app/venues', 'store'], ['/app/listening', 'ear'],
-  ['/app/inbox', 'mail'], ['/app/ledger', 'ledger'], ['/app/settings', 'gear'], ['/app/pause', 'pause'], ['/app', 'home'],
+  ['/app/inbox', 'mail'], ['/app/ledger', 'ledger'], ['/app/settings', 'gear'], ['/app', 'home'],
 ]
 export function navIcon(path: string): IconName {
   return byPath.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`))?.[1] ?? 'home'

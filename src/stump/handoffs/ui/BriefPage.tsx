@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
-import { Chip, Disc, Outcome, useLoaded } from '../../ui/kit.tsx'
+import { Chip, Disc, Outcome, pageName, useLoaded } from '../../ui/kit.tsx'
 import type { IconName } from '../../ui/icons.tsx'
 import { handoffStyles } from './styles.ts'
 import { briefTitle, dayOf, dueLine, LAPSE_AT, ruleLines, say, STATE, type Handoff } from './words.ts'
@@ -82,9 +82,10 @@ export function BriefPage({ handoffId }: { handoffId: string }) {
   </HydrationUnit>
 }
 
+/** A fact's proof named by its page ("changelog"), or by its own words. */
 const proofWords = (proof: unknown): string | null => {
-  if (typeof proof === 'string') return proof.replace(/^https?:\/\/(www\.)?/, '')
-  if (proof && typeof proof === 'object') { const value = proof as { text?: string; document?: string; url?: string }; return value.text ?? value.document ?? value.url?.replace(/^https?:\/\/(www\.)?/, '') ?? null }
+  if (typeof proof === 'string') return /^https?:\/\//.test(proof) ? pageName(proof) : proof
+  if (proof && typeof proof === 'object') { const value = proof as { text?: string; document?: string; url?: string }; return value.text ?? value.document ?? (value.url ? pageName(value.url) : null) }
   return null
 }
 

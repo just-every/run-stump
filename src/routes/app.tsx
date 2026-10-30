@@ -83,6 +83,8 @@ function AppLayout() {
     document.addEventListener('keydown', key)
     return () => document.removeEventListener('keydown', key)
   }, [drawer])
+  // First-run setup is its own paper page, outside the shell (SPEC §4.2).
+  if (path === '/app/setup') return <><style>{appStyles}</style><Outlet /></>
   return <>
     <style>{appStyles}</style>
     <div className={drawer ? 'st-shell drawer-open' : 'st-shell'}>
@@ -95,7 +97,7 @@ function AppLayout() {
               <button type="button" className="st-icon-button st-menu-button" aria-label="Menu" aria-controls="st-side" aria-expanded={drawer} onClick={() => setDrawer(!drawer)}><Icon name="menu" /></button>
             </Tip>
             <a className="st-topbar-brand" href="/app"><img src="/brand/stump-mark.svg" alt="" width="28" height="28" />{branding.name}</a>
-            <PauseControl role={data?.person.role} />
+            <PauseControl role={data?.person.role} personId={data?.person.id} />
             <span className="st-topbar-divider" aria-hidden="true" />
             {data ? <Avatar name={data.person.display_name} email={data.person.email} /> : <span className="st-avatar" aria-hidden="true" />}
           </header>

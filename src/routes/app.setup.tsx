@@ -1,0 +1,118 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
+import { HydrationUnit } from '../base/hydration/unit'
+import { me, runAction } from '../stump/ui/api.ts'
+import { Icon } from '../stump/ui/icons.tsx'
+import { Outcome, Saved, accountWord, useLoaded, useRun, useSaved } from '../stump/ui/kit.tsx'
+
+// First-run setup (SPEC §4.2): after the owner confirms their account on Base's
+// /setup, Stump asks only what must be answered (L6): the company, its product,
+// one account and the venues. The company site prefills the names (L5); every
+// value stays editable and saves as you go.
+export const Route = createFileRoute('/app/setup')({ head: () => ({ meta: [{ title: 'Set up Stump' }] }), component: SetupPage })
+
+const key = () => crypto.randomUUID()
+interface Product { id: string; name: string; urls: string[] }
+interface Account { id: string; network: string; handle: string; display_name: string | null; state: string }
+
+function SetupPage() {
+  const { data, refresh } = useLoaded(async () => {
+    const who = await me()
+    const may = (tool: string) => who.actions.includes(tool)
+    const [products, accounts, venues] = await Promise.all([
+      runAction<{ items: Product[]; company_names: string[] }>('stump.brand.manage', { action: 'product_list' }),
+      may('stump.accounts.connect') ? runAction<{ items: Account[] }>('stump.accounts.connect', { action: 'list' }) : Promise.resolve({ items: [] as Account[] }),
+      runAction<{ total: number }>('stump.venues.manage', { action: 'list' }),
+    ])
+    return { who, products: products.items, company: products.company_names[0] ?? '', accounts: accounts.items.filter(account => account.state === 'connected'), venues: venues.total }
+  })
+  const { busy, message, run } = useRun()
+  const { shown, saved } = useSaved()
+  const [site, setSite] = useState('')
+  const [names, setNames] = useState<{ company: string; product: string } | null>(null)
+  const product = data?.products[0] ?? null
+  const company = names?.company ?? data?.company ?? ''
+  const productName = names?.product ?? product?.name ?? ''
+
+  async function saveCompany(value: string) {
+    if (!value || value === data?.company) return
+    if (await run(() => runAction('stump.brand.manage', { action: 'company_update', company_names: [value], idempotency_key: key() }))) { saved(); await refresh() }
+  }
+  async function saveProduct(value: string, url?: string) {
+    if (!value || (value === product?.name && !url)) return
+    const urls = url ? [...new Set([...(product?.urls ?? []), url])] : undefined
+    const done = await run(() => product
+      ? runAction('stump.brand.manage', { action: 'product_update', product_id: product.id, name: value, ...(urls ? { urls } : {}), idempotency_key: key() })
+      : runAction('stump.brand.manage', { action: 'product_create', name: value, ...(urls ? { urls } : {}), idempotency_key: key() }))
+    if (done) { saved(); await refresh() }
+  }
+  /** URL first: the site's own name fills the company and the product where they are still empty, and stays editable. */
+  async function readSite() {
+    if (!site.trim()) return
+    const read = await run(() => runAction<{ url: string; name: string | null }>('stump.brand.manage', { action: 'site_read', url: site.trim() }))
+    if (!read?.name) return
+    const next = { company: data?.company || read.name, product: product?.name || read.name }
+    setNames(next)
+    if (!data?.company) await saveCompany(next.company)
+    await saveProduct(next.product, read.url)
+  }
+
+  return <HydrationUnit>
+    <div className="st-setup">
+      <a className="st-setup-brand" href="/app"><img src="/brand/stump-mark.svg" alt="" width="40" height="40" />Stump</a>
+      <img className="st-setup-plate" src="/art/stump-small.webp" alt="" width="240" height="154" />
+      <h1>Set up Stump</h1>
+      <section className="st-setup-card" aria-label="Setup steps">
+        <ol className="st-setup-steps">
+          <li>
+            <span className="st-setup-num" aria-hidden="true">1</span>
+            <div>
+              <h2 id="setup-company">Company</h2>
+              <input className="st-setup-value" aria-labelledby="setup-company" key={`c-${company}`} defaultValue={company} placeholder="Your company" maxLength={120} autoComplete="organization"
+                onBlur={event => void saveCompany(event.target.value.trim())} />
+              <label className="st-setup-site"><span className="st-sr">Company site</span>
+                <input value={site} placeholder="Company site, to fill these in" inputMode="url" autoComplete="url" maxLength={2048}
+                  onChange={event => setSite(event.target.value)} onBlur={() => void readSite()} onKeyDown={event => { if (event.key === 'Enter') void readSite() }} />
+              </label>
+            </div>
+          </li>
+          <li>
+            <span className="st-setup-num" aria-hidden="true">2</span>
+            <div>
+              <h2 id="setup-product">Product</h2>
+              <input className="st-setup-value" aria-labelledby="setup-product" key={`p-${productName}`} defaultValue={productName} placeholder="Your product" maxLength={120}
+                onBlur={event => void saveProduct(event.target.value.trim())} />
+            </div>
+          </li>
+          <li>
+            <span className="st-setup-num" aria-hidden="true">3</span>
+            <div>
+              <h2>Connect an account</h2>
+              {data?.accounts.length ? <p className="st-setup-done"><span className="st-tick" aria-hidden="true"><Icon name="check" /></span>{data.accounts.map(account => accountWord(account)).join(', ')}</p> : null}
+              <div className="st-setup-pills">
+                <a className="st-setup-pill" href="/app/settings/accounts?connect=bluesky">Bluesky</a>
+                <a className="st-setup-pill" href="/app/settings/accounts?connect=mastodon">Mastodon</a>
+              </div>
+            </div>
+          </li>
+          <li>
+            <span className="st-setup-num" aria-hidden="true">4</span>
+            <div>
+              <h2>Bring your venues</h2>
+              {data?.venues ? <p className="st-setup-done"><span className="st-tick" aria-hidden="true"><Icon name="check" /></span>{data.venues} {data.venues === 1 ? 'venue' : 'venues'}</p> : null}
+              <div className="st-setup-pills">
+                <a className="st-setup-pill" href="/app/venues?import=1">Import a venue list (Markdown or CSV)</a>
+                <a className="st-setup-pill" href="/app/settings/import">Switch from Buffer</a>
+              </div>
+            </div>
+          </li>
+        </ol>
+        <div className="st-setup-foot">
+          <Outcome message={message?.error ? message : null} />
+          <Saved shown={shown && !busy} />
+          <a className="st-button primary large" href="/app">Open Today <span aria-hidden="true">→</span></a>
+        </div>
+      </section>
+    </div>
+  </HydrationUnit>
+}

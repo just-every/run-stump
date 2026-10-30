@@ -16,6 +16,7 @@ import { Route as AppInboxRouteImport } from './routes/app.inbox'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
 import { Route as AppListeningRouteImport } from './routes/app.listening'
 import { Route as AppPauseRouteImport } from './routes/app.pause'
+import { Route as AppSetupRouteImport } from './routes/app.setup'
 import { Route as AppConnectedNetworkRouteImport } from './routes/app.connected.$network'
 import { Route as AppHandoffsIndexRouteImport } from './routes/app.handoffs.index'
 import { Route as AppHandoffsHandoffIdRouteImport } from './routes/app.handoffs.$handoffId'
@@ -63,6 +64,11 @@ const AppListeningRoute = AppListeningRouteImport.update({
 const AppPauseRoute = AppPauseRouteImport.update({
   id: '/pause',
   path: '/pause',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSetupRoute = AppSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => AppRoute,
 } as any)
 const AppConnectedNetworkRoute = AppConnectedNetworkRouteImport.update({
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/pause': typeof AppPauseRoute
+  '/app/setup': typeof AppSetupRoute
   '/app/': typeof AppIndexRoute
   '/app/connected/$network': typeof AppConnectedNetworkRoute
   '/app/handoffs/$handoffId': typeof AppHandoffsHandoffIdRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/pause': typeof AppPauseRoute
+  '/app/setup': typeof AppSetupRoute
   '/app': typeof AppIndexRoute
   '/app/connected/$network': typeof AppConnectedNetworkRoute
   '/app/handoffs/$handoffId': typeof AppHandoffsHandoffIdRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/pause': typeof AppPauseRoute
+  '/app/setup': typeof AppSetupRoute
   '/app/': typeof AppIndexRoute
   '/app/connected/$network': typeof AppConnectedNetworkRoute
   '/app/handoffs/$handoffId': typeof AppHandoffsHandoffIdRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/app/ledger'
     | '/app/listening'
     | '/app/pause'
+    | '/app/setup'
     | '/app/'
     | '/app/connected/$network'
     | '/app/handoffs/$handoffId'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/app/ledger'
     | '/app/listening'
     | '/app/pause'
+    | '/app/setup'
     | '/app'
     | '/app/connected/$network'
     | '/app/handoffs/$handoffId'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/app/ledger'
     | '/app/listening'
     | '/app/pause'
+    | '/app/setup'
     | '/app/'
     | '/app/connected/$network'
     | '/app/handoffs/$handoffId'
@@ -320,6 +332,13 @@ declare module '@tanstack/react-router' {
       path: '/pause'
       fullPath: '/app/pause'
       preLoaderRoute: typeof AppPauseRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/setup': {
+      id: '/app/setup'
+      path: '/setup'
+      fullPath: '/app/setup'
+      preLoaderRoute: typeof AppSetupRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/connected/$network': {
@@ -422,6 +441,7 @@ interface AppRouteChildren {
   AppLedgerRoute: typeof AppLedgerRoute
   AppListeningRoute: typeof AppListeningRoute
   AppPauseRoute: typeof AppPauseRoute
+  AppSetupRoute: typeof AppSetupRoute
   AppIndexRoute: typeof AppIndexRoute
   AppConnectedNetworkRoute: typeof AppConnectedNetworkRoute
   AppHandoffsHandoffIdRoute: typeof AppHandoffsHandoffIdRoute
@@ -443,6 +463,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLedgerRoute: AppLedgerRoute,
   AppListeningRoute: AppListeningRoute,
   AppPauseRoute: AppPauseRoute,
+  AppSetupRoute: AppSetupRoute,
   AppIndexRoute: AppIndexRoute,
   AppConnectedNetworkRoute: AppConnectedNetworkRoute,
   AppHandoffsHandoffIdRoute: AppHandoffsHandoffIdRoute,
