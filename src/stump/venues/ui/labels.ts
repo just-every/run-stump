@@ -5,9 +5,17 @@ export const kindLabel = (kind: string) => (KIND_FIELDS as Record<string, { labe
 export const statusLabel = (status: string) => STATUS_LABELS[status] ?? status
 export const routeLabel = (route: string) => ROUTE_LABELS[route] ?? route
 
-/** The one route a list shows: a pitch for an editorial venue, else the widest route its rules open. */
-export function primaryRoute(venue: Pick<Venue, 'status' | 'routes'>): string | null {
-  if (venue.status === 'editorial') return 'Pitch'
+/** Venues a company pitches, never posts in: a person there decides what runs. */
+const PITCHED = ['podcast', 'newsletter', 'journalist', 'publication']
+
+/**
+ * The one route a list shows (display only; the routes field keeps the interface's words): none yet for a candidate or a
+ * venue whose rules nobody has read, a pitch for a venue you pitch, else the widest route its rules open.
+ */
+export function primaryRoute(venue: Pick<Venue, 'kind' | 'status' | 'routes' | 'rules'>): string | null {
+  if (venue.status === 'candidate') return null
+  if (PITCHED.includes(venue.kind) || venue.status === 'editorial') return 'Pitch'
+  if (!Object.values(venue.rules).some(Boolean)) return null
   const route = ['publish', 'handoff_draft', 'handoff_brief'].find(item => venue.routes.includes(item))
   return route ? routeLabel(route) : null
 }

@@ -16,14 +16,26 @@ const cap = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 export const rowTitle = (handoff: Handoff) => `${handoff.venue.name} · ${cap(placeOf(handoff))}`
 export const briefTitle = (handoff: Handoff) => `Post in: ${handoff.venue.name} ${placeOf(handoff).toLowerCase()}`
 
-const DAY = 86_400_000
-/** "Due Thu" within the week, "Due Nov 12" after; a done hand-off shows its date. */
+/** Whole days from the viewer's today to the day of `at`: 0 today, 1 tomorrow, -1 yesterday. */
+function daysFrom(at: Date, now: Date): number {
+  const start = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  return Math.round((start(at) - start(now)) / 86_400_000)
+}
+/**
+ * When a hand-off is due or was done, in the viewer's own days: "Due today · 4:00 PM", "Due tomorrow", "Due Thu" up to
+ * six days out, else "Due Nov 12"; a posted one "Posted today" or "Posted Oct 27"; a skipped or expired one its date.
+ */
 export function shortWhen(handoff: Handoff, now = Date.now()): string {
-  const at = handoff.state === 'posted' ? handoff.posted_at : handoff.state === 'skipped' || handoff.state === 'expired' ? handoff.updated_at : handoff.due_at
-  if (!at) return ''
-  const date = new Date(at), soon = date.getTime() - now < 6 * DAY && date.getTime() > now - DAY
-  const day = new Intl.DateTimeFormat(undefined, soon ? { weekday: 'short' } : { month: 'short', day: 'numeric' }).format(date)
-  return ['open', 'join_first', 'held'].includes(handoff.state) ? `Due ${day}` : day
+  const iso = handoff.state === 'posted' ? handoff.posted_at : handoff.state === 'skipped' || handoff.state === 'expired' ? handoff.updated_at : handoff.due_at
+  if (!iso) return ''
+  const date = new Date(iso), days = daysFrom(date, new Date(now))
+  const dated = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)
+  if (handoff.state === 'posted') return days === 0 ? 'Posted today' : `Posted ${dated}`
+  if (!['open', 'join_first', 'held'].includes(handoff.state)) return dated
+  if (days === 0) return `Due today · ${new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date)}`
+  if (days === 1) return 'Due tomorrow'
+  if (days >= 2 && days <= 6) return `Due ${new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(date)}`
+  return days < 0 ? `Was due ${dated}` : `Due ${dated}`
 }
 /** "Due Thu, Nov 5 · 4:00 PM MT". */
 export function dueLine(iso: string | null): string {

@@ -77,7 +77,7 @@ function Venues() {
   const rows: Array<[string, string | null, string | null]> = [['r/healthIT', 'Members post', 'AI text banned'], ['Indie Hackers', null, 'Ready'], ['Hacker News', 'Show HN by hand', null], ['Healthcare IT Today', 'Editorial', null]]
   return <div className="lp-card lp-feature">
     <p className="lp-card-title">Venue register</p>
-    <ul className="lp-rows">{rows.map(([name, meta, chip]) => <li key={name}><span className="lp-row-name">{name}</span>{meta ? <span className="lp-row-meta">{meta}</span> : null}{chip ? <span className="lp-chip">{chip}</span> : null}</li>)}</ul>
+    <ul className="lp-rows">{rows.map(([name, meta, chip]) => <li key={name}><span className="lp-row-text"><span className="lp-row-name">{name}</span>{meta ? <span className="lp-row-meta">{meta}</span> : null}</span>{chip ? <span className="lp-chip">{chip}</span> : null}</li>)}</ul>
   </div>
 }
 

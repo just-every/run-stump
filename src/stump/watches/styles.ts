@@ -48,7 +48,8 @@ export const listeningStyles = `
 .st-listen .st-source-box { display: grid; gap: var(--stump-space); padding: calc(var(--stump-space) * 1.5) 0; border-top: 1px solid var(--stump-hairline); }
 .st-listen .st-blocked { display: flex; flex-wrap: wrap; gap: var(--stump-space); }
 .st-listen .st-blocked .st-button { min-height: 36px; padding: 4px 12px; }
-.st-listen .st-empty { color: var(--stump-muted); padding: calc(var(--stump-space) * 3) 0; display: block; text-align: left; }
+.st-listen .st-listen-none { color: var(--stump-muted); padding: calc(var(--stump-space) * 3) 0; margin: 0; }
+.st-listen .st-listen-first { max-width: 720px; margin-top: calc(var(--stump-space) * 3); }
 .st-listen .st-listen-next { margin: 0 0 calc(var(--stump-space) * 2); }
 .st-listen .st-chip-more { display: inline-flex; align-items: center; }
 .st-listen .st-finding:not(.focal) .st-finding-body { gap: 4px; }
@@ -61,6 +62,9 @@ export const listeningStyles = `
   .st-listen .st-card { padding: calc(var(--stump-space) * 2); }
   .st-listen .st-card[aria-label="Your watches"] { border: 0; padding: 0; }
   .st-listen .st-card[aria-label="Your watches"] > h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  /* The findings sit on the column under the watch picker: no outer panel, one border per finding. */
+  .st-listen .st-card[aria-label="Top findings"] { border: 0; padding: 0; }
+  .st-listen .st-finding h3 { font-size: 17px; line-height: 24px; }
   .st-listen .st-finding { grid-template-columns: minmax(0, 1fr) auto; padding: calc(var(--stump-space) * 2); }
   .st-listen .st-numeral { display: none; }
   .st-listen .st-finding-body { grid-column: 1; }

@@ -4,7 +4,7 @@ import { HydrationUnit } from '../base/hydration/unit'
 import { screenStyles } from '../stump/ledger/screen-styles.ts'
 import type { ConnectionView, OfferView, PreviewView, RulesView } from '../stump/stack/view.ts'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, Saved, handleWord, networkWord, useLoaded, useRun, useSaved, when } from '../stump/ui/kit.tsx'
+import { Outcome, PanelTitle, Saved, handleWord, networkWord, useLoaded, useRun, useSaved, when } from '../stump/ui/kit.tsx'
 
 export const Route = createFileRoute('/app/settings/connections')({ component: ConnectionsPage })
 
@@ -25,7 +25,8 @@ function ConnectionsPage() {
   })
   return <HydrationUnit>
     <style>{screenStyles}</style>
-    <section className="st-page st-ledger-screen" aria-labelledby="connections-title">
+    {/* Every section is one hairline panel with its heading inside, as on Brand (src/stump/ui/styles.ts .st-conn). */}
+    <section className="st-page st-ledger-screen st-conn" aria-labelledby="connections-title">
       <h1 id="connections-title" className="st-sr">Connections</h1>
       {error ? <p className="st-error">{error}</p> : null}
       {data ? <>
@@ -53,9 +54,9 @@ function Seed({ seed, connection, admin, offers, line, onChange }: { seed: 'orbi
       ...(seed === 'orbit' ? { source_id: String(form.get('id')).trim() } : { site_id: String(form.get('id')).trim() }), secret: String(form.get('secret')).trim() }), () => `${NAMES[seed]} connected.`)
     if (saved) { setEditing(false); await onChange() }
   }
-  return <>
-    <h2>{NAMES[seed]}</h2>
-    <p className="st-meta">{line}</p>
+  return <section className="st-panel" aria-labelledby={`conn-${seed}`}>
+    <PanelTitle icon={seed === 'orbit' ? 'people' : 'chart'} id={`conn-${seed}`}>{NAMES[seed]}</PanelTitle>
+    <p className="st-meta st-conn-line">{line}</p>
     {connection && connected && !editing ? <div className="st-row">
       <div className="st-row-main">
         <div className="st-name">{connection.origin}</div>
@@ -68,7 +69,7 @@ function Seed({ seed, connection, admin, offers, line, onChange }: { seed: 'orbi
       </div> : null}
     </div> : null}
     {connection && !connected && !editing ? <p className="st-meta">Disconnected {when(connection.disconnected_at)}. Nothing is sent.</p> : null}
-    {admin && (!connected || editing) ? <form className="st-panel" onSubmit={connect} aria-label={`Connect ${NAMES[seed]}`}>
+    {admin && (!connected || editing) ? <form className="st-conn-form" onSubmit={connect} aria-label={`Connect ${NAMES[seed]}`}>
       <div className="st-form">
         <label className="st-field">{NAMES[seed]} address<input name="origin" type="url" required maxLength={300} defaultValue={connection?.origin ?? ''} placeholder={`https://${seed}.example.com`} autoComplete="off" /></label>
         <label className="st-field">{seed === 'orbit' ? 'Signal source ID' : 'Site ID'}<input name="id" required maxLength={100} defaultValue={(seed === 'orbit' ? connection?.source_id : connection?.site_id) ?? ''} autoComplete="off" /></label>
@@ -81,7 +82,7 @@ function Seed({ seed, connection, admin, offers, line, onChange }: { seed: 'orbi
       </div>
     </form> : <Outcome message={message} />}
     {connected && waiting.length ? <Waiting offers={waiting} onChange={onChange} /> : null}
-  </>
+  </section>
 }
 
 function Waiting({ offers, onChange }: { offers: OfferView[]; onChange(): Promise<void> }) {
@@ -120,8 +121,9 @@ function Links({ rules, admin, onChange }: { rules: RulesView; admin: boolean; o
     if (result) setSample(result)
   }
   return <>
-    <h2>Link tags</h2>
-    {admin ? <form className="st-panel" ref={form} onSubmit={event => { event.preventDefault(); void save() }} aria-label="Link tagging rules">
+    <section className="st-panel" aria-labelledby="conn-links">
+    <PanelTitle icon="send" id="conn-links">Link tags</PanelTitle>
+    {admin ? <form className="st-conn-form" ref={form} onSubmit={event => { event.preventDefault(); void save() }} aria-label="Link tagging rules">
       <div className="st-form">
         <label className="st-field">Your domains<input name="domains" required defaultValue={rules.own_domains.join(', ')} placeholder="example.com, docs.example.com" autoComplete="off"
           onBlur={event => { if (event.target.value.trim() !== rules.own_domains.join(', ')) void save() }} /></label>
@@ -130,9 +132,10 @@ function Links({ rules, admin, onChange }: { rules: RulesView; admin: boolean; o
       </div>
       <div className="st-actions"><Outcome message={message?.error ? message : null} /><Saved shown={shown && !busy} /></div>
     </form> : set ? <p>{rules.own_domains.join(', ')} · posts {rules.mediums?.published}, hand-offs {rules.mediums?.handoff}</p> : <p className="st-meta">The company has not set its link rules yet.</p>}
-    {set ? <>
-      <h2>Try a link</h2>
-      <form className="st-panel" onSubmit={preview} aria-label="Try a link">
+    </section>
+    {set ? <section className="st-panel" aria-labelledby="conn-try">
+      <PanelTitle icon="check" id="conn-try">Try a link</PanelTitle>
+      <form className="st-conn-form" onSubmit={preview} aria-label="Try a link">
         <div className="st-form">
           <label className="st-field">Text<input name="text" required defaultValue={`See https://${rules.own_domains[0] ?? 'example.com'}/pricing`} /></label>
           <label className="st-field">Goes to<input name="source" required defaultValue="bluesky" /></label>
@@ -145,6 +148,6 @@ function Links({ rules, admin, onChange }: { rules: RulesView; admin: boolean; o
           <p className="st-meta">Links to {rules.own_domains.join(', ')} get utm_source (where it goes), utm_medium, utm_campaign and utm_content (the post). Links to other sites stay as they are.</p>
         </> : null}
       </form>
-    </> : null}
+    </section> : null}
   </>
 }

@@ -90,7 +90,8 @@ function InboxPage() {
         {inbox.data && !items.length ? <Empty title={`Nothing has reached @${account.handle} yet`}>Mentions and replies arrive here when you check for new ones.</Empty> : null}
         {items.length ? <div className="st-inbox-grid">
           <ul className="st-inbox-list" aria-label="Mentions and replies">{items.map(item => <li key={item.id}>
-            <button type="button" className="st-inbox-row" aria-current={current?.id === item.id ? 'true' : undefined} onClick={() => choose(item.id)}>
+            {/* The item on the right is the selected row; with none opened, a phone shows the list alone and selects nothing. */}
+            <button type="button" className={open ? 'st-inbox-row' : 'st-inbox-row st-inbox-first'} aria-current={current?.id === item.id ? 'true' : undefined} onClick={() => choose(item.id)}>
               <span className={item.may_reply && !item.reply ? 'st-dot' : 'st-dot off'} aria-hidden="true" />
               <span className="st-inbox-handle">{handle(item.author)}{item.may_reply && !item.reply ? <span className="st-visually-hidden">, waiting for a reply</span> : null}</span>
               <span className="st-inbox-time">{shortTime(item.occurred_at)}</span>
@@ -171,16 +172,14 @@ function Item({ item, account, mayAct, onBack, onChange }: { item: InboxView; ac
         {blocking.length ? blocking.map((flag, index) => <li key={`${flag.code}-${index}`} className="bad">{flagLine(flag)}</li>)
           : <li className="ok">Claims, disclosure and repeats check out{account.network === 'x' && checked.charge_usd ? ` · X charges ${usd(checked.charge_usd)}` : ''}</li>}
       </ul> : null}
-      <div className="st-inbox-foot">
-        <span className="st-meta">{text.length ? `${[...new Intl.Segmenter().segment(text)].length} characters` : ''}</span>
-        <button type="button" className="st-inbox-link" disabled={busy} onClick={() => void send(true)}>Draft with AI</button>
-      </div>
+      {text.length ? <span className="st-meta st-inbox-count">{[...new Intl.Segmenter().segment(text)].length} characters</span> : null}
     </div> : null}
     {item.offer?.state === 'sent' ? <div><Chip tone="success" tick>Sent to Orbit</Chip></div> : null}
     {offerError?.ok === false && item.offer?.state !== 'sent' ? <p className="st-error">Last send to Orbit failed: {offerError.error ?? 'try again'}</p> : null}
     {mayAct && (item.may_reply || (item.offer && item.offer.state !== 'sent')) ? <div className="st-inbox-actions">
       {item.may_reply ? <button className="st-button primary" type="button" disabled={busy || !text.trim() || blocking.length > 0} onClick={() => void send(false)}>Reply</button> : null}
       {item.offer && item.offer.state !== 'sent' ? <button className="st-button quiet" type="button" disabled={busy} onClick={() => void toOrbit()}>Send to Orbit</button> : null}
+      {item.may_reply ? <button className="st-button quiet st-inbox-ai" type="button" disabled={busy} onClick={() => void send(true)}>Draft with AI</button> : null}
     </div> : null}
     <Outcome message={note ?? message} />
   </article>

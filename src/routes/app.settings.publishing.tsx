@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
+import { Outcome, PanelTitle, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
 import type { PauseState, Resumed, Team } from '../stump/ui/types.ts'
 import { shownHandle } from '../stump/accounts/handle.ts'
 import { pauseChanged } from '../stump/ui/pause.tsx'
@@ -73,33 +73,28 @@ function PublishingPage() {
         <ul className="st-list">{resumed.will_post.map(item => <li className="st-row" key={item.item_id}><span className="st-meta">{when(item.scheduled_at)} · {handle(item.account_id)}</span></li>)}</ul>
         {resumed.held_overdue.length ? <p>{resumed.held_overdue.length} overdue {resumed.held_overdue.length === 1 ? 'post stays' : 'posts stay'} held until rescheduled or dropped.</p> : null}
       </div> : null}
-      {data?.accounts.length ? <>
-        <h2>Accounts</h2>
-        <ul className="st-list">{data.accounts.map(account => {
-          const scope = paused.find(item => item.account_id === account.id)
-          return <li className="st-row" key={account.id}>
-            <div className="st-row-main"><div className="st-name">{shownHandle(account)}</div>
-              <div className="st-meta">{NAMES[account.network]} · {scope ? `paused by ${name(scope.person_id)}, ${when(scope.at)}` : 'publishing'}</div></div>
-            {may ? scope
-              ? <button className="st-button" type="button" disabled={busy} onClick={() => void resume('account', account.id)}>Resume</button>
-              : <button className="st-button" type="button" disabled={busy}
-                onClick={() => void run(() => runAction('stump.calendar.pause', { action: 'pause', scope: 'account', account_id: account.id, idempotency_key: key() }), () => `${shownHandle(account)} paused.`).then(refresh)}>Pause</button> : null}
-          </li>
-        })}</ul>
-      </> : null}
-      {data?.apps ? <>
-        <h2>Network apps</h2>
-        <ul className="st-list st-box">{data.apps.items.map(app => <AppRow key={app.network} app={app} admin={admin} onSaved={() => void refresh()} />)}</ul>
-      </> : null}
-      {data ? <QueueSlots accounts={data.accounts} slots={data.slots} onSaved={() => void refresh()} /> : null}
-      <h2>History</h2>
-      {data && !data.state.history.length ? <p className="st-meta">Publishing has never been paused.</p> : null}
-      <ul className="st-list">{data?.state.history.map((entry, index) => <li className="st-row" key={`${entry.at}-${index}`}>
-        <div className="st-row-main">
-          <div className="st-name">{entry.action === 'pause' ? 'Paused' : 'Resumed'} {entry.scope === 'all' ? 'all publishing' : handle(entry.account_id)}</div>
-          <div className="st-meta">{name(entry.person_id)}{entry.agent_id ? ' through an agent' : ''} · {when(entry.at)}</div>
-        </div>
-      </li>)}</ul>
+      {/* Every section is one hairline panel with its heading inside, as on Brand. Each account is one row: pause it, or open it for its queue slots. */}
+      {data?.accounts.length ? <section className="st-panel st-pub" aria-labelledby="pub-accounts">
+        <PanelTitle icon="people" id="pub-accounts">Accounts</PanelTitle>
+        <ul className="st-list">{data.accounts.map(account => <AccountRow key={account.id} account={account} slots={data.slots.find(item => item.account_id === account.id) ?? null}
+          scope={paused.find(item => item.account_id === account.id) ?? null} may={may} busy={busy} name={name}
+          onPause={() => void run(() => runAction('stump.calendar.pause', { action: 'pause', scope: 'account', account_id: account.id, idempotency_key: key() }), () => `${shownHandle(account)} paused.`).then(refresh)}
+          onResume={() => void resume('account', account.id)} onSaved={() => void refresh()} />)}</ul>
+      </section> : null}
+      {data?.apps ? <section className="st-panel st-pub" aria-labelledby="pub-apps">
+        <PanelTitle icon="key" id="pub-apps">Network apps</PanelTitle>
+        <ul className="st-list">{data.apps.items.map(app => <AppRow key={app.network} app={app} admin={admin} onSaved={() => void refresh()} />)}</ul>
+      </section> : null}
+      <section className="st-panel st-pub" aria-labelledby="pub-history">
+        <PanelTitle icon="clock" id="pub-history">History</PanelTitle>
+        {data && !data.state.history.length ? <p className="st-meta">Publishing has never been paused.</p> : null}
+        <ul className="st-list">{data?.state.history.map((entry, index) => <li className="st-row" key={`${entry.at}-${index}`}>
+          <div className="st-row-main">
+            <div className="st-name">{entry.action === 'pause' ? 'Paused' : 'Resumed'} {entry.scope === 'all' ? 'all publishing' : handle(entry.account_id)}</div>
+            <div className="st-meta">{name(entry.person_id)}{entry.agent_id ? ' through an agent' : ''} · {when(entry.at)}</div>
+          </div>
+        </li>)}</ul>
+      </section>
     </section>
   </HydrationUnit>
 }
@@ -127,7 +122,7 @@ function AppRow({ app, admin, onSaved }: { app: App; admin: boolean; onSaved(): 
       <span className="st-state"><span className={app.state === 'not_created' ? 'st-dot off' : 'st-dot'} aria-hidden="true" />{STATE_WORDS[app.state]}</span>
       <span className="st-chevron" aria-hidden="true">›</span>
     </button>
-    {open ? <div className="st-panel">
+    {open ? <div className="st-pub-detail">
       <ol>{app.steps.map(step => <li key={step}>{step}</li>)}</ol>
       <div className="st-meta">Callback URL</div>
       {app.callback_urls.map(url => <div className="st-secret" key={url}>{url}</div>)}
@@ -153,21 +148,15 @@ function zones(): string[] {
   try { return (Intl as unknown as { supportedValuesOf(kind: string): string[] }).supportedValuesOf('timeZone') } catch { return ['UTC'] }
 }
 
-function QueueSlots({ accounts, slots, onSaved }: { accounts: Account[]; slots: Slots[]; onSaved(): void }) {
-  const connected = accounts.filter(account => account.state === 'connected')
-  if (!connected.length) return null
-  return <>
-    <h2>Queue slots</h2>
-    <ul className="st-list st-box">{connected.map(account => <SlotRow key={account.id} account={account} slots={slots.find(item => item.account_id === account.id) ?? null} onSaved={onSaved} />)}</ul>
-  </>
-}
-
-function SlotRow({ account, slots, onSaved }: { account: Account; slots: Slots | null; onSaved(): void }) {
+/** One account: its handle, then its network, whether it publishes and its queue slots; Pause on the right, and the row opens to set its slots. */
+function AccountRow({ account, slots, scope, may, busy: pausing, name, onPause, onResume, onSaved }: { account: Account; slots: Slots | null; scope: PauseState['paused'][number] | null; may: boolean; busy: boolean
+  name(id: string): string; onPause(): void; onResume(): void; onSaved(): void }) {
   const { busy, message, run } = useRun()
   const first = slots?.slots[0]
   const [days, setDays] = useState<string[]>(first?.days ?? ['mon', 'tue', 'wed', 'thu', 'fri'])
   const [times, setTimes] = useState(first?.times.join(', ') ?? '')
   const [zone, setZone] = useState(slots?.time_zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone)
+  const [open, setOpen] = useState(false)
   async function save(next: { days?: string[]; times?: string; zone?: string }) {
     const chosenDays = next.days ?? days, chosenTimes = (next.times ?? times).split(/[\s,]+/).filter(Boolean), chosenZone = next.zone ?? zone
     if (!chosenDays.length || !chosenTimes.length) return
@@ -175,19 +164,24 @@ function SlotRow({ account, slots, onSaved }: { account: Account; slots: Slots |
       slots: [{ days: chosenDays, times: chosenTimes }], idempotency_key: key() }), done => done.moved.length ? `Saved. ${done.moved.length} queued ${done.moved.length === 1 ? 'post moved' : 'posts moved'} to the next open slot.` : 'Saved')
     if (saved) onSaved()
   }
-  const [open, setOpen] = useState(false)
+  const connected = account.state === 'connected'
   const next = slots?.upcoming.find(slot => !slot.taken)
   const DAY_NAMES = Object.fromEntries(DAYS) as Record<string, string>
-  const summary = first ? `${first.days.length === 5 && !first.days.some(day => day === 'sat' || day === 'sun') ? 'Weekdays' : first.days.map(day => DAY_NAMES[day]).join(', ')} ${first.times.join(', ')} · ${slots?.time_zone}` : 'No queue slots yet'
+  const slotWords = first ? `${first.days.length === 5 && !first.days.some(day => day === 'sat' || day === 'sun') ? 'weekdays' : first.days.map(day => DAY_NAMES[day]).join(', ')} ${first.times.join(', ')}${next ? `, next ${when(next.at)}` : ''}` : 'no queue slots yet'
+  const meta = [NAMES[account.network] ?? account.network, scope ? `paused by ${name(scope.person_id)}, ${when(scope.at)}` : connected ? 'publishing' : account.state.replace(/_/g, ' '), connected ? slotWords : null].filter(Boolean).join(' · ')
   return <li className="st-row st-stack">
-    <button className="st-row-toggle" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
-      <span className="st-row-main"><span className="st-name st-handle">{shownHandle(account)}</span><span className="st-meta">{NAMES[account.network]} · {summary}</span></span>
-      <span className="st-state">{next ? `next open ${when(next.at)}` : ''}</span>
-      <span className="st-chevron" aria-hidden="true">›</span>
-    </button>
-    {open ? <div className="st-panel">
+    <div className="st-pub-account">
+      {connected ? <button className="st-row-toggle" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="st-row-main"><span className="st-name st-handle">{shownHandle(account)}</span><span className="st-meta">{meta}</span></span>
+        <span className="st-chevron" aria-hidden="true">›</span>
+      </button> : <div className="st-row-main"><div className="st-name st-handle">{shownHandle(account)}</div><div className="st-meta">{meta}</div></div>}
+      {may ? scope
+        ? <button className="st-button" type="button" disabled={pausing} onClick={onResume}>Resume</button>
+        : <button className="st-button" type="button" disabled={pausing} onClick={onPause}>Pause</button> : null}
+    </div>
+    {open ? <div className="st-pub-detail">
       <div className="st-form">
-        <div className="st-field">Days<div className="st-days">{DAYS.map(([value, label]) => <label key={value}>
+        <div className="st-field">Queue days<div className="st-days">{DAYS.map(([value, label]) => <label key={value}>
           <input type="checkbox" checked={days.includes(value)} disabled={busy}
             onChange={event => { const chosen = event.target.checked ? [...days, value] : days.filter(day => day !== value); setDays(chosen); void save({ days: chosen }) }} />{label}</label>)}</div></div>
         <label className="st-field">Times<input value={times} placeholder="09:00, 14:00" disabled={busy} onChange={event => setTimes(event.target.value)} onBlur={() => void save({})} /></label>
