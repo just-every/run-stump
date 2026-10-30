@@ -17,7 +17,7 @@ import type { ActionContext, Args } from '../actions/types.ts'
 import type { D1Sql } from '../../modules/import-kit/src/d1/index.ts'
 import { publishers } from '../publish/publishers.ts'
 import { fullNameMatcher, nameMatcher, nameParts, pitchStatements } from './anonymise.ts'
-import { eraseWithImportCustody, holdsImports, importTargets } from './import-custody.ts'
+import { eraseWithImportCustody, holdsImports, importedVenues, rekeyVenue } from './import-custody.ts'
 import { recheckItems } from './recheck.ts'
 import { erasureRemoval } from './removal.ts'
 import { handleWords, residueStatements, type Trace } from './residue.ts'
@@ -267,10 +267,10 @@ export async function erase(ctx: ActionContext, scope: Scope) {
 
   const now = ctx.now(), statements: D1Sql[] = []
   const list = (ids: string[]) => ids.map(() => '?').join(',')
-  let imported = { venues: [] as string[], items: [] as string[] }
+  let imported: Array<{ venue_id: string; target_id: string }> = []
   if (scope.contact) {
     const reference = { contact_id: null, name: null, route: null, erased: `erasure:${id}` }
-    imported = await importTargets(db, scope.venues, scope.pitches)
+    imported = await importedVenues(db, scope.venues)
     // Pitches keep their text with every form of the journalist's name taken out, and an anonymised reference in place of the contact.
     statements.push(sql('DELETE FROM stump_press_contacts WHERE id=?', scope.contact.id), ...await pitchStatements(db, scope.pitches, nameMatcher(scope.contact.name), reference))
     for (const venue of scope.venues) {
@@ -282,6 +282,8 @@ export async function erase(ctx: ActionContext, scope: Scope) {
     // What the list import wrote becomes Stump's own: an Undo leaves the anonymised venue and pitches alone.
     if (scope.venues.length) statements.push(sql(`DELETE FROM stump_venue_imports WHERE venue_id IN (${list(scope.venues)})`, ...scope.venues))
     if (scope.pitches.length) statements.push(sql(`DELETE FROM stump_item_imports WHERE item_id IN (${list(scope.pitches)})`, ...scope.pitches))
+    // The first venue the import wrote takes a new id, so the import's own target for it is erased (and refused if uploaded again).
+    if (imported[0]) statements.push(...rekeyVenue(imported[0].venue_id))
   }
   if (scope.subject.kind === 'engager') {
     // Digests of each erased finding's address and of the person's handle on each source keep them out of later polls.
@@ -307,7 +309,7 @@ export async function erase(ctx: ActionContext, scope: Scope) {
     id, scope.subject.kind, ctx.person.id, ctx.agent?.id ?? null, JSON.stringify(counts), JSON.stringify(audited), JSON.stringify(sent_to_seeds), now))
   if (scope.contact && await holdsImports(db)) {
     // The list import's copies of the journalist leave in the same batch as everything above.
-    const retired = await eraseWithImportCustody(ctx, id, { name: scope.contact.name, venueTargets: imported.venues }, statements)
+    const retired = await eraseWithImportCustody(ctx, id, { name: scope.contact.name, venueTargets: imported.map(venue => venue.target_id) }, statements, imported[0]?.target_id ?? null)
     counts.import_records = retired.recordsErased
     await db.prepare('UPDATE stump_erasures SET counts=? WHERE id=?').bind(JSON.stringify(counts), id).run()
   } else await db.batch(statements.map(statement => db.prepare(statement.sql).bind(...statement.params ?? [])))

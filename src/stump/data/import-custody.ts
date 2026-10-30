@@ -17,10 +17,23 @@ import { VENUE_DESTINATION } from '../venues/import/source.ts'
 import { venueListTargets } from '../venues/import/targets.ts'
 
 /** The import-side copies Stump keeps of a venue or a pitch the list wrote. */
-export async function importTargets(db: D1Database, venues: string[], items: string[]) {
-  const read = async (table: string, key: string, ids: string[]) => ids.length
-    ? (await db.prepare(`SELECT target_id FROM ${table} WHERE ${key} IN (${ids.map(() => '?').join(',')})`).bind(...ids).all<{ target_id: string }>()).results.map(row => row.target_id) : []
-  return { venues: await read('stump_venue_imports', 'venue_id', venues), items: await read('stump_item_imports', 'item_id', items) }
+export async function importedVenues(db: D1Database, venues: string[]): Promise<Array<{ venue_id: string; target_id: string }>> {
+  return venues.length ? (await db.prepare(`SELECT venue_id,target_id FROM stump_venue_imports WHERE venue_id IN (${venues.map(() => '?').join(',')}) ORDER BY venue_id`).bind(...venues)
+    .all<{ venue_id: string; target_id: string }>()).results : []
+}
+
+/** Every table that names a venue by its id. */
+const VENUE_REFERENCES = ['stump_items', 'stump_handoffs', 'stump_ledger', 'stump_venue_products', 'stump_venue_members', 'stump_venue_applications', 'stump_venue_history']
+
+/**
+ * A venue the import wrote keeps the id the import gave it; once erased it takes
+ * a new one, with every reference to it, so the import's target for it is gone
+ * and the import can never write it again.
+ */
+export function rekeyVenue(from: string): D1Sql[] {
+  const to = `ven_${crypto.randomUUID().replaceAll('-', '').slice(0, 24)}`
+  return [{ sql: 'UPDATE stump_venues SET id=? WHERE id=?', params: [to, from] },
+    ...VENUE_REFERENCES.map(table => ({ sql: `UPDATE ${table} SET venue_id=? WHERE venue_id=?`, params: [to, from] }))]
 }
 
 /** Whether the venue-list import holds anything at all: a job, or an upload waiting at the door. */
@@ -50,11 +63,13 @@ function holdsJournalist(person: Journalist) {
 
 /**
  * Runs Stump's erasure statements (`native`) in the import kit's custody batch.
- * The kit binds what it severs to one target: the erasure's own, which no
- * record of Stump's can share. Authority is the acting person still being an
- * active owner or admin, checked before and after the batch.
+ * The kit erases one target and binds what else it severs to it: the
+ * journalist's venue as the import wrote it (`target`, which `native` re-keys),
+ * or, with none, the erasure's own target, which no record of Stump's can share.
+ * Authority is the acting person still being an active owner or admin, checked
+ * before and after the batch.
  */
-export async function eraseWithImportCustody(ctx: ActionContext, erasureId: string, person: Journalist, native: D1Sql[]) {
+export async function eraseWithImportCustody(ctx: ActionContext, erasureId: string, person: Journalist, native: D1Sql[], target: string | null) {
   const context: D1ImportContext = {
     destination: VENUE_DESTINATION, namespace: 'erasure', mappingVersion: 'erasure',
     originalErasurePolicy: 'withdraw-affected-artifacts',
@@ -70,7 +85,7 @@ export async function eraseWithImportCustody(ctx: ActionContext, erasureId: stri
   // Portability's restore checkpoint: an archive older than this erasure is refused whole.
   const checkpoint: D1Sql[] = (await redactionStatements(ctx.db)).map(toD1Sql)
   return retireD1ImportCustody({
-    target: { kind: 'venue', id: `venue:erased:${erasureId}` },
+    target: { kind: 'venue', id: target ?? `venue:erased:${erasureId}` },
     related: { source: holds, original: bytes => full.test(new TextDecoder().decode(bytes)) },
   }, native, context, checkpoint)
 }
