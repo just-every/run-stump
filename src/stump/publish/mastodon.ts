@@ -1,8 +1,8 @@
 import { mastodonFor } from '../accounts/clients.ts'
 import { shownHandle } from '../accounts/handle.ts'
-import { needsReconnect } from '../accounts/store.ts'
 import type { MastodonClient, NetworkError as MastodonError, StatusDraft, ThreadItem, ThreadPosted, Visibility } from '../lib/mastodon/index.ts'
 import { stumpFetch } from '../net/fetch.ts'
+import { credentialsRefused, notReady, partsToRemove, removeEach } from './held.ts'
 import { partKey, postedParts, recordCall, savePart, textsOf } from './parts.ts'
 import type { DueItem, Problem, PublishContext, PublishOutcome, Publisher } from './types.ts'
 
@@ -54,7 +54,7 @@ export const mastodonPublisher: Publisher = {
 
   async publish(item, ctx) {
     const opened = await mastodonFor(ctx.env, ctx.account)
-    if (!opened.ok) return { state: 'held', kind: 'reconnect', next_attempt_at: null, error: { code: opened.code, message: opened.message } }
+    if (!opened.ok) return notReady(opened)
     const { client } = opened, token = opened.credentials.network === 'mastodon' ? opened.credentials.access_token : ''
     const account = await client.account()
     if (!account.ok) return fault(ctx, account.error, 0)
@@ -112,17 +112,31 @@ export const mastodonPublisher: Publisher = {
     }
     // Posted only once every part reads back from the instance with its own id and URL.
     const texts: string[] = []
+    let followers: number | null = null
     for (const posted of done) {
       const back = await client.readBack(posted.status.id)
       await recordCall(ctx, { network: 'mastodon', item_id: item.id, act: 'read' })
       if (!back.ok) return { state: 'uncertain', error: { code: 'readback_failed', message: back.error.message } }
       texts.push(back.value.sourceText ?? back.value.plainText)
+      followers ??= back.value.accountFollowers
     }
     const first = done[0]!
-    return { state: 'posted', url: first.status.url, network_id: first.status.id, posted_at: ctx.now(), text: texts.join('\n\n') }
+    return { state: 'posted', url: first.status.url, network_id: first.status.id, posted_at: ctx.now(), text: texts.join('\n\n'), followers }
   },
 
   readBack: (url, ctx) => mastodonReadBack(url, ctx),
+
+  async remove(entry, ctx) {
+    const opened = await mastodonFor(ctx.env, ctx.account)
+    if (!opened.ok) return { outcome: 'failed', error: opened.message }
+    return removeEach(await partsToRemove(ctx, ctx.account.id, entry.network_id), async id => {
+      const gone = await opened.client.deleteStatus(id)
+      if (gone.ok) return { outcome: gone.value.alreadyGone ? 'not_found' : 'deleted' }
+      if (gone.error.kind === 'not_found') return { outcome: 'not_found' }
+      if (gone.error.kind === 'auth_revoked' || gone.error.kind === 'client_invalid') await credentialsRefused(ctx, 'revoked', error(gone.error))
+      return { outcome: 'failed', error: gone.error.message }
+    })
+  },
 }
 
 export async function mastodonReadBack(url: string, ctx: PublishContext) {
@@ -137,14 +151,12 @@ export async function mastodonReadBack(url: string, ctx: PublishContext) {
     const me = await opened.client.account()
     if (me.ok && me.value.id !== back.value.accountId) return { ok: false as const, message: `${url} is not a post of ${shownHandle(ctx.account)}.` }
   }
-  return { ok: true as const, url: back.value.url, network_id: back.value.id, text: back.value.sourceText ?? back.value.plainText }
+  return { ok: true as const, url: back.value.url, network_id: back.value.id, text: back.value.sourceText ?? back.value.plainText, followers: back.value.accountFollowers }
 }
 
 async function fault(ctx: PublishContext, e: MastodonError, postedCount: number, first: { url: string; network_id: string } | null = null): Promise<PublishOutcome> {
-  if (e.kind === 'auth_revoked' || e.kind === 'client_invalid') {
-    await needsReconnect(ctx.db, ctx.env, ctx.account, 'revoked', ctx.now())
-    return { state: 'held', kind: 'reconnect', next_attempt_at: null, error: error(e) }
-  }
+  // A 401: the instance refused the token (revoked by the person, or the app removed).
+  if (e.kind === 'auth_revoked' || e.kind === 'client_invalid') return credentialsRefused(ctx, 'revoked', error(e))
   if (e.kind === 'rate_limited') return { state: 'held', kind: 'rate_limit', next_attempt_at: e.retryAtMs ?? null, error: error(e) }
   if (postedCount > 0 && first) return { state: 'partly_posted', ...first, posted_parts: postedCount, error: error(e) }
   if (e.outcomeUnknown) return { state: 'uncertain', error: error(e) }

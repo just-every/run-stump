@@ -73,6 +73,8 @@ export interface PostedStatus {
   media: Array<{ id: string; type: string; url: string | null; description: string | null }>;
   poll: PostedPoll | null;
   accountId: string | null;
+  /** The posting account's followers_count, as the instance answers it with the status. */
+  accountFollowers: number | null;
 }
 
 export interface StatusReadBack extends PostedStatus {

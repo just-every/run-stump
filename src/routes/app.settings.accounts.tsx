@@ -13,7 +13,7 @@ const key = () => crypto.randomUUID()
 
 interface Account {
   id: string; network: string; handle: string; display_name: string | null; owner: { kind: 'person' | 'company'; person_id: string | null }
-  connected_by: string | null; connected_at: string | null; state: 'connected' | 'expired' | 'revoked' | 'disconnected'; reconnect_url: string | null
+  connected_by: string | null; connected_at: string | null; state: 'connected' | 'expired' | 'disconnected'; state_reason: string | null; reconnect_url: string | null
   instance: string | null; automated_label: boolean; operator_bio: string | true | null
 }
 interface App { network: string; state: 'not_needed' | 'not_created' | 'connected' }
@@ -33,6 +33,13 @@ function AccountsPage() {
   const [open, setOpen] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   useEffect(() => { const wanted = new URLSearchParams(window.location.search).get('reconnect'); if (wanted) setOpen(wanted) }, [])
+  // An account the network refused opens on its reconnect step for whoever can reconnect it.
+  useEffect(() => {
+    if (!data || open) return
+    const admin = ['owner', 'admin'].includes(data.me.person.role)
+    const waiting = data.accounts.items.find(account => account.state === 'expired' && (account.owner.kind === 'company' ? admin : account.owner.person_id === data.me.person.id))
+    if (waiting) setOpen(waiting.id)
+  }, [data])
   const name = (id: string | null) => data?.team.items.find(person => person.id === id)?.display_name ?? 'someone who left'
   const admin = data ? ['owner', 'admin'].includes(data.me.person.role) : false
   const viewer = data?.me.person.role === 'viewer'
@@ -59,7 +66,7 @@ function AccountsPage() {
 function status(account: Account, connectedBy: string) {
   if (account.state === 'connected') return { dot: 'st-dot', text: `connected by ${connectedBy}, ${shortDate(account.connected_at)}` }
   if (account.state === 'disconnected') return { dot: 'st-dot off', text: 'disconnected' }
-  return { dot: 'st-dot paused', text: 'needs reconnecting' }
+  return { dot: 'st-dot paused', text: 'expired · reconnect' }
 }
 
 function AccountRow({ account, owner, connectedBy, open, mine, onToggle, onChange }: { account: Account; owner: string; connectedBy: string; open: boolean; mine: boolean; onToggle(): void; onChange(text: string): void }) {
@@ -93,6 +100,7 @@ function AccountRow({ account, owner, connectedBy, open, mine, onToggle, onChang
       <span className="st-chevron" aria-hidden="true">›</span>
     </button>
     {open ? <div className="st-panel">
+      {account.state === 'expired' ? <p className="st-note">{account.state_reason ?? 'The network refused its access.'} Posts queued on it hold until it is reconnected.</p> : null}
       {account.instance ? <div className="st-meta">Server: {account.instance}</div> : null}
       {account.network === 'x' ? <div className="st-meta">{account.automated_label ? `Automated label recorded · ${account.operator_bio === true ? 'operator named in the bio' : `operator: ${account.operator_bio ?? ''}`}` : 'No Automated label recorded. Agents cannot publish here until it is.'}</div> : null}
       {mine ? <div className="st-actions st-spaced">

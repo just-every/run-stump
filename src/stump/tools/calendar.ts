@@ -28,13 +28,15 @@ async function queued(ctx: ActionContext, args: Args) {
 /** The imported posts a release would put back on the schedule, and what X charges for them when they go out. */
 async function releasable(ctx: ActionContext, args: Args) {
   let posts = 0, charge_micro = 0
+  const reach = new Map<string, number>()
   for (const id of args.item_ids as string[]) {
     const row = await readItem(ctx.db, id)
     if (!row || row.state !== 'paused' || !(JSON.parse(row.options) as { imported_from?: unknown }).imported_from) continue
     const left = await remaining(ctx, row)
     posts += left.posts; charge_micro += left.charge_micro
+    if (row.account_id && left.posts) reach.set(row.account_id, left.followers)
   }
-  return { posts, charge_micro }
+  return { posts, charge_micro, followers: [...reach.values()].reduce((sum, count) => sum + count, 0) }
 }
 const accountId = { type: 'string', minLength: 1, maxLength: 64 }
 const iso = (ms: number | null) => ms === null ? null : new Date(ms).toISOString()
@@ -169,8 +171,8 @@ export const calendarTools: StumpTool[] = [{
       properties: { item_ids: { type: 'array', minItems: 1, maxItems: 500, items: accountId }, confirm_source_cleared: { type: 'boolean' } },
       required: ['item_ids', 'confirm_source_cleared'],
       async classify(args, ctx) {
-        const { posts, charge_micro } = await releasable(ctx, args)
-        return [{ class: 'live', facts: { measure: (args.item_ids as string[]).length, service: 'publishing queue' } }, ...publishClasses(posts, charge_micro)]
+        const { followers, charge_micro } = await releasable(ctx, args)
+        return [{ class: 'live', facts: { measure: (args.item_ids as string[]).length, service: 'publishing queue' } }, ...publishClasses(followers, charge_micro)]
       },
       async summary(args, ctx) {
         const { charge_micro } = await releasable(ctx, args)

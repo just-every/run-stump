@@ -126,7 +126,7 @@ export async function getXPost(
       expansions: 'author_id,attachments.media_keys,attachments.poll_ids',
       [fieldsParam(ctx, 'media')]: 'media_key,type,url,alt_text',
       [fieldsParam(ctx, 'poll')]: 'options,duration_minutes,end_datetime,voting_status',
-      [fieldsParam(ctx, 'user')]: 'username,name',
+      [fieldsParam(ctx, 'user')]: 'username,name,public_metrics',
     },
     parse: (body, status) => {
       const missing = resourceError(body, status)

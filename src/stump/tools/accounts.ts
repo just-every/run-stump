@@ -72,7 +72,10 @@ export const accountTools: StumpTool[] = [{
       properties: { include_unconnected: { type: 'boolean' }, connection_id: id },
       classify: () => [security('network_connections', 0)],
       async run(args, ctx) {
-        const rows = (await ctx.db.prepare(`SELECT * FROM stump_accounts ${args.include_unconnected === true ? '' : "WHERE state<>'disconnected'"} ORDER BY owner_kind='person',network,handle`).all<AccountRow>()).results
+        // A poster sees only their own accounts (STUMP-TEAM-001.2); every other role sees the company's and each person's, with its owner.
+        const where = [...args.include_unconnected === true ? [] : ["state<>'disconnected'"], ...ctx.person.role === 'poster' ? ["owner_kind='person' AND owner_person_id=?"] : []]
+        const rows = (await ctx.db.prepare(`SELECT * FROM stump_accounts ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY owner_kind='person',network,handle`)
+          .bind(...ctx.person.role === 'poster' ? [ctx.person.id] : []).all<AccountRow>()).results
         const items = rows.map(accountView)
         // What one of the caller's own consents answered when the network sent them back.
         const connection = typeof args.connection_id === 'string'

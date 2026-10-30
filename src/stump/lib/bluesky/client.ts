@@ -58,6 +58,8 @@ export interface BlueskyClient {
   /** The account as the PDS sees it now: current handle and whether it is active. */
   session(): Promise<Result<{ did: string; handle: string; active: boolean; status: string | null }>>;
   profile(): Promise<Result<BlueskyProfile>>;
+  /** The account's follower count from app.bsky.actor.getProfile, which the PDS proxies to its AppView. */
+  followers(): Promise<Result<number | null>>;
   resolveHandle(handle: string): Promise<Result<string | null>>;
   buildFacets(text: string): Promise<Result<FacetBuild>>;
   /** Problems that stop a draft being marked ready. Sends nothing. */
@@ -118,6 +120,12 @@ export function createBlueskyClient(config: BlueskyClientConfig): BlueskyClient 
         avatar: v.avatar && typeof v.avatar === 'object' ? (v.avatar as BlobRef) : null,
         hasProfileRecord: rec.ok,
       });
+    },
+    async followers() {
+      const res = await transport.call({ nsid: 'app.bsky.actor.getProfile', method: 'GET', query: { actor: did() }, write: false });
+      if (!res.ok) return fail(res.error);
+      const count = (res.value.json as Record<string, unknown>).followersCount;
+      return ok(typeof count === 'number' ? count : null, res.rate);
     },
     resolveHandle: (handle) => resolveHandle(deps, resolverUrl, handle),
     async buildFacets(text) {
