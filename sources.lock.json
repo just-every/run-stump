@@ -1748,15 +1748,15 @@
       "executable": false
     },
     "src/stump/lib/claims/banned.ts": {
-      "sha256": "2c7ea0695506e66af8704f6bcdd70f8f1f29a7907e6189fc374474b56ccc5db8",
+      "sha256": "d6c02d579b9934cd98c2503c65848dbf56d5983c96040e86e568d7b27b57250d",
       "executable": false
     },
     "src/stump/lib/claims/check.ts": {
-      "sha256": "74b7d9b3fc78e926d6bb4cb2c223a0cd8e4fd02cbc332cddf71c424ca5bc2aec",
+      "sha256": "5527a7c9328572df61a9af4718e13605b03dda87082b48113c903a0d1e040b91",
       "executable": false
     },
     "src/stump/lib/claims/disclosure.ts": {
-      "sha256": "781d9bc32fb9696f5653358c41638fc94ef8cb57c1256fc8ccf89e344a9204a1",
+      "sha256": "ca949c2317e2417ca6b27a4f424ef0d0ab8b244ab5cba77ee53bedc4ff10ed25",
       "executable": false
     },
     "src/stump/lib/claims/extract.ts": {
@@ -1772,7 +1772,7 @@
       "executable": false
     },
     "src/stump/lib/claims/numbers.ts": {
-      "sha256": "92ce8df13350b53511768057e753c259a4905901225d58b2274a4d4e0b30e4bd",
+      "sha256": "dbb8a5942072d6594c3ca6de9c29b0f74e6238f9dadb017557f51fb3c7176872",
       "executable": false
     },
     "src/stump/lib/claims/request.ts": {
@@ -1784,7 +1784,7 @@
       "executable": false
     },
     "src/stump/lib/claims/types.ts": {
-      "sha256": "9e475caf7f1286bd96abc27e9ad325e8fd2ef8456aedd590af1d2a82b3132216",
+      "sha256": "6bb2691dbf34d007729c1dbcbc99fb08469191f27c172e59ebf46af892fccd07",
       "executable": false
     },
     "src/stump/lib/claims/validate.ts": {
