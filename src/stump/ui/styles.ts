@@ -462,11 +462,6 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-drafting .st-check-list li.danger span.st-fix { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
 .st-drafting .st-quiet-link { color: var(--stump-muted); font-size: var(--stump-size-small); text-decoration: underline; text-underline-offset: 3px; }
 .st-drafting .st-when-short { display: none; }
-@media (max-width: 600px) {
-  .st-drafting .st-when-long { display: none; }
-  .st-drafting .st-when-short { display: inline; }
-  .st-drafting .st-when-pill svg:last-child { display: none; }
-}
 @media (max-width: 760px) {
   .st-drafting .st-compose { grid-template-columns: 1fr; }
   .st-drafting .st-checks-toggle { display: flex; align-items: center; gap: 10px; font: inherit; width: 100%; background: none; border: 0; padding: 0; color: var(--stump-text); text-align: left; min-height: 44px; }
@@ -484,6 +479,14 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-drafting .st-kv { grid-template-columns: 1fr; gap: 4px; }
   .st-drafting .st-kv > :last-child { border-left: 0; padding-left: 0; min-height: 0; }
   .st-drafting .st-textarea.large { font-size: 18px; }
+}
+@media (max-width: 600px) {
+  /* The time never cuts: beside the action when both fit, else on its own row under it. */
+  .st-drafting .st-bar { flex-wrap: wrap; row-gap: 8px; }
+  .st-drafting .st-bar .st-when { flex: 1 1 176px; min-width: 176px; }
+  .st-drafting .st-when-long { display: none; }
+  .st-drafting .st-when-short { display: inline; }
+  .st-drafting .st-when-pill svg:last-child { display: none; }
 }
 
 /* First-run setup (src/routes/app.setup.tsx, SPEC §4.2): the paper page, the stump seated above one white card, four numbered steps. */

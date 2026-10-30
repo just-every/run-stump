@@ -11,9 +11,9 @@ import { JOB_WORDS, chipsFor, jobOf } from '../stump/watches/finding-view.ts'
 
 export const Route = createFileRoute('/app/listening')({
   // `act` opens the focal finding's job at once (Today's "Draft a reply" lands here).
-  validateSearch: (search: Record<string, unknown>): { watch?: string; finding?: string; act?: '1' } => ({
+  validateSearch: (search: Record<string, unknown>): { watch?: string; finding?: string; act?: true } => ({
     ...(typeof search.watch === 'string' ? { watch: search.watch } : {}), ...(typeof search.finding === 'string' ? { finding: search.finding } : {}),
-    ...(search.act === '1' || search.act === 1 ? { act: '1' as const } : {}),
+    ...(search.act === true || search.act === 'true' ? { act: true as const } : {}),
   }),
   component: Listening,
 })
@@ -73,10 +73,10 @@ function Listening() {
         <div className="st-card" aria-label="Your watches">
           <h2>Your watches</h2>
           {/* At phone width the watches are one picker; New watch is its last choice, below the focal finding in weight. */}
-          <select className="st-pick" aria-label="Watch" value={editing === 'new' ? NEW_WATCH : selected?.id ?? ''} onChange={event => event.target.value === NEW_WATCH ? setEditing('new') : choose(event.target.value)}>
+          {items.length ? <select className="st-pick" aria-label="Watch" value={editing === 'new' ? NEW_WATCH : selected?.id ?? ''} onChange={event => event.target.value === NEW_WATCH ? setEditing('new') : choose(event.target.value)}>
             {items.map(watch => <option key={watch.id} value={watch.id}>{watch.name}</option>)}
             {mayEdit ? <option value={NEW_WATCH}>+ New watch</option> : null}
-          </select>
+          </select> : null}
           <ul className="st-watches st-watches-list">
             {items.map(watch => <li key={watch.id}>
               <button type="button" className="st-watch" aria-current={watch.id === selected?.id} onClick={() => choose(watch.id)}>
@@ -86,12 +86,12 @@ function Listening() {
             </li>)}
           </ul>
           {watches.data && !items.length ? <p className="st-empty">No watches yet. A watch follows Hacker News, feeds, Bluesky and Mastodon for threads you could answer.</p> : null}
-          {mayEdit ? <button className="st-button primary st-new-watch" type="button" onClick={() => setEditing('new')}>+ New watch</button> : null}
+          {mayEdit ? <button className={items.length ? 'st-button primary st-new-watch' : 'st-button primary'} type="button" onClick={() => setEditing('new')}>+ New watch</button> : null}
         </div>
         <div className="st-card" aria-label={editing ? 'Watch' : 'Top findings'}>
           {editing === 'new' ? <Editor role={role} onDone={async id => { setEditing(null); await reload(); choose(id) }} onCancel={() => setEditing(null)} /> : null}
           {editing === 'edit' && selected ? <Editor role={role} watch={selected} blocked={watches.data?.list.blocked_authors ?? []} onDone={async () => { setEditing(null); await reload() }} onCancel={() => setEditing(null)} /> : null}
-          {!editing ? <Findings watch={selected} data={findings.data?.watch.id === selected?.id ? findings.data : null} error={findings.error} focus={search.finding} act={search.act === '1'} may={mayEdit}
+          {!editing ? <Findings watch={selected} data={findings.data?.watch.id === selected?.id ? findings.data : null} error={findings.error} focus={search.finding} act={search.act === true} may={mayEdit}
             context={{ me: watches.data?.me.person.id ?? '', role, products: watches.data?.products ?? [], accounts: watches.data?.accounts ?? [] }}
             onFocus={id => void navigate({ search: { ...(selected ? { watch: selected.id } : {}), finding: id } })}
             onEdit={() => setEditing('edit')} onChange={reload} /> : null}

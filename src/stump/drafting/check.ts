@@ -174,7 +174,9 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   // The venue's rules where the item is aimed: outside its promotion thread, a link where links are banned,
   // or the company's account where only members post (D-3). The flag has the venue register's shape.
   const held = venue ? venueHold(venue, draft) : null
-  if (held) flags.push({ code: 'venue_rule', blocking: true, venue_id: held.venue_id, rule: held.rule, reason: held.reason, source_url: held.source_url })
+  // `where` and `thread_url` let a screen link the words that name the venue's thread, never printing its address.
+  if (held) flags.push({ code: 'venue_rule', blocking: true, venue_id: held.venue_id, rule: held.rule, reason: held.reason, source_url: held.source_url,
+    ...(held.where ? { where: held.where } : {}), ...(held.thread_url ? { thread_url: held.thread_url } : {}) })
 
   // Vote requests where the venue's platform bans them (STUMP-TRUTH-003.5).
   for (const finding of venue?.platform ? screenDraftForVenue(text, venue.platform) : []) {

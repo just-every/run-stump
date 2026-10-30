@@ -42,8 +42,10 @@ export function claimSpan(sentence: string, found: string[] | undefined): string
   }
   return null
 }
-const NUMBER = /\d+(?:[.,]\d+)*\s?%?/g
-const plainNumber = (value: string) => value.replace(/\s+/g, '')
+const NUMBER = /[$€£]?\d+(?:[.,]\d+)*\s?(?:%|x\b|×)?/gi
+const plainNumber = (value: string) => value.replace(/\s+/g, '').toLowerCase()
+/** A number's kind, so "50%" is weighed against "30%" and never against a version like "3.2". */
+const unitOf = (value: string) => /%$/.test(value.trim()) ? '%' : /(x|×)$/i.test(value.trim()) ? 'x' : /^[$€£]/.test(value.trim()) ? '$' : ''
 /**
  * The claim a mismatch flag is about, as the person wrote it ("50% faster"), not
  * the whole sentence. The check's own findings name the numbers the draft used;
@@ -54,10 +56,11 @@ export function spanOf(flag: Flag, claims: ClaimFinding[] = []): string | null {
   const sentence = String(flag.text ?? '')
   const found = claims.find(claim => claim.status === 'number_mismatch' && claim.text === sentence)?.found
   if (found?.length) return claimSpan(sentence, found)
-  const expected = new Set((flag.expected ?? []).map(plainNumber))
-  const numbers = sentence.match(NUMBER) ?? []
-  const used = numbers.filter(number => !expected.has(plainNumber(number)))
-  return claimSpan(sentence, used.length ? used : numbers)
+  const expected = new Set((flag.expected ?? []).map(plainNumber)), units = new Set((flag.expected ?? []).map(unitOf))
+  const numbers = (sentence.match(NUMBER) ?? []).map(number => number.trim())
+  const kin = numbers.filter(number => units.has(unitOf(number)))
+  const used = (kin.length ? kin : numbers).filter(number => !expected.has(plainNumber(number)))
+  return claimSpan(sentence, used.length ? used : kin.length ? kin : numbers)
 }
 
 /** Where a flag's claim sits in a variant's text, to mark it: [start, end), or null when the text no longer holds it. */

@@ -64,7 +64,7 @@ function Go({ to, className, children }: { to: Dest; className?: string; childre
   switch (to.kind) {
     case 'handoff': return <Link className={className} to="/app/handoffs/$handoffId" params={{ handoffId: to.id }}>{children}</Link>
     case 'compose': return <Link className={className} to="/app/compose" search={{ ...(to.master ? { master: to.master } : {}), ...(to.item ? { item: to.item } : {}), ...(to.fix ? { fix: to.fix } : {}) }}>{children}</Link>
-    case 'listening': return <Link className={className} to="/app/listening" search={{ watch: to.watch, finding: to.finding, ...(to.act ? { act: '1' as const } : {}) }}>{children}</Link>
+    case 'listening': return <Link className={className} to="/app/listening" search={{ watch: to.watch, finding: to.finding, ...(to.act ? { act: true as const } : {}) }}>{children}</Link>
   }
 }
 
