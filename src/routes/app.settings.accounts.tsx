@@ -25,8 +25,7 @@ const shortDate = (iso: string | null) => iso ? new Intl.DateTimeFormat(undefine
 function AccountsPage() {
   const { data, error, refresh } = useLoaded(async () => ({
     me: await me(),
-    accounts: await runAction<{ items: Account[] }>('stump.accounts.connect', { action: 'list' }),
-    apps: await runAction<{ items: App[] }>('stump.setup.apps', { action: 'list' }),
+    accounts: await runAction<{ items: Account[]; apps: App[] }>('stump.accounts.connect', { action: 'list' }),
     team: await runAction<Team>('stump.team.manage', { action: 'list' }).catch(() => ({ items: [], total: 0 }) as Team),
   }))
   const [connecting, setConnecting] = useState(false)
@@ -57,7 +56,7 @@ function AccountsPage() {
           mine={account.owner.kind === 'company' ? admin : account.owner.person_id === data?.me.person.id}
           onChange={text => { setNote(text); void refresh() }} />)}
       </ul> : null}
-      {showForm && data ? <Connect admin={admin} apps={data.apps.items} onCancel={accounts.length ? () => setConnecting(false) : null} />
+      {showForm && data ? <Connect admin={admin} apps={data.accounts.apps} onCancel={accounts.length ? () => setConnecting(false) : null} />
         : !viewer ? <p><button className="st-button primary" type="button" onClick={() => { setNote(null); setConnecting(true) }}>+ Connect an account</button></p> : null}
     </section>
   </HydrationUnit>

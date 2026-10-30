@@ -1,6 +1,6 @@
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
-import { NETWORKS, type Network } from '../accounts/apps.ts'
+import { NETWORKS, appStates, type Network } from '../accounts/apps.ts'
 import { completeConnection, disconnectAccount, mayManage, startConnection } from '../accounts/connect.ts'
 import { digest } from '../accounts/seal.ts'
 import { shownHandle } from '../accounts/handle.ts'
@@ -81,7 +81,8 @@ export const accountTools: StumpTool[] = [{
         const connection = typeof args.connection_id === 'string'
           ? await ctx.db.prepare('SELECT id,network,account_id,completed_at,outcome FROM stump_connections WHERE id=? AND person_id=?').bind(args.connection_id, ctx.person.id)
             .first<{ id: string; network: Network; account_id: string | null; completed_at: number | null; outcome: string | null }>() : null
-        return { items, total: items.length,
+        // Each network's readiness to connect, without the app's keys or steps (those are Admin work in stump.setup.apps).
+        return { items, total: items.length, apps: await appStates(ctx.db),
           ...(connection ? { connection: { id: connection.id, network: connection.network, account_id: connection.account_id, completed: connection.completed_at !== null,
             outcome: connection.outcome ? JSON.parse(connection.outcome) as Record<string, unknown> : null } } : {}) }
       },

@@ -4,10 +4,19 @@ import type { ClassAndFacts, Principal, Runtime, PolicyState } from './types.ts'
 // Serialize only policy admission, never a native action or external request.
 // A lost admission lease cannot commit a usage reservation. Reservations are
 // visible before execution, so concurrent calls cannot both consume a cap.
+// Admission is held for milliseconds, so a call that finds it held waits its
+// turn with bounded backoff (about five seconds in all) before answering
+// decision_busy: concurrent calls, reads included, are admitted one by one.
+const DECISION_WAITS_MS = [10, 20, 40, 80, 160, 320, 500, 750, 1000, 1000, 1000]
 export async function acquireDecision(rt: Runtime, id: string): Promise<boolean> {
-  const result = await rt.options.db.prepare('UPDATE agent_door_state SET decision_lock=?,decision_until=? WHERE id=1 AND (decision_lock IS NULL OR decision_until<=?)')
-    .bind(id, rt.now() + 30000, rt.now()).run()
-  return !!result.meta.changes
+  for (let attempt = 0; ; attempt++) {
+    const result = await rt.options.db.prepare('UPDATE agent_door_state SET decision_lock=?,decision_until=? WHERE id=1 AND (decision_lock IS NULL OR decision_until<=?)')
+      .bind(id, rt.now() + 30000, rt.now()).run()
+    if (result.meta.changes) return true
+    const wait = DECISION_WAITS_MS[attempt]
+    if (wait === undefined) return false
+    await new Promise(resolve => setTimeout(resolve, wait))
+  }
 }
 export async function releaseDecision(rt: Runtime, id: string) {
   await rt.options.db.prepare('UPDATE agent_door_state SET decision_lock=NULL,decision_until=NULL WHERE id=1 AND decision_lock=?').bind(id).run()

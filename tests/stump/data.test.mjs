@@ -94,13 +94,16 @@ test('switching from Buffer: a dry run, sent posts to the ledger, schedules to s
   assert.deepEqual((await act('stump.calendar.plan', { action: 'slots', account_id: account.id })).slots, [])
 })
 
-test('erasing a person: an engager leaves findings and offers, a journalist their record and route while pitches keep an anonymised reference, each company post naming them is asked to be deleted, and a legal hold keeps its entry', async () => {
+test('erasing a person: an engager leaves findings, the inbox and offers, a journalist their record and route while pitches keep an anonymised reference, each company post naming them is asked to be deleted, and a legal hold keeps its entry', async () => {
   const owner = await app.owner()
   const watch = await act('stump.watches.manage', { action: 'create', name: 'Synthwell', terms: { any: ['synthwell'] }, sources: [{ kind: 'hn' }] })
   const findings = async () => (await act('stump.findings.work', { action: 'list', watch_id: watch.id })).items.map(finding => finding.author).sort()
   assert.deepEqual(await findings(), ['synthetic-alice', 'synthetic-bob'])
   // The engager offer the inbox writes (migration 0500).
   await app.db.prepare(`INSERT INTO stump_stack_offers(id,seed,kind,network,handle,post_url,occurred_at,created_at) VALUES('o1','orbit','engager','x','synthetic-alice','https://x.com/synthetic-alice/status/9',1,1)`).run()
+  // What the inbox read from the company's X account: the engager's mention, and someone else's.
+  for (const [id, handle] of [['i1', 'Synthetic-Alice'], ['i2', 'synthetic-bob']]) await app.db.prepare(`INSERT INTO stump_inbox_items(id,account_id,network,network_id,kind,url,text,author_handle,engaged_first,offer_id,received_at)
+    VALUES(?,'a1','x',?,'mention',?,'@synthwellhq thanks',?,1,?,1)`).bind(id, id, `https://x.com/${handle}/status/${id}`, handle, id === 'i1' ? 'o1' : null).run()
   // A different person with the same name on Bluesky.
   await app.db.prepare(`INSERT INTO stump_stack_offers(id,seed,kind,network,handle,post_url,occurred_at,created_at) VALUES('o2','orbit','engager','bluesky','synthetic-alice','https://bsky.app/profile/synthetic-alice/post/9',1,1)`).run()
   await plan(JSON.stringify({ format: 'buffer-api-v1', profiles: [{ id: 'p-m', service: 'mastodon', service_username: 'synthwell', timezone: 'UTC' }],
@@ -118,6 +121,7 @@ test('erasing a person: an engager leaves findings and offers, a journalist thei
   assert.equal(erased.deletion_requests.find(request => request.ledger_id === held.id).outcome, 'kept')
   assert.deepEqual(await findings(), ['synthetic-bob'])
   assert.deepEqual((await act('stump.stack.send', { action: 'offers' })).items.map(offer => offer.id), ['o2'], 'each handle is matched on its own network only')
+  assert.deepEqual([(await app.db.prepare('SELECT id FROM stump_inbox_items ORDER BY id').all()).results.map(row => row.id), erased.removed.inbox_items], [['i2'], 1], 'the engager leaves the inbox')
   const kept = (await act('stump.ledger.search', { action: 'get', entry_id: held.id })).entry
   assert.deepEqual([kept.text, kept.legal_hold.reason], [held.text, 'Dispute on file'])
 

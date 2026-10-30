@@ -22,11 +22,13 @@ interface Slots { account_id: string; time_zone: string | null; slots: Array<{ d
 function PublishingPage() {
   const { data, error, refresh } = useLoaded(async () => {
     const accounts = await runAction<{ items: Account[] }>('stump.accounts.connect', { action: 'list' })
+    const who = await me()
     return {
-      me: await me(),
+      me: who,
       state: await runAction<PauseState>('stump.calendar.pause', { action: 'state' }),
       team: await runAction<Team>('stump.team.manage', { action: 'list' }).catch(() => ({ items: [], total: 0 }) as Team),
-      apps: await runAction<{ items: App[] }>('stump.setup.apps', { action: 'list' }),
+      // Network apps are Admin work (STUMP-TEAM-001): other roles never load them.
+      apps: ['owner', 'admin'].includes(who.person.role) ? await runAction<{ items: App[] }>('stump.setup.apps', { action: 'list' }) : null,
       accounts: accounts.items,
       slots: await Promise.all(accounts.items.filter(account => account.state === 'connected').map(account => runAction<Slots>('stump.calendar.plan', { action: 'slots', account_id: account.id }))),
     }
@@ -84,8 +86,10 @@ function PublishingPage() {
           </li>
         })}</ul>
       </> : null}
-      <h2>Network apps</h2>
-      <ul className="st-list st-box">{data?.apps.items.map(app => <AppRow key={app.network} app={app} admin={admin} onSaved={() => void refresh()} />)}</ul>
+      {data?.apps ? <>
+        <h2>Network apps</h2>
+        <ul className="st-list st-box">{data.apps.items.map(app => <AppRow key={app.network} app={app} admin={admin} onSaved={() => void refresh()} />)}</ul>
+      </> : null}
       {data ? <QueueSlots accounts={data.accounts} slots={data.slots} onSaved={() => void refresh()} /> : null}
       <h2>History</h2>
       {data && !data.state.history.length ? <p className="st-meta">Publishing has never been paused.</p> : null}

@@ -7,6 +7,8 @@ import { refuse } from '../actions/refusals.ts'
 import type { ActionContext } from '../actions/types.ts'
 import { TRANSITIONS, type ItemState } from '../items/state.ts'
 import { readPerson } from '../people/store.ts'
+import { readVenue } from '../venues/model.ts'
+import { routesFor } from '../venues/rules.ts'
 import { checkDraft, loadBrand, type Brand, type CheckResult, type Draft } from './check.ts'
 import { itemRecord, parse, type Row } from './records.ts'
 
@@ -75,15 +77,18 @@ export async function prepareInsert(ctx: ActionContext, brand: Brand, item: NewI
   const check = await checkDraft(ctx.db, brand, item, person, now)
   const state = nextState('draft', check, false)
   const agent = ctx.agent ? JSON.stringify({ id: ctx.agent.id, name: ctx.agent.name }) : null
+  // An item at a venue carries the routes its rules allow from its first revision (STUMP-VENUE-002.1, .4).
+  const venue = item.venue_id ? await readVenue(ctx.db, item.venue_id) : null
+  const routes = venue ? routesFor(venue).routes : []
   return {
     check, state,
     statements: [
       ctx.db.prepare(`INSERT INTO stump_items(id,format,network,account_id,venue_id,person_id,product_id,master_id,state,revision,text,parts,flags,claims_used,sources,ai,
-        hold,recipient,subject,reply_to,differs_from_master,campaign,options,agent,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        hold,recipient,subject,reply_to,differs_from_master,campaign,options,agent,routes,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
         .bind(item.id, item.format, item.network, item.account_id, item.venue_id, item.person_id, item.product_id, item.master_id, state, item.parts?.length ? null : item.text,
           item.parts?.length ? JSON.stringify(item.parts) : null, JSON.stringify(check.flags), JSON.stringify(check.claims_used), JSON.stringify(item.sources ?? []),
           item.ai ? JSON.stringify(item.ai) : null, holdOf(check, item.person_id), item.recipient ? JSON.stringify(item.recipient) : null, item.subject ?? null,
-          item.reply_to ? JSON.stringify(item.reply_to) : null, item.differs_from_master ?? 0, item.campaign ?? null, JSON.stringify(item.options ?? {}), agent, ctx.person.id, now, now),
+          item.reply_to ? JSON.stringify(item.reply_to) : null, item.differs_from_master ?? 0, item.campaign ?? null, JSON.stringify(item.options ?? {}), agent, JSON.stringify(routes), ctx.person.id, now, now),
       ctx.db.prepare('INSERT INTO stump_item_revisions(item_id,revision,text,parts,saved_by,agent_id,at) VALUES(?,1,?,?,?,?,?)')
         .bind(item.id, item.parts?.length ? null : item.text, item.parts?.length ? JSON.stringify(item.parts) : null, ctx.person.id, ctx.agent?.id ?? null, now),
       ctx.db.prepare("INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at) VALUES(?,?,NULL,?,?,?,?,?)")

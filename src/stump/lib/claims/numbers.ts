@@ -49,7 +49,7 @@ function unitStem(w: string): string {
   return UNIT_ALIASES[u] ?? u
 }
 
-const PERCENT = /(?<!\d|\d[.,])(\d+(?:[.,]\d+)*)\s?(?:%|percent\b)/giu
+const PERCENT = /(?<![\p{L}\d]|\d[.,])(\d+(?:[.,]\d+)*)\s?(?:%|percent\b)/giu
 const MULTIPLIER = /(?<![\p{L}\p{N}.])(\d+(?:\.\d+)?)\s?[x×](?![\p{L}\p{N}])/giu
 const MONEY = /(?:US)?\$\s?(\d[\d,]*(?:\.\d+)?)(?:\s?(k|m|mm|b|thousand|million|billion)\b)?/giu
 // The unit may follow a space, a hyphen ("a 10-minute setup") or nothing ("10min").
@@ -177,6 +177,8 @@ export function extractNumbers(text: string): FoundNumber[] {
     const indices = (m as RegExpMatchArray & { indices: Array<[number, number] | undefined> }).indices
     const [numStart, numEnd] = indices[1] as [number, number]
     if (!free(numStart, numEnd)) continue
+    // Digits inside a word are no number: "2905d0e3fe6c" is an id, while "10min" and "4k" stay counts.
+    if (/^\p{L}+\p{N}/u.test(/^[\p{L}\p{N}]*/u.exec(folded.slice(numEnd))?.[0] ?? '')) continue
     const scaleWord = m[2]
     const word = m[3]
     // A month name just before ("Sep. 2026") makes it a date; the longest is "September. ".

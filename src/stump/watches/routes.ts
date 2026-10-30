@@ -9,8 +9,6 @@ interface Rule { value?: unknown; source_url?: string | null; read_at?: string |
 
 const hostOf = (url: string | null | undefined) => (url ? parseHttpUrl(url)?.hostname.replace(/^www\./, '').toLowerCase() ?? null : null)
 const ruleOf = (rules: Record<string, unknown>, key: string): Rule | null => { const rule = rules[key]; return rule && typeof rule === 'object' ? rule as Rule : null }
-/** A rule opens a route only with its source: the page it was read from and the date it was read. */
-const sourced = (rule: Rule | null) => rule !== null && typeof rule.source_url === 'string' && rule.source_url !== '' && typeof rule.read_at === 'string' && rule.read_at !== ''
 const says = (rule: Rule | null, ...values: string[]) => rule !== null && values.includes(String(rule.value))
 
 /** Where a finding lives, as venue addresses name it. */
@@ -23,17 +21,17 @@ function homes(finding: Pick<Finding, 'source' | 'source_ref' | 'url'>): { exact
 
 /**
  * The routes a venue's rules open, read as the venues area reads them (D-3, STUMP-VENUE-002.1, .2):
- * publish needs a sourced rule that lets software post from the company's account; a hand-off with a
- * draft needs a sourced rule that allows AI-written text, with or without disclosure; a banned
- * self-promotion rule closes both, sourced or not. A hand-off with a brief and facts is always open.
+ * publish needs a rule that lets software post from the company's account; a hand-off with a draft
+ * needs a rule that allows AI-written text, with or without disclosure; a banned self-promotion rule
+ * closes both. Each rule decides by its value, sourced or not. A hand-off with a brief and facts is always open.
  */
 export function venueRoutes(rulesJson: string): Route[] {
   const rules = JSON.parse(rulesJson) as Record<string, unknown>
   const posting = ruleOf(rules, 'posting'), ai = ruleOf(rules, 'ai_text')
   if (says(ruleOf(rules, 'self_promotion'), 'banned')) return ['handoff_brief']
   return [
-    ...(says(posting, 'company_account') && sourced(posting) ? ['publish' as const] : []),
-    ...(says(ai, 'allowed', 'allowed_with_disclosure') && sourced(ai) ? ['handoff_draft' as const] : []),
+    ...(says(posting, 'api', 'company_account') ? ['publish' as const] : []),
+    ...(says(ai, 'allowed', 'allowed_with_disclosure') ? ['handoff_draft' as const] : []),
     'handoff_brief',
   ]
 }
