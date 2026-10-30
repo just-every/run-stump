@@ -26,14 +26,14 @@
 
 import { readSentence, startsWithPronoun } from './extract'
 import type { ClaimCandidate } from './extract'
-import { extractMentions } from './mentions'
+import { extractMentions, hostOfUrl } from './mentions'
 import type { MentionSet } from './mentions'
 import { extractNumbers, stripNumbers } from './numbers'
 import type { FoundNumber } from './numbers'
 import { contentTokens, foldText, sentenceSpans } from './sentences'
 import type { Span } from './sentences'
 import type { Claim, ClaimFinding, PersonProfile, ProductProfile } from './types'
-import { claimStaleness, hasProof, isIsoDate } from './validate'
+import { assertToday, claimStaleness, hasProof, isIsoDate } from './validate'
 
 export interface CheckClaimsInput {
   text: string
@@ -43,7 +43,7 @@ export interface CheckClaimsInput {
   company_names?: readonly string[]
   /** The item's product; company-wide and this product's claims apply (banned claims always do). */
   product_id?: string
-  /** YYYY-MM-DD, the date in the company's time zone. */
+  /** YYYY-MM-DD, the date in the company's time zone; anything else throws a RangeError. */
   today: string
 }
 
@@ -68,12 +68,22 @@ export interface CheckClaimsResult {
   flags: ClaimFlag[]
 }
 
-/** A claim record the check can match against: banned claims always; others only with their proof or dated source. */
-export function isCurrentRecord(claim: Claim): boolean {
+/** A claim record with what backs it: banned claims always; others only with their proof or a named competitor and dated source. */
+export function isBackedRecord(claim: Claim): boolean {
   if (!claim.text || claim.text.trim() === '') return false
   if (claim.kind === 'banned') return true
   if (claim.kind === 'allowed') return hasProof(claim.proof)
   return Boolean(claim.competitor && claim.source_url && isIsoDate(claim.source_date))
+}
+
+/**
+ * A claim record the check can match against: banned claims always; others only when backed
+ * (isBackedRecord) and carrying a valid YYYY-MM-DD review date. A claim whose review date is
+ * missing or malformed ("01/01/2026", "2026-1-1", a timestamp) can never be shown current,
+ * so it backs no draft: the check reads its sentence as unmatched.
+ */
+export function isCurrentRecord(claim: Claim): boolean {
+  return isBackedRecord(claim) && (claim.kind === 'banned' || isIsoDate(claim.review_on))
 }
 
 /** A proof number with no unit ({ number: 30 }) stands for the claim's measure: it backs 30% or 30x. */
@@ -235,12 +245,14 @@ function clauseSpans(span: Span, numbers: readonly FoundNumber[]): Span[] {
 const JOIN_WINDOW = 6
 
 export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
+  assertToday(input.today)
   const prepared = relevant(input.claims, input.product_id).map(prepare)
   const mentionInput = { products: input.products, people: input.people, company_names: input.company_names }
   const mentions = extractMentions(input.text, mentionInput)
   const productNames = (input.products ?? []).flatMap((p) => [p.name, ...(p.other_names ?? [])])
   const competitorNames = (input.products ?? []).flatMap((p) => (p.competitors ?? []).flatMap((c) => (typeof c === 'string' ? [c] : [c.name, ...(c.aliases ?? [])])))
-  const ctx = { product_names: [...productNames, ...(input.company_names ?? [])], competitor_names: competitorNames }
+  const ownHosts = [...new Set((input.products ?? []).flatMap((p) => (p.urls ?? []).map(hostOfUrl)).filter(Boolean))]
+  const ctx = { product_names: [...productNames, ...(input.company_names ?? [])], competitor_names: competitorNames, own_hosts: ownHosts }
   const profileById = new Map((input.products ?? []).map((p) => [p.id, p]))
   const named = mentions.products // sorted by start
   /** The product named last inside a span. */
@@ -318,7 +330,7 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
 
   const findings: ClaimFinding[] = []
   let previousProduct: ProductProfile | undefined
-  for (const sentence of sentenceSpans(input.text)) {
+  for (const sentence of sentenceSpans(input.text, ownHosts)) {
     // "It supports SSO." after a sentence about Orbit is about Orbit.
     const pronounProduct = previousProduct && startsWithPronoun(sentence.text) ? previousProduct : undefined
     previousProduct = productIn(sentence) ?? pronounProduct

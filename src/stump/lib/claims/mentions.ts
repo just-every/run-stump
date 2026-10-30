@@ -77,7 +77,8 @@ function hostsIn(text: string): Array<{ host: string; text: string; start: numbe
   return out
 }
 
-function hostOfUrl(url: string): string {
+/** The lower-case host of a URL or bare domain, without "www.". */
+export function hostOfUrl(url: string): string {
   return url.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/^www\./, '')
 }
 

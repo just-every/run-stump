@@ -186,6 +186,7 @@ export interface DisclosureCheckInput {
   /** The item goes to one of the company's own accounts. */
   company_account: boolean
   lines?: readonly string[]
+  /** Names of the company and its products; when absent, the names `mentions` found in the text. */
   terms?: readonly string[]
   cut?: number
 }
@@ -198,6 +199,15 @@ export interface DisclosureCheck {
   because: string[]
 }
 
+/**
+ * The company and product names a text used, as `mentions` found them: products by name or
+ * other name and the company by its names. A link's host is not a name, and a competitor's
+ * name never makes "we" a disclosure.
+ */
+function mentionedTerms(mentions: MentionSet): string[] {
+  return [...new Set([...mentions.products, ...mentions.company].filter((m) => m.via !== 'url').map((m) => m.name))]
+}
+
 /** D-2 applied to one item: is disclosure required, and does the text provide it above the cut. */
 export function checkDisclosure(input: DisclosureCheckInput): DisclosureCheck {
   const because: string[] = []
@@ -205,7 +215,8 @@ export function checkDisclosure(input: DisclosureCheckInput): DisclosureCheck {
   if (input.mentions.products.length > 0) because.push('product')
   if (input.mentions.competitors.length > 0) because.push('competitor')
   const required = !input.company_account && input.connection !== null && because.length > 0
-  const detection = detectDisclosure(input.text, { lines: input.lines, terms: input.terms, cut: input.cut })
+  const terms = input.terms ?? mentionedTerms(input.mentions)
+  const detection = detectDisclosure(input.text, { lines: input.lines, terms, cut: input.cut })
   if (!required) return { required, status: 'not_required', detection, because }
   if (!detection.disclosed) return { required, status: 'missing', detection, because }
   if (detection.above_cut === false) return { required, status: 'below_cut', detection, because }

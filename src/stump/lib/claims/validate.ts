@@ -72,9 +72,23 @@ export function validateClaim(claim: Partial<Claim>, today?: string): ClaimError
   return errors
 }
 
-/** A claim past its review date. `today` is YYYY-MM-DD in the company's time zone. */
+/**
+ * Throws a RangeError unless `today` is a YYYY-MM-DD calendar date. Against a malformed
+ * date ("2026-10-30T12:00:00Z", "10/30/2026", "") no claim could ever read as stale, so the
+ * claim check refuses to run rather than pass a draft it could not check.
+ */
+export function assertToday(today: unknown): asserts today is string {
+  if (typeof today !== 'string' || !isIsoDate(today)) throw new RangeError(`today must be a YYYY-MM-DD date, got ${JSON.stringify(today)}`)
+}
+
+/**
+ * A claim past its review date. `today` is YYYY-MM-DD in the company's time zone; any other
+ * value throws a RangeError. A claim with no valid review date is never current at all
+ * (isCurrentRecord), so the check and drafting requests never reach it here.
+ */
 export function claimStaleness(claim: Pick<Claim, 'review_on'>, today: string): { stale: boolean; days_overdue: number } {
-  if (!isIsoDate(claim.review_on) || !isIsoDate(today)) return { stale: false, days_overdue: 0 }
+  assertToday(today)
+  if (!isIsoDate(claim.review_on)) return { stale: false, days_overdue: 0 }
   if (claim.review_on >= today) return { stale: false, days_overdue: 0 }
   const days = Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${claim.review_on}T00:00:00Z`)) / 86_400_000)
   return { stale: true, days_overdue: days }
