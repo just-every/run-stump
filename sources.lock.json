@@ -3720,7 +3720,7 @@
       "executable": false
     },
     "src/stump/imports/door.ts": {
-      "sha256": "5afb7f3e07d180a12b127bdd6cd9548cbc4c5b762549811bcf9d8afcf23889e9",
+      "sha256": "0fd5a816fff83821968b827125e1659ed01c636ee50268b88a3af840d61ab670",
       "executable": false
     },
     "src/stump/inbox/engagement.ts": {
