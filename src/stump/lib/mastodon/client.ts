@@ -7,7 +7,7 @@ import { fail, validationError, type Result } from './errors.ts';
 import type { FetchFn, HttpDeps } from './http.ts';
 import { getInstanceInfo, normalizeInstance, type InstanceInfo } from './instance.ts';
 import { uploadMedia } from './media.ts';
-import { deleteStatus, findPostedStatus, getStatus, postStatus, readBack, type FindCriteria } from './statuses.ts';
+import { deleteStatus, findPostedStatus, getStatus, postStatus, readBack, searchStatus, type FindCriteria } from './statuses.ts';
 import { checkStatusDraft } from './text.ts';
 import { publishThread, type ThreadItem, type ThreadOutcome, type ThreadPosted } from './thread.ts';
 import type { MediaFile, PostedStatus, StatusDraft, StatusDraftOptions, StatusReadBack, UploadedMedia } from './types.ts';
@@ -37,6 +37,8 @@ export interface MastodonClient {
   readBack(id: string): Promise<Result<StatusReadBack>>;
   deleteStatus(id: string): Promise<Result<{ alreadyGone: boolean; text: string | null }>>;
   findPostedStatus(criteria: FindCriteria): Promise<Result<PostedStatus | null>>;
+  /** This instance's id for a status at another instance's URL, or null when it finds none. */
+  searchStatus(url: string): Promise<Result<string | null>>;
   publishThread(items: ThreadItem[], alreadyPosted?: ThreadPosted[]): Promise<ThreadOutcome>;
 }
 
@@ -84,6 +86,7 @@ export function createMastodonClient(config: MastodonClientConfig): MastodonClie
     readBack: (id) => readBack(deps, origin, token, id),
     deleteStatus: (id) => deleteStatus(deps, origin, token, id),
     findPostedStatus: (criteria) => findPostedStatus(deps, origin, token, criteria),
+    searchStatus: (url) => searchStatus(deps, origin, token, url),
     publishThread: (items, alreadyPosted) => publishThread(client, items, alreadyPosted),
   };
   return client;

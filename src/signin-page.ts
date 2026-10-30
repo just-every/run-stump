@@ -3,18 +3,30 @@
 // the address in place of the form. The address travels in a short-lived HttpOnly
 // cookie scoped to /signin, never in the URL. Base's page and its handlers stay unedited.
 
+import { readCappedText } from './stump/http/body.ts'
+
 const SENT_COOKIE = 'stump_signin_sent'
 const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 const address = (value: string) => {
   const email = value.trim().toLowerCase()
   return email.length <= 254 && /^[^\s@<>"'`]+@[^\s@<>"'`]+$/.test(email) ? email : null
 }
-const formPost = (request: Request) => request.method === 'POST' && /^(application\/x-www-form-urlencoded|multipart\/form-data)/i.test(request.headers.get('content-type') ?? '')
+// Base reads a sign-in post as JSON or a URL-encoded form of at most 8 KiB (operator-auth readInput).
+const FORM_BYTES = 8192
+const formPost = (request: Request) => request.method === 'POST' && (request.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase() === 'application/x-www-form-urlencoded'
 
-/** The address a sign-in form posts, read from a copy of the request before Base reads it. */
+/**
+ * The address a sign-in form posts, read from a copy of the request before Base
+ * reads it, under Base's own limits: a URL-encoded form of at most 8 KiB. A
+ * larger or other post is left to Base, which refuses it.
+ */
 export async function postedAddress(request: Request): Promise<string | null> {
   if (new URL(request.url).pathname !== '/auth/magic-link' || !formPost(request)) return null
-  try { return address(String((await request.clone().formData()).get('email') ?? '')) } catch { return null }
+  if (Number(request.headers.get('content-length') ?? 0) > FORM_BYTES) return null
+  try {
+    const text = await readCappedText(request.clone(), FORM_BYTES)
+    return typeof text === 'string' ? address(new URLSearchParams(text).get('email') ?? '') : null
+  } catch { return null }
 }
 
 /** After a send that lands on the sent notice, remember the address for the next page only. */

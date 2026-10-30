@@ -6,7 +6,7 @@ A watch finds the threads worth answering on open sources, ranks them, and says 
 - **RSS and Atom feeds**: blogs, newsletters, podcasts and release feeds. Podcast transcripts linked from a feed are matched too.
 - **Bluesky** search, and **Mastodon** search and hashtags on the instances you choose. Where an instance limits full-text search, the watch says it covers hashtags only there.
 
-Reddit feeds are not a source.
+Reddit feeds are not a source. Feeds, transcripts and instances are read from public web addresses only.
 
 ## A watch
 

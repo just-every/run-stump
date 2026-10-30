@@ -6,7 +6,7 @@ import { refuse } from '../actions/refusals.ts'
 import type { StumpEnv } from '../env.ts'
 import { resolveHandle } from '../lib/bluesky/index.ts'
 import { htmlToText } from '../lib/mastodon/index.ts'
-import { stumpFetch } from '../net/fetch.ts'
+import { NotPublicError, publicFetch, stumpFetch } from '../net/fetch.ts'
 import type { VenueRow } from '../venues/model.ts'
 
 const ALIASES: Record<string, string> = { 'old.reddit.com': 'reddit.com', 'new.reddit.com': 'reddit.com', 'np.reddit.com': 'reddit.com', 'twitter.com': 'x.com', 'mobile.twitter.com': 'x.com', 'mobile.x.com': 'x.com' }
@@ -96,12 +96,20 @@ export async function authorMatches(env: StumpEnv, checked: Checked, recorded: s
   return (await blueskyDid(env, recorded, checked.resolved ?? new Map())) === checked.author
 }
 
+/** A post's record is a few kilobytes; a link check reads at most this much of an answer. */
+const LINK_ANSWER_BYTES = 1024 * 1024
+
 async function read(env: StumpEnv, url: string, network: string): Promise<Record<string, unknown> | null> {
   let response: Response
-  try { response = await stumpFetch(env)(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(15_000) }) }
-  catch { return refuse('link_check_failed', { network, reason: `${network} could not be reached to check the link. Try again.` }) }
+  try { response = await publicFetch(env, fetch, { maxBytes: LINK_ANSWER_BYTES })(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(15_000) }) }
+  catch (error) {
+    if (error instanceof NotPublicError) return refuse('link_check_failed', { network, reason: 'Stump checks links on public sites only.' })
+    return refuse('link_check_failed', { network, reason: `${network} could not be reached to check the link. Try again.` })
+  }
   if (response.status === 404) { await response.body?.cancel(); return null }
-  const body = await response.json().catch(() => null) as Record<string, unknown> | null
+  let body: Record<string, unknown> | null = null, unread = false
+  try { body = await response.json() as Record<string, unknown> | null } catch { unread = true }
+  if (unread && response.ok) return refuse('link_check_failed', { network, status: response.status, reason: `${network}'s answer could not be read when the link was checked.` })
   // Bluesky answers 400 NotFound for a post that does not exist.
   if (response.status === 400 && body && /notfound/i.test(String(body.error ?? ''))) return null
   if (!response.ok || !body) return refuse('link_check_failed', { network, status: response.status, reason: `${network} answered ${response.status} when the link was checked.` })

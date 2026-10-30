@@ -1,6 +1,6 @@
 import { refuse } from '../actions/refusals.ts'
 import type { StumpEnv } from '../env.ts'
-import { stumpFetch } from '../net/fetch.ts'
+import { publicFetch } from '../net/fetch.ts'
 import { canonicalUrl, describeError, scoreFinding, screenFindings, type Finding, type DropReason } from '../lib/discovery/index.ts'
 import { sendImmediateAlerts } from './alerts.ts'
 import { blockedAuthors, blockRefs } from './blocks.ts'
@@ -65,7 +65,8 @@ export async function pollWatch(ctx: PollContext, watch: WatchRow, options: { ma
   const team = await teamHandles(db)
   const blocked = blockRefs(await blockedAuthors(db))
   const rank = rankContext(watch, products, now)
-  const fetch = stumpFetch(ctx.env)
+  // Sources, and the transcripts a feed names, are read from the public web only.
+  const fetch = publicFetch(ctx.env)
   const outcome: PollOutcome = { watch_id: watch.id, added: 0, alerts: 0, sources: [], next_poll_at: null }
   const fresh: Stored[] = []
   let error: RecordedError | null = null

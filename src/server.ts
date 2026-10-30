@@ -14,6 +14,7 @@ import { consentCallback } from './stump/accounts/callback.ts'
 import { appDocumentGate } from './stump/http/app-gate.ts'
 import { importDoorResponse } from './stump/imports/door.ts'
 import { personDoorResponse } from './stump/http/routes.ts'
+import { readCapped } from './stump/http/body.ts'
 import { publishDue } from './stump/publish/tick.ts'
 import { tickHandoffs } from './stump/handoffs/refresh.ts'
 import { pollDueWatches } from './stump/watches/scheduled.ts'
@@ -28,6 +29,18 @@ function noTransform(response: Response): Response {
   const headers = new Headers(response.headers), policy = headers.get('cache-control')
   headers.set('cache-control', policy ? `${policy}, no-transform` : 'no-transform')
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers })
+}
+
+// The agent door's own pages and policy routes (approvals, Pause, the policy) take
+// bodies of a few fields; each is read to at most the MCP door's 1 MiB before the
+// door sees it. POST /mcp keeps the door's own capped read.
+const AGENT_BODY_BYTES = 1024 * 1024
+async function agentDoorRequest(request: Request, path: string): Promise<Request | Response> {
+  if (path === '/mcp' || ['GET', 'HEAD'].includes(request.method) || !request.body) return request
+  const bytes = await readCapped(request, AGENT_BODY_BYTES)
+  if (!bytes) return Response.json({ code: 'request_too_large', max_bytes: AGENT_BODY_BYTES }, { status: 413, headers: { 'cache-control': 'no-store' } })
+  const headers = new Headers(request.headers); headers.delete('content-length')
+  return new Request(request.url, { method: request.method, headers, body: bytes })
 }
 
 export default withDemo<Bindings, ExportedHandler<Bindings>>({
@@ -48,8 +61,10 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
     if (AGENT_PATHS(path)) {
       const moved = agentsPageRedirect(request)
       if (moved) return moved
-      const agent = await stumpAgentDoor(env).handle(request)
-      if (agent) return rejectedResponse(request, agent)
+      const bounded = await agentDoorRequest(request, path)
+      if (bounded instanceof Response) return bounded
+      const agent = await stumpAgentDoor(env).handle(bounded)
+      if (agent) return rejectedResponse(bounded, agent)
     }
     // The owner's import door: venue lists today (src/stump/imports/door.ts).
     const imported = await importDoorResponse(request, env)

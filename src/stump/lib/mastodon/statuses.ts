@@ -107,6 +107,20 @@ export async function getStatus(deps: HttpDeps, origin: string, token: string | 
   return ok(status, res.rate);
 }
 
+/**
+ * The id on this instance of a status at another instance's URL, through GET /api/v2/search with
+ * resolve=true (https://docs.joinmastodon.org/methods/search/); null when the instance finds none.
+ */
+export async function searchStatus(deps: HttpDeps, origin: string, token: string, url: string): Promise<Result<string | null>> {
+  const q = new URLSearchParams({ q: url, resolve: 'true', type: 'statuses', limit: '1' });
+  const res = await send(deps, { method: 'GET', url: `${origin}/api/v2/search?${q.toString()}`, headers: { ...bearer(token), accept: 'application/json' }, write: false });
+  if (!res.ok) return fail(res.error);
+  const statuses = (res.value.json as { statuses?: unknown } | null)?.statuses;
+  if (!Array.isArray(statuses)) return invalidResponse('Search answered without a statuses list', res.value.status);
+  const id = (statuses[0] as { id?: unknown } | undefined)?.id;
+  return ok(typeof id === 'string' && id ? id : null, res.rate);
+}
+
 /** Exact posted text and content warning, as typed. Needs read:statuses. */
 export async function getStatusSource(deps: HttpDeps, origin: string, token: string, id: string): Promise<Result<{ text: string; spoilerText: string }>> {
   const res = await send(deps, { method: 'GET', url: `${origin}/api/v1/statuses/${encodeURIComponent(id)}/source`, headers: { ...bearer(token), accept: 'application/json' }, write: false });

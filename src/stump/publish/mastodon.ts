@@ -1,7 +1,6 @@
 import { mastodonFor } from '../accounts/clients.ts'
 import { shownHandle } from '../accounts/handle.ts'
-import type { MastodonClient, NetworkError as MastodonError, StatusDraft, ThreadItem, ThreadPosted, Visibility } from '../lib/mastodon/index.ts'
-import { stumpFetch } from '../net/fetch.ts'
+import type { MastodonClient, NetworkError as MastodonError, Result, StatusDraft, ThreadItem, ThreadPosted, Visibility } from '../lib/mastodon/index.ts'
 import { credentialsRefused, notReady, partsToRemove, removeEach } from './held.ts'
 import { partKey, postedParts, recordCall, savePart, textsOf } from './parts.ts'
 import type { DueItem, Problem, PublishContext, PublishOutcome, Publisher } from './types.ts'
@@ -26,15 +25,11 @@ function drafts(item: DueItem): Array<Omit<StatusDraft, 'inReplyToId'>> {
   }))
 }
 
-/** The status a reply answers: on this instance by its id, elsewhere through the instance's search. */
-async function replyTarget(ctx: PublishContext, client: MastodonClient, token: string, url: string): Promise<string | null> {
+/** The status a reply answers: on this instance by its id, elsewhere through the instance's search (with the client's timeout). */
+async function replyTarget(client: MastodonClient, url: string): Promise<Result<string | null>> {
   const target = new URL(url)
-  if (target.origin === client.origin) return /(\d+)\/?$/.exec(target.pathname)?.[1] ?? null
-  const query = new URLSearchParams({ q: url, resolve: 'true', type: 'statuses', limit: '1' })
-  const response = await stumpFetch(ctx.env)(`${client.origin}/api/v2/search?${query}`, { headers: { authorization: `Bearer ${token}`, accept: 'application/json' } })
-  if (!response.ok) return null
-  const found = await response.json() as { statuses?: Array<{ id?: string }> }
-  return found.statuses?.[0]?.id ?? null
+  if (target.origin === client.origin) return { ok: true, value: /(\d+)\/?$/.exec(target.pathname)?.[1] ?? null }
+  return client.searchStatus(url)
 }
 
 const error = (e: MastodonError) => ({ code: e.code ?? e.kind, message: e.message })
@@ -55,7 +50,7 @@ export const mastodonPublisher: Publisher = {
   async publish(item, ctx) {
     const opened = await mastodonFor(ctx.env, ctx.account)
     if (!opened.ok) return notReady(opened)
-    const { client } = opened, token = opened.credentials.network === 'mastodon' ? opened.credentials.access_token : ''
+    const { client } = opened
     const account = await client.account()
     if (!account.ok) return fault(ctx, account.error, 0)
     const sent = drafts(item)
@@ -71,7 +66,9 @@ export const mastodonPublisher: Publisher = {
     }
     let parent: string | null = null
     if (item.reply_to) {
-      parent = await replyTarget(ctx, client, token, item.reply_to.url)
+      const found = await replyTarget(client, item.reply_to.url)
+      if (!found.ok) return fault(ctx, found.error, 0)
+      parent = found.value
       if (!parent) return { state: 'failed', error: { code: 'reply_target_not_found', message: `${client.origin} could not find ${item.reply_to.url}.` } }
     }
     const threadItems: ThreadItem[] = sent.map((draft, index) => ({ key: partKey(item, index), draft: index === 0 && parent ? { ...draft, inReplyToId: parent } as StatusDraft : draft }))
@@ -142,8 +139,9 @@ export const mastodonPublisher: Publisher = {
 export async function mastodonReadBack(url: string, ctx: PublishContext) {
   const opened = await mastodonFor(ctx.env, ctx.account)
   if (!opened.ok) return { ok: false as const, message: opened.message }
-  const token = opened.credentials.network === 'mastodon' ? opened.credentials.access_token : ''
-  const id = await replyTarget(ctx, opened.client, token, url)
+  const found = await replyTarget(opened.client, url)
+  if (!found.ok) return { ok: false as const, message: found.error.message }
+  const id = found.value
   if (!id) return { ok: false as const, message: `${opened.client.origin} could not find ${url}.` }
   const back = await opened.client.readBack(id)
   if (!back.ok) return { ok: false as const, message: back.error.message }
