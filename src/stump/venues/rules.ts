@@ -2,6 +2,7 @@
 // route only with its source; a rule that restricts binds whether or not it is
 // sourced. Every act on a venue reads the rules at the moment it runs.
 import { refuse } from '../actions/refusals.ts'
+import { normalizeVenueUrl } from '../lib/imports/index.ts'
 import { moveItem, type ItemState, type Mover } from '../items/state.ts'
 import { RULE_KEYS, rulesOf, type Rule, type RuleKey, type Rules, type VenueRow } from './model.ts'
 
@@ -9,7 +10,8 @@ export const ROUTES = ['publish', 'handoff_draft', 'handoff_brief'] as const
 export type Route = typeof ROUTES[number]
 
 const VALUES: Partial<Record<RuleKey, readonly string[]>> = {
-  posting: ['company_account', 'members_only'],
+  // 'api' and 'company_account' both let software post from the company's own account.
+  posting: ['api', 'company_account', 'members_only'],
   ai_text: ['allowed', 'allowed_with_disclosure', 'banned'],
   self_promotion: ['allowed', 'thread', 'day', 'ratio', 'banned'],
   links: ['allowed', 'banned'],
@@ -17,9 +19,9 @@ const VALUES: Partial<Record<RuleKey, readonly string[]>> = {
 
 const source = { type: ['string', 'null'], maxLength: 2048 }
 const readAt = { type: ['string', 'null'], pattern: '^\\d{4}-\\d{2}-\\d{2}$' }
-const ruleSchema = (value: Record<string, unknown>) => ({
+const ruleSchema = (value: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({
   type: ['object', 'null'], additionalProperties: false, required: ['value'],
-  properties: { value, source_url: source, read_at: readAt, sourced: { type: 'boolean' }, detail: { type: ['string', 'null'], maxLength: 300 } },
+  properties: { value, source_url: source, read_at: readAt, sourced: { type: 'boolean' }, detail: { type: ['string', 'null'], maxLength: 300 }, ...extra },
 })
 /** The `rules` argument: any of the six rules, each {value, source_url, read_at}; null removes one. */
 export const RULES_SCHEMA = {
@@ -27,7 +29,8 @@ export const RULES_SCHEMA = {
   properties: {
     posting: ruleSchema({ enum: VALUES.posting }),
     ai_text: ruleSchema({ enum: VALUES.ai_text }),
-    self_promotion: ruleSchema({ enum: VALUES.self_promotion }),
+    // A rule that keeps self-promotion to one thread names that thread's address.
+    self_promotion: ruleSchema({ enum: VALUES.self_promotion }, { thread_url: source }),
     links: ruleSchema({ enum: VALUES.links }),
     disclosure_line: ruleSchema({ type: 'string', minLength: 1, maxLength: 280 }),
     gates: ruleSchema({
@@ -44,9 +47,20 @@ const realDate = (value: unknown) => typeof value === 'string' && !Number.isNaN(
 export function normalizeRule(key: RuleKey, input: Record<string, unknown>): Rule {
   if (input.source_url != null && !httpUrl(input.source_url)) refuse('invalid_arguments', { field: `rules.${key}.source_url`, reason: 'Give the http(s) page the rule comes from.' })
   if (input.read_at != null && !realDate(input.read_at)) refuse('invalid_arguments', { field: `rules.${key}.read_at` })
+  if (input.thread_url != null && !httpUrl(input.thread_url)) refuse('invalid_arguments', { field: `rules.${key}.thread_url`, reason: 'Give the http(s) address of the thread.' })
   const source_url = (input.source_url as string | null | undefined) ?? null, read_at = (input.read_at as string | null | undefined) ?? null
   const value = key === 'disclosure_line' ? String(input.value).trim() : input.value
-  return { value, source_url, read_at, sourced: source_url !== null && read_at !== null, ...(input.detail ? { detail: String(input.detail).trim() } : {}) }
+  const thread_url = input.value === 'thread' && typeof input.thread_url === 'string' ? input.thread_url.trim() : null
+  return { value, source_url, read_at, sourced: source_url !== null && read_at !== null, ...(input.detail ? { detail: String(input.detail).trim() } : {}), ...(thread_url ? { thread_url } : {}) }
+}
+
+const ruleWords = (rule: Rule | null) => rule === null ? 'none'
+  : `${typeof rule.value === 'string' ? rule.value : JSON.stringify(rule.value)}${rule.thread_url ? ` in ${rule.thread_url}` : ''}${rule.sourced ? '' : ' (unsourced)'}`
+const sameRule = (a: Rule | null, b: Rule | null) => JSON.stringify(a && { ...a, origin: undefined }) === JSON.stringify(b && { ...b, origin: undefined })
+
+/** The rules that differ between two sets, each as "key: old -> new" (STUMP-VENUE-002.4). */
+export function ruleChanges(before: Rules, after: Rules): string[] {
+  return RULE_KEYS.filter(key => !sameRule(before[key], after[key])).map(key => `${key}: ${ruleWords(before[key])} -> ${ruleWords(after[key])}`)
 }
 
 /** The stored rules with the given ones replaced (null removes a rule). */
@@ -81,7 +95,7 @@ export function routesFor(venue: VenueRow): RouteAnswer {
   else if (said(rules.self_promotion, 'banned')) closeAll('self_promotion', 'The venue bans self-promotion.')
   else {
     const posting = rules.posting, ai = rules.ai_text
-    reasons.push(said(posting, 'company_account') && posting!.sourced
+    reasons.push(said(posting, 'api', 'company_account') && posting!.sourced
       ? { route: 'publish', open: true, rule: 'posting', because: 'Software may post from the company account.' }
       : { route: 'publish', open: false, rule: 'posting', because: said(posting, 'members_only') ? 'Only members post here.' : posting ? 'The posting rule has no source.' : 'No posting rule is recorded.' })
     reasons.push(said(ai, 'allowed', 'allowed_with_disclosure') && ai!.sourced
@@ -102,6 +116,20 @@ const threadOf = (item: ItemAtVenue) => {
   const reply = item.reply_to ? (JSON.parse(item.reply_to) as { url?: string }).url : undefined
   return reply ?? (JSON.parse(item.options) as { thread_url?: string }).thread_url ?? null
 }
+/** The thread a URL sits in: a Reddit-style post id where there is one, else the canonical address itself. */
+function threadKey(url: string): { host: string; post: string | null; path: string } | null {
+  const canonical = normalizeVenueUrl(url)
+  if (!canonical) return null
+  const parsed = new URL(canonical.includes('://') ? canonical : `https://${canonical}`)
+  return { host: parsed.hostname.replace(/^(www|old|new|np)\.reddit\.com$/, 'reddit.com'), post: /\/comments\/([a-z0-9]+)/i.exec(parsed.pathname)?.[1]?.toLowerCase() ?? null, path: parsed.pathname.replace(/\/+$/, '') }
+}
+/** Whether an item's thread is the venue's promotion thread, or a reply inside it. */
+export function inThread(threadUrl: string, itemUrl: string): boolean {
+  const thread = threadKey(threadUrl), item = threadKey(itemUrl)
+  if (!thread || !item || thread.host !== item.host) return false
+  if (thread.post) return thread.post === item.post
+  return item.path === thread.path || item.path.startsWith(`${thread.path}/`)
+}
 const textOf = (item: ItemAtVenue) => [item.text ?? '', ...(item.parts ? JSON.parse(item.parts) as string[] : [])].join('\n')
 
 /**
@@ -112,7 +140,12 @@ const textOf = (item: ItemAtVenue) => [item.text ?? '', ...(item.parts ? JSON.pa
 export function holdFor(venue: VenueRow, item: ItemAtVenue): VenueHold | null {
   const rules = rulesOf(venue), name = venue.name
   const hold = (rule: RuleKey, reason: string): VenueHold => ({ rule, reason, source_url: rules[rule]?.source_url ?? null })
-  if (said(rules.self_promotion, 'thread') && !threadOf(item)) return hold('self_promotion', `${name} allows self-promotion only in ${rules.self_promotion!.detail ?? 'its promotion thread'}.`)
+  if (said(rules.self_promotion, 'thread')) {
+    const rule = rules.self_promotion!, aimed = threadOf(item)
+    const where = rule.thread_url ?? rule.detail ?? 'its promotion thread'
+    // With the thread's address recorded, anything outside that thread is held; without it, anything not in a thread at all.
+    if (rule.thread_url ? !aimed || !inThread(rule.thread_url, aimed) : !aimed) return hold('self_promotion', `${name} allows self-promotion only in ${where}.`)
+  }
   if (said(rules.links, 'banned') && /https?:\/\//i.test(textOf(item))) return hold('links', `${name} does not allow links.`)
   if (item.account_id && !routesFor(venue).routes.includes('publish')) return hold('posting', `${name} keeps posting for its members; hand it to a member instead.`)
   return null
@@ -126,7 +159,7 @@ const OPEN: readonly ItemState[] = ['draft', 'ready', 'scheduled', 'held', 'paus
  * holds moves to held with the rule named, and one only a rule held goes back
  * to draft (STUMP-VENUE-002.4).
  */
-export async function refreshItems(db: D1Database, venue: VenueRow, mover: Mover): Promise<D1PreparedStatement[]> {
+export async function refreshItems(db: D1Database, venue: VenueRow, mover: Mover, changes: string[] = []): Promise<D1PreparedStatement[]> {
   const items = (await db.prepare(`SELECT id,state,format,account_id,text,parts,reply_to,options,routes,flags,hold FROM stump_items
     WHERE venue_id=? AND state IN (SELECT value FROM json_each(?))`).bind(venue.id, JSON.stringify(OPEN)).all<ItemAtVenue>()).results
   const routes = routesFor(venue).routes, statements: D1PreparedStatement[] = []
@@ -144,9 +177,10 @@ export async function refreshItems(db: D1Database, venue: VenueRow, mover: Mover
     } else if (changed || set.flags !== item.flags) {
       statements.push(db.prepare('UPDATE stump_items SET routes=?,flags=?,updated_at=? WHERE id=? AND state=?').bind(set.routes, set.flags, mover.now(), item.id, item.state))
     }
-    if (changed) statements.push(db.prepare('INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at) VALUES(?,?,?,?,?,?,?,?)')
+    // The change itself goes in each open item's history: which rule moved and how, then the routes before and after.
+    if (changed || changes.length) statements.push(db.prepare('INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at) VALUES(?,?,?,?,?,?,?,?)')
       .bind(crypto.randomUUID(), item.id, item.state, item.state, mover.person?.id ?? null, mover.agent?.id ?? null,
-        `${venue.name} rules changed: routes ${before.join(', ') || 'none'} -> ${routes.join(', ') || 'none'}`, mover.now()))
+        `${venue.name} rules changed: ${[...changes, `routes ${before.join(', ') || 'none'} -> ${routes.join(', ') || 'none'}`].join('; ')}`, mover.now()))
   }
   return statements
 }

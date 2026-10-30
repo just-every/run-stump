@@ -7,7 +7,7 @@ import { inferKind } from '../lib/imports/index.ts'
 import { CONTRIBUTORS, EDITORS, READERS } from '../people/roles.ts'
 import { usage } from './limits.ts'
 import {
-  KINDS, PRIORITIES, STATUSES, kindDetails, placeKey, priorityRank, productLinks, publicVenue, readVenue, venueHistory, venueOrRefuse,
+  KIND_FIELDS, KINDS, PRIORITIES, STATUSES, kindDetails, placeKey, priorityRank, productLinks, publicVenue, readVenue, venueHistory, venueOrRefuse,
   type PublicVenue, type VenueKind, type VenueRow,
 } from './model.ts'
 import { refreshItems, routesFor } from './rules.ts'
@@ -15,16 +15,25 @@ import { refreshItems, routesFor } from './rules.ts'
 const text = (max: number) => ({ type: 'string', minLength: 1, maxLength: max })
 const optionalText = (max: number) => ({ type: ['string', 'null'], maxLength: max })
 export const venueId = { type: 'string', minLength: 1, maxLength: 80 }
-const product = { type: 'object', additionalProperties: false, required: ['product_id'], properties: { product_id: text(80), fit: { type: ['integer', 'null'], minimum: 0, maximum: 100 } } }
+// A product link reads product_id and fit; any other key a caller sends with it is ignored.
+const product = { type: 'object', required: ['product_id'], properties: { product_id: text(80), fit: { type: ['integer', 'null'], minimum: 0, maximum: 100 } } }
+const DETAIL_TYPES = { text: optionalText(300), integer: { type: ['integer', 'null'], minimum: 0 }, number: { type: ['number', 'null'], minimum: 0 }, date: { type: ['string', 'null'], pattern: '^\\d{4}-\\d{2}-\\d{2}$' } }
+/** Every kind's own fields, also accepted at the top level of a create or update (a Slack venue's channel, a journalist's publication). */
+const DETAIL_FIELDS: Record<string, unknown> = {}
+for (const kind of Object.values(KIND_FIELDS)) for (const [key, type] of Object.entries(kind.details)) DETAIL_FIELDS[key] = DETAIL_TYPES[type]
+// How to post and requirements are what people write: plain text is kept as {text}.
+const writtenOr = (properties: Record<string, unknown>) => ({ type: ['object', 'string'], maxLength: 2000, additionalProperties: false, properties })
 const FIELDS = {
   kind: { enum: [...KINDS] }, name: text(200), url: optionalText(2048), platform: optionalText(80),
   status: { enum: [...STATUSES] }, priority: { enum: [...PRIORITIES, null] },
   products: { type: 'array', maxItems: 50, items: product },
   details: { type: 'object', maxProperties: 12 },
   audience: optionalText(2000), why: optionalText(2000), reader_value: optionalText(2000), reception: optionalText(2000), notes: optionalText(4000),
-  how_to_post: { type: 'object', additionalProperties: false, properties: { text: optionalText(2000), thread: optionalText(300), channel: optionalText(120), flair: optionalText(120), day: optionalText(40), template: optionalText(4000) } },
-  requirements: { type: 'object', additionalProperties: false, properties: { text: optionalText(2000), karma: { type: ['integer', 'null'], minimum: 0 }, account_age_days: { type: ['integer', 'null'], minimum: 0 }, membership: { type: ['boolean', 'null'] }, price_usd: { type: ['number', 'null'], minimum: 0 } } },
+  how_to_post: writtenOr({ text: optionalText(2000), thread: optionalText(300), channel: optionalText(120), flair: optionalText(120), day: optionalText(40), template: optionalText(4000) }),
+  requirements: writtenOr({ text: optionalText(2000), karma: { type: ['integer', 'null'], minimum: 0 }, account_age_days: { type: ['integer', 'null'], minimum: 0 }, membership: { type: ['boolean', 'null'] }, price_usd: { type: ['number', 'null'], minimum: 0 } }),
+  ...DETAIL_FIELDS,
 }
+const written = (value: unknown) => JSON.stringify(typeof value === 'string' ? (value.trim() ? { text: value.trim() } : {}) : value ?? {})
 const standard = (measure = 1) => [{ class: 'standard' as const, facts: { measure } }]
 const clean = (value: unknown) => typeof value === 'string' ? value.trim() || null : null
 const mover = (ctx: ActionContext) => ({ db: ctx.db, person: ctx.person, agent: ctx.agent, now: ctx.now })
@@ -81,7 +90,10 @@ function fieldsOf(args: Args, current?: VenueRow): Fields {
   const kind = (args.kind ?? current?.kind) as VenueKind, name = clean(args.name) ?? current?.name ?? null
   const url = args.url !== undefined ? clean(args.url) : current?.url ?? null
   if (!name) refuse('invalid_arguments', { field: 'name' })
-  const details = kindDetails(kind, url, (args.details ?? (current && kind === current.kind ? JSON.parse(current.details) : {})) as Record<string, unknown>)
+  // A kind's fields may come under details or at the top level; a field of another kind is refused by name, never dropped.
+  const given = (args.details ?? (current && kind === current.kind ? JSON.parse(current.details) : {})) as Record<string, unknown>
+  const top = Object.fromEntries(Object.keys(DETAIL_FIELDS).filter(key => args[key] !== undefined).map(key => [key, args[key]]))
+  const details = kindDetails(kind, url, { ...given, ...top })
   return { kind, name, url, url_key: placeKey(url, name), details }
 }
 
@@ -95,7 +107,7 @@ async function insertVenue(ctx: ActionContext, args: Args, status: string) {
     ctx.db.prepare(`INSERT INTO stump_venues(id,kind,name,url,url_key,platform,status,priority,notes,created_by,created_at,updated_at,details,audience,why,reader_value,how_to_post,requirements,reception)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id, fields.kind, fields.name, fields.url, fields.url_key, clean(args.platform), status, priorityRank(args.priority),
       clean(args.notes), ctx.person.id, now, now, JSON.stringify(fields.details), clean(args.audience), clean(args.why), clean(args.reader_value),
-      JSON.stringify(args.how_to_post ?? {}), JSON.stringify(args.requirements ?? {}), clean(args.reception)),
+      written(args.how_to_post), written(args.requirements), clean(args.reception)),
     ...productStatements(ctx, id, products),
     venueHistory(ctx.db, id, 'create', mover(ctx), { status, kind: fields.kind }),
   ]).catch(error => {
@@ -104,7 +116,7 @@ async function insertVenue(ctx: ActionContext, args: Args, status: string) {
     throw error
   })
   ctx.emit('venue.created', `stump://venues/${id}`, { kind: fields.kind })
-  return { venue: await one(ctx, id) }
+  return one(ctx, id)
 }
 
 const LIST_FILTERS = { kind: FIELDS.kind, status: FIELDS.status, product_id: text(80), priority: FIELDS.priority, include_excluded: { type: 'boolean' }, include_archived: { type: 'boolean' }, q: text(200) }
@@ -129,7 +141,7 @@ const target = (args: Args) => ({ kind: 'venue', id: String(args.venue_id) })
 const summary = async (args: Args, ctx: ActionContext) => { const venue = await readVenue(ctx.db, args.venue_id); return { target: { id: String(args.venue_id), name: venue?.name ?? undefined } } }
 const revision = async (args: Args, ctx: ActionContext) => (await readVenue(ctx.db, args.venue_id))?.revision ?? null
 
-/** Writes one change to a venue under its revision, with its history, and answers the venue. */
+/** Writes one change to a venue under its revision, with its history, and answers the venue record. */
 async function change(ctx: ActionContext, venue: VenueRow, action: string, set: Record<string, unknown>, detail: Record<string, unknown>, extra: D1PreparedStatement[] = []) {
   const columns = Object.keys(set)
   const changed = await ctx.db.batch([
@@ -143,7 +155,7 @@ async function change(ctx: ActionContext, venue: VenueRow, action: string, set: 
   const refreshed = await refreshItems(ctx.db, next, mover(ctx))
   if (refreshed.length) await ctx.db.batch(refreshed)
   ctx.emit(`venue.${action}`, `stump://venues/${venue.id}`)
-  return { venue: (await answer(ctx, [next]))[0]! }
+  return (await answer(ctx, [next]))[0]!
 }
 
 export const manageActions: Record<string, StumpAction> = {
@@ -171,7 +183,8 @@ export const manageActions: Record<string, StumpAction> = {
   get: {
     roles: READERS, read: true, properties: { venue_id: venueId }, required: ['venue_id'],
     classify: () => standard(0), target,
-    async run(args, ctx) { const venue = await venueOrRefuse(ctx.db, args.venue_id); return { venue: (await answer(ctx, [venue]))[0], items: await itemsAt(ctx, venue.id) } },
+    // The Venue record itself, with the items aimed at it beside its fields.
+    async run(args, ctx) { const venue = await venueOrRefuse(ctx.db, args.venue_id); return { ...(await answer(ctx, [venue]))[0]!, items: await itemsAt(ctx, venue.id) } },
   },
   list: {
     roles: READERS, read: true, properties: LIST_FILTERS,
@@ -187,7 +200,7 @@ export const manageActions: Record<string, StumpAction> = {
       if (fields.url_key !== venue.url_key) await samePlace(ctx, fields.url_key, venue.id)
       const set: Record<string, unknown> = { kind: fields.kind, name: fields.name, url: fields.url, url_key: fields.url_key, details: JSON.stringify(fields.details) }
       for (const key of ['platform', 'audience', 'why', 'reader_value', 'reception', 'notes'] as const) if (args[key] !== undefined) set[key] = clean(args[key])
-      for (const key of ['how_to_post', 'requirements'] as const) if (args[key] !== undefined) set[key] = JSON.stringify(args[key])
+      for (const key of ['how_to_post', 'requirements'] as const) if (args[key] !== undefined) set[key] = written(args[key])
       if (args.priority !== undefined) set.priority = priorityRank(args.priority)
       // A new status other than excluded brings an excluded venue back, without its exclusion.
       if (args.status !== undefined) { notExcluded(args.status); set.status = args.status; set.excluded = null }
@@ -214,7 +227,7 @@ export const manageActions: Record<string, StumpAction> = {
     classify: () => standard(), summary, target, revision,
     async run(args, ctx) {
       const venue = await venueOrRefuse(ctx.db, args.venue_id)
-      if (venue.archived) return { venue: (await answer(ctx, [venue]))[0] }
+      if (venue.archived) return (await answer(ctx, [venue]))[0]!
       // Items, hand-offs and ledger entries keep their venue throughout (STUMP-VENUE-001.5).
       return change(ctx, venue, 'archive', { archived: 1, archived_at: ctx.now(), archived_by: ctx.person.id }, {})
     },
@@ -224,7 +237,7 @@ export const manageActions: Record<string, StumpAction> = {
     classify: () => standard(), summary, target, revision,
     async run(args, ctx) {
       const venue = await venueOrRefuse(ctx.db, args.venue_id)
-      if (!venue.archived) return { venue: (await answer(ctx, [venue]))[0] }
+      if (!venue.archived) return (await answer(ctx, [venue]))[0]!
       return change(ctx, venue, 'restore', { archived: 0, archived_at: null, archived_by: null }, {})
     },
   },

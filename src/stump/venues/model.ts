@@ -18,7 +18,7 @@ export const priorityWord = (rank: unknown): Priority | null => typeof rank === 
 
 export const RULE_KEYS = ['posting', 'ai_text', 'self_promotion', 'links', 'disclosure_line', 'gates'] as const
 export type RuleKey = typeof RULE_KEYS[number]
-export interface Rule { value: unknown; source_url: string | null; read_at: string | null; sourced: boolean; detail?: string | null; origin?: string }
+export interface Rule { value: unknown; source_url: string | null; read_at: string | null; sourced: boolean; detail?: string | null; thread_url?: string | null; origin?: string }
 export type Rules = Record<RuleKey, Rule | null>
 
 export const PERIODS = ['day', 'week', 'month', 'quarter', 'year'] as const

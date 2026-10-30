@@ -6,7 +6,7 @@ import { holdOverLimit, usage } from '../venues/limits.ts'
 import { eligibility, memberOf, type MemberRow } from '../venues/members.ts'
 import { PERIODS, readVenue, rulesOf, venueHistory, venueOrRefuse, type VenueRow } from '../venues/model.ts'
 import { answer, manageActions, venueId } from '../venues/register.ts'
-import { mergeRules, refreshItems, routesFor, RULES_SCHEMA } from '../venues/rules.ts'
+import { mergeRules, refreshItems, routesFor, ruleChanges, RULES_SCHEMA } from '../venues/rules.ts'
 
 // The venue register (STUMP-VENUE-001 to -006): records, rules and routes,
 // the shared limit, and who on the team belongs where.
@@ -20,14 +20,14 @@ const handle = { type: 'string', minLength: 1, maxLength: 120 }
 const day = { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }
 
 /** Writes a venue column under its revision, refreshes the items there, and answers the venue. */
-async function saveVenue(ctx: ActionContext, venue: VenueRow, action: string, column: 'rules' | 'shared_limit', value: string | null, detail: Record<string, unknown>) {
+async function saveVenue(ctx: ActionContext, venue: VenueRow, action: string, column: 'rules' | 'shared_limit', value: string | null, detail: Record<string, unknown>, changes: string[] = []) {
   const [updated] = await ctx.db.batch([
     ctx.db.prepare(`UPDATE stump_venues SET ${column}=?,revision=revision+1,updated_at=? WHERE id=? AND revision=?`).bind(value, ctx.now(), venue.id, venue.revision),
     venueHistory(ctx.db, venue.id, action, mover(ctx), detail),
   ])
   if (!updated!.meta.changes) refuse('revision_conflict', { current_revision: (await readVenue(ctx.db, venue.id))?.revision ?? null })
   const next = (await readVenue(ctx.db, venue.id))!
-  const follow = column === 'rules' ? await refreshItems(ctx.db, next, mover(ctx)) : await holdOverLimit(ctx.db, next, mover(ctx))
+  const follow = column === 'rules' ? await refreshItems(ctx.db, next, mover(ctx), changes) : await holdOverLimit(ctx.db, next, mover(ctx))
   if (follow.length) await ctx.db.batch(follow)
   ctx.emit(`venue.${action}`, `stump://venues/${venue.id}`)
   return next
@@ -75,8 +75,9 @@ export const venueTools: StumpTool[] = [{
       async run(args, ctx) {
         const venue = await venueOrRefuse(ctx.db, args.venue_id)
         const before = routesFor(venue).routes, rules = mergeRules(rulesOf(venue), args.rules as Record<string, unknown>)
+        const changes = ruleChanges(rulesOf(venue), rules)
         const next = await saveVenue(ctx, venue, 'rules', 'rules', JSON.stringify(Object.fromEntries(Object.entries(rules).filter(([, rule]) => rule !== null))),
-          { rules: Object.keys(args.rules as object), routes_before: before })
+          { rules: Object.keys(args.rules as object), changes, routes_before: before }, changes)
         return { venue: (await answer(ctx, [next]))[0], routes: routesFor(next) }
       },
     },

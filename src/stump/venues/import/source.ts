@@ -56,7 +56,9 @@ function venueDetails(kind: VenueKind, url: string | null): Record<string, Json>
  */
 export async function venueListSource(db: D1Database, namespace: VenueSource, ownerId: string) {
   const state = await known(db)
-  let summary: VenueListSummary | null = null
+  let summary: VenueListSummary | null = null, rejected: Array<{ kind: string; sourceId: string; reason: string }> | null = null
+  // What each row maps to in this request, by "<kind>|<sourceId>": a plan names a changed row's fields from it.
+  const mapped = new Map<string, Record<string, unknown>>()
   // The list's own venues, by target, as the reader read them: their rules decide their drafts' routes.
   const listedVenues = new Map<string, { status: string; rules: Record<string, Json> }>()
   const productRef = (name: string) => {
@@ -118,10 +120,11 @@ export async function venueListSource(db: D1Database, namespace: VenueSource, ow
       version: MAPPING_VERSION,
       map(record) {
         if (record.kind === REJECTED_KIND) return mapRecord(record as never)
-        if (record.kind === 'product') return mapProduct(record)
-        if (record.kind === 'venue') return mapVenue(record)
-        if (record.kind === 'draft') return mapDraft(record)
-        return { effects: [], rejection: `unknown record kind "${record.kind}"` }
+        const result = record.kind === 'product' ? mapProduct(record) : record.kind === 'venue' ? mapVenue(record) : record.kind === 'draft' ? mapDraft(record) : null
+        if (!result) return { effects: [], rejection: `unknown record kind "${record.kind}"` }
+        const value = result.effects[0]?.value
+        if (value) mapped.set(`${record.kind}|${record.sourceId}`, value as Record<string, unknown>)
+        return result
       },
     },
     readRaw(upload) {
@@ -136,8 +139,10 @@ export async function venueListSource(db: D1Database, namespace: VenueSource, ow
       }
       // Products first, then venues, then their entries, then each refused row with its reasons.
       const products: ParsedRecord[] = [...names.values()].map(name => ({ kind: 'product', sourceId: productTarget(name), payload: { name } }))
-      return [...products, ...toRecords(parsed) as ParsedRecord[]]
+      const records = toRecords(parsed)
+      rejected = records.filter(record => record.kind === REJECTED_KIND).map(record => ({ kind: record.kind, sourceId: record.sourceId, reason: mapRecord(record).rejection! }))
+      return [...products, ...records as ParsedRecord[]]
     },
   }
-  return { source, summary: () => summary }
+  return { source, summary: () => summary, rejected: () => rejected, mapped }
 }

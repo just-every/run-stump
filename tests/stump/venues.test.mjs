@@ -16,14 +16,14 @@ test('the register keeps one venue per place, and its rules decide the routes an
   assert.equal((await app.json('owner', '/agents/api/policy', { document: autonomous }, 'PUT')).status, 200)
   const { token } = (await app.json('owner', '/app/api/agent-credentials', { name: 'Synthetic venue agent' })).body
 
-  const subreddit = (await manage('owner', { action: 'create', kind: 'subreddit', name: 'r/synthetic1', url: 'https://www.reddit.com/r/synthetic1/', status: 'ready', priority: 'high' })).body.result.venue
+  const subreddit = (await manage('owner', { action: 'create', kind: 'subreddit', name: 'r/synthetic1', url: 'https://www.reddit.com/r/synthetic1/', status: 'ready', priority: 'high' })).body.result
   assert.equal(subreddit.details.subreddit, 'r/synthetic1')
   const journalist = await app.mcp(token, 'stump.venues.manage', { action: 'create', kind: 'journalist', name: 'Synthetic Reporter', status: 'editorial', details: { publication: 'Synthetic Times', beat: 'clinics' } })
-  assert.equal(journalist.result.structuredContent.venue.details.publication, 'Synthetic Times')
-  const newsletter = (await manage('owner', { action: 'create', kind: 'newsletter', name: 'Synthetic Weekly', url: 'https://synthetic-stump-2.example/news', status: 'editorial' })).body.result.venue
+  assert.equal(journalist.result.structuredContent.details.publication, 'Synthetic Times')
+  const newsletter = (await manage('owner', { action: 'create', kind: 'newsletter', name: 'Synthetic Weekly', url: 'https://synthetic-stump-2.example/news', status: 'editorial' })).body.result
 
-  for (const [kind, extra, field] of [['slack', { details: { workspace: 'Synthetic', channel: '#demos' } }, 'channel'], ['podcast', { details: { host: 'Synthetic Host' } }, 'host'], ['directory', { details: { price_usd: 49 } }, 'price_usd']]) {
-    const venue = (await manage('owner', { action: 'create', kind, name: `Synthetic ${kind}`, url: `https://synthetic-stump-${kind}.example/`, status: 'candidate', ...extra })).body.result.venue
+  for (const [kind, extra, field] of [['slack', { workspace: 'Synthetic', channel: '#demos' }, 'channel'], ['podcast', { details: { host: 'Synthetic Host' } }, 'host'], ['directory', { details: { price_usd: 49 } }, 'price_usd']]) {
+    const venue = (await manage('owner', { action: 'create', kind, name: `Synthetic ${kind}`, url: `https://synthetic-stump-${kind}.example/`, status: 'candidate', ...extra })).body.result
     assert.equal(venue.kind, kind); assert.ok(Object.hasOwn(venue.details, field) && venue.details[field] !== null, kind)
   }
   const listed = (await manage('owner', { action: 'list', status: 'editorial' })).body.result
@@ -37,9 +37,9 @@ test('the register keeps one venue per place, and its rules decide the routes an
   const proposed = await app.mcp(token, 'stump.venues.manage', { action: 'propose', url: 'https://synthetic-stump-2.example/news/' })
   assert.equal(proposed.error?.code, 'venue_excluded'); assert.equal(proposed.error?.alternative, 'The subreddit.')
   assert.equal((await manage('owner', { action: 'list', include_excluded: true })).body.result.total, 6)
-  assert.equal((await manage('owner', { action: 'archive', venue_id: subreddit.id })).body.result.venue.archived, true)
+  assert.equal((await manage('owner', { action: 'archive', venue_id: subreddit.id })).body.result.archived, true)
   assert.ok(!(await manage('owner', { action: 'list' })).body.result.items.some(venue => venue.id === subreddit.id))
-  assert.equal((await manage('owner', { action: 'restore', venue_id: subreddit.id })).body.result.venue.archived, false)
+  assert.equal((await manage('owner', { action: 'restore', venue_id: subreddit.id })).body.result.archived, false)
   const stale = await manage('owner', { action: 'update', venue_id: subreddit.id, expected_revision: subreddit.revision, why: 'stale' })
   assert.equal(stale.body.code, 'revision_conflict')
 
@@ -48,9 +48,9 @@ test('the register keeps one venue per place, and its rules decide the routes an
     posting: { value: 'members_only', source_url: source, read_at: '2026-10-28' }, ai_text: { value: 'banned', source_url: source, read_at: '2026-10-28' },
     gates: { value: { karma: 100 }, source_url: source, read_at: '2026-10-28' } } })
   assert.deepEqual(rules.body.result.routes.routes, ['handoff_brief'])
-  const unsourced = await app.mcp(token, 'stump.venues.rules', { action: 'set', venue_id: journalist.result.structuredContent.venue.id, rules: { posting: { value: 'company_account' }, ai_text: { value: 'allowed' } } })
+  const unsourced = await app.mcp(token, 'stump.venues.rules', { action: 'set', venue_id: journalist.result.structuredContent.id, rules: { posting: { value: 'company_account' }, ai_text: { value: 'allowed' } } })
   assert.deepEqual(unsourced.result.structuredContent.routes.routes, ['handoff_brief'])
-  const sourced = await app.mcp(token, 'stump.venues.rules', { action: 'set', venue_id: journalist.result.structuredContent.venue.id, rules: { posting: { value: 'company_account', source_url: source, read_at: '2026-10-29' } } })
+  const sourced = await app.mcp(token, 'stump.venues.rules', { action: 'set', venue_id: journalist.result.structuredContent.id, rules: { posting: { value: 'api', source_url: source, read_at: '2026-10-29' } } })
   assert.deepEqual(sourced.result.structuredContent.routes.routes, ['publish', 'handoff_brief'])
 
   const limit = await app.action('owner', 'stump.venues.fit', { action: 'set_limit', venue_id: subreddit.id, limit: { posts: 1, per: 'week' } })
@@ -180,15 +180,21 @@ test('a venue list imports from Markdown and CSV: a dry run, apply, a rerun that
   const held = (await manage('owner', { action: 'get', venue_id: reddit.id })).body.result.items[0]
   assert.equal(held.state, 'held'); assert.equal(held.hold.rule, 'self_promotion'); assert.ok(held.history.length >= 2)
 
+  // The same file again is the applied import itself: applying it changes nothing.
   const rerun = await plan('outreach-md', list())
-  assert.deepEqual([rerun.body.summary.created, rerun.body.summary.updated], [0, 0])
+  assert.deepEqual([rerun.body.summary.created, rerun.body.summary.updated, rerun.body.planId, rerun.body.applied], [0, 0, first.body.planId, true])
   await apply('outreach-md', rerun.body)
+  // A changed row names its fields; the venue edited here is a conflict and keeps its edit.
   const changed = await plan('outreach-md', list('ready'))
-  assert.ok(changed.body.differences.conflicts.some(key => key.includes(`forum-s${run}`)), JSON.stringify(changed.body.differences))
+  const conflict = changed.body.changes.find(change => change.id === forum.id)
+  assert.ok(conflict?.conflict, JSON.stringify(changed.body.changes))
+  assert.ok(conflict.fields.some(field => field.field === 'status' && field.before === 'candidate' && field.after === 'ready'), JSON.stringify(conflict))
   await apply('outreach-md', changed.body)
-  assert.equal((await manage('owner', { action: 'get', venue_id: forum.id })).body.result.venue.status, 'candidate', 'the edited venue keeps its edit')
+  assert.equal((await manage('owner', { action: 'get', venue_id: forum.id })).body.result.status, 'candidate', 'the edited venue keeps its edit')
 
-  for (const later of [changed.body.planId, rerun.body.planId]) assert.equal((await door('undo', 'outreach-md', { planId: later })).status, 200)
+  const under = await door('undo', 'outreach-md', { planId: first.body.planId })
+  assert.deepEqual([under.status, under.body.error, under.body.details?.planId], [409, 'import_superseded', changed.body.planId])
+  assert.equal((await door('undo', 'outreach-md', { planId: changed.body.planId })).status, 200)
   const undone = await door('undo', 'outreach-md', { planId: first.body.planId })
   assert.equal(undone.body.job.state, 'undone')
   const kept = undone.body.kept.filter(item => item.kind === 'venue').map(item => item.id).sort()

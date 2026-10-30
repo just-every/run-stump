@@ -6,7 +6,7 @@ import type { Rule, RuleKey, Venue } from './types.ts'
 
 const LABELS: Record<RuleKey, string> = { posting: 'Posting', ai_text: 'AI text', self_promotion: 'Self-promotion', links: 'Links', disclosure_line: 'Disclosure line', gates: 'Gates' }
 const CHOICES: Partial<Record<RuleKey, Record<string, string>>> = {
-  posting: { members_only: 'members only', company_account: 'the company account may post' },
+  posting: { members_only: 'members only', company_account: 'the company account may post', api: 'software may post by API' },
   ai_text: { allowed: 'allowed', allowed_with_disclosure: 'allowed with disclosure', banned: 'banned' },
   self_promotion: { allowed: 'allowed', thread: 'in its thread only', day: 'on one day only', ratio: 'limited by a ratio', banned: 'banned' },
   links: { allowed: 'allowed', banned: 'banned' },
@@ -23,7 +23,8 @@ export function ruleWords(key: RuleKey, rule: Rule | null): string {
   }
   if (key === 'disclosure_line') return String(rule.value)
   const word = CHOICES[key]?.[String(rule.value)] ?? String(rule.value)
-  return rule.detail ? `${word} (${rule.detail})` : word
+  const where = rule.thread_url ? rule.thread_url.replace(/^https?:\/\/(www\.)?/, '') : rule.detail
+  return where ? `${word} (${where})` : word
 }
 
 const key = () => crypto.randomUUID()
@@ -55,16 +56,16 @@ function RuleEditor({ venue, name, rule, onSaved, onClose }: { venue: Venue; nam
   const gates = (name === 'gates' ? rule?.value ?? {} : {}) as Gates
   const [value, setValue] = useState<string>(name === 'gates' ? '' : String(rule?.value ?? ''))
   const [source, setSource] = useState(rule?.source_url ?? ''), [readAt, setReadAt] = useState(rule?.read_at ?? '')
-  const [detail, setDetail] = useState(rule?.detail ?? '')
+  const [detail, setDetail] = useState(rule?.detail ?? ''), [thread, setThread] = useState(rule?.thread_url ?? '')
   const [gate, setGate] = useState({ karma: gates.karma?.toString() ?? '', age: gates.account_age_days?.toString() ?? '', approval: gates.approval === true })
-  const save = (next: Partial<{ value: unknown; source: string; readAt: string; detail: string }> = {}, remove = false) => run(async () => {
+  const save = (next: Partial<{ value: unknown; source: string; readAt: string; detail: string; thread: string }> = {}, remove = false) => run(async () => {
     const chosen = next.value ?? (name === 'gates'
       ? Object.fromEntries(Object.entries({ karma: gate.karma ? Number(gate.karma) : undefined, account_age_days: gate.age ? Number(gate.age) : undefined, approval: gate.approval || undefined }).filter(([, item]) => item !== undefined))
       : value)
-    const src = (next.source ?? source).trim(), date = next.readAt ?? readAt, extra = (next.detail ?? detail).trim()
+    const src = (next.source ?? source).trim(), date = next.readAt ?? readAt, extra = (next.detail ?? detail).trim(), threadUrl = (next.thread ?? thread).trim()
     if (!remove && (chosen === '' || (typeof chosen === 'object' && !Object.keys(chosen as object).length))) return
     await runAction('stump.venues.rules', { action: 'set', idempotency_key: key(), venue_id: venue.id, expected_revision: venue.revision,
-      rules: { [name]: remove ? null : { value: chosen, source_url: src || null, read_at: date || null, ...(extra ? { detail: extra } : {}) } } })
+      rules: { [name]: remove ? null : { value: chosen, source_url: src || null, read_at: date || null, ...(extra ? { detail: extra } : {}), ...(chosen === 'thread' && threadUrl ? { thread_url: threadUrl } : {}) } } })
     onSaved()
   }, () => 'Saved.')
   return <div className="st-panel" role="group" aria-label={`Edit ${LABELS[name]}`}>
@@ -72,6 +73,7 @@ function RuleEditor({ venue, name, rule, onSaved, onClose }: { venue: Venue; nam
       {CHOICES[name] ? <label className="st-field">Rule<select value={value} disabled={busy} onChange={event => { setValue(event.target.value); void save({ value: event.target.value }) }}>
         <option value="" disabled>Choose…</option>{Object.entries(CHOICES[name]!).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label> : null}
       {name === 'disclosure_line' ? <label className="st-field">Line the venue asks for<input value={value} maxLength={280} onChange={event => setValue(event.target.value)} onBlur={() => void save()} /></label> : null}
+      {name === 'self_promotion' && value === 'thread' ? <label className="st-field">Thread address<input type="url" value={thread} placeholder="https://" maxLength={2048} onChange={event => setThread(event.target.value)} onBlur={() => void save()} /></label> : null}
       {name === 'self_promotion' ? <label className="st-field">Which thread, day or ratio<input value={detail} maxLength={300} onChange={event => setDetail(event.target.value)} onBlur={() => void save()} /></label> : null}
       {name === 'gates' ? <>
         <label className="st-field">Karma at least<input type="number" min={0} value={gate.karma} onChange={event => setGate({ ...gate, karma: event.target.value })} onBlur={() => void save()} /></label>

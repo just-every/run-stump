@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { applyPlan, ImportError, planFile, undoPlan, type ImportSourceId, type Kept, type Plan } from './importer.ts'
+import { applyPlan, ImportError, planFile, undoPlan, type Change, type ImportSourceId, type Kept, type Plan } from './importer.ts'
 
 const SOURCES: Array<{ id: ImportSourceId; label: string; accept: string }> = [
   { id: 'outreach-md', label: 'Venue list (Markdown)', accept: '.md,.markdown,text/markdown,text/plain' },
@@ -9,9 +9,37 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 const WORDS: Record<string, string> = {
   source_raw_reader_failed: 'This file is not a venue list Stump can read. Use the Markdown venue list or a CSV with the same column names.',
   owner_required: 'Only the owner can import.', origin_required: 'Reload the page and try again.',
-  namespace_has_pending_import: 'An earlier import of this kind is still waiting. Apply or undo it first.',
+  namespace_has_pending_import: 'An earlier import of this kind is still being applied. Try again once it finishes.',
   import_superseded: 'A newer import holds these records. Undo the newer one first.',
 }
+const words = (field: string) => field.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase())
+/** A field's value as a person reads it: a rule by its value, a list by its items. */
+function shown(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'none'
+  if (Array.isArray(value)) return value.length ? value.map(shown).join(', ') : 'none'
+  if (typeof value === 'object') {
+    const object = value as Record<string, unknown>
+    if (Object.hasOwn(object, 'value')) return shown(object.value)
+    const parts = Object.entries(object).filter(([, item]) => item !== null && item !== undefined).map(([key, item]) => `${words(key).toLowerCase()} ${shown(item)}`)
+    return parts.join('; ') || 'none'
+  }
+  return String(value)
+}
+const clip = (text: string) => text.length > 160 ? `${text.slice(0, 157)}…` : text
+
+/** One changed row of the file: its name, and each field as Stump holds it now and as the file has it. */
+function ChangeRow({ change }: { change: Change }) {
+  return <li className="st-row" style={{ alignItems: 'flex-start' }}>
+    <span className="st-row-main" style={{ overflowWrap: 'anywhere' }}>{change.name ?? change.source_id.replace(/^(venue|product):(name:)?/, '')}
+      <div className="st-meta">{change.kind}{change.conflict ? ' · edited in Stump since the last import, so applying keeps your edit' : ' · applying takes the file\'s values'}</div>
+      {change.fields.length ? <dl style={{ margin: '6px 0 0' }}>{change.fields.map(field => <div key={field.field} className="st-meta">
+        <dt style={{ display: 'inline', fontWeight: 600 }}>{words(field.field)}: </dt>
+        <dd style={{ display: 'inline', margin: 0 }}>{clip(shown(field.before))} → {clip(shown(field.after))}</dd>
+      </div>)}</dl> : null}
+    </span>
+  </li>
+}
+
 const explain = (error: unknown) => error instanceof ImportError ? WORDS[error.code] ?? `The import was refused: ${error.code.replace(/_/g, ' ')}.` : 'Something went wrong. Try again.'
 
 /** The import entry point: choose the file, read its dry run, apply it, and undo it. */
@@ -30,9 +58,10 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
     if (!file || !file.size) { setError('Choose a file first.'); return }
     await run(async () => { setPlan(await planFile(source, file)); setApplied(false); setKept(null) })
   }
-  // Refused rows are listed on their own; a conflict is a record edited here since the last import.
-  const conflicts = (plan?.differences.conflicts ?? []).map(key => JSON.parse(key) as [string, string]).filter(([kind]) => kind !== 'rejected')
-  const nothing = plan && plan.summary.created === 0 && plan.summary.updated === 0 && conflicts.length === 0
+  // Refused rows are listed on their own; a changed row shows each field before and after, and a conflict is one edited here since the last import.
+  const changes = plan?.changes ?? [], conflicts = changes.filter(change => change.conflict), replaced = changes.filter(change => !change.conflict)
+  const nothing = plan && (plan.applied || (plan.summary.created === 0 && plan.summary.updated === 0 && conflicts.length === 0))
+  const gone = plan?.differences.gone.length ?? 0
 
   return <section className="st-card" aria-labelledby="import-title">
     <h2 id="import-title">Import a venue list</h2>
@@ -54,12 +83,17 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
         <div><strong>{plan.summary.excluded ?? 0}</strong>excluded</div>
         <div><strong>{plan.rejected.length}</strong>refused rows</div>
       </div>
-      <p>{applied ? 'Imported.' : nothing ? 'Everything in this file is already in Stump. Applying it changes nothing.'
-        : `Applying adds ${plural(plan.summary.created, 'record')}${plan.summary.updated ? ` and updates ${plural(plan.summary.updated, 'record')}` : ''}.`}</p>
-      {conflicts.length ? <>
+      <p>{applied ? 'Imported.' : nothing ? 'Everything in this file is already in Stump. There is nothing to apply.'
+        : `Applying adds ${plural(plan.summary.created, 'record')}${plan.summary.updated ? ` and updates ${plural(plan.summary.updated, 'record')}` : ''}.`}
+        {gone && !applied ? ` ${plural(gone, 'row')} from the last import ${gone === 1 ? 'is' : 'are'} not in this file; Stump keeps ${gone === 1 ? 'it' : 'them'}.` : ''}</p>
+      {replaced.length && !applied ? <>
+        <h3>Changed in this file</h3>
+        <ul className="st-list">{replaced.map(change => <ChangeRow key={change.source_id} change={change} />)}</ul>
+      </> : null}
+      {conflicts.length && !applied ? <>
         <h3>Changed here since the last import</h3>
-        <p className="st-note">These were edited in Stump, so the import leaves them as they are.</p>
-        <ul className="st-list">{conflicts.map(([kind, id]) => <li className="st-row" key={`${kind}|${id}`}><span className="st-row-main">{id.replace(/^(venue|product|outreach-entry):(name:)?/, '')}<div className="st-meta">{kind === 'draft' ? 'entry' : kind}</div></span></li>)}</ul>
+        <p className="st-note">These were edited in Stump. The import leaves them as they are; edit them yourself to take the file's values.</p>
+        <ul className="st-list">{conflicts.map(change => <ChangeRow key={change.source_id} change={change} />)}</ul>
       </> : null}
       {plan.rejected.length ? <>
         <h3>Refused rows</h3>
@@ -72,11 +106,11 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
       </> : null}
       {error ? <p className="st-error" role="alert">{error}</p> : null}
       <div className="st-actions">
-        {!applied && !kept ? <button className="st-button primary pill" type="button" disabled={busy}
+        {!applied && !kept && !plan.applied ? <button className="st-button primary pill" type="button" disabled={busy}
           onClick={() => void run(async () => { await applyPlan(source, plan); setApplied(true); onChanged() })}>{busy ? 'Applying…' : 'Apply import'}</button> : null}
         {applied && !kept ? <button className="st-button pill outline" type="button" disabled={busy}
           onClick={() => void run(async () => { setKept((await undoPlan(source, plan.planId)).kept); onChanged() })}>Undo import</button> : null}
-        {applied || kept ? <button className="st-button pill" type="button" onClick={onClose}>Done</button>
+        {applied || kept || plan.applied ? <button className="st-button pill" type="button" onClick={onClose}>Done</button>
           // An unapplied plan holds the source's place in line; cancelling removes it.
           : <button className="st-button pill" type="button" disabled={busy} onClick={() => void run(async () => { await undoPlan(source, plan.planId); onClose() })}>Cancel</button>}
       </div>

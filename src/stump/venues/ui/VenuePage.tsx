@@ -17,12 +17,13 @@ const PERIODS = ['day', 'week', 'month', 'quarter', 'year']
 export function VenuePage({ venueId }: { venueId: string }) {
   const { data, error, refresh } = useLoaded(async () => {
     const [who, got, routes, members, team] = await Promise.all([
-      me(), runAction<{ venue: Venue; items: VenueItem[] }>('stump.venues.manage', { action: 'get', venue_id: venueId }),
+      me(), runAction<Venue & { items: VenueItem[] }>('stump.venues.manage', { action: 'get', venue_id: venueId }),
       runAction<RouteAnswer>('stump.venues.rules', { action: 'routes', venue_id: venueId }),
       runAction<Members>('stump.venues.members', { action: 'list', venue_id: venueId }),
       runAction<Team>('stump.team.manage', { action: 'list' }),
     ])
-    return { who, ...got, routes, members, team }
+    const { items, ...venue } = got
+    return { who, venue: venue as Venue, items, routes, members, team }
   })
   const [editing, setEditing] = useState(false)
   const editor = data ? ['owner', 'admin', 'editor'].includes(data.who.person.role) : false

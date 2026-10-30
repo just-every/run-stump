@@ -22,8 +22,15 @@ function base64(bytes: Uint8Array) {
   return btoa(text)
 }
 
+export interface Change {
+  kind: 'venue' | 'product' | 'entry'; source_id: string; id: string; name: string | null
+  conflict: boolean; cause: string | null; reason: string | null; fields: Array<{ field: string; before: unknown; after: unknown }>
+}
 export interface Plan {
   planId: string; fingerprint: string; created: boolean
+  /** The file is the applied import itself: nothing to write. */
+  applied?: boolean
+  changes: Change[]
   summary: { sourceRecords: number; created: number; updated: number; unchanged: number; gone: number; venues?: number; entries?: number; excluded?: number }
   rejected: Array<{ kind: string; sourceId: string; reason: string }>
   differences: { additions: string[]; replacements: string[]; unchanged: string[]; gone: string[]; conflicts: string[] }

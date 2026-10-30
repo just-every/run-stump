@@ -1,5 +1,5 @@
 // The venue tools' results as the person door returns them (src/stump/tools/venues.ts).
-export interface Rule { value: unknown; source_url: string | null; read_at: string | null; sourced: boolean; detail?: string | null; origin?: string }
+export interface Rule { value: unknown; source_url: string | null; read_at: string | null; sourced: boolean; detail?: string | null; thread_url?: string | null; origin?: string }
 export type RuleKey = 'posting' | 'ai_text' | 'self_promotion' | 'links' | 'disclosure_line' | 'gates'
 export interface Venue {
   id: string; kind: string; name: string; url: string | null; platform: string | null; status: string; priority: string | null

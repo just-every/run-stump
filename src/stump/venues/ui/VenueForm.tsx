@@ -30,10 +30,10 @@ export function VenueForm({ venue, onDone, onCancel, onImport }: { venue?: Venue
     const form = new FormData(event.currentTarget), text = (name: string) => String(form.get(name) ?? '').trim() || null
     const args = { kind, name: text('name'), url: text('url'), platform: text('platform'), priority: text('priority'), details: details(kind, form),
       audience: text('audience'), why: text('why'), ...(venue?.status === 'excluded' ? {} : { status: text('status') ?? 'candidate' }) }
-    const saved = await run(() => runAction<{ venue: Venue }>('stump.venues.manage', venue
+    const saved = await run(() => runAction<Venue>('stump.venues.manage', venue
       ? { action: 'update', idempotency_key: key(), venue_id: venue.id, expected_revision: venue.revision, ...args }
       : { action: 'create', idempotency_key: key(), ...args }))
-    if (saved) onDone(saved.venue)
+    if (saved) onDone(saved)
   }
   return <form className="st-card" onSubmit={submit} aria-label={venue ? 'Edit venue' : 'Add a venue'}>
     <h2>{venue ? 'Edit venue' : 'Add a venue'}</h2>
