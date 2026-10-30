@@ -2231,6 +2231,450 @@
       "sha256": "d0f1b559d719f879bd933ae8672db7e98b62500c2f95f7f94ff322462c6b157b",
       "executable": false
     },
+    "src/stump/lib/bluesky/client.ts": {
+      "sha256": "dd70c804df948cc96584375ce23190063c895e23801fbcbbacaf895688dacd32",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/dpop-send.ts": {
+      "sha256": "ae66db859d54e2710edd62acc426d9f3881f9ea76e88a5879ebb752112fc775f",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/dpop.ts": {
+      "sha256": "166522e9db600b1a2f34626b5a23f2063c4516ed11e20f5cb7a381272f0b52de",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/errors.ts": {
+      "sha256": "abd5ef20936c9346d1a8d90f540847310e37a30271876d9c480a81130db167d9",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/http.ts": {
+      "sha256": "ba722a6887f753aa2af04cbcbf44d1143ce1922b0bf1ac8358c891368bef2286",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/identity.ts": {
+      "sha256": "3642ad91a9a4086461516fca82bcd59a34d3b85bc200e5a67b2f97e0d0f5fd0e",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/index.ts": {
+      "sha256": "6846d56d63029649348cee4ad5a331abe539e2f3c77773073ad8ef3ecc953284",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/oauth.ts": {
+      "sha256": "17cd0d72c227d61403cb84e04eb02700384836e9cd21af5434d89f4f5e0c7f50",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/post.ts": {
+      "sha256": "fab66542a685923589b08f3aac5cd0b5bd84af12d423ec78ede1cdf0c99906a4",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/records.ts": {
+      "sha256": "9519d325bed36aa913fe498f8aab5343ba77dcaac1648daec018076cb364c36f",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/richtext.ts": {
+      "sha256": "b8d63ef0589687d803a5bd355fc365c3a01017d1d168b38560d2463dccfab745",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/session.ts": {
+      "sha256": "23b3c4cbeb4aac1797ae75e0769defb248ea0f13dd36dc77515819cd41b460fc",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/thread.ts": {
+      "sha256": "30b9c3921565a2d49f49c70fe3bc2a0c5960e522afd0152e5b6461945242c941",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/tid.ts": {
+      "sha256": "4321a36df2bd4af1cbae21af9fa1d459adeec3b40f5efde7dd47acc99b726ae1",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/types.ts": {
+      "sha256": "c928d8bf5c16eb3d995e7ad125d4166219897355a8e3ddac5b74c43d2c215f6f",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/video.ts": {
+      "sha256": "67f52f25891ae416b876913dd6415ea555b6c7d66eb75d45486e18a3dff200fa",
+      "executable": false
+    },
+    "src/stump/lib/bluesky/xrpc.ts": {
+      "sha256": "92962e58582d0536e7342cc7f7fd6e5a0de7cdebfdf6513a6d9084a68f083e96",
+      "executable": false
+    },
+    "src/stump/lib/claims/banned.ts": {
+      "sha256": "d6c02d579b9934cd98c2503c65848dbf56d5983c96040e86e568d7b27b57250d",
+      "executable": false
+    },
+    "src/stump/lib/claims/check.ts": {
+      "sha256": "3eef2d15e12667990698c7b207f400f5cdde1fcd36a1a077309695040e1e7085",
+      "executable": false
+    },
+    "src/stump/lib/claims/disclosure.ts": {
+      "sha256": "f15108d0574190a7ce2fae8725677adeb310aa9219539d0dbe40a40051145456",
+      "executable": false
+    },
+    "src/stump/lib/claims/extract.ts": {
+      "sha256": "3eff6d6e007e5408ca024775d022b1cf06bcfb2d9a303364ae3482bf1a445681",
+      "executable": false
+    },
+    "src/stump/lib/claims/index.ts": {
+      "sha256": "59985ab2c036e4474b723c29cf7184e0645a8958e2f71d3e5ab2f2812a7397c3",
+      "executable": false
+    },
+    "src/stump/lib/claims/mentions.ts": {
+      "sha256": "fa2f29ef3ecb8e7db40c807ebd45a1abbef775b8410b907a3d236b0fb1a7f02d",
+      "executable": false
+    },
+    "src/stump/lib/claims/numbers.ts": {
+      "sha256": "05273bb9e8d3b0212df098510b9e2c24a5bc4e2620216c1c8c2dc581ff548720",
+      "executable": false
+    },
+    "src/stump/lib/claims/request.ts": {
+      "sha256": "9953885de422f81f37b1f0fc73145346289f86000cdf238cbf7c9e08a0176b3c",
+      "executable": false
+    },
+    "src/stump/lib/claims/sentences.ts": {
+      "sha256": "65e24de5a412eeb6495115dd3101fb8d0cf3b93c5bcad4c0a134bd5a99b697fb",
+      "executable": false
+    },
+    "src/stump/lib/claims/types.ts": {
+      "sha256": "6bb2691dbf34d007729c1dbcbc99fb08469191f27c172e59ebf46af892fccd07",
+      "executable": false
+    },
+    "src/stump/lib/claims/validate.ts": {
+      "sha256": "180ceb9440a04a304c0b710f91aca33eb8b8682f373efca080e8cccec99b8c23",
+      "executable": false
+    },
+    "src/stump/lib/discovery/alert-types.ts": {
+      "sha256": "26911ee050c188e511328f423dbbf5230dd8c3dca900df0ba71988b50700b24e",
+      "executable": false
+    },
+    "src/stump/lib/discovery/bluesky.ts": {
+      "sha256": "08ab7daafba6c1ba8f1801e7b905a9c7be0bf9dd84a09b158abcca89fe1369dd",
+      "executable": false
+    },
+    "src/stump/lib/discovery/errors.ts": {
+      "sha256": "b54b230f73c25aa8606c8e1d72c257a44b97e07f47081df14ee190d9389bc38b",
+      "executable": false
+    },
+    "src/stump/lib/discovery/feed-poll.ts": {
+      "sha256": "5726376aed82fc652724024f1f0b4eefde2a8f56319074c5853ef3575b01db5e",
+      "executable": false
+    },
+    "src/stump/lib/discovery/feeds.ts": {
+      "sha256": "d441f29db2189e07d06fc0867b30c127e126814f7465844156687ebd0db44daf",
+      "executable": false
+    },
+    "src/stump/lib/discovery/hn.ts": {
+      "sha256": "b4c779a1d93a3f3754364ab533c422a4b4e071c1478db0d10ba8887505533f9d",
+      "executable": false
+    },
+    "src/stump/lib/discovery/http.ts": {
+      "sha256": "4fe2a0e36785ea44c1037927e1d23c67e6c31d847e47b27f5cffc058a9b1f6f9",
+      "executable": false
+    },
+    "src/stump/lib/discovery/index.ts": {
+      "sha256": "4034417b2cc847108d9e5768b6e5b71058679dd163e449213050e8824f690b7d",
+      "executable": false
+    },
+    "src/stump/lib/discovery/marks.ts": {
+      "sha256": "b0360ff29fb6ea118f52a6943a38d1bd795ccaa6fba9ff1eedb1ca6c12f2f33c",
+      "executable": false
+    },
+    "src/stump/lib/discovery/mastodon.ts": {
+      "sha256": "477e45bf3ed999c998b5d6eb205f1adcd5d51a5197576f31a697cd35c2ddc660",
+      "executable": false
+    },
+    "src/stump/lib/discovery/rank-text.ts": {
+      "sha256": "1d7f054630ce338b3d51c2f4db84155b1f132b3ffafa91d90218175dd7d1c70f",
+      "executable": false
+    },
+    "src/stump/lib/discovery/rank.ts": {
+      "sha256": "10268fad5e51a7ef635a360b45ccde91abbfca0316d54da3fd3f165d14aafaf4",
+      "executable": false
+    },
+    "src/stump/lib/discovery/screen.ts": {
+      "sha256": "75092386c8ac4d86657c75a20576f4a184919cc308af0cb5932b55f9d7e95686",
+      "executable": false
+    },
+    "src/stump/lib/discovery/slack.ts": {
+      "sha256": "0c851c069ad7afaa9b52554e1401631c09395ab6250884389c799afac07450cf",
+      "executable": false
+    },
+    "src/stump/lib/discovery/terms.ts": {
+      "sha256": "6ae19cc2493d3571b3e0b524bb814e81f663932d70f9323194b9e991bf62e688",
+      "executable": false
+    },
+    "src/stump/lib/discovery/text.ts": {
+      "sha256": "f5904edff5011694f20ba7487745628b43f60fb6d835bfaaefaa3acc703af742",
+      "executable": false
+    },
+    "src/stump/lib/discovery/transcripts.ts": {
+      "sha256": "4f8654357059fd39a27cba5c21db57675ac7f4ba8f8fe7675d164facb9b18df3",
+      "executable": false
+    },
+    "src/stump/lib/discovery/types.ts": {
+      "sha256": "97ff6f44e7696666d7fb15febd451ad6c65dc290e370e3ac0581a001b7bdeda5",
+      "executable": false
+    },
+    "src/stump/lib/discovery/url.ts": {
+      "sha256": "59e2f4cae8a40e511c7cfbd1b354f00fb48dd0ec6c2162f043c71c20ceb85e25",
+      "executable": false
+    },
+    "src/stump/lib/discovery/webhook.ts": {
+      "sha256": "dcdef846e823d53d9700ab2e08cf1bf86714c31aa9d4a39e7b4c8d00c9e4566b",
+      "executable": false
+    },
+    "src/stump/lib/discovery/xml.ts": {
+      "sha256": "633370e65cba5dd9ae5418e175c58ad8b9477acf21e5309d78f52147b014f5c8",
+      "executable": false
+    },
+    "src/stump/lib/imports/buffer.ts": {
+      "sha256": "2194649cc798d1d2bff067c5f5b2f006fae2dcd60d0dea43a35adb703e1e499d",
+      "executable": false
+    },
+    "src/stump/lib/imports/canonical.ts": {
+      "sha256": "b13483521cbb6158b9aac99ebfb164885c17abd262852ceca3aaf4027fb0b942",
+      "executable": false
+    },
+    "src/stump/lib/imports/csv.ts": {
+      "sha256": "00e6b78ae8169ce92b821d7218c121c00552357c74099add497ac319255d7b6f",
+      "executable": false
+    },
+    "src/stump/lib/imports/diff.ts": {
+      "sha256": "dd8b9864ac4897fd46479e01751b60599ea1127a00c839226d17304f7b8a92a8",
+      "executable": false
+    },
+    "src/stump/lib/imports/index.ts": {
+      "sha256": "db325a5244b721212962375ebe553bc89da289863c243a14aa02b0c7e6876484",
+      "executable": false
+    },
+    "src/stump/lib/imports/outreach-md.ts": {
+      "sha256": "43cc4de51bb36c3f3e5e0d6beff454678defd2ac0e9f179518acb0357eb8a809",
+      "executable": false
+    },
+    "src/stump/lib/imports/plan.ts": {
+      "sha256": "0045b0822c79f8ef6f48a37ca251f5de94e1e5b2f6d1156c527a671436e94214",
+      "executable": false
+    },
+    "src/stump/lib/imports/README.md": {
+      "sha256": "e9199a83e140927621f9453b2fc187136eb042b780a56ea4729087cf675e5dca",
+      "executable": false
+    },
+    "src/stump/lib/imports/records.ts": {
+      "sha256": "b7abe3d072da7cdbc5e0a821b81f765b9b73dc97a9ec3ae25fe7a3de1c05aa14",
+      "executable": false
+    },
+    "src/stump/lib/imports/types.ts": {
+      "sha256": "11fb2b3b0d6f2f70abf1ca102d9c299ed06f074f803d899330c38c049dfc0b02",
+      "executable": false
+    },
+    "src/stump/lib/imports/url.ts": {
+      "sha256": "182d3d0709b36b453538185ec113ea2f4812587369b21069b6096f01a381ee7b",
+      "executable": false
+    },
+    "src/stump/lib/imports/venue-assemble.ts": {
+      "sha256": "05250f811b5d94031327737faf54353a544497caf4c2f8f1485253826701abab",
+      "executable": false
+    },
+    "src/stump/lib/imports/venue-fields.ts": {
+      "sha256": "60586afb0185465a1f7e27b1beb271b3119f57ae59da46a11a9cba189dea8b5a",
+      "executable": false
+    },
+    "src/stump/lib/imports/venues-csv.ts": {
+      "sha256": "e8f9ae849a2c5c1ab63d278fd9ca384b7740b4b29683434f0593a8340f436978",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/errors.ts": {
+      "sha256": "032483ce792f99e95d687e4ba40f8f30cec65c7f4a19d799eb94fdbf36b2ce09",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/http.ts": {
+      "sha256": "bd29618c3923ce8a6b546e0b92e12fb523703051fa833f67da2291db3c3c11b0",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/images.ts": {
+      "sha256": "6e76467284669c96eabb58048051d65f6a3a0bbfe131d393973bdba1bd38c801",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/index.ts": {
+      "sha256": "ba65f09773cd8b8de8fc6264d01a0fc8ffe97accd9f11524f7c089dcb4a62683",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/limits.ts": {
+      "sha256": "efdca2af4d400ebd183c8bbc46beda75eae6ab6234c5d2ab4a45b262e4d3d9d5",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/oauth.ts": {
+      "sha256": "8da195e4bd0aa969ae479301e66adeb7937b87d6131109d8f5e538d08eac6c91",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/posts.ts": {
+      "sha256": "e83bb41cd0c87fa715024693d9d3a3140d5ee9fa261d8b7d3d9ad2bcc7dca22f",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/setup.ts": {
+      "sha256": "899fe95498e4c72f7013772e24ae2472c0a6588bdbd09a529d6ee506ae143e32",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/text.ts": {
+      "sha256": "9a8e43571dc0747173a69b7cf4cb6e4bafcbd1b8ca91006643b63622cce765ea",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/types.ts": {
+      "sha256": "713d500b9f32de7bfc7380aaa81e64436e66acc68f12123b283ea4e901923a23",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/userinfo.ts": {
+      "sha256": "d091dfb9984c15622dd9191926ab83ab43f2abaee975f4c8f5cdcc36eb288029",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/account.ts": {
+      "sha256": "7ce77c6c51f65ded182c5f194188b795bcb2170edc0d9088f8816571572d3097",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/client.ts": {
+      "sha256": "3cd6a56fe6605a04a43951ca2ea2a0360211bcb0d310cf6bd5497b7bb4c99361",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/errors.ts": {
+      "sha256": "fc793b85ad708d53da301af7151dfd7091c222a644c526f85307da0d3b0150cb",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/http.ts": {
+      "sha256": "1c65fda1b64cd1aeb08d8901c71427b88d5a5385c171e620b581860d47c7d1c7",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/index.ts": {
+      "sha256": "0dfee749d4d7bc8d1209018f79b9fa1a07f9de95eae0866ef7c8731d7e6ece9d",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/instance.ts": {
+      "sha256": "7dd31c50349da9bf7292233789169108eff8b8273344aa1e4d02db49748296cf",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/media-check.ts": {
+      "sha256": "aa4ec9b4713186383832d857b50d6b76d182e981e89f59f50c0f37bd3fb45914",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/media.ts": {
+      "sha256": "495011e70a32d16fecf6525620ec7cf4b0ec8d2a4c02ded5a6def453792529b0",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/oauth.ts": {
+      "sha256": "6ca160fbad88e47ea50523a78cf8b7c0984e709e868291f7e879247fd7c72ad0",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/statuses.ts": {
+      "sha256": "9b3fab61f7a5adf4f76539de0ab81e21215e088f50a219d3c2a58ec5513a3e31",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/text.ts": {
+      "sha256": "bbca4791c859af12f5e5069a29a5bab358df923f8be18111eb95304272305ceb",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/thread.ts": {
+      "sha256": "a8d0b86b7c8d2f1fd291946eb066d48115a67a144de7aaf746aed22312441656",
+      "executable": false
+    },
+    "src/stump/lib/mastodon/types.ts": {
+      "sha256": "cc1664b8d194cc62461cdc20d9c4e0a97d175af675aae91e35191da7d8e9fa9a",
+      "executable": false
+    },
+    "src/stump/lib/text/count.ts": {
+      "sha256": "7072fbadde611d4ff6de9a4535a8893aa2cec7a47b2346a45b24759f15c36bba",
+      "executable": false
+    },
+    "src/stump/lib/text/graphemes.ts": {
+      "sha256": "710b65f923fa5f0c97ff51cbd9d69ee4fd848321f9a635d2da5c9a46796b9420",
+      "executable": false
+    },
+    "src/stump/lib/text/index.ts": {
+      "sha256": "7616c47acac22085923e3380bb7543ca411dee559a44da2e355d22d8b787d58f",
+      "executable": false
+    },
+    "src/stump/lib/text/linkedin.ts": {
+      "sha256": "ac25b17a4b5295089b7434ad5400731a64be6b6410cbb5128670106a0723ebdf",
+      "executable": false
+    },
+    "src/stump/lib/text/similarity.ts": {
+      "sha256": "5669cb4ee4d3bc9b54bd78cf0102c367c4a363c0e2d97c3b50c2de7e3c2e62ab",
+      "executable": false
+    },
+    "src/stump/lib/text/thread.ts": {
+      "sha256": "7c399cbc2fbd1cd964873f57c757162c87f607173fb00fb4709fd75a7ba5e28c",
+      "executable": false
+    },
+    "src/stump/lib/text/types.ts": {
+      "sha256": "b7866e7e6347dd1fdacb915a3ca640a2350d928a2f21572a4f11f2ee9853ecda",
+      "executable": false
+    },
+    "src/stump/lib/text/urls.ts": {
+      "sha256": "90d89a375299a80913e269f74c6ddd20bfe940c6094945a25bfda8e1bacd90f6",
+      "executable": false
+    },
+    "src/stump/lib/text/utm.ts": {
+      "sha256": "5971eadc0e512edaf40ac99e4aa7406ca3464707da4a01f44f1c1aec2a595be7",
+      "executable": false
+    },
+    "src/stump/lib/text/variants.ts": {
+      "sha256": "436c19e5ab5de0ccedc418555bba4548b6b25b768d2a6e9b66c79ad0830e6649",
+      "executable": false
+    },
+    "src/stump/lib/x/charge.ts": {
+      "sha256": "4674916a53a4674b2e9776f4f732da6cf7a6ae1a987ea3a9f8bbd2c4664730a1",
+      "executable": false
+    },
+    "src/stump/lib/x/errors.ts": {
+      "sha256": "b81d0472ac5a876a3c43fe245b8e05095b64f5ea5ac73d62b5ef0ad12baea813",
+      "executable": false
+    },
+    "src/stump/lib/x/http.ts": {
+      "sha256": "3a4c39a3fa66487971d776b9626e8aacca84b62e27321dbaee57aee78f136686",
+      "executable": false
+    },
+    "src/stump/lib/x/index.ts": {
+      "sha256": "322701f472fe0d4fddae0b95045c588df633f3c2b5193e4cb549d2be330cb481",
+      "executable": false
+    },
+    "src/stump/lib/x/length.ts": {
+      "sha256": "84a45e3cd7542260f35b5739a131e8a4d95a2a791a47a27b29e6c5a720a84072",
+      "executable": false
+    },
+    "src/stump/lib/x/media.ts": {
+      "sha256": "f668d8896aed3c02cc3bbb4e008b0a3c398a349d4cbbf3b7c4d807934acb437a",
+      "executable": false
+    },
+    "src/stump/lib/x/mentions.ts": {
+      "sha256": "ea79978154d6f2300f6188f3f6eac8ed45776e9c87c1e6b2395e19762c0afe8a",
+      "executable": false
+    },
+    "src/stump/lib/x/oauth.ts": {
+      "sha256": "e5be5bd1331b24bfd6b5796e84aec86917a2e122059c32c706e83ea7ef7ec492",
+      "executable": false
+    },
+    "src/stump/lib/x/posts.ts": {
+      "sha256": "4d692f49775776574e3d813d7eafe8074239c942cff18fa3030295deafb6cd89",
+      "executable": false
+    },
+    "src/stump/lib/x/readback.ts": {
+      "sha256": "275f9e955ee1448de4d646ff34f4339419b335f8c43ff3cd2a65079699d4b7da",
+      "executable": false
+    },
+    "src/stump/lib/x/setup.ts": {
+      "sha256": "6ef393c8b255a45ad607de4f800927e92452d28ea984370e595d66dfef6f50e3",
+      "executable": false
+    },
+    "src/stump/lib/x/types.ts": {
+      "sha256": "dc3c77a1a979babafcb2eb8806b67c35a1aa83f35036da5285f5d42d4b4de390",
+      "executable": false
+    },
+    "src/stump/lib/x/urls.ts": {
+      "sha256": "d45830c118ace1cd41bc9f3f797ac23bfd70f8db5986ad482ed74bfa86e4b206",
+      "executable": false
+    },
+    "src/stump/lib/x/users.ts": {
+      "sha256": "dd23e8e5ac678279f125260868372388030522b3a27d06c7a1874f42035eff82",
+      "executable": false
+    },
     "src/stump/net/fetch.ts": {
       "sha256": "830366745c81cc735287c1d5a550582d86d0413349dba6d4887e1b783896d9a4",
       "executable": false
