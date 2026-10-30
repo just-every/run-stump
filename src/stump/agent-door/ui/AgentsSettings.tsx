@@ -1,9 +1,9 @@
 // Settings · Agents (U17, L15): connect an agent, and the company's agent policy, Pause and recent activity in the
 // app shell, each a hairline panel with its disc. Every policy choice saves as it changes; Base's own /agents page
 // sends here, and its approval pages stay where Base keeps them.
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
-import { ActionError, credentials, explain, issueCredential, me, revokeCredential } from '../../ui/api.ts'
+import { credentials, explain, issueCredential, me, revokeCredential } from '../../ui/api.ts'
 import { Icon } from '../../ui/icons.tsx'
 import { Outcome, PanelTitle, Saved, useLoaded, useRun, useSaved, when } from '../../ui/kit.tsx'
 import {
@@ -129,7 +129,10 @@ function Policy({ owner, state, document, stored, refresh }: { owner: boolean; s
       <PanelTitle icon="list" id="policy-title">What agents may do</PanelTitle>
       <Saved shown={shown && !busy} />
     </div>
-    <p className="st-meta">{business ? 'Managed in Business.' : left ? `${classes.length - left} of ${classes.length} answered · agents start once every kind has an answer` : `All ${classes.length} answered · each change applies at once`}</p>
+    <div className="st-agents-sub">
+      <p className="st-meta">{business ? 'Managed in Business.' : left ? `${classes.length - left} of ${classes.length} answered · agents start once every kind has an answer` : `All ${classes.length} answered · each change applies at once`}</p>
+      {owner && !business ? <p className="st-meta">Ask first goes to the owner, who has a day to answer. Drafting through the company's AI provider counts as Sending outside the company.</p> : null}
+    </div>
     <ul className="st-list">{classes.map(cls => {
       const value = answer(cls)
       return <li className="st-row" key={cls}>
@@ -143,35 +146,43 @@ function Policy({ owner, state, document, stored, refresh }: { owner: boolean; s
       </li>
     })}</ul>
     {narrower(document) ? <p className="st-meta">The policy also has {narrower(document)} narrower {narrower(document) === 1 ? 'rule' : 'rules'} for particular agents or amounts.</p> : null}
-    {owner && !business ? <p className="st-meta st-agents-foot">Ask first goes to the owner, who has a day to answer. Drafting through the company's AI provider counts as Sending outside the company.</p> : null}
     {failure ? <p className="st-error" role="alert">{failure}</p> : null}
-    {owner && !business ? <PolicyDocumentEditor document={document} stored={Object.keys(stored).length > 0} refresh={refresh} /> : null}
+    {owner && !business ? <PolicyDocumentEditor document={document} stored={stored} refresh={refresh} /> : null}
   </section>
 }
 
-/** The whole policy document, for rules the answers above cannot say: reviewers, approvers, waits and narrower rules for particular agents or amounts. */
-function PolicyDocumentEditor({ document, stored, refresh }: { document: PolicyDocument | null; stored: boolean; refresh(): Promise<void> }) {
-  const { busy, message, run } = useRun()
-  const text = JSON.stringify(document ?? withAnswer(null, {}), null, 2)
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const source = String(new FormData(event.currentTarget).get('document') ?? '')
-    const saved = await run(() => {
-      let parsed: PolicyDocument
-      // Text that is not JSON is refused as Base refuses a document it cannot read.
-      try { parsed = JSON.parse(source) as PolicyDocument } catch { throw new ActionError('policy_document_invalid', { path: '$' }, 400) }
+/**
+ * The whole policy document, for rules the answers above cannot say: reviewers, approvers, waits and narrower rules for particular
+ * agents or amounts. It shows the answers Stump is still holding, so every answer given is in it. It saves as you go (L15): leaving
+ * the field saves text that parses, and text that does not stays as typed with the reason beside it.
+ */
+function PolicyDocumentEditor({ document: policy, stored, refresh }: { document: PolicyDocument | null; stored: Record<string, Disposition>; refresh(): Promise<void> }) {
+  const text = JSON.stringify(withAnswer(policy, stored), null, 2)
+  const [draft, setDraft] = useState(text)
+  const [failure, setFailure] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const field = useRef<HTMLTextAreaElement>(null)
+  const { shown, saved } = useSaved()
+  // A refresh shows the document as it now stands, unless the owner is in the middle of editing it.
+  useEffect(() => { if (document.activeElement !== field.current) setDraft(text) }, [text])
+  async function save() {
+    if (draft === text) return
+    let parsed: PolicyDocument
+    try { parsed = JSON.parse(draft) as PolicyDocument } catch { setFailure('This is not valid JSON, so it is not saved. Your text stays as you typed it.'); return }
+    setBusy(true); setFailure(null)
+    try {
+      await savePolicy(parsed)
       // The whole document replaces any answers still waiting in Stump.
-      return savePolicy(parsed).then(async result => { if (stored) await clearAnswers(); return result })
-    }, () => 'Policy saved.')
-    if (saved) await refresh()
+      if (Object.keys(stored).length) await clearAnswers()
+      saved(); await refresh()
+    } catch (cause) { setFailure(explain(cause)) }
+    finally { setBusy(false) }
   }
   return <details className="st-agents-document">
-    <summary className="st-meta">Edit policy document</summary>
-    <form className="st-form" onSubmit={submit}>
-      <label className="st-field">Policy document<textarea key={text} name="document" rows={16} spellCheck={false} defaultValue={text} required /></label>
-      <div><button className="st-button" type="submit" disabled={busy}>Save policy document</button></div>
-      <Outcome message={message} />
-    </form>
+    <summary><Icon name="chevronRight" />Edit policy document<Saved shown={shown && !busy} /></summary>
+    <textarea ref={field} className="st-input st-agents-json" aria-label="Policy document" value={draft} rows={16} spellCheck={false} aria-invalid={failure ? true : undefined}
+      onChange={event => { setDraft(event.target.value); setFailure(null) }} onBlur={() => void save()} />
+    {failure ? <p className="st-error" role="alert">{failure}</p> : null}
   </details>
 }
 

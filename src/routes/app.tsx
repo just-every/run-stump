@@ -33,14 +33,37 @@ function Sidebar({ path, onNavigate }: { path: string; onNavigate(): void }) {
   </nav>
 }
 
-/** The Settings title and its underline tabs over every settings screen. */
+/**
+ * The Settings title and its underline tabs over every settings screen. On a narrow screen the strip scrolls sideways
+ * (SPEC §4.2): the current tab is scrolled into view, and while tabs sit past the right edge a fade there says so.
+ */
 function SettingsHead({ path }: { path: string }) {
+  const strip = useRef<HTMLElement>(null)
+  const [more, setMore] = useState(false)
+  useEffect(() => {
+    const nav = strip.current
+    if (!nav) return
+    const measure = () => setMore(nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 1)
+    const active = nav.querySelector<HTMLElement>('a[aria-current="page"]')
+    if (active && nav.scrollWidth > nav.clientWidth) {
+      // Centre the current tab in the strip, never scrolling the page itself.
+      const tab = active.getBoundingClientRect(), box = nav.getBoundingClientRect()
+      const target = nav.scrollLeft + tab.left - box.left - (nav.clientWidth - tab.width) / 2
+      nav.scrollLeft = Math.max(0, Math.min(target, nav.scrollWidth - nav.clientWidth))
+    }
+    measure()
+    nav.addEventListener('scroll', measure, { passive: true })
+    window.addEventListener('resize', measure)
+    return () => { nav.removeEventListener('scroll', measure); window.removeEventListener('resize', measure) }
+  }, [path])
   return <div className="st-settings-head">
     <p className="st-settings-title">Settings</p>
-    <nav className="st-tabs" aria-label="Settings">
-      {settings.map(entry => <Link key={entry.to} to={entry.to}
-        aria-current={path === entry.to || path.startsWith(`${entry.to}/`) ? 'page' : undefined}>{entry.label}</Link>)}
-    </nav>
+    <div className={more ? 'st-tabs-strip more' : 'st-tabs-strip'}>
+      <nav className="st-tabs" aria-label="Settings" ref={strip}>
+        {settings.map(entry => <Link key={entry.to} to={entry.to}
+          aria-current={path === entry.to || path.startsWith(`${entry.to}/`) ? 'page' : undefined}>{entry.label}</Link>)}
+      </nav>
+    </div>
   </div>
 }
 

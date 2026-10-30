@@ -3360,7 +3360,7 @@
       "executable": false
     },
     "src/routes/app.inbox.tsx": {
-      "sha256": "7dfb7fe452ec6334385c1c0bbf2d6b7792d48cae3776c1a7be0e7aae84d5afd2",
+      "sha256": "7e8f38fcd8c88e68b5991bb68877fcfc711c9f2bfd0647869f8ec850f7ba0854",
       "executable": false
     },
     "src/routes/app.index.tsx": {
@@ -3372,7 +3372,7 @@
       "executable": false
     },
     "src/routes/app.listening.tsx": {
-      "sha256": "e5df4d471eb5643d81a231acbe4698d8b7cf34579aadf56d67521b120b274b6b",
+      "sha256": "d4123f782bf3174e0c73be286ffff55a795a0ab419297f6df433215a0d7212ba",
       "executable": false
     },
     "src/routes/app.pause.tsx": {
@@ -3412,7 +3412,7 @@
       "executable": false
     },
     "src/routes/app.tsx": {
-      "sha256": "cd8f6a553bc371137e15b3b4d3522e33020edad7f1bfe6c3cf6b7a49573eb87d",
+      "sha256": "71bee42cc594d3bf917801b652e3244eb82d3bee43b47206ef911df4e59ed2ac",
       "executable": false
     },
     "src/routes/app.venues.$venueId.tsx": {
@@ -3476,11 +3476,11 @@
       "executable": false
     },
     "src/site/styles/docs.css": {
-      "sha256": "c2db973bf2ed8ed233bb5cdf7ef2810df647630e095d27bc01bdb487086339da",
+      "sha256": "143523d806505b5c3c7455161db12ab839215d7940ab6097f5ac9fe0637140bd",
       "executable": false
     },
     "src/site/styles/landing.css": {
-      "sha256": "9b6e641534a925fff2559c856c61cfed0a2d5f6545a364cf3859f97e2a328025",
+      "sha256": "002f0ed1d7923b9f8f51860b3e445b31cc0cd4cbecb71cc134383cf90b9c6302",
       "executable": false
     },
     "src/site/styles/site.css": {
@@ -3544,7 +3544,7 @@
       "executable": false
     },
     "src/stump/agent-door/ui/AgentsSettings.tsx": {
-      "sha256": "6ab062a05b82b50fec347a7acc7f247d4c341d220a53e7a5e6221aa36e8a20b3",
+      "sha256": "6d2df14ffb12568c3c55c8c892dd44e472071d8db23647eeae073f1376cbd005",
       "executable": false
     },
     "src/stump/agent-door/ui/policy.ts": {
@@ -3592,7 +3592,7 @@
       "executable": false
     },
     "src/stump/drafting/view.ts": {
-      "sha256": "adb8c1f12ec69a06ce5bc1603f7db54b223ea198c62cfe647f4a4311293ece86",
+      "sha256": "4fc8cf5113dab697530abd2629e13210782ca398ce6889442b7ee5e6d69ad2b5",
       "executable": false
     },
     "src/stump/drafting/write.ts": {
@@ -3748,7 +3748,7 @@
       "executable": false
     },
     "src/stump/ledger/screen-styles.ts": {
-      "sha256": "07cd014728b8d9b70b89a4652970a9e83cb8759bb881886afdec9e4c6d0bf4a0",
+      "sha256": "ed8ec782148f3967792cf93529506ab2ddb26dd642c689664091145910eb962f",
       "executable": false
     },
     "src/stump/ledger/words.ts": {
@@ -4332,11 +4332,11 @@
       "executable": false
     },
     "src/stump/today/sections.ts": {
-      "sha256": "b74a75ecaa2c9760a06c427db488fc79b4b2178a18b55b4c49e96ec5ae0a2b18",
+      "sha256": "0d2f5228367af5340d0422b6bd18597e7731c7afc27a5e6468469675f667bd26",
       "executable": false
     },
     "src/stump/today/TodayPage.tsx": {
-      "sha256": "8342b588c346e750475acb84348f3fecf03350e2f0a97cfb42eddc0881b924f6",
+      "sha256": "5f48b309388e25e7b4b295e1c1a80d6113a2c5e71f5eb246fbfa4cb52448935f",
       "executable": false
     },
     "src/stump/tools/accounts.ts": {
@@ -4420,7 +4420,7 @@
       "executable": false
     },
     "src/stump/ui/kit.tsx": {
-      "sha256": "5264e567dd04689e91edf122c9dc5b814ced8c386366b726e9b3486eeb196872",
+      "sha256": "9ffcc959d4054dd6cd9a7bae431142d94a0a707bbcc8afe66e85063f32dc3862",
       "executable": false
     },
     "src/stump/ui/nav.ts": {
@@ -4432,7 +4432,7 @@
       "executable": false
     },
     "src/stump/ui/styles.ts": {
-      "sha256": "b1379df0dd1bb04cdce7fc868199b92402ed887c4a34d4a65a2bf6187a7eb358",
+      "sha256": "6b3f1e6abadc1bd7bd158581a78b4600c47a797f845392b8d174f19c04a744e1",
       "executable": false
     },
     "src/stump/ui/types.ts": {
@@ -4472,7 +4472,7 @@
       "executable": false
     },
     "src/stump/venues/register.ts": {
-      "sha256": "243334e02f2dce1a85528bab51ed3a6a1eedbfc04d474a5ff6e44c210b979158",
+      "sha256": "1b507825abe11f098606894b42c594b16af1953f9bdf9c8a5d7218773aa9dbd8",
       "executable": false
     },
     "src/stump/venues/rules.ts": {
@@ -4488,15 +4488,15 @@
       "executable": false
     },
     "src/stump/venues/ui/labels.ts": {
-      "sha256": "4692a6e46ef4f32f79822cde68c329ee4a90f2f1a9a5236e97c197128564cec0",
+      "sha256": "c09c287580a4b4ada9a095d67e1cefa8153ab0c274f776e3b9fe3b0ed8c61ad9",
       "executable": false
     },
     "src/stump/venues/ui/RulesCard.tsx": {
-      "sha256": "b4e558a53351d4fa1beaa96f1ba299971eb2617b2a223853c5f02689f827dca7",
+      "sha256": "199c7d7cdf3b0e7d1ee0c998244453b50582e10be9b17e8ee5e99ae4791d25d0",
       "executable": false
     },
     "src/stump/venues/ui/types.ts": {
-      "sha256": "288798de82e522490e66bf0c88389c224996f89cc3cda1b0954ad374e90395ed",
+      "sha256": "df6b7a1d8cbfc219960177a644245dd7ee0e60790246e567e848023fe0853d51",
       "executable": false
     },
     "src/stump/venues/ui/VenueForm.tsx": {
@@ -4504,11 +4504,11 @@
       "executable": false
     },
     "src/stump/venues/ui/VenuePage.tsx": {
-      "sha256": "581998628cb3848c4914e78b92c6c3e2d23416a8263d6d9fa5baa6a38a44fc9f",
+      "sha256": "0112ef43e9071e85f4550dc3b782f3503c637866378abaddd2b7f856d422197e",
       "executable": false
     },
     "src/stump/venues/ui/VenuesPage.tsx": {
-      "sha256": "93ce3f2c384238f82d12bf0fcc1fe300d42486a060bf13d17216615be517de5b",
+      "sha256": "655235847ee9f3bca26b2ec0444e1c7de4357d4705241b5fb2c6a5d918b15c72",
       "executable": false
     },
     "src/stump/watches/alerts-config.ts": {
@@ -4568,7 +4568,7 @@
       "executable": false
     },
     "src/stump/watches/styles.ts": {
-      "sha256": "df77a2f157a06551b964bd36df489e33b1197fef55db8d825a26bb455d0aede4",
+      "sha256": "6eb4ddbefe1afa2d5b6e4d540154e66594cd97413f03f122df5a3a25877082c2",
       "executable": false
     },
     "src/stump/watches/ui-types.ts": {

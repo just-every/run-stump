@@ -32,8 +32,8 @@ export function VenuesPage() {
     list: await runAction<VenueList>('stump.venues.manage', { action: 'list', ...filters, ...(search ? { q: search } : {}) }),
   }))
   useEffect(() => { const timer = setTimeout(() => setSearch(query.trim()), 250); return () => clearTimeout(timer) }, [query])
-  // ?import=1 (from first-run setup) opens the import panel.
-  useEffect(() => { if (new URLSearchParams(window.location.search).get('import')) setPanel('import') }, [])
+  // ?import=1 (from first-run setup) opens the import panel; ?add=1 (from an empty Today) opens the add form.
+  useEffect(() => { const asked = new URLSearchParams(window.location.search); if (asked.get('import')) setPanel('import'); else if (asked.get('add')) setPanel('add') }, [])
   useEffect(() => { void refresh() }, [filters, search, refresh])
   const editor = data ? ['owner', 'admin', 'editor'].includes(data.me.person.role) : false
   const owner = data?.me.person.role === 'owner'

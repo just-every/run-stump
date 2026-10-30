@@ -43,4 +43,10 @@ export const screenStyles = `
   .st-ledger-screen .st-phone a { flex: none; min-height: 44px; display: inline-flex; align-items: center; }
   .st-ledger-screen .st-table tr.detail-row > td { padding: 0 16px 12px; }
 }
+/* At phone width the toolbar follows Venues: search and Filters share the first row, Export CSV is a full-width pill under them. */
+@media (max-width: 480px) {
+  .st-ledger-screen .st-bar .st-search-field { flex: 1 1 0; min-width: 0; }
+  .st-ledger-screen .st-bar > .st-button { flex: none; }
+  .st-ledger-screen .st-bar > .st-button.primary { flex: 1 1 100%; }
+}
 `

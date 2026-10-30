@@ -80,7 +80,7 @@ export function flagLine(flag: Flag, span?: string | null): string {
     case 'claim_unmatched': return `${quote(String(flag.text ?? ''))} has no proof on record`
     case 'claim_stale': return `${quote(String(flag.text ?? ''))} uses a claim past its review date`
     case 'avoid_word': return `${quote(String(flag.text ?? ''))} is on the avoid list`
-    case 'over_limit': return `${networkName(flag.network)} variant · ${flag.count} / ${flag.limit}`
+    case 'over_limit': return `${networkName(flag.network)} variant · ${flag.count}\u00a0/\u00a0${flag.limit}`
     case 'disclosure_missing': return 'Disclosure needed before it goes out'
     case 'disclosure_below_cut': return 'Move the disclosure above "see more"'
     case 'near_duplicate': return `Nearly repeats ${flag.matches?.length ?? 1} earlier ${flag.matches?.length === 1 ? 'post' : 'posts'}`

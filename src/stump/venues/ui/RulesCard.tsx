@@ -17,7 +17,7 @@ type Gates = { karma?: number; account_age_days?: number; approval?: boolean; me
 export function ruleWords(key: RuleKey, rule: Rule | null): string {
   if (!rule) return 'not recorded'
   if (key === 'gates') {
-    const gates = rule.value as Gates, parts = [gates.karma !== undefined ? `${gates.karma} karma` : null, gates.account_age_days !== undefined ? `account ${gates.account_age_days} days old` : null,
+    const gates = rule.value as Gates, parts = [gates.karma !== undefined ? `${gates.karma}\u00a0karma` : null, gates.account_age_days !== undefined ? `account ${gates.account_age_days}\u00a0days old` : null,
       gates.approval ? 'approval to join' : null, gates.membership ? 'membership' : null].filter(Boolean)
     return parts.join(', ') || 'none'
   }

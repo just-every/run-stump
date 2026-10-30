@@ -174,7 +174,7 @@ function Item({ item, account, mayAct, onBack, onChange }: { item: InboxView; ac
         {blocking.length ? blocking.map((flag, index) => <li key={`${flag.code}-${index}`} className="bad">{flagLine(flag)}</li>)
           : <li className="ok">Claims, disclosure and repeats check out{account.network === 'x' && checked.charge_usd ? ` · X charges ${usd(checked.charge_usd)}` : ''}</li>}
       </ul> : null}
-      {text.length ? <span className="st-meta st-inbox-count">{[...new Intl.Segmenter().segment(text)].length} characters</span> : null}
+      {text.length ? <span className="st-meta st-inbox-count">{[...new Intl.Segmenter().segment(text)].length}{'\u00a0'}characters</span> : null}
     </div> : null}
     {item.offer?.state === 'sent' ? <div><Chip tone="success" tick>Sent to Orbit</Chip></div> : null}
     {offerError?.ok === false && item.offer?.state !== 'sent' ? <p className="st-error">Last send to Orbit failed: {offerError.error ?? 'try again'}</p> : null}

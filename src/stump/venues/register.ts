@@ -52,14 +52,21 @@ export const one = async (ctx: ActionContext, id: string) => (await answer(ctx, 
 /** Exclusion carries a reason and an alternative, so it has its own action. */
 const notExcluded = (status: unknown) => { if (status === 'excluded') refuse('invalid_arguments', { field: 'status', reason: 'Exclude a venue with its reason and alternative (action exclude).' }) }
 
-/** The items aimed at a venue, by product, with their routes, hold and latest history (STUMP-VENUE-001.6, -002.4). */
+/**
+ * The items aimed at a venue, by product, with their routes, hold and latest history (STUMP-VENUE-001.6, -002.4). Each carries its
+ * product's name and, when a hand-off carries it, that hand-off and its state, so every screen names and states it alike.
+ */
 async function itemsAt(ctx: ActionContext, id: string) {
-  const items = (await ctx.db.prepare(`SELECT id,product_id,format,state,routes,hold,flags,scheduled_at,text,parts FROM stump_items WHERE venue_id=? ORDER BY updated_at DESC,id LIMIT 200`).bind(id)
-    .all<{ id: string; product_id: string | null; format: string; state: string; routes: string; hold: string | null; flags: string; scheduled_at: number | null; text: string | null; parts: string | null }>()).results
+  const items = (await ctx.db.prepare(`SELECT i.id,i.product_id,p.name AS product_name,i.format,i.state,i.routes,i.hold,i.flags,i.scheduled_at,i.text,i.parts,
+      (SELECT h.id FROM stump_handoffs h WHERE h.item_id=i.id ORDER BY h.created_at DESC,h.id DESC LIMIT 1) AS handoff_id,
+      (SELECT h.state FROM stump_handoffs h WHERE h.item_id=i.id ORDER BY h.created_at DESC,h.id DESC LIMIT 1) AS handoff_state
+    FROM stump_items i LEFT JOIN stump_products p ON p.id=i.product_id WHERE i.venue_id=? ORDER BY i.updated_at DESC,i.id LIMIT 200`).bind(id)
+    .all<{ id: string; product_id: string | null; product_name: string | null; format: string; state: string; routes: string; hold: string | null; flags: string; scheduled_at: number | null; text: string | null; parts: string | null; handoff_id: string | null; handoff_state: string | null }>()).results
   const history = (await ctx.db.prepare(`SELECT item_id,from_state,to_state,reason,at FROM stump_item_history WHERE item_id IN (SELECT value FROM json_each(?)) ORDER BY at DESC,id`)
     .bind(JSON.stringify(items.map(item => item.id))).all<{ item_id: string; from_state: string | null; to_state: string; reason: string | null; at: number }>()).results
   return items.map(item => ({
-    id: item.id, product_id: item.product_id, format: item.format, state: item.state, routes: JSON.parse(item.routes) as string[], hold: item.hold ? JSON.parse(item.hold) : null,
+    id: item.id, product_id: item.product_id, product_name: item.product_name, format: item.format, state: item.state, routes: JSON.parse(item.routes) as string[], hold: item.hold ? JSON.parse(item.hold) : null,
+    handoff: item.handoff_id ? { id: item.handoff_id, state: item.handoff_state! } : null,
     // Its words, so a screen can name an item with no product by its opening words, as Today does.
     text: item.text ?? (item.parts ? (JSON.parse(item.parts) as string[])[0] ?? null : null),
     flags: (JSON.parse(item.flags) as Array<{ code: string }>).map(flag => flag.code), scheduled_at: item.scheduled_at === null ? null : new Date(item.scheduled_at).toISOString(),

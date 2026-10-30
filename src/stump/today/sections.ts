@@ -106,7 +106,7 @@ export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string
     const flag = flags[0]
     const over = flag?.code === 'over_limit'
     // A claim reads as the claim itself ("'50% faster' differs from proof (30%)"), as Compose quotes it.
-    const reason = over ? `${String(flag!.count)} / ${String(flag!.limit)} characters`
+    const reason = over ? `${String(flag!.count)}\u00a0/\u00a0${String(flag!.limit)}\u00a0characters`
       : flag ? flagLine(flag, spanOf(flag)) : String((item.hold as { reason?: string } | null)?.reason ?? 'Held for a person to look at')
     const network = networkName(String(item.network ?? (item.account_id ? accounts.get(String(item.account_id))?.network ?? '' : '')) || null)
     // Every held row has its one action: the draft opens in Compose (its master post, or the item alone), a claim with its span selected.

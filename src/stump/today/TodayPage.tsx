@@ -7,7 +7,7 @@ import type { Handoff } from '../handoffs/ui/words.ts'
 import { CONTRIBUTORS, READERS, type Role } from '../people/roles.ts'
 import { me, runAction } from '../ui/api.ts'
 import { Icon } from '../ui/icons.tsx'
-import { Chip, PanelTitle, useLoaded } from '../ui/kit.tsx'
+import { Chip, Empty, PanelTitle, Parts, useLoaded } from '../ui/kit.tsx'
 import { JOB_WORDS, chipsFor, jobOf } from '../watches/finding-view.ts'
 import type { FindingList, WatchList } from '../watches/ui-types.ts'
 import { dayOf, dueToday, findingChips, goingOut, heldRows, worthAnswering, type Day, type Dest } from './sections.ts'
@@ -82,6 +82,19 @@ function Nothing({ children }: { children: ReactNode }) {
   return <p className="st-today-empty">{children}</p>
 }
 
+/**
+ * Nothing at all for today: the family empty state in the column, with the next thing worth doing (an ink "Add a venue", or
+ * "Write a post" once venues exist) and an outline for the other, each only for a person who may do it.
+ */
+function Quiet({ role, venues }: { role: Role; venues: number }) {
+  const venue = ['owner', 'admin', 'editor'].includes(role) ? <a className={venues ? 'st-button outline' : 'st-button primary'} href="/app/venues?add=1" key="venue">Add a venue</a> : null
+  const post = CONTRIBUTORS.includes(role) ? <Link className={venues ? 'st-button primary' : 'st-button outline'} to="/app/compose" key="post">Write a post</Link> : null
+  const actions = (venues ? [post, venue] : [venue, post]).filter(Boolean)
+  return <Empty title="Nothing due today" actions={actions.length ? <>{actions}</> : undefined}>
+    {!actions.length ? 'Hand-offs and posts that need you show up here.' : venues ? 'Write your next post for the venues worth showing up in.' : 'Add the venues worth showing up in, then write your first post.'}
+  </Empty>
+}
+
 function Failed({ error }: { error: string | null }) {
   return error ? <p className="st-error" role="alert">{error}</p> : null
 }
@@ -108,19 +121,25 @@ export function TodayPage() {
   const writer = !!work.data && CONTRIBUTORS.includes(work.data.who.person.role as Role)
   const [focal, ...moreDue] = due?.rows ?? []
   const shownHeld = held ? allHeld ? held : held.slice(0, 3) : []
+  // Everything has answered once before the panels show, so a quiet day opens on its empty state and never flashes four empty panels.
+  const ready = !!day && !!work.data && (!reader || findings.data !== null || !!findings.error) && (week.data !== null || !!week.error)
+  const quiet = ready && !!due && !due.rows.length && !due.next && !held?.length && !out?.length && !findings.data?.items.length
+  // This week shows once the ledger has something to count.
+  const counted = !!week.data && (week.data.posted > 0 || week.data.handed > 0)
 
   return <HydrationUnit>
     <section className="st-page st-today" aria-labelledby="today-title">
       <h1 id="today-title">Today</h1>
       <p className="st-lead">{now === null ? ' ' : new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(now))}</p>
-      <div className="st-today-grid">
-        <div className="st-today-main">
+      {ready || work.error ? <div className={counted ? 'st-today-grid' : 'st-today-grid solo'}>
+        {quiet && work.data ? <div className="st-today-main"><Quiet role={work.data.who.person.role as Role} venues={work.data.venues.size} /></div> : <div className="st-today-main">
           <section className="st-panel focus" aria-labelledby="today-due">
             <PanelTitle icon="clock" id="today-due">Due today</PanelTitle>
             <Failed error={work.error} />
             {focal ? <>
-              <p className="st-today-focal">{focal.title} · <span className="st-today-when">{focal.due}</span></p>
-              <p className="st-today-who">{focal.who}</p>
+              {/* At phone width the time moves to the meta line, so the title never ends on a separator. */}
+              <p className="st-today-focal">{focal.title}<span className="st-today-due-wide"> · <span className="st-today-when">{focal.due}</span></span></p>
+              <p className="st-today-who"><span className="st-today-due-narrow">{focal.due} · </span>{focal.who}</p>
               <Go className="st-button primary" to={{ kind: 'handoff', id: focal.id }}>Open brief <Icon name="arrowRight" /></Go>
               {moreDue.length ? <ul className="st-list st-today-more">
                 {moreDue.map(row => <li className="st-row" key={row.id}>
@@ -169,22 +188,23 @@ export function TodayPage() {
             <Failed error={work.error} />
             {out && !out.length ? <Nothing>Nothing scheduled for today.{writer ? <> <Link to="/app/compose">Write a post</Link> and pick a time.</> : ' Posts the team schedules for today show here.'}</Nothing> : null}
             {out?.length ? <ul className="st-list">
-              {out.map(row => {
-                const line = <><span className="st-today-out-line">{row.time} · {row.network}{row.who ? ` · ${row.who}` : ''}{row.text ? ` · ${row.text}` : ''}</span>{row.paused ? <Chip tone="held">Paused</Chip> : null}</>
-                return <li className="st-row" key={row.id}><Go className="st-today-out" to={row.to}>{line}</Go></li>
-              })}
+              {/* One line at desktop width; at phone width the post's words are the name over one meta line (H16). */}
+              {out.map(row => <li className="st-row" key={row.id}><Go className="st-today-out" to={row.to}>
+                <span className="st-today-out-line"><Parts className="st-today-out-meta" parts={[row.time, row.network, row.who]} />{row.text ? <span className="st-today-out-text">{row.text}</span> : null}</span>
+                {row.paused ? <Chip tone="held">Paused</Chip> : null}
+              </Go></li>)}
             </ul> : null}
           </section>
-        </div>
+        </div>}
 
-        <aside className="st-panel side st-today-week" aria-labelledby="today-week">
+        {counted ? <aside className="st-panel side st-today-week" aria-labelledby="today-week">
           <PanelTitle icon="chart" id="today-week">This week</PanelTitle>
           <ul>
-            <li><Link className="st-today-count" to="/app/ledger"><span className="st-disc big">{week.data?.posted ?? ' '}</span>posted</Link></li>
-            <li><span className="st-disc big">{week.data?.handed ?? ' '}</span>handed off</li>
+            <li><Link className="st-today-count" to="/app/ledger"><span className="st-disc big">{week.data!.posted}</span>posted</Link></li>
+            <li><span className="st-disc big">{week.data!.handed}</span>handed off</li>
           </ul>
-        </aside>
-      </div>
+        </aside> : null}
+      </div> : null}
     </section>
   </HydrationUnit>
 }
