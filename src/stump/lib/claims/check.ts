@@ -12,7 +12,12 @@
 //   banned           a claim the company must not make
 //   number_mismatch  it matches a claim but states another number than the claim's or
 //                    its proof's (a percent, multiplier or price in any form: "2x" or
-//                    "in half" against a proven 30% is a mismatch)
+//                    "in half" against a proven 30% is a mismatch), or a percent,
+//                    multiplier or price where the claim and its proof state none
+//                    ("50% cheaper" against "cheaper than HubSpot"; expected is empty).
+//                    A proof's numbers come from its number, its text, or a plain-string
+//                    proof that is not a link; a unitless proof number backs a percent or
+//                    multiplier of that value.
 //   stale            it matches a claim past its review date
 //   unmatched        it reads as a factual claim (extract.ts) but no claim covers it
 // Priority when several apply: banned, number_mismatch, stale, matched. A person and an
@@ -71,10 +76,30 @@ export function isCurrentRecord(claim: Claim): boolean {
   return Boolean(claim.competitor && claim.source_url && isIsoDate(claim.source_date))
 }
 
+/** A proof number with no unit ({ number: 30 }) stands for the claim's measure: it backs 30% or 30x. */
+type Expected = FoundNumber & { unitless?: boolean }
+
 interface Prepared {
   claim: Claim
   phrases: Array<{ tokens: Set<string>; numbers: FoundNumber[] }>
-  proofNumbers: FoundNumber[]
+  proofNumbers: Expected[]
+}
+
+const BARE_NUMBER = /^\s*[+-]?(?:\d[\d,]*(?:\.\d+)?|\.\d+)\s*$/
+// A link: a scheme or www., or a host whose last label starts with a letter ("orbit.run/bench", never "1.5x").
+const LINK = /^\s*(?:[a-z][a-z\d+.-]*:\/\/|www\.)\S*\s*$|^\s*(?:[\p{L}\p{N}-]+\.)+\p{L}[\p{L}\p{N}-]*(?:[/?#]\S*)?\s*$/iu
+
+/** The numbers a proof states: a plain number, a number written in a sentence, never the digits of a link. */
+function proofNumbersOf(value: string | number | undefined): Expected[] {
+  if (value === undefined || value === null) return []
+  const text = String(value)
+  if (text.trim() === '' || LINK.test(text)) return []
+  if (BARE_NUMBER.test(text)) {
+    const value = Number(text.trim().replace(/,/g, ''))
+    return Number.isFinite(value) ? [{ kind: 'count', value, unit: '', raw: text.trim(), start: 0, end: text.length, unitless: true }] : []
+  }
+  // In prose a unitless count is a date part or an ordinal, not the claim's number.
+  return extractNumbers(text).filter((n) => n.kind !== 'count' || n.unit !== '')
 }
 
 function prepare(claim: Claim): Prepared {
@@ -83,8 +108,12 @@ function prepare(claim: Claim): Prepared {
     return { tokens: new Set(contentTokens(stripNumbers(p, numbers))), numbers }
   })
   const proof = claim.proof
-  const proofText = typeof proof === 'object' && proof !== null && proof.number !== undefined ? String(proof.number) : ''
-  const proofNumbers = proofText ? extractNumbers(proofText) : []
+  const proofNumbers =
+    typeof proof === 'string'
+      ? proofNumbersOf(proof)
+      : proof
+        ? [...proofNumbersOf(proof.number), ...proofNumbersOf(proof.text)]
+        : []
   return { claim, phrases, proofNumbers }
 }
 
@@ -102,29 +131,35 @@ function sameUnit(a: FoundNumber, b: FoundNumber): boolean {
   return a.kind === 'count' && b.kind === 'count' && a.unit !== '' && a.unit === b.unit
 }
 
-const isMeasure = (n: FoundNumber) => n.kind === 'percent' || n.kind === 'multiplier' || n.kind === 'money'
+const isRatio = (n: FoundNumber) => n.kind === 'percent' || n.kind === 'multiplier'
 const equal = (a: FoundNumber, b: FoundNumber) => a.kind === b.kind && a.value === b.value && (a.kind !== 'count' || a.unit === b.unit)
+/** A draft's percent or multiplier against an expected one: across kinds never equal, a unitless proof number by value. */
+const backs = (e: Expected, f: FoundNumber) => equal(f, e) || (e.unitless === true && isRatio(f) && e.value === f.value)
 
 type Conflict = { expected: FoundNumber[]; found: FoundNumber[] }
 
 /**
  * Numbers the draft states for a claim when none of them is the claim's or its proof's.
- * Counts are compared within one unit. A claim's measure (percent, multiplier, money) is
- * compared with every percent and multiplier the draft states, whatever its kind, and with
- * money when the claim states money: "2x" against a proven 30% is a mismatch.
+ * Ratios (percent and multiplier) are compared across kinds, "2x" against a proven 30% is
+ * a mismatch, and a unitless proof number backs a percent or multiplier of the same value.
+ * Money is compared with money, and counts within one unit. A ratio or a price the claim
+ * and its proof state none of is unbacked: a mismatch with nothing expected.
  */
-function numberConflict(claimNumbers: readonly FoundNumber[], proofNumbers: readonly FoundNumber[], clauseNumbers: readonly FoundNumber[]): Conflict | undefined {
-  const expectedAll = [...claimNumbers, ...proofNumbers]
+function numberConflict(claimNumbers: readonly FoundNumber[], proofNumbers: readonly Expected[], clauseNumbers: readonly FoundNumber[]): Conflict | undefined {
+  const expectedAll: Expected[] = [...claimNumbers, ...proofNumbers]
   const conflicts: Conflict = { expected: [], found: [] }
 
-  const expectedMeasures = expectedAll.filter(isMeasure)
-  if (expectedMeasures.length > 0) {
-    const moneyExpected = expectedMeasures.some((n) => n.kind === 'money')
-    const found = clauseNumbers.filter((n) => n.kind === 'percent' || n.kind === 'multiplier' || (moneyExpected && n.kind === 'money'))
-    if (found.length > 0 && !found.some((f) => expectedMeasures.some((e) => equal(f, e)))) {
-      conflicts.expected.push(...expectedMeasures)
-      conflicts.found.push(...found)
-    }
+  const measures: Array<[(n: FoundNumber) => boolean, (e: Expected) => boolean]> = [
+    [isRatio, (e) => isRatio(e) || e.unitless === true],
+    [(n) => n.kind === 'money', (e) => e.kind === 'money'],
+  ]
+  for (const [stated, expects] of measures) {
+    const found = clauseNumbers.filter(stated)
+    if (found.length === 0) continue
+    const expected = expectedAll.filter(expects)
+    if (found.some((f) => expected.some((e) => backs(e, f)))) continue
+    conflicts.expected.push(...expected)
+    conflicts.found.push(...found)
   }
 
   const units = new Set(clauseNumbers.filter((n) => n.kind === 'count' && n.unit !== '').map((n) => n.unit))
@@ -158,37 +193,46 @@ const CLAUSE_BREAK = /;\s+|,\s+(?:(?:and|but)\s+)?|\s+(?:and|but)\s+/giu
 
 /**
  * A sentence's clauses, with offsets into the draft. A piece of fewer than three words
- * ("Slack, Teams and Discord") stays with the clause before it.
+ * ("Slack, Teams and Discord") stays with the clause before it, and a break inside a
+ * number ("one hundred and twenty percent") is not a break.
  */
-function clauseSpans(span: Span): Span[] {
-  const pieces: Span[] = []
+function clauseSpans(span: Span, numbers: readonly FoundNumber[]): Span[] {
+  const pieces: Array<{ start: number; end: number }> = []
+  let n = 0
+  const insideNumber = (at: number) => {
+    while (n < numbers.length && (numbers[n] as FoundNumber).end <= at) n++
+    const next = numbers[n]
+    return next !== undefined && next.start < at
+  }
+  const words = (from: number, to: number) => span.text.slice(from, to).match(/[\p{L}\p{N}]+/gu)?.length ?? 0
   let cursor = 0
   const push = (from: number, to: number) => {
     const raw = span.text.slice(from, to)
-    const lead = raw.length - raw.trimStart().length
     const text = raw.trim()
     if (text === '') return
-    const piece = { text, start: span.start + from + lead, end: span.start + from + lead + text.length }
-    const words = text.match(/[\p{L}\p{N}]+/gu)?.length ?? 0
+    const start = from + (raw.length - raw.trimStart().length)
+    const end = start + text.length
     const last = pieces[pieces.length - 1]
-    if (last && words < MIN_CLAUSE_WORDS) {
-      last.end = piece.end
-      last.text = span.text.slice(last.start - span.start, last.end - span.start)
-    } else pieces.push(piece)
+    if (last && words(start, end) < MIN_CLAUSE_WORDS) last.end = end
+    else pieces.push({ start, end })
   }
   for (const m of span.text.matchAll(CLAUSE_BREAK)) {
     const at = m.index ?? 0
+    if (insideNumber(at)) continue
     push(cursor, at)
     cursor = at + m[0].length
   }
   push(cursor, span.text.length)
   const first = pieces[0]
-  if (first && pieces.length > 1 && (first.text.match(/[\p{L}\p{N}]+/gu)?.length ?? 0) < MIN_CLAUSE_WORDS) {
-    const second = pieces[1] as Span
-    pieces.splice(0, 2, { text: span.text.slice(first.start - span.start, second.end - span.start), start: first.start, end: second.end })
+  if (first && pieces.length > 1 && words(first.start, first.end) < MIN_CLAUSE_WORDS) {
+    first.end = (pieces[1] as { end: number }).end
+    pieces.splice(1, 1)
   }
-  return pieces
+  return pieces.map((p) => ({ text: span.text.slice(p.start, p.end), start: span.start + p.start, end: span.start + p.end }))
 }
+
+/** At most this many clauses after a clause are joined with it to match one claim. */
+const JOIN_WINDOW = 6
 
 export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
   const prepared = relevant(input.claims, input.product_id).map(prepare)
@@ -198,17 +242,49 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
   const competitorNames = (input.products ?? []).flatMap((p) => (p.competitors ?? []).flatMap((c) => (typeof c === 'string' ? [c] : [c.name, ...(c.aliases ?? [])])))
   const ctx = { product_names: [...productNames, ...(input.company_names ?? [])], competitor_names: competitorNames }
   const profileById = new Map((input.products ?? []).map((p) => [p.id, p]))
+  const named = mentions.products // sorted by start
+  /** The product named last inside a span. */
   const productIn = (span: Span) => {
-    const inSpan = mentions.products.filter((m) => m.start >= span.start && m.end <= span.end)
-    return inSpan.length > 0 ? profileById.get((inSpan[inSpan.length - 1] as { id: string }).id) : undefined
+    let lo = 0
+    let hi = named.length
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if ((named[mid] as { start: number }).start < span.start) lo = mid + 1
+      else hi = mid
+    }
+    let last: string | undefined
+    for (let k = lo; k < named.length && (named[k] as { start: number }).start < span.end; k++) {
+      const m = named[k] as { id: string; end: number }
+      if (m.end <= span.end) last = m.id
+    }
+    return last === undefined ? undefined : profileById.get(last)
+  }
+
+  // The numbers of the sentence being read, offsets within the draft: a clause takes the ones inside it.
+  let sentenceNumbers: FoundNumber[] = []
+  const numbersIn = (span: Span) => {
+    let lo = 0
+    let hi = sentenceNumbers.length
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if ((sentenceNumbers[mid] as FoundNumber).start < span.start) lo = mid + 1
+      else hi = mid
+    }
+    const out: FoundNumber[] = []
+    for (let k = lo; k < sentenceNumbers.length && (sentenceNumbers[k] as FoundNumber).start < span.end; k++) {
+      const n = sentenceNumbers[k] as FoundNumber
+      if (n.end <= span.end) out.push({ ...n, start: n.start - span.start, end: n.end - span.start })
+    }
+    return out
   }
 
   /** Match one piece of text, read with `subject` as its product when it names none. */
   const assess = (span: Span, subject: ProductProfile | undefined): Unit => {
     const own = productIn(span)
     const carried = own ? undefined : subject
-    const candidate = readSentence(span, ctx, carried?.name)
-    const numbers = candidate?.numbers ?? extractNumbers(span.text)
+    const spanNumbers = numbersIn(span)
+    const candidate = readSentence(span, ctx, carried?.name, spanNumbers)
+    const numbers = candidate?.numbers ?? spanNumbers
     const tokens = new Set(contentTokens(stripNumbers(span.text, numbers)))
     if (carried) for (const t of contentTokens(carried.name)) tokens.add(t)
     const folded = foldText(span.text)
@@ -227,7 +303,9 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
       }
       if (score === 0) continue
       if (p.claim.kind === 'banned') {
-        if (conflict) continue // a different number is a different statement than the banned one
+        // A different number than the banned claim's is a different statement; a number added
+        // to a banned claim that states none leaves it banned.
+        if (conflict && conflict.expected.length > 0) continue
         if (!banned || score > banned.score) banned = { p, score }
         continue
       }
@@ -245,7 +323,9 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
     const pronounProduct = previousProduct && startsWithPronoun(sentence.text) ? previousProduct : undefined
     previousProduct = productIn(sentence) ?? pronounProduct
 
-    const clauses = clauseSpans(sentence)
+    const ownNumbers = extractNumbers(sentence.text)
+    sentenceNumbers = ownNumbers.map((n) => ({ ...n, start: n.start + sentence.start, end: n.end + sentence.start }))
+    const clauses = clauseSpans(sentence, ownNumbers)
     const subjects: Array<ProductProfile | undefined> = []
     let subject = pronounProduct
     for (const c of clauses) {
@@ -260,7 +340,7 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
     for (let i = 0; i < clauses.length; ) {
       let chosen = single[i] as Unit
       let next = i + 1
-      for (let j = i + 1; j < clauses.length && scoreOf(single[j] as Unit) === 0; j++) {
+      for (let j = i + 1; j < clauses.length && j <= i + JOIN_WINDOW && scoreOf(single[j] as Unit) === 0; j++) {
         const joined = { text: input.text.slice((clauses[i] as Span).start, (clauses[j] as Span).end), start: (clauses[i] as Span).start, end: (clauses[j] as Span).end }
         const u = assess(joined, subjects[i])
         if (scoreOf(u) > scoreOf(chosen)) {

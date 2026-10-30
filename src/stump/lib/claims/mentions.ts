@@ -69,7 +69,8 @@ function findAll(text: string, name: string, caseSensitive: boolean): Array<{ te
 
 function hostsIn(text: string): Array<{ host: string; text: string; start: number; end: number }> {
   const out: Array<{ host: string; text: string; start: number; end: number }> = []
-  for (const m of text.matchAll(/(?<![\p{L}\p{N}_@])(?:https?:\/\/)?((?:[\p{L}\p{N}-]+\.)+[\p{L}]{2,})(?::\d+)?(?:[/?#][^\s<>"]*)?/giu)) {
+  // A host starts at a word boundary, never inside "a-b" or "a.b", so each run is scanned once.
+  for (const m of text.matchAll(/(?<![\p{L}\p{N}_@.-])(?:https?:\/\/)?((?:[\p{L}\p{N}-]+\.)+[\p{L}]{2,})(?::\d+)?(?:[/?#][^\s<>"]*)?/giu)) {
     const start = m.index ?? 0
     out.push({ host: (m[1] as string).toLowerCase(), text: m[0], start, end: start + m[0].length })
   }
@@ -84,9 +85,13 @@ function hostOfUrl(url: string): string {
 function dedupe<T extends { start: number; end: number; id: string }>(list: T[]): T[] {
   const sorted = [...list].sort((a, b) => a.start - b.start || b.end - a.end)
   const out: T[] = []
+  // Every earlier mention starts at or before this one, so it is covered when an earlier one of its id ends at or after it.
+  const reach = new Map<string, number>()
   for (const m of sorted) {
-    const covered = out.some((o) => o.id === m.id && o.start <= m.start && o.end >= m.end)
-    if (!covered) out.push(m)
+    const end = reach.get(m.id)
+    if (end !== undefined && end >= m.end) continue
+    out.push(m)
+    reach.set(m.id, m.end)
   }
   return out
 }

@@ -26,6 +26,7 @@
 //   https://www.ecfr.gov/current/title-16/chapter-I/subchapter-B/part-255
 //   https://www.ecfr.gov/current/title-16/chapter-I/subchapter-D/part-465
 
+import { extractUrls } from '../text/urls'
 import { escapeRegExp, sentenceSpans } from './sentences'
 import type { MentionSet } from './mentions'
 import type { Connection } from './types'
@@ -106,6 +107,23 @@ const I_AM_THE_ROLE = new RegExp(`\\bi(?:${APOS}m| am) (?:the |one of the )?(?:$
 const BIO_SEGMENT = /\b(?:bio|profile|about me)\s*[:\u2014-]\s*[^\n)]*/giu
 const WEAK = new RegExp(`\\b(?:we|we${APOS}re|we${APOS}ve|we${APOS}ll|we${APOS}d|our|ours)\\b`, 'giu')
 
+/** Links, addresses, #tags and @handles: none of them is the author's own words ("orbit.run/our-pricing", "#our"). */
+const NOT_WORDS = [
+  /(?<!\S)\S*?(?::\/\/|www\.)\S*/giu,
+  /(?<![\p{L}\p{N}_.-])[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+[/?#]\S*/giu,
+  /(?<![\p{L}\p{N}._%+-])[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+/giu,
+  /(?<![\p{L}\p{N}_])[@\uFF20#\uFF03][\p{L}\p{N}_.]+/giu,
+]
+
+/** The text with links, addresses, #tags and @handles blanked to spaces, keeping every offset. */
+function wordsOnly(text: string): string {
+  const units = text.split('')
+  const blank = (a: number, b: number) => units.fill(' ', a, b)
+  for (const u of extractUrls(text)) blank(u.start, u.end)
+  for (const re of NOT_WORDS) for (const m of text.matchAll(re)) blank(m.index ?? 0, (m.index ?? 0) + m[0].length)
+  return units.join('')
+}
+
 export function detectDisclosure(text: string, options: DetectDisclosureOptions = {}): DisclosureResult {
   const matches: DisclosureMatch[] = []
 
@@ -129,19 +147,29 @@ export function detectDisclosure(text: string, options: DetectDisclosureOptions 
   for (const re of [...ALWAYS, ...objectPatterns(termAlt)]) pushAll(re, text, 0)
 
   if (termAlt) {
+    // The sentence may name the product anywhere, a link included; "we", "our" and "I'm the
+    // founder" are read only in the author's own words.
     const term = new RegExp(`(?<![\\p{L}\\p{N}_])${termAlt}(?![\\p{L}\\p{N}_])`, 'iu')
+    const words = wordsOnly(text)
     for (const span of sentenceSpans(text)) {
       if (!term.test(span.text)) continue
-      pushAll(WEAK, span.text, span.start)
-      pushAll(I_AM_THE_ROLE, span.text, span.start)
+      const own = words.slice(span.start, span.end)
+      pushAll(WEAK, own, span.start)
+      pushAll(I_AM_THE_ROLE, own, span.start)
     }
   }
 
+  // Bio segments do not overlap and come in order; a match inside one is dropped.
   const bios = [...text.matchAll(BIO_SEGMENT)].map((m) => [m.index ?? 0, (m.index ?? 0) + m[0].length] as const)
-  const kept = matches.filter((m) => !bios.some(([s, e]) => m.start >= s && m.end <= e))
+  matches.sort((a, b) => a.start - b.start || b.end - a.end)
+  let b = 0
+  const kept = matches.filter((m) => {
+    while (b < bios.length && (bios[b] as readonly [number, number])[1] <= m.start) b++
+    const bio = bios[b]
+    return !(bio && m.start >= bio[0] && m.end <= bio[1])
+  })
   matches.length = 0
   matches.push(...kept)
-  matches.sort((a, b) => a.start - b.start || b.end - a.end)
   const kind = matches.some((m) => m.kind === 'line') ? 'line' : matches.length > 0 ? 'own_words' : null
   const above =
     options.cut === undefined || matches.length === 0 ? null : matches.some((m) => m.end <= (options.cut as number))

@@ -31,17 +31,29 @@ function parse(raw: string): number {
   return Number(raw.replace(/,/g, ''))
 }
 
-function unitStem(w: string): string {
-  let u = w.toLowerCase()
-  if (u.length > 3 && u.endsWith('ies')) u = `${u.slice(0, -3)}y`
-  else if (u.length > 3 && u.endsWith('s') && !u.endsWith('ss')) u = u.slice(0, -1)
-  return u
+/** Abbreviations of one unit read as that unit: "10 min." and "10 mins" are "10 minutes". */
+const UNIT_ALIASES: Record<string, string> = {
+  m: 'minute', min: 'minute', mn: 'minute',
+  h: 'hour', hr: 'hour', hrs: 'hour',
+  sec: 'second', secs: 'second',
+  ms: 'millisecond', msec: 'millisecond',
+  wk: 'week', wks: 'week',
+  mo: 'month', mos: 'month', mth: 'month', mths: 'month',
+  yr: 'year', yrs: 'year',
 }
 
-const PERCENT = /(\d+(?:[.,]\d+)*)\s?(?:%|percent\b)/giu
+function unitStem(w: string): string {
+  let u = w.toLowerCase().replace(/\.$/, '')
+  if (u.length > 3 && u.endsWith('ies')) u = `${u.slice(0, -3)}y`
+  else if (u.length > 3 && u.endsWith('s') && !u.endsWith('ss')) u = u.slice(0, -1)
+  return UNIT_ALIASES[u] ?? u
+}
+
+const PERCENT = /(?<!\d|\d[.,])(\d+(?:[.,]\d+)*)\s?(?:%|percent\b)/giu
 const MULTIPLIER = /(?<![\p{L}\p{N}.])(\d+(?:\.\d+)?)\s?[x×](?![\p{L}\p{N}])/giu
 const MONEY = /(?:US)?\$\s?(\d[\d,]*(?:\.\d+)?)(?:\s?(k|m|mm|b|thousand|million|billion)\b)?/giu
-const COUNT = /(?<![\p{L}\p{N}.$])(\d[\d,]*(?:\.\d+)?)(?:\s?(k|m|thousand|million|billion)\b)?(?:\s+([\p{L}][\p{L}'-]*))?/giud
+// The unit may follow a space, a hyphen ("a 10-minute setup") or nothing ("10min").
+const COUNT = /(?<![\p{L}\p{N}.$])(\d[\d,]*(?:\.\d+)?)(?:\s?(k|m|thousand|million|billion)\b)?(?:(?:\s+|-)?([\p{L}][\p{L}'-]*))?/giud
 
 const ONES: Record<string, number> = {
   zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
@@ -50,8 +62,11 @@ const ONES: Record<string, number> = {
 const TENS: Record<string, number> = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 }
 const MAGNITUDE: Record<string, number> = { hundred: 100, thousand: 1e3, million: 1e6, billion: 1e9 }
 const NUMBER_WORD = `(?:${[...Object.keys(ONES), ...Object.keys(TENS), ...Object.keys(MAGNITUDE)].join('|')})`
-/** "thirty-five", "one hundred and twenty", "a hundred"; a leading "a" only before a magnitude. */
-const WORDS = `(?:a\\s+(?=hundred|thousand|million|billion))?${NUMBER_WORD}(?:(?:[\\s-]+|\\s+and\\s+)${NUMBER_WORD})*`
+/**
+ * "thirty-five", "one hundred and twenty", "a hundred"; a leading "a" only before a magnitude.
+ * A run is at most nine words, so a scan from each word start stays short on any input.
+ */
+const WORDS = `(?:a\\s+(?=hundred|thousand|million|billion))?${NUMBER_WORD}(?:(?:[\\s-]+|\\s+and\\s+)${NUMBER_WORD}){0,8}`
 const COMPARATIVE_AFTER = '(?=\\s+(?:as|more|less|fewer|over|the|[\\p{L}]+er)\\b)'
 
 /** The value of a run of number words, e.g. "two hundred and fifty" -> 250. */
@@ -84,15 +99,39 @@ const FOLD = new RegExp(`\\b(?:(doubles|doubled|doubling|triples|tripled|triplin
 const WORD_COUNT = new RegExp(`\\b(${WORDS})\\s+([\\p{L}][\\p{L}'-]*)`, 'giu')
 const FOLD_VALUE: Record<string, number> = { doub: 2, twic: 2, trip: 3, thri: 3, quad: 4 }
 
-/** Find the numbers in a text. Years, clock times and dates are not claims and are skipped. */
+/**
+ * NFKC form of a text ("３０％" -> "30%") with, when folding changes lengths, the offset in
+ * the text of each offset in the folded form, so numbers keep the text's own offsets.
+ */
+function foldWithOffsets(text: string): { folded: string; at: (i: number) => number } {
+  const whole = text.normalize('NFKC')
+  if (whole === text) return { folded: text, at: (i) => i }
+  let folded = ''
+  const map: number[] = []
+  let raw = 0
+  for (const ch of text) {
+    const f = ch.normalize('NFKC')
+    for (let k = 0; k < f.length; k++) map.push(raw)
+    folded += f
+    raw += ch.length
+  }
+  map.push(raw)
+  return { folded, at: (i) => map[i] ?? raw }
+}
+
+/**
+ * Find the numbers in a text, with offsets into `text`. Years, clock times and dates are not
+ * claims and are skipped.
+ */
 export function extractNumbers(text: string): FoundNumber[] {
-  const folded = text.normalize('NFKC')
+  const { folded, at } = foldWithOffsets(text)
   const out: FoundNumber[] = []
-  const taken: Array<[number, number]> = []
-  const free = (a: number, b: number) => !taken.some(([s, e]) => a < e && b > s)
+  // One flag per UTF-16 unit: a number found by an earlier pattern keeps its span.
+  const taken = new Uint8Array(folded.length + 1)
+  const free = (a: number, b: number) => taken.subarray(a, b).indexOf(1) === -1
   const add = (n: FoundNumber) => {
     out.push(n)
-    taken.push([n.start, n.end])
+    taken.fill(1, n.start, n.end)
   }
 
   for (const m of folded.matchAll(PERCENT)) {
@@ -140,7 +179,8 @@ export function extractNumbers(text: string): FoundNumber[] {
     if (!free(numStart, numEnd)) continue
     const scaleWord = m[2]
     const word = m[3]
-    const before = folded.slice(0, numStart).match(/([\p{L}]+)\.?\s*$/u)?.[1]?.toLowerCase()
+    // A month name just before ("Sep. 2026") makes it a date; the longest is "September. ".
+    const before = folded.slice(Math.max(0, numStart - 16), numStart).match(/([\p{L}]+)\.?\s*$/u)?.[1]?.toLowerCase()
     if (before && MONTH_SET.has(before)) continue
     const value = parse(m[1] as string) * (scaleWord ? (SCALE[scaleWord.toLowerCase()] ?? 1) : 1)
     const stem = word ? unitStem(word) : ''
@@ -158,17 +198,16 @@ export function extractNumbers(text: string): FoundNumber[] {
     if (value === undefined || NOT_UNITS.has(stem) || FUNCTION_WORDS.has(stem) || !free(start, start + m[0].length)) continue
     add({ kind: 'count', value, unit: stem, raw: m[0], start, end: start + m[0].length })
   }
-  return out.sort((a, b) => a.start - b.start)
+  return out.sort((a, b) => a.start - b.start).map((n) => ({ ...n, start: at(n.start), end: at(n.end) }))
 }
 
 /** Remove number spans from a text (used before tokenising for word matching). */
 export function stripNumbers(text: string, numbers: readonly FoundNumber[]): string {
-  const folded = text.normalize('NFKC')
   let out = ''
   let cursor = 0
   for (const n of numbers) {
-    out += `${folded.slice(cursor, n.start)} `
+    out += `${text.slice(cursor, n.start)} `
     cursor = n.end
   }
-  return out + folded.slice(cursor)
+  return out + text.slice(cursor)
 }

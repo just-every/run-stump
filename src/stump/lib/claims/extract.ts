@@ -39,7 +39,8 @@ const QUANT_CONTEXT_UNITS = new Set([
   'minute', 'hour', 'second', 'ms', 'millisecond', 'day', 'week', 'step', 'click', 'line', 'request', 'query', 'user', 'customer',
   'team', 'integration', 'connector', 'language', 'region', 'country', 'developer', 'engineer', 'company', 'seat', 'site', 'app', 'download', 'star',
 ])
-const PRICE_WORDS = /\b(price|pricing|cost|costs|plan|plans|per|month|year|seat|save|saves|cheaper|free|from|starting|only|just)\b/
+const PRICE_WORDS =
+  /\b(price|prices|priced|pricing|cost|costs|plan|plans|per|month|monthly|mo|year|yearly|annually|yr|seat|seats|user|users|save|saves|cheaper|free|from|starting|starts|only|just)\b|\/\s*[\p{L}]/u
 
 function mentionsAny(folded: string, names: readonly string[]): string | undefined {
   for (const n of names) {
@@ -62,14 +63,15 @@ export function startsWithPronoun(sentence: string): boolean {
 
 /**
  * Read one sentence; `undefined` when it is not a claim. `pronounProduct` is the product the
- * previous sentence named, when this one opens with "It ..." or "This ...".
+ * previous sentence named, when this one opens with "It ..." or "This ...". `found` is the
+ * sentence's numbers when the caller has already read them (offsets within `span.text`).
  */
-export function readSentence(span: Span, ctx: ExtractContext, pronounProduct?: string): ClaimCandidate | undefined {
+export function readSentence(span: Span, ctx: ExtractContext, pronounProduct?: string, found?: readonly FoundNumber[]): ClaimCandidate | undefined {
   const folded = foldText(span.text)
   if (span.text.endsWith('?')) return undefined
   if (wordCount(folded) < 3) return undefined
 
-  const numbers = extractNumbers(span.text)
+  const numbers = found ? [...found] : extractNumbers(span.text)
   const product = mentionsAny(folded, ctx.product_names) ?? pronounProduct
   const competitor = mentionsAny(folded, ctx.competitor_names)
   const firstPerson = FIRST_PERSON_PLURAL.test(folded)
@@ -80,7 +82,8 @@ export function readSentence(span: Span, ctx: ExtractContext, pronounProduct?: s
     (n) =>
       n.kind === 'percent' ||
       n.kind === 'multiplier' ||
-      (n.kind === 'money' && PRICE_WORDS.test(folded)) ||
+      // A money amount about a product, a competitor or "we" is a price ("Orbit starts at $29/mo").
+      (n.kind === 'money' && (anchored || PRICE_WORDS.test(folded))) ||
       (n.kind === 'count' && QUANT_CONTEXT_UNITS.has(n.unit)),
   )
   if (hasMetric) reasons.push('quantity')

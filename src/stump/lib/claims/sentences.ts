@@ -60,13 +60,20 @@ export function foldText(text: string): string {
     .replace(/(\p{L})(?=\d)/gu, '$1 ')
 }
 
+/** Unit abbreviations match the word they stand for ("$29/mo" and "$49 per month"). */
+const ABBREVIATIONS: Record<string, string> = {
+  min: 'minute', hr: 'hour', hrs: 'hour', sec: 'second', wk: 'week', wks: 'week',
+  mo: 'month', mos: 'month', mth: 'month', yr: 'year', yrs: 'year',
+}
+
 /** Content words of a text, stemmed, with stop words and numbers removed. */
 export function contentTokens(text: string): string[] {
   const out: string[] = []
   for (const m of foldText(text).matchAll(/[\p{L}][\p{L}\p{N}]*/gu)) {
     const w = m[0]
     if (STOP.has(w)) continue
-    out.push(stem(w))
+    const stemmed = stem(w)
+    out.push(ABBREVIATIONS[stemmed] ?? stemmed)
   }
   return out
 }
