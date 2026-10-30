@@ -7,6 +7,7 @@ import type { Team } from '../../ui/types.ts'
 import { DETAIL_LABELS } from '../kinds.ts'
 import { kindLabel, limitWords, nextOpen, routeLabel, statusLabel, statusTone } from './labels.ts'
 import { openingWords } from '../../today/sections.ts'
+import { STATE as HANDOFF_STATE } from '../../handoffs/ui/words.ts'
 import { RulesCard, threadWords } from './RulesCard.tsx'
 import type { Members, RouteAnswer, Venue, VenueItem } from './types.ts'
 import { VenueForm } from './VenueForm.tsx'
@@ -127,7 +128,7 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
     if (done) { setAdding(false); onChanged() }
   }
   const approve = (id: string) => run(() => runAction('stump.venues.members', { action: 'approve_application', idempotency_key: key(), application_id: id })).then(done => { if (done) onChanged() })
-  const gateWords = (gate: { gate: string; need: number | boolean }) => gate.gate === 'karma' ? `needs ${gate.need} karma` : gate.gate === 'account_age' ? `account needs ${gate.need} days` : gate.gate === 'approval' ? 'needs approval' : 'join first'
+  const gateWords = (gate: { gate: string; need: number | boolean }) => gate.gate === 'karma' ? `needs ${gate.need}\u00a0karma` : gate.gate === 'account_age' ? `account needs ${gate.need}\u00a0days` : gate.gate === 'approval' ? 'needs approval' : 'join first'
   const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
   const pending = members.applications.filter(application => application.state === 'applied')
   return <section className="st-card" aria-labelledby="members-title">
@@ -135,7 +136,7 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
     {members.items.length ? <ul className="st-list">{members.items.map(member => <li className="st-row" key={member.person_id}>
       <div className="st-row-main">
         <div className="st-name">{member.display_name ?? names.get(member.person_id) ?? 'Teammate'}</div>
-        <div className="st-meta">{[member.handle, member.karma !== null ? `${member.karma.toLocaleString('en-US')} karma` : null, member.joined_on ? `joined ${monthYear(member.joined_on)}` : null].filter(Boolean).join(' · ')}</div>
+        <div className="st-meta">{[member.handle, member.karma !== null ? `${member.karma.toLocaleString('en-US')}\u00a0karma` : null, member.joined_on ? `joined ${monthYear(member.joined_on)}` : null].filter(Boolean).join(' · ')}</div>
       </div>
       {/* Able to post is the default (H16): a chip shows only what still stands in the way. */}
       {member.eligible ? null : <span className="st-chip held">{capital(member.unmet.map(gateWords).join(', '))}</span>}
@@ -228,15 +229,19 @@ function ProductsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
 }
 
 const cap = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
-/** An item aimed here, named as Today names it: by its product ("Brightwell Rooms post"), else a post by its opening words. */
+/**
+ * An item aimed here, named as Today names it: by its product ("Brightwell post"), whether or not this venue lists that product,
+ * else a post by its opening words.
+ */
 function itemName(item: VenueItem, names: Map<string, string>): string {
-  const product = item.product_id ? names.get(item.product_id) : null
+  const product = item.product_name ?? (item.product_id ? names.get(item.product_id) : null)
   if (product) return `${product} ${item.format}`
   return item.format === 'post' && item.text ? openingWords(item.text) : cap(item.format)
 }
 
-/** Where an item aimed here stands, in words: the rule that holds it, never its code. */
+/** Where an item aimed here stands, in words: a hand-off's own state as Hand-offs says it, else the rule that holds it, never its code. */
 function itemWords(venue: Venue, item: VenueItem): string {
+  if (item.handoff) return HANDOFF_STATE[item.handoff.state]?.label ?? cap(words(item.handoff.state))
   if (item.state === 'held' || item.hold) {
     const rule = item.hold?.rule ?? null
     if (rule === 'self_promotion') return `Held: outside the ${venue.rules.self_promotion ? threadWords(venue.rules.self_promotion) : 'promotion thread'}`

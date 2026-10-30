@@ -46,6 +46,15 @@ export function FilePick({ name, label, short, accept, required = true, named = 
   </label>
 }
 
+/**
+ * A meta line of parts joined by " · ". The dot belongs to the part after it and is clipped where that part starts a line, so a
+ * wrapped line never ends or starts with a separator.
+ */
+export function Parts({ parts, className }: { parts: ReactNode[]; className?: string }) {
+  const shown = parts.filter(part => part !== null && part !== undefined && part !== false && part !== '')
+  return <span className={className ? `st-parts ${className}` : 'st-parts'}><span>{shown.map((part, index) => <span key={index}>{part}</span>)}</span></span>
+}
+
 /** Two initials from a display name, for the initials disc. */
 export const initialsOf = (name: string) => name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]!.toUpperCase()).join('') || '?'
 export function Initials({ name }: { name: string }) {

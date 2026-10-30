@@ -76,4 +76,12 @@ export const listeningStyles = `
   .st-listen .st-finding-body { grid-column: 1; }
   .st-listen .st-finding-actions .st-button { flex: 1 1 auto; }
 }
+/* At phone width the focal finding's job is a full-width pill with "Open thread ↗" centred under it, as the hero's pair. */
+@media (max-width: 480px) {
+  .st-listen .st-finding.focal .st-finding-body { grid-column: 1 / -1; }
+  .st-listen .st-finding.focal h3 { padding-right: 40px; }
+  .st-listen .st-finding.focal > .st-more-menu { position: absolute; top: 12px; right: 8px; }
+  .st-listen .st-finding-actions { flex-direction: column; align-items: stretch; gap: 4px; }
+  .st-listen .st-finding-actions .st-open-link { align-self: center; display: inline-flex; align-items: center; min-height: 44px; }
+}
 `

@@ -224,6 +224,20 @@
   .lp-closing h2 { font-size: 40px; line-height: 42px; text-align: center; }
   .lp-closing .lp-actions { align-items: stretch; }
 }
+/* 900 and wider (SPEC §2.2, page-1440/screen-6): a 640 px closing band, the stump about 860 px wide at the right and "Go be heard."
+   with its actions centred against it, over the plate's empty upper left. */
+@media (min-width: 900px) {
+  .lp-closing { display: grid; align-items: center; min-height: 640px; padding-block: 16px 24px; }
+  .lp-closing-grid { grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .lp-closing-copy, .lp-closing-plate { grid-area: 1 / 1; }
+  .lp-closing-copy { position: relative; z-index: 1; }
+  .lp-closing-plate { width: min(860px, 68%); max-width: none; justify-self: end; }
+}
+/* At phone width the hero's four network chips keep one row in the card. */
+@media (max-width: 480px) {
+  .lp-step .lp-chips { gap: 6px; }
+  .lp-step .lp-chips li { padding: 0 8px; }
+}
 /* A phone's register row: the name over its meta on the left, the chip centred on the right, so every row keeps one shape. */
 @media (max-width: 479px) {
   .lp-rows li { flex-wrap: nowrap; }

@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { ActionError, explain, me, runAction } from '../stump/ui/api.ts'
 import { Icon } from '../stump/ui/icons.tsx'
-import { Empty, MoreMenu, Outcome, accountWord, useLoaded, useRun } from '../stump/ui/kit.tsx'
+import { Empty, MoreMenu, Outcome, Parts, accountWord, useLoaded, useRun } from '../stump/ui/kit.tsx'
 import { flagLine, type Flag } from '../stump/drafting/view.ts'
 import { listeningStyles } from '../stump/watches/styles.ts'
 import type { BlockedAuthor, FindingList, FindingView, PollView, WatchList, WatchView } from '../stump/watches/ui-types.ts'
@@ -161,7 +161,7 @@ function Finding({ finding, rank, watch, focal, act, may, context, onFocus, onCh
     <span className="st-numeral" aria-hidden="true">{rank}</span>
     <div className="st-finding-body">
       <h3>{focal ? title : <button type="button" className="st-finding-title" onClick={onFocus}>{title}</button>}</h3>
-      <div className="st-meta">{focal ? <>{source} · {ago(finding.published_at)}{finding.author ? ` · ${finding.author}` : ''}{finding.points !== null && finding.source === 'hn' ? ` · ${finding.points} points` : ''}</> : `${source} · ${ago(finding.published_at)}`}</div>
+      <div className="st-meta">{focal ? <Parts parts={[source, ago(finding.published_at), finding.author, finding.points !== null && finding.source === 'hn' ? `${finding.points}\u00a0points` : null]} /> : `${source} · ${ago(finding.published_at)}`}</div>
       {shown.length ? <ul className="st-chips" aria-label="Why it ranks here">
         {shown.map(chip => <li className="st-chip" key={chip.label} title={chip.title}>{chip.label}</li>)}
         {more > 0 ? <li className="st-meta st-chip-more" title={chips.slice(1).map(chip => chip.label).join(', ')}>+{more}</li> : null}

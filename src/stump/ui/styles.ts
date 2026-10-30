@@ -92,6 +92,9 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-tabs a:hover { color: var(--stump-ink); }
 .st-tabs a[aria-current="page"] { color: var(--stump-ink); font-weight: 600; border-bottom-color: var(--stump-emerald); }
 .st-settings .st-page > h1:first-child, .st-settings .st-page h1 { font-size: 24px; line-height: 30px; }
+/* The strip scrolls sideways on a narrow screen; while tabs sit past its right edge, a 24 px fade from white says so. */
+.st-settings-head .st-tabs-strip { position: relative; }
+.st-settings-head .st-tabs-strip.more::after { content: ""; position: absolute; top: 0; bottom: 1px; right: 0; width: 24px; background: linear-gradient(to right, rgba(255,255,255,0), var(--stump-white)); pointer-events: none; }
 
 /* Lists and rows */
 .st-list { list-style: none; margin: 0; padding: 0; }
@@ -101,6 +104,11 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-name { font-weight: 500; font-size: 16px; line-height: 22px; color: var(--stump-ink); overflow-wrap: anywhere; }
 .st-meta { font-size: var(--stump-size-small); line-height: 20px; color: var(--stump-muted); overflow-wrap: anywhere; }
 .st-actions { display: flex; gap: var(--stump-space); align-items: center; flex-wrap: wrap; }
+/* A meta line of parts (kit Parts): each part's leading dot is clipped where the part starts a line. */
+.st-parts { display: block; overflow: hidden; }
+.st-parts > span { display: flex; flex-wrap: wrap; margin-left: -0.95em; }
+.st-parts > span > span { min-width: 0; }
+.st-parts > span > span::before { content: "·"; display: inline-block; width: 0.95em; text-align: center; }
 
 /* Panels (SPEC §3.4: white, 1 px hairline, radius 14, no shadow) */
 .st-panel { background: var(--stump-white); border: 1px solid var(--stump-hairline); border-radius: var(--stump-radius); padding: 24px; margin: 16px 0; }
@@ -314,6 +322,7 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
   .st-settings .st-page h1 { font-size: 22px; line-height: 28px; }
   .st-settings-title { margin-bottom: 12px; }
   .st-tabs { gap: 20px; margin: 0 -16px; padding: 0 16px; }
+  .st-settings-head .st-tabs-strip.more::after { right: -16px; }
   .st-row { flex-wrap: wrap; }
   .st-panel { padding: 16px; }
   .st-popover { position: fixed; inset: auto 0 0 0; top: auto; width: auto; border-radius: 20px 20px 0 0; padding: 20px 16px calc(24px + env(safe-area-inset-bottom)); }
@@ -562,8 +571,18 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 
 /* Settings · Agents (src/stump/agent-door/ui/AgentsSettings.tsx): each kind of action with its answer at the right */
 .st-agents .st-agents-policy .st-select { flex: none; min-width: 200px; }
-.st-agents .st-agents-policy > .st-meta { margin: -8px 0 8px; }
-.st-agents .st-agents-foot { margin: 12px 0 0; }
+.st-agents .st-agents-sub { margin: -8px 0 8px; }
+.st-agents .st-agents-sub > .st-meta { margin: 0; }
+.st-agents .st-agents-policy > .st-meta { margin: 12px 0 0; }
+/* The folded policy document: a line-icon chevron (turned when open), then the JSON in code type across the panel, saved on leaving it */
+.st-agents .st-agents-document { margin-top: 12px; }
+.st-agents .st-agents-document > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; list-style: none; cursor: pointer; font-size: var(--stump-size-small); font-weight: 500; color: var(--stump-muted); border-radius: 8px; }
+.st-agents .st-agents-document > summary::-webkit-details-marker { display: none; }
+.st-agents .st-agents-document > summary svg { flex: none; width: 20px; height: 20px; color: var(--stump-muted); transition: transform var(--stump-motion); }
+.st-agents .st-agents-document[open] > summary svg { transform: rotate(90deg); }
+.st-agents .st-agents-document > summary .st-saved-mark { margin-left: auto; }
+.st-agents .st-agents-document > summary:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
+.st-agents .st-agents-json { display: block; width: 100%; min-height: 280px; margin-top: 8px; padding: 12px 14px; font: 14px/1.6 var(--stump-mono); resize: vertical; }
 .st-agents .st-agents-answer { flex: none; font-size: var(--stump-size-small); color: var(--stump-body); }
 .st-agents .st-panel-head .st-saved-mark { margin-left: auto; }
 @media (max-width: 900px) {
@@ -700,7 +719,13 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-today .st-today-finding .st-chip { background: var(--stump-focus-tint); color: var(--stump-body); }
 .st-today .st-today-out { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; color: var(--stump-body); text-decoration: none; }
 .st-today a.st-today-out:hover .st-today-out-line { text-decoration: underline; }
-.st-today .st-today-out-line { flex: 1 1 auto; min-width: 0; font-size: var(--stump-size-body); line-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-today .st-today-out-line { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; font-size: var(--stump-size-body); line-height: 22px; overflow: hidden; white-space: nowrap; }
+.st-today .st-today-out-meta { flex: none; }
+.st-today .st-today-out-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.st-today .st-today-out-text::before { content: "·"; display: inline-block; width: 0.95em; text-align: center; }
+/* Nothing for today (kit Empty) fills the column alone; the time of the one due hand-off moves under its title at phone width. */
+.st-today .st-today-grid.solo { grid-template-columns: minmax(0, 1fr); }
+.st-today .st-today-due-narrow { display: none; }
 .st-today .st-today-all { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; padding: 0; border: 0; background: none; font: 600 15px/20px var(--stump-font); color: var(--stump-emerald-text); cursor: pointer; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
 .st-today .st-today-line a { color: var(--stump-emerald-text); }
 .st-today .st-today-count { display: flex; align-items: center; gap: 20px; color: inherit; text-decoration: none; border-radius: 12px; }
@@ -724,12 +749,20 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
   .st-today .st-today-main { gap: 16px; }
   .st-today .st-today-pair { gap: 16px; }
   .st-today .st-today-focal { font-size: 19px; line-height: 26px; }
-  .st-today .st-today-out-line { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  /* A post going out reads as its words over one meta line (H16). */
+  .st-today .st-today-out-line { flex-direction: column; align-items: stretch; white-space: normal; }
+  .st-today .st-today-out-text { order: -1; white-space: nowrap; color: var(--stump-ink); font-weight: 500; }
+  .st-today .st-today-out-text::before { content: none; }
+  .st-today .st-today-out-meta { font-size: var(--stump-size-small); line-height: 20px; color: var(--stump-muted); }
   .st-today .st-row { flex-wrap: nowrap; align-items: flex-start; }
   .st-today .st-today-week .st-panel-title .st-disc { display: inline-flex; }
   .st-today .st-today-week ul { display: flex; flex-wrap: wrap; gap: 12px 28px; }
   .st-today .st-today-week li { gap: 12px; font-size: 16px; white-space: nowrap; }
   .st-today .st-today-count { gap: 12px; }
   .st-today .st-today-week .st-disc.big { width: 44px; height: 44px; font-size: 22px; }
+}
+@media (max-width: 480px) {
+  .st-today .st-today-due-wide { display: none; }
+  .st-today .st-today-due-narrow { display: inline; }
 }
 `

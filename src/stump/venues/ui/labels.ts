@@ -36,7 +36,7 @@ export function nextOpen(iso: string | null, now = Date.now()): string | null {
   return short.format(new Date(at)).replace(',', '')
 }
 export const readOn = (date: string | null) => date ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`)) : null
-export const limitWords = (limit: { posts: number; per: string } | null) => limit ? `${limit.posts === 1 ? 'One post' : `${limit.posts} posts`} a ${limit.per}` : null
+export const limitWords = (limit: { posts: number; per: string } | null) => limit ? `${limit.posts === 1 ? 'One post' : `${limit.posts}\u00a0posts`} a ${limit.per}` : null
 
 /** The status dot: filled when the venue is ready to use, open otherwise. */
 export const statusTone = (status: string) => status === 'ready' ? 'ok' : status === 'hold' || status === 'excluded' ? 'held' : ''
