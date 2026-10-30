@@ -15,6 +15,7 @@ import { appDocumentGate } from './stump/http/app-gate.ts'
 import { importDoorResponse } from './stump/imports/door.ts'
 import { personDoorResponse } from './stump/http/routes.ts'
 import { publishDue } from './stump/publish/tick.ts'
+import { tickHandoffs } from './stump/handoffs/lapse.ts'
 import { pollDueWatches } from './stump/watches/scheduled.ts'
 
 const api = new Hono<{ Bindings: Bindings }>()
@@ -33,7 +34,11 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
   // The scheduler tick: due items go out unless a Pause covers them (src/stump/publish/tick.ts).
   async scheduled(controller, env) {
     try { await publishDue(runtimeBindings(env), controller.scheduledTime) }
-    finally { await pollDueWatches(runtimeBindings(env), controller.scheduledTime) }
+    finally {
+      // Hand-offs never wait in silence: review dates, rule changes and lapses (src/stump/handoffs/lapse.ts).
+      try { await tickHandoffs(runtimeBindings(env), controller.scheduledTime) }
+      finally { await pollDueWatches(runtimeBindings(env), controller.scheduledTime) }
+    }
   },
   async fetch(request, env, execution) {
     const asset = await staticAssetResponse(request, env)

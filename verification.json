@@ -33,7 +33,7 @@
       "commands": [
         "pnpm run build",
         "node --test tests/stump/team.test.mjs",
-        "node --test tests/stump/venues.test.mjs",
+        "node --test tests/stump/venues.test.mjs tests/stump/handoffs.test.mjs",
         "node --test tests/stump/watches.test.mjs",
         "node --test tests/stump/ledger-stack.test.mjs",
         "node --test tests/stump/accounts.test.mjs tests/stump/drafting.test.mjs",

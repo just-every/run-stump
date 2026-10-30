@@ -2,6 +2,7 @@ import { refuse, NO_PERSONAS } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
 import { ADMINS, CONNECTIONS, EVERYONE, ROLES, isRole, rank, type Role } from '../people/roles.ts'
 import { listPeople, readPerson, type StumpPerson } from '../people/store.ts'
+import { answerRemovedPerson } from '../handoffs/lapse.ts'
 
 const email = { type: 'string', format: 'email', minLength: 3, maxLength: 254 }
 const personId = { type: 'string', minLength: 1, maxLength: 64 }
@@ -161,8 +162,9 @@ export const teamTools: StumpTool[] = [{
           await history(ctx, target.status === 'invited' ? 'cancel_invitation' : 'remove', target, { open_handoffs: handoffs.length, unscheduled_items: scheduled.length }),
         ])
         ctx.emit('team.removed', `stump://people/${target.id}`)
-        // The removed person's record, with the open hand-offs and unscheduled items that now need an answer.
-        return { ...publicPerson((await readPerson(ctx.db, target.id))!), open_handoffs: handoffs, unscheduled_items: scheduled.map(item => item.id) }
+        // The removed person's record, with the open hand-offs and unscheduled items that now need an answer:
+        // each hand-off moves to the venue's next member or expires, with its history (STUMP-HANDOFF-003.5).
+        return { ...publicPerson((await readPerson(ctx.db, target.id))!), open_handoffs: handoffs, handoffs_answered: await answerRemovedPerson(ctx, target.id), unscheduled_items: scheduled.map(item => item.id) }
       },
     },
   },
