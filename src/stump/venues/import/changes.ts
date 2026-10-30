@@ -39,12 +39,13 @@ function comparable(kind: Kind, value: Value): JsonObject {
 /** The record as Stump holds it now, in the import's own shape. */
 async function nativeNow(db: D1Database, kind: Kind, id: string, imported: Value): Promise<Value> {
   if (kind === 'venue') {
-    const row = await db.prepare('SELECT kind,name,url,platform,status,priority,audience,reception,rules,shared_limit,excluded,how_to_post,details FROM stump_venues WHERE id=?').bind(id).first<Record<string, unknown>>()
+    const row = await db.prepare('SELECT kind,name,url,platform,status,priority,audience,reception,rules,shared_limit,excluded,how_to_post,details,requirements,why,reader_value FROM stump_venues WHERE id=?').bind(id).first<Record<string, unknown>>()
     if (!row) return imported
     const products = (await db.prepare('SELECT product_id FROM stump_venue_products WHERE venue_id=?').bind(id).all<{ product_id: string }>()).results
     return {
       ...imported, kind: row.kind, name: row.name, url: row.url, platform: row.platform, status: row.status, priority: priorityWord(row.priority), audience: row.audience,
       reception: row.reception, rules: parse(row.rules), shared_limit: parse(row.shared_limit), excluded: parse(row.excluded), how_to_post: parse(row.how_to_post), details: parse(row.details), products,
+      requirements: parse(row.requirements), why: row.why, reader_value: row.reader_value,
     }
   }
   if (kind === 'product') {

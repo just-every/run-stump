@@ -29,5 +29,7 @@ export function explain(error: unknown): string {
     self_escalation: 'You cannot widen your own access.', not_found: 'That no longer exists.', invalid_arguments: 'Check the fields and try again.',
     act_refused: 'Stump never does that.', origin_refused: 'Reload the page and try again.', unauthenticated: 'Sign in again to continue.',
   }
-  return words[error.code] ?? `Refused: ${error.code.replace(/_/g, ' ')}.`
+  // A refusal that says why in plain words (a provider's error, a teammate who has not joined yet) shows that reason.
+  const reason = typeof error.fields.reason === 'string' && error.fields.reason.trim() ? error.fields.reason.trim() : null
+  return reason ?? words[error.code] ?? `Refused: ${error.code.replace(/_/g, ' ')}.`
 }

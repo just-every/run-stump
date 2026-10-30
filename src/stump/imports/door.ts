@@ -39,13 +39,15 @@ interface ImportSource {
   release(kept: unknown[]): Promise<void>
   /** Work that follows the import's records once they exist, run again until it is done. */
   settle(): Promise<void>
+  /** Why the reader could not read the upload at all, when it says, so the refusal names what it expected. */
+  failure(): string | null
 }
 type SourceFactory = (db: D1Database, ownerId: string) => Promise<ImportSource>
 
 const venueList = (namespace: 'outreach-md' | 'venues-csv'): SourceFactory => async (db, ownerId) => {
-  const { source, summary, rejected, mapped, existing } = await venueListSource(db, namespace, ownerId)
+  const { source, summary, rejected, mapped, existing, failure } = await venueListSource(db, namespace, ownerId)
   return {
-    destination: VENUE_DESTINATION, targets: venueListTargets, source, rejected, existing,
+    destination: VENUE_DESTINATION, targets: venueListTargets, source, rejected, existing, failure,
     summary: () => summary() as unknown as Record<string, number> | null,
     changes: rows => rowChanges(db, rows, mapped),
     kept: jobId => keptAfterUndo(db, jobId), release: kept => releaseKept(db, kept as never), settle: async () => {},
@@ -55,7 +57,7 @@ const venueList = (namespace: 'outreach-md' | 'venues-csv'): SourceFactory => as
 const buffer: SourceFactory = async (db, ownerId) => {
   const { source, summary, rejected, existing, changes } = await bufferSource(db, ownerId)
   return {
-    destination: BUFFER_DESTINATION, targets: bufferTargets, source, summary, rejected, existing, changes,
+    destination: BUFFER_DESTINATION, targets: bufferTargets, source, summary, rejected, existing, changes, failure: () => null,
     kept: jobId => bufferKept(db, jobId), release: kept => releaseBufferKept(db, kept as never),
     // Imported items get the draft check once their accounts exist.
     settle: async () => { await checkImportedItems(db, Date.now()) },
@@ -163,7 +165,12 @@ export async function importDoorResponse(request: Request, original: StumpEnv): 
       response = await kit('plan', JSON.stringify({ ...given, catchup: true })); catchup = true
       if (await errorOf(response) === 'catchup_requires_baseline') { response = await kit('plan', body); catchup = false }
     } else response = await kit('plan', body)
-    if (!response.ok) return response
+    if (!response.ok) {
+      // The kit names only that the reader failed; the reader's own words say what the file should hold.
+      const reason = entry.failure()
+      if (reason && await errorOf(response) === 'source_raw_reader_failed') return refused('source_raw_reader_failed', response.status, { reason })
+      return response
+    }
     const result = await response.json() as Preview & Record<string, unknown>, d = result.differences
     const counted = entry.summary(), bundle = result.bundleSha256
     if (counted) await env.DB.prepare('INSERT INTO stump_import_summaries(namespace,bundle_sha256,summary) VALUES(?,?,?) ON CONFLICT DO UPDATE SET summary=excluded.summary').bind(name, bundle, JSON.stringify(counted)).run()

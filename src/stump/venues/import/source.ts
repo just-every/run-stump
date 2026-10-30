@@ -7,7 +7,7 @@
 import { canonicalJson, sha256 } from '../../../modules/import-kit/src/provenance/identity.ts'
 import type { ImportDoorRawSource } from '../../../modules/import-kit/src/door/types.ts'
 import type { Json, MappingResult, ParsedRecord, SourceRecord } from '../../../modules/import-kit/src/types.ts'
-import { foldName, mapRecord, parseOutreachMarkdown, parseVenuesCsv, REJECTED_KIND, toRecords, type VenueListSummary } from '../../lib/imports/index.ts'
+import { foldName, ImportInputError, mapRecord, parseOutreachMarkdown, parseVenuesCsv, REJECTED_KIND, toRecords, type VenueListSummary } from '../../lib/imports/index.ts'
 import { KIND_FIELDS, priorityRank, priorityWord, type VenueKind } from '../model.ts'
 import { routesFor } from '../rules.ts'
 
@@ -62,6 +62,8 @@ function venueDetails(kind: VenueKind, url: string | null): Record<string, Json>
 export async function venueListSource(db: D1Database, namespace: VenueSource, ownerId: string) {
   const state = await known(db)
   let summary: VenueListSummary | null = null, rejected: Array<{ kind: string; sourceId: string; reason: string }> | null = null
+  // Why the reader could not read the file at all, in its own words, so the plan's refusal says what it expected.
+  let failure: string | null = null
   // What each row maps to in this request, by "<kind>|<sourceId>": a plan names a changed row's fields from it.
   const mapped = new Map<string, Record<string, unknown>>()
   // The list's own venues, by target, as the reader read them: their rules decide their drafts' routes.
@@ -91,6 +93,7 @@ export async function venueListSource(db: D1Database, namespace: VenueSource, ow
       namespace, created_by: ownerId, kind, name: p.name!, url: p.url ?? null, url_key: key, platform: p.platform ?? null, status: p.status!,
       priority: priorityWord(priorityRank(p.priority)), audience: p.audience ?? null, how_to_post: p.how_to_post ? { text: p.how_to_post } : {},
       reception: p.reception ?? null, notes: p.rules_text ? `Rules as the list states them: ${String(p.rules_text)}` : null, details: venueDetails(kind, (p.url as string | null) ?? null),
+      requirements: p.requirements ? { text: p.requirements } : {}, why: p.why ?? null, reader_value: p.reader_value ?? null,
       rules: importedRules((p.rules ?? {}) as Record<string, Json>),
       shared_limit: limit && limit.posts && limit.per ? { posts: limit.posts, per: limit.per, text: limit.text } : null,
       limit_text: limit && !(limit.posts && limit.per) ? limit.text : null,
@@ -141,8 +144,14 @@ export async function venueListSource(db: D1Database, namespace: VenueSource, ow
       },
     },
     readRaw(upload) {
-      const text = new TextDecoder('utf-8', { fatal: true }).decode(upload.bytes)
-      const parsed = namespace === 'outreach-md' ? parseOutreachMarkdown(text) : parseVenuesCsv(text)
+      let parsed: ReturnType<typeof parseVenuesCsv>
+      try {
+        const text = new TextDecoder('utf-8', { fatal: true }).decode(upload.bytes)
+        parsed = namespace === 'outreach-md' ? parseOutreachMarkdown(text) : parseVenuesCsv(text)
+      } catch (error) {
+        failure = error instanceof ImportInputError ? error.message : error instanceof TypeError ? 'The file is not UTF-8 text.' : null
+        throw error
+      }
       summary = parsed.summary
       for (const row of parsed.rows) if (row.kind === 'venue') listedVenues.set(row.sourceId, { status: String(row.payload.status), rules: importedRules((row.payload.rules ?? {}) as Record<string, Json>) })
       const names = new Map<string, string>()
@@ -157,5 +166,5 @@ export async function venueListSource(db: D1Database, namespace: VenueSource, ow
       return [...products, ...records as ParsedRecord[]]
     },
   }
-  return { source, summary: () => summary, rejected: () => rejected, mapped, existing: () => [...existing.values()] }
+  return { source, summary: () => summary, rejected: () => rejected, mapped, existing: () => [...existing.values()], failure: () => failure }
 }

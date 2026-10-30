@@ -17,6 +17,12 @@ A role change applies from the person's next request.
 
 An owner or admin invites a person by email with their name, role and connection: founder, employee, contractor, investor, advisor, friend or family. They may add the person's disclosure lines. The person joins when they sign in with that email. Nobody joins without an invitation.
 
+Until they sign in, an invited person holds nothing: a hand-off, a draft in their voice or a voice guide for them is refused with "<name> has not accepted their invitation yet".
+
+### On your own computer
+
+Mail is not sent locally, so an invited person signs in from this computer instead: open `/signin` in a browser that has opened the `RER_OPEN` link, and choose **Sign in as <name>** beside them. That accepts their invitation and opens Stump with their role. `rer dev --as person@example.com` starts the app signed in as them. Once deployed with mail, they use the sign-in link Stump emails them.
+
 ## The owner
 
 The owner cannot be removed or demoted until ownership is transferred to someone else, and the transfer is recorded. Nobody can widen their own access.

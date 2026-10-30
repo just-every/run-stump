@@ -66,7 +66,7 @@ export const inboxTools: StumpTool[] = [{
     reply: {
       roles: EDITORS,
       properties: { inbox_item_id: id, account_id: id, text, generate: { type: 'boolean' } }, required: ['inbox_item_id', 'account_id'],
-      async classify(args, ctx) { return replyClasses(await planReply(ctx, args), aiHost(ctx.env)) },
+      async classify(args, ctx) { return replyClasses(await planReply(ctx, args), await aiHost(ctx.env, ctx.db)) },
       async summary(args, ctx) {
         const plan = await planReply(ctx, args)
         return { target: { id: plan.inbox.id, name: `Reply to @${plan.inbox.author_handle ?? 'someone'} on ${plan.account.network}` }, recipients: [plan.inbox.url],

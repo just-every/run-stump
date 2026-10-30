@@ -2283,11 +2283,11 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company's policy decides every ca
 | `stump.stack.send` | Send engagers to Orbit or another CRM, newsletters to Mango, beehiiv, Kit or Ghost, and annotations to Vane | STUMP-STACK-002, STUMP-STACK-003, STUMP-STACK-004, STUMP-STACK-007, STUMP-STACK-009, STUMP-STACK-010 | standard or external (+ sensitive) | planned |
 | `stump.notices.route` | Choose notice channels and Slack routes | STUMP-STACK-005 | standard or live (+ security) | planned |
 | `stump.api.keys` | Issue, scope and revoke API keys, webhooks and Zapier and Make connections | STUMP-STACK-006 | access · security | planned |
-| `stump.team.manage` | Invite people, change roles and remove people | STUMP-TEAM-001 | access | planned |
+| `stump.team.manage` | Invite people, change roles and remove people | STUMP-TEAM-001 | access (reading the team: standard) | planned |
 | `stump.team.signoff` | Define, change or turn off sign-off paths | STUMP-TEAM-002 | access | planned |
 | `stump.accounts.delegate` | Grant or revoke account delegation and per-account grants | STUMP-TEAM-003 | access | planned |
 | `stump.setup.apps` | Record network apps, keys and approvals | STUMP-CONNECT-002 | security (+ gated) | planned |
-| `stump.setup.ai` | Choose the AI provider, model and key | STUMP-DRAFT-006 | security | planned |
+| `stump.setup.ai` | Choose the AI provider, model and key | STUMP-DRAFT-006 | security (reading the setting: standard) | planned |
 | `stump.data.export` | Export the archive or restore it into an empty installation | STUMP-DATA-001 | standard (+ sensitive) | planned |
 | `stump.data.erase` | Erase a person | STUMP-DATA-002 | destructive · sensitive (+ external) | planned |
 | `stump.loop.release_posts` | Turn a release into a planned set of posts and hand-offs | STUMP-LOOP-001 | standard or external (+ money) | planned |

@@ -91,6 +91,9 @@ function BrandPage() {
 function ProductProfile({ product, save }: { product: Product; save: (args: Record<string, unknown>) => unknown }) {
   const [open, setOpen] = useState(false)
   const words = open || product.words_use.length > 0 || product.words_avoid.length > 0
+  // What the product is, who it is for, where it lives and what it is compared with: what each AI request and the claim check read (STUMP-BRAND-001).
+  const described = !!(product.description || product.audience || product.urls.length || product.competitors.length || product.other_names.length)
+  const [details, setDetails] = useState(false)
   return <div className="st-profile">
     <div className="st-profile-tone">
       <ProfileField label="tone" product={product.name} value={product.tone} onSave={tone => save({ tone })} />
@@ -100,6 +103,13 @@ function ProductProfile({ product, save }: { product: Product; save: (args: Reco
       <ProfileField label="use" product={product.name} value={product.words_use.join(', ')} focus={open && !product.words_use.length} allowEmpty onSave={value => save({ words_use: list(value) })} />
       <ProfileField label="avoid" product={product.name} value={product.words_avoid.join(', ')} allowEmpty onSave={value => save({ words_avoid: list(value) })} />
     </> : null}
+    {details || described ? <>
+      <ProfileField label="what it is" product={product.name} value={product.description ?? ''} focus={details && !described} allowEmpty onSave={value => save({ description: value || null })} />
+      <ProfileField label="for" product={product.name} value={product.audience ?? ''} allowEmpty onSave={value => save({ audience: value || null })} />
+      <ProfileField label="links" product={product.name} value={product.urls.join(', ')} allowEmpty onSave={value => save({ urls: list(value) })} />
+      <ProfileField label="compared with" product={product.name} value={product.competitors.join(', ')} allowEmpty onSave={value => save({ competitors: list(value) })} />
+      <ProfileField label="also called" product={product.name} value={product.other_names.join(', ')} allowEmpty onSave={value => save({ other_names: list(value) })} />
+    </> : <button className="st-add-words" type="button" onClick={() => setDetails(true)}>Add description, audience and links</button>}
   </div>
 }
 
@@ -118,17 +128,19 @@ function Adder({ open, label, children }: { open: boolean; label: string; childr
 }
 
 function ProductForm({ open, busy, onAdd }: { open: boolean; busy: boolean; onAdd: (args: Record<string, unknown>) => Promise<unknown> }) {
-  const empty = { name: '', other_names: '', tone: '', competitors: '', words_use: '', words_avoid: '' }
+  const empty = { name: '', description: '', audience: '', urls: '', other_names: '', tone: '', competitors: '', words_use: '', words_avoid: '' }
   const [form, setForm] = useState(empty)
   const field = (name: keyof typeof form, label: string, placeholder = '') => <label className="st-field">{label}
     <input value={form[name]} placeholder={placeholder} onChange={event => setForm({ ...form, [name]: event.target.value })} /></label>
   return <Adder open={open} label="Add product">{close => <form className="st-form" onSubmit={async event => {
     event.preventDefault()
-    const done = await onAdd({ name: form.name.trim(), ...(form.tone.trim() ? { tone: form.tone.trim() } : {}), other_names: list(form.other_names), competitors: list(form.competitors),
+    const done = await onAdd({ name: form.name.trim(), ...(form.tone.trim() ? { tone: form.tone.trim() } : {}), ...(form.description.trim() ? { description: form.description.trim() } : {}),
+      ...(form.audience.trim() ? { audience: form.audience.trim() } : {}), urls: list(form.urls), other_names: list(form.other_names), competitors: list(form.competitors),
       words_use: list(form.words_use), words_avoid: list(form.words_avoid) })
     if (done) { setForm(empty); close() }
   }}>
-    {field('name', 'Name')}{field('tone', 'Tone', 'plain, warm, exact')}{field('other_names', 'Other names', 'comma separated')}
+    {field('name', 'Name')}{field('description', 'What it is', 'Invoicing for freelancers')}{field('audience', 'Who it is for', 'US freelancers and small studios')}
+    {field('urls', 'Links', 'https://example.com, comma separated')}{field('tone', 'Tone', 'plain, warm, exact')}{field('other_names', 'Other names', 'comma separated')}
     {field('competitors', 'Compared with', 'comma separated')}{field('words_use', 'Words to use', 'comma separated')}{field('words_avoid', 'Words to avoid', 'comma separated')}
     <button className="st-button primary" type="submit" disabled={busy || !form.name.trim()}>Add product</button>
   </form>}</Adder>

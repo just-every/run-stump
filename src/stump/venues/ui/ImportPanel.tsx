@@ -41,7 +41,8 @@ function ChangeRow({ change }: { change: Change }) {
   </li>
 }
 
-const explain = (error: unknown) => error instanceof ImportError ? WORDS[error.code] ?? `The import was refused: ${error.code.replace(/_/g, ' ')}.` : 'Something went wrong. Try again.'
+// The reader's own words say what it expected (a heading, a column); otherwise the code in plain words.
+const explain = (error: unknown) => error instanceof ImportError ? (typeof error.details.reason === 'string' ? error.details.reason : null) ?? WORDS[error.code] ?? `The import was refused: ${error.code.replace(/_/g, ' ')}.` : 'Something went wrong. Try again.'
 
 /** The import entry point: choose the file, read its dry run, apply it, and undo it. */
 export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose(): void }) {
@@ -62,6 +63,8 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
   // Refused rows are listed on their own; a changed row shows each field before and after, and a conflict is one edited here since the last import.
   const changes = plan?.changes ?? [], conflicts = changes.filter(change => change.conflict), replaced = changes.filter(change => !change.conflict)
   const nothing = plan && (plan.applied || (plan.summary.created === 0 && plan.summary.updated === 0 && conflicts.length === 0))
+  // Nothing to apply because every row was refused, not because it is all in Stump already.
+  const allRefused = !!plan && !plan.applied && plan.rejected.length > 0 && (plan.summary.venues ?? 0) + (plan.summary.entries ?? 0) + (plan.summary.excluded ?? 0) === 0
   const gone = plan?.differences.gone.length ?? 0
   // Products are bookkeeping here; the venues and entries are what a person recognises.
   const already = (plan?.existing ?? []).filter(row => row.kind !== 'product')
@@ -86,7 +89,8 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
         <div><strong>{plan.summary.excluded ?? 0}</strong>excluded</div>
         <div><strong>{plan.rejected.length}</strong>refused rows</div>
       </div>
-      <p>{applied ? 'Imported.' : nothing ? 'Everything in this file is already in Stump. There is nothing to apply.'
+      <p>{applied ? 'Imported.' : allRefused ? 'Every row in this file was refused, so there is nothing to apply. Fix the rows below and upload it again.'
+        : nothing ? 'Everything in this file is already in Stump. There is nothing to apply.'
         : `Applying adds ${plural(plan.summary.created, 'record')}${plan.summary.updated ? ` and updates ${plural(plan.summary.updated, 'record')}` : ''}.`}
         {gone && !applied ? ` ${plural(gone, 'row')} from the last import ${gone === 1 ? 'is' : 'are'} not in this file; Stump keeps ${gone === 1 ? 'it' : 'them'}.` : ''}</p>
       {replaced.length && !applied ? <>
@@ -114,7 +118,7 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
       </> : null}
       {error ? <p className="st-error" role="alert">{error}</p> : null}
       <div className="st-actions">
-        {!applied && !kept && !plan.applied ? <button className="st-button primary pill" type="button" disabled={busy}
+        {!applied && !kept && !plan.applied && !allRefused ? <button className="st-button primary pill" type="button" disabled={busy}
           onClick={() => void run(async () => { await applyPlan(source, plan); setApplied(true); onChanged() })}>{busy ? 'Applying…' : 'Apply import'}</button> : null}
         {applied && !kept ? <button className="st-button pill outline" type="button" disabled={busy}
           onClick={() => void run(async () => { setKept((await undoPlan(source, plan.planId)).kept); onChanged() })}>Undo import</button> : null}

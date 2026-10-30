@@ -1,7 +1,14 @@
 import { KIND_FIELDS, ROUTE_LABELS, STATUS_LABELS } from '../kinds.ts'
 import type { Venue } from './types.ts'
 
-export const kindLabel = (kind: string) => (KIND_FIELDS as Record<string, { label: string }>)[kind]?.label ?? kind
+/**
+ * A venue's kind in words, with the platform it runs on where the kind does not
+ * already say it: a Mastodon instance is a forum by kind, and reads "Forum on Mastodon".
+ */
+export const kindLabel = (kind: string, platform?: string | null) => {
+  const label = (KIND_FIELDS as Record<string, { label: string }>)[kind]?.label ?? kind, on = platform?.trim()
+  return on && !label.toLowerCase().includes(on.toLowerCase()) ? `${label} on ${on.charAt(0).toUpperCase()}${on.slice(1)}` : label
+}
 export const statusLabel = (status: string) => STATUS_LABELS[status] ?? status
 export const routeLabel = (route: string) => ROUTE_LABELS[route] ?? route
 

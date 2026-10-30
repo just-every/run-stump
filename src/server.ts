@@ -9,7 +9,7 @@ import { lobbyResponse } from './base/lobby'
 import { setupStateResponse } from './base/setup-state'
 import { authResponse, businessSettings, operatorAuth, runtimeBindings, type Bindings } from './auth.server'
 import { identity } from './identity'
-import { AGENT_PATHS, agentsPageRedirect, stumpAgentDoor } from './stump/agent-door/index.ts'
+import { AGENT_PATHS, agentsPageRedirect, stumpAgentDoor, withProtocolHint } from './stump/agent-door/index.ts'
 import { consentCallback } from './stump/accounts/callback.ts'
 import { appDocumentGate } from './stump/http/app-gate.ts'
 import { importDoorResponse } from './stump/imports/door.ts'
@@ -49,7 +49,7 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
       const moved = agentsPageRedirect(request)
       if (moved) return moved
       const agent = await stumpAgentDoor(env).handle(request)
-      if (agent) return rejectedResponse(request, agent)
+      if (agent) return rejectedResponse(request, path === '/mcp' ? await withProtocolHint(agent) : agent)
     }
     // The owner's import door: venue lists today (src/stump/imports/door.ts).
     const imported = await importDoorResponse(request, env)

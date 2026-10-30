@@ -2,7 +2,7 @@ Stump keeps your products, the claims you may make with their proof, and each pe
 
 ## Products
 
-For each product: its name and other names, a one-line description, audience, URLs, the competitors it is compared with, the words it uses and the words it avoids, and its tone. A draft that uses an avoided word cannot be marked ready until the word is gone. Drafting, disclosure and listening all read this, so a mention of a product or a competitor is recognised wherever it appears.
+For each product: its name and other names, a one-line description, audience, URLs, the competitors it is compared with, the words it uses and the words it avoids, and its tone. In **Settings › Brand**, **Add product** takes them all; on a product already there, its tone, words and **Add description, audience and links** edit in place and save as you leave each field. A draft that uses an avoided word cannot be marked ready until the word is gone. Drafting, disclosure and listening all read this, so a mention of a product or a competitor is recognised wherever it appears.
 
 ## Claims
 

@@ -36,6 +36,16 @@ const blocking = (flags: Flag[]) => flags.filter(flag => flag.blocking)
 const graphemes = (value: string) => [...new Intl.Segmenter().segment(value)].length
 const localNow = () => { const at = new Date(Date.now() + 3_600_000); at.setMinutes(0, 0, 0); return new Date(at.getTime() - at.getTimezoneOffset() * 60_000).toISOString().slice(0, 16) }
 
+/** States in which a variant has left Compose, in the words its card shows. */
+const GONE: Record<string, string> = { scheduled: 'Scheduled', posting: 'Posting', posted: 'Posted', partly_posted: 'Partly posted', uncertain: 'Sent, not confirmed', cancelled: 'Cancelled' }
+/** What already went out, for the bar: "Already posted", or "2 already scheduled or posted". */
+function goneWords(gone: Variant[]): string {
+  if (!gone.length) return ''
+  const states = new Set(gone.map(variant => variant.state))
+  const what = states.size === 1 && states.has('scheduled') ? 'scheduled' : states.size === 1 && states.has('posted') ? 'posted' : 'scheduled or posted'
+  return gone.length === 1 ? `${networkName(gone[0]!.network)} already ${what}` : `${gone.length} already ${what}`
+}
+
 function ComposePage() {
   const { master: masterId, item: itemId, fix } = Route.useSearch()
   const navigate = useNavigate({ from: '/app/compose' })
@@ -66,8 +76,11 @@ function ComposePage() {
 
   const accounts = data?.accounts ?? []
   const chosen = preview ? preview.master.account_ids : picked
-  const variants = preview?.items ?? (alone ? [alone] : [])
+  const allVariants = preview?.items ?? (alone ? [alone] : [])
   const open = !!(preview || alone)
+  // A variant already scheduled or sent is not offered again: the bar acts on the rest, and says what already went out.
+  const gone = allVariants.filter(variant => GONE[variant.state])
+  const variants = allVariants.filter(variant => !GONE[variant.state])
   const held = variants.filter(variant => blocking(variant.flags).length)
   // The master is never posted itself: it counts quietly against the largest chosen network's limit; each variant card and Checks carry the over-limit signal.
   const largest = Math.max(...variants.map(variant => variant.count?.limit ?? -Infinity), ...accounts.filter(account => chosen.includes(account.id)).map(account => ({ x: 280, bluesky: 300, mastodon: 500, linkedin: 3000 } as Record<string, number>)[account.network] ?? -Infinity))
@@ -148,7 +161,7 @@ function ComposePage() {
     </ul>
   </section>
 
-  const variantCards = variants.map(variant => <VariantCard key={`${variant.item_id}-${variant.revision}`} variant={variant} claims={claimRanges(variant)}
+  const variantCards = allVariants.map(variant => <VariantCard key={`${variant.item_id}-${variant.revision}`} variant={variant} claims={claimRanges(variant)}
     select={fixing?.item === variant.item_id ? { range: claimRanges(variant)[0] ?? null, at: fixing.at } : null} onSelected={() => setFixing(null)}
     onSave={next => void saveVariant(variant, next)} />)
 
@@ -199,7 +212,12 @@ function ComposePage() {
         <h2 className="st-card-head" id="variants-title"><Disc icon="grid" />Variants</h2>
         <div className="st-variants">{variantCards}</div>
       </section> : null}
-      {open && !(alone && !alone.account_id) ? <div className="st-bar">
+      {open && !(alone && !alone.account_id) && !variants.length ? <div className="st-bar">
+        <span className="st-pill">{goneWords(gone)}</span>
+        <Link className="st-quiet-link" to="/app/ledger">See the ledger</Link>
+      </div> : null}
+      {open && !(alone && !alone.account_id) && variants.length ? <div className="st-bar">
+        {gone.length ? <span className="st-pill">{goneWords(gone)}</span> : null}
         {held.length === variants.length
           ? <span className="st-pill held st-bar-held">{variants.length === 1
             ? <><span className="st-held-long">The {networkName(held[0]!.network)} variant holds until fixed</span><span className="st-held-short" aria-hidden="true">{networkName(held[0]!.network)} held until fixed</span></>
@@ -241,6 +259,7 @@ function VariantCard({ variant, claims, select, onSelected, onSave }: { variant:
     <button className="st-variant-head" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
       <strong>{networkName(variant.network)}</strong>
       {variant.differs_from_master ? <span className="st-pill">Edited</span> : null}
+      {GONE[variant.state] ? <span className="st-pill">{GONE[variant.state]}</span> : null}
       {variant.count ? <span className={over ? 'st-chars over' : 'st-chars'}>{variant.count.count.toLocaleString()} / {variant.count.limit.toLocaleString()}</span> : null}
       <span className="st-chevron" aria-hidden="true"><Icon name="chevronRight" /></span>
     </button>

@@ -8,7 +8,7 @@ export interface Variant { item_id: string; network: string | null; account_id: 
 export interface MasterPreview { master: Master; items: Variant[]; total: number }
 export interface ClaimFinding { status: 'matched' | 'unmatched' | 'banned' | 'stale' | 'number_mismatch'; claim_id?: string; text: string; expected?: string[]; found?: string[]; reason?: string; review_on?: string }
 export interface Check { passed: boolean; claims: ClaimFinding[]; flags: Flag[]; disclosure: { required: boolean; status: string }; duplicates: Array<{ id: string; kind: string }> }
-export interface Product { id: string; name: string; other_names: string[]; description: string | null; tone: string; competitors: string[]; words_avoid: string[]; words_use: string[] }
+export interface Product { id: string; name: string; other_names: string[]; description: string | null; audience: string | null; urls: string[]; tone: string; competitors: string[]; words_avoid: string[]; words_use: string[] }
 export interface ClaimView { id: string; product_id: string | null; kind: 'allowed' | 'banned' | 'comparative'; text: string; proof: unknown; owner_id: string; review_on: string | null; reason: string | null; competitor: string | null; source_url: string | null; source_date: string | null; stale: boolean }
 export interface VoiceView { id: string; person_id: string; name: string; do: string[]; dont: string[]; state: string; sample_count: number }
 

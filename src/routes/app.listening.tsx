@@ -168,6 +168,8 @@ function Finding({ finding, rank, watch, focal, act, may, context, onFocus, onCh
       </ul> : null}
       {focal ? <div className="st-finding-actions">
         {job && !working ? <button type="button" className="st-button primary" onClick={() => setWorking(true)}>{JOB_WORDS[job]} <Icon name="arrowRight" /></button> : null}
+        {/* A hand-off goes to a member of a venue: with no venue recorded for this thread's site, the way there is to add it. */}
+        {!job && context.role !== 'viewer' && !finding.venue && finding.routes.some(route => route.startsWith('handoff')) ? <a className="st-quiet-link" href="/app/venues?add=1">Add {source} as a venue to hand this off</a> : null}
         <a className="st-open-link" href={finding.url} target="_blank" rel="noopener noreferrer">Open thread ↗</a>
       </div> : null}
       {focal && working && job === 'reply' ? <ReplyForm finding={finding} context={context} onClose={() => setWorking(false)} /> : null}

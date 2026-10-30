@@ -15,4 +15,4 @@ You set your own domains and naming rules once.
 
 ## Signups by post
 
-With Vane, Stump reads Vane's attribution for its tagged links and shows visits, signups and revenue by post, venue, person and campaign, linked back to the [ledger](/docs/ledger). See [Orbit and Vane](/docs/stack).
+Count them where your analytics reads UTM tags: `utm_content` names the post, `utm_campaign` its campaign and `utm_source` where it went. With [Vane](/docs/stack) connected, Vane's attribution shows signups by post, and each post is marked on its day there, linked to its [ledger](/docs/ledger) entry. Showing those signups inside Stump, beside each post, is not built yet.

@@ -6,6 +6,8 @@ import { linkClasses, record } from '../handoffs/posted.ts'
 import { edit, get, hold, queue, release, skip } from '../handoffs/manage.ts'
 import { handoffOrRefuse, LAPSES } from '../handoffs/model.ts'
 import { one } from '../handoffs/view.ts'
+import { readPerson } from '../people/store.ts'
+import { readVenue } from '../venues/model.ts'
 
 // The hand-off queue (STUMP-HANDOFF-001 to -003): a brief and a draft for the
 // named member who posts by hand, the posted link recorded and checked, and
@@ -43,7 +45,11 @@ export const handoffTools: StumpTool[] = [{
       },
       required: ['venue_id', 'person_id', 'product_id', 'due_at', 'lapse'],
       classify: classes,
-      summary: args => ({ target: { name: `Hand a post at a venue to ${String(args.person_id)}${args.generate === true ? ', drafted through the AI provider' : ''}` } }),
+      // An approver reads names, never record ids: "Hand a post at Bootstrapped SaaS Discord to Maya Chen".
+      async summary(args, ctx) {
+        const [person, venue] = await Promise.all([readPerson(ctx.db, String(args.person_id)), readVenue(ctx.db, args.venue_id)])
+        return { target: { id: String(args.venue_id), name: `Hand a post at ${venue?.name ?? 'a venue'} to ${person?.display_name ?? 'a teammate'}${args.generate === true ? ', drafted through the AI provider' : ''}` } }
+      },
       target: args => ({ kind: 'venue', id: String(args.venue_id) }),
       async run(args, ctx) { return one(ctx, await prepare(ctx, args, await plan(ctx, args))) },
     }),

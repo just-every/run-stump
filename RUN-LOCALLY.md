@@ -243,6 +243,24 @@ gives the available memory, the floor and the running servers with their stop
 commands; start with `RER_SERVERS_MIN_MEMORY_BYTES=N` (bytes; 0 turns it off) to
 start anyway. Reusing a checkout's running server is never refused for memory.
 
+## AI drafting locally
+
+Stump drafts through the company's own AI provider. Set it in the app, signed in
+as the owner or an admin: **Settings › Connections › AI provider**, with an
+OpenAI-compatible address, the model id and the key (see `docs/ai-provider.md`).
+An installation can instead set `AI_ENABLED=true`, `AI_BASE_URL`, `AI_MODEL` and
+`AI_API_KEY` in this checkout's private `.dev.vars`, then start `rer dev` again;
+a provider saved in Settings takes precedence.
+
+`rer dev --models fake|live` chooses how Base's own AI double behaves in local
+dev. `fake` (the default) answers with a fixed development double; it cannot
+write a real draft. `live` links a capped Just Every Models dev app instead: the
+first time, pipe its key on stdin with
+`your-secret-reader | rer dev --models live --models-service https://models.example`;
+the key is saved in `.rer/local/models.json` (0600) and later `rer dev --models live`
+reuses it. `--models-service` is accepted only with `--models live`. Neither is
+needed when you set your own provider as above.
+
 ## Back up and restore this installation
 
 Use `/app/import` above for owner move-in. The low-level `rer export` and

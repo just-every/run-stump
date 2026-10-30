@@ -78,3 +78,15 @@ export async function resolvePerson(db: D1Database, operator: Operator, now = Da
     .bind(crypto.randomUUID(), operator.id, email, operator.id, now).run()
   return readPerson(db, operator.id)
 }
+
+/**
+ * Why someone cannot be spoken for yet (D-1, STUMP-TRUTH-001.5), in words a
+ * person reads with the act_refused: not invited, invited and not yet signed
+ * in, or removed.
+ */
+export function notActiveReason(person: StumpPerson | null): string {
+  if (!person) return 'That person is not on the team. Invite them in Settings › Team first.'
+  if (person.status === 'invited') return `${person.display_name} has not accepted their invitation yet. Once they sign in, try again.`
+  if (person.status === 'removed') return `${person.display_name} was removed from the team.`
+  return `${person.display_name} cannot be spoken for.`
+}
