@@ -435,8 +435,72 @@
       "sha256": "9c3da7252426b6e8e9b1534f19212a8497070d7fff58f6bde71db20fca0c66ff",
       "executable": false
     },
+    "docs/accounts.md": {
+      "sha256": "ee815fb3e53f5f494314a9835b580e149756314aadbeaef3f36d0ce54935ab92",
+      "executable": false
+    },
+    "docs/agents.md": {
+      "sha256": "186130c650198a7e7ebd11a13c74c3f9c107bf40108bf02421d7208998cdd436",
+      "executable": false
+    },
+    "docs/ai-provider.md": {
+      "sha256": "22c10e5d7ca4549313686a9881bd49bac50debc5b2395ddfd34d9ee3911bfa4d",
+      "executable": false
+    },
+    "docs/brand.md": {
+      "sha256": "d135ca57cd040b60d834f8a38f30154143432f13f2107b82500b2fc639fc4481",
+      "executable": false
+    },
     "docs/CLAIMS.md": {
       "sha256": "e26df75950f01d8927c4f806c58bee2672cc993183fe8714dc3f1645fd970a3f",
+      "executable": false
+    },
+    "docs/compose.md": {
+      "sha256": "6c268e758df9c2ef18bfb7adddf7a33ee0d6b05938782a75b7a122be47bbf434",
+      "executable": false
+    },
+    "docs/contract.md": {
+      "sha256": "5e952b0782909a60d80fa03b87ea398c3fe9413b7c2a064ea312b8ea1b9d8243",
+      "executable": false
+    },
+    "docs/data.md": {
+      "sha256": "35c7598be3bff442b27d5c97786c9e5f94009b7ff6061936d32cd2c9a18bbbcb",
+      "executable": false
+    },
+    "docs/deploy.md": {
+      "sha256": "bb936bcb18211c30bdcad12c134e777b3b8b608ae1c38ffe6f56cfa080290aa4",
+      "executable": false
+    },
+    "docs/disclosure.md": {
+      "sha256": "5221b4a40b705d740b7c2fe5fda18bd10267a45a78fb35dec98955d76209fe53",
+      "executable": false
+    },
+    "docs/getting-started.md": {
+      "sha256": "9645a0167a7db3f3dd5f0c132ba071b1b696c8e2a6018c74f193daf29fd93ca8",
+      "executable": false
+    },
+    "docs/handoffs.md": {
+      "sha256": "0603b7db9a399fa799eb6ce81e283fcbe7ff8d870493db3716987e9a359cb818",
+      "executable": false
+    },
+    "docs/import-venues.md": {
+      "sha256": "cf6e09ba541ffeaa24eb324e6a0157e2c6a29a4f373710de5d7ebdb729e9629d",
+      "executable": false
+    },
+    "docs/inbox.md": {
+      "sha256": "96cca7f732ed6168765db4e24250d87f5c64f5b3eb8b1c266f6272e4a0f689e0",
+      "executable": false
+    },
+    "docs/ledger.md": {
+      "sha256": "2c5e8537e37196d62854cc73a2421bd0859b734442cda00a27e9e496fea174bb",
+      "executable": false
+    },
+    "docs/links.md": {
+      "sha256": "d1869c2fb75e7d319b84f842d128ea65d80c30a431ac3aef730ec7584ece6b25",
+      "executable": false
+    },
+    "docs/listening.md": {
+      "sha256": "bf1e44f7034d47346e0eb17c801fe390d259475c753b2bb0732eff0fae9247b9",
       "executable": false
     },
     "docs/measures.md": {
@@ -445,6 +509,38 @@
     },
     "docs/networks.md": {
       "sha256": "4e15823854ce06a6323cd219af52af9ca9f350ee78f7a961a169e18169002f1d",
+      "executable": false
+    },
+    "docs/overview.md": {
+      "sha256": "2a4f2f82c9b52e5e42d979306beb608e3de91b455d145bc1c09f51fb583f4a44",
+      "executable": false
+    },
+    "docs/pause.md": {
+      "sha256": "c4834c71f4a4fd26d4a2e80451037951174b0601b1d9868f3c5791838e5b6939",
+      "executable": false
+    },
+    "docs/refusals.md": {
+      "sha256": "73b6d0634ea46373691b05412b839bee4588be6ffd5c9ed55b01b18cf0e3c579",
+      "executable": false
+    },
+    "docs/site.json": {
+      "sha256": "12a3ba26b128c37cf2dce84ce9fb640636023b93fb8dd8618a9b7f4b52897ef0",
+      "executable": false
+    },
+    "docs/stack.md": {
+      "sha256": "1b55fde4f0cac42abf2347e531b9982bdffa876351bc4e9197e59aab6e37d302",
+      "executable": false
+    },
+    "docs/switch-from-buffer.md": {
+      "sha256": "339a3778b9dbe3265e48ef400b189923552031eacd0cdfc89c49ee507a7cf3a6",
+      "executable": false
+    },
+    "docs/team.md": {
+      "sha256": "e40b7d4f7776d0c577304c0f7ad0f92a1c9659e7fb5a238f986bef5599bb6322",
+      "executable": false
+    },
+    "docs/venues.md": {
+      "sha256": "93a2a0173703ff6f718a7cd448d1f72e23d3642ec79afb4eac754e98e8a4dbc9",
       "executable": false
     },
     "edition.json": {
@@ -591,6 +687,42 @@
       "sha256": "92effd85f6101558c4b1567ee9b41e1e873487fc9cb926859a972d139b4fef5f",
       "executable": false
     },
+    "public/apple-touch-icon.png": {
+      "sha256": "b310284315885911ef22c1bb56ef533c844cd7373189656aaee58d51e45e09bb",
+      "executable": false
+    },
+    "public/art/band.webp": {
+      "sha256": "907611344196912a3aacff234826c516112542a3e8bad096fca32ab15515897f",
+      "executable": false
+    },
+    "public/art/grain.png": {
+      "sha256": "2730f64c47405ae4c0b954d4adb424f90d4843bc859edd936c2863bb37fad8b9",
+      "executable": false
+    },
+    "public/art/sprout.webp": {
+      "sha256": "ed5c53d03fb6b720bf504e923c07e6d9dd985825c57a14d38e8411a18a07e832",
+      "executable": false
+    },
+    "public/art/stump-close.webp": {
+      "sha256": "3a09eea9357260a5d31076cd4cbe6e8c4fcb7184cdf65a874f1c1064f4e0380a",
+      "executable": false
+    },
+    "public/art/stump-hero.webp": {
+      "sha256": "7ec4d8905daeefa30fb0d54241171d72e1cd3e39acdd55c24b3ec368bcf658f8",
+      "executable": false
+    },
+    "public/art/stump-small.webp": {
+      "sha256": "1c3ed2d60521ea9d01e6ed1165365bfd327f73bbd91bb074aac5abb6a6047b34",
+      "executable": false
+    },
+    "public/art/tuft-left.webp": {
+      "sha256": "d1efb56182ea59df99035c452f378140438f5591b5a252b27b445d96d5fe369c",
+      "executable": false
+    },
+    "public/art/tuft-right.webp": {
+      "sha256": "5b60440009ce2b5e7ca9438fb0767377c3aa13645858dcfb4cb89a7317881db6",
+      "executable": false
+    },
     "public/brand/band.svg": {
       "sha256": "595e6226645ca8873d4e06c4417a7f42c2e6940094ab06baa4be6fc74e8fa1e3",
       "executable": false
@@ -599,8 +731,68 @@
       "sha256": "c70d2e997e59ce121b63645f51cea15130c6f9c30ecbedce7c8150b21d4c8d37",
       "executable": false
     },
+    "public/brand/social.png": {
+      "sha256": "b5f3c211cfeb11e821c93539d7d0a33973aa57ecfc45bbcd5f153d2329ab95f9",
+      "executable": false
+    },
+    "public/brand/stump-lockup-dark.svg": {
+      "sha256": "57f3657fe3dea5910801cb13d72f3d0a1f359fe5f16304e34373e5f30cd1e783",
+      "executable": false
+    },
+    "public/brand/stump-lockup.svg": {
+      "sha256": "4bf413db1f77ea1e3d0fda73efed14b709a0311589d6468f30bccd431211f5e5",
+      "executable": false
+    },
+    "public/brand/stump-mark-16-dark.svg": {
+      "sha256": "dcb12f9be7a41cb022975320df17b83f96f61f6155139cefe89175c70e00672f",
+      "executable": false
+    },
+    "public/brand/stump-mark-16.svg": {
+      "sha256": "ac773971f0b04abfdd77c3ac337163bdaac36afdbd5519645283dbbcce555adf",
+      "executable": false
+    },
+    "public/brand/stump-mark-dark.svg": {
+      "sha256": "4ce432278e384823ee61cd544f6d31668e212ace4509a9efd3e274939b85515c",
+      "executable": false
+    },
+    "public/brand/stump-mark.svg": {
+      "sha256": "c70d2e997e59ce121b63645f51cea15130c6f9c30ecbedce7c8150b21d4c8d37",
+      "executable": false
+    },
+    "public/favicon-32.png": {
+      "sha256": "1b12a202a43e7f6f039887356bcd1c867295e80a04bbcde6aef6848393f889e8",
+      "executable": false
+    },
+    "public/favicon.svg": {
+      "sha256": "61484df676f85a4d29e5b1133f2781eee481c1c8be54677043245f79daa6a54c",
+      "executable": false
+    },
     "public/fonts/fonts.css": {
       "sha256": "4e82af6a360420c8b64191ccd8e98a26b03e8b07057da856c6a437a5ec8e3494",
+      "executable": false
+    },
+    "public/fonts/gantari/gantari-latin-400-normal.woff2": {
+      "sha256": "8559b6fdeaf60d309a4ccf075e595be826cfb26f026216b04f640a95ed65e08b",
+      "executable": false
+    },
+    "public/fonts/gantari/gantari-latin-500-normal.woff2": {
+      "sha256": "8b0726c73936b14e708d8a8389f41f415594c7839403dcb34db8d7c01b825ad5",
+      "executable": false
+    },
+    "public/fonts/gantari/gantari-latin-600-normal.woff2": {
+      "sha256": "0bd37b91a9df89209e392d52aeb6b4e7ada8a6c2823b3f8b3fd59211a76a5f15",
+      "executable": false
+    },
+    "public/fonts/gantari/gantari-latin-700-normal.woff2": {
+      "sha256": "2594833301b40fb0e2ba1f4d325c416f49ba2c257697fd147329f97b106c3bdb",
+      "executable": false
+    },
+    "public/fonts/gantari/gantari-latin-800-normal.woff2": {
+      "sha256": "80515ebf3c0bc07d6de8c3440143da52c7e31ebc810de306cb419a3576b80081",
+      "executable": false
+    },
+    "public/fonts/gantari/LICENSE.txt": {
+      "sha256": "20bfb1fe414d1ef2190a609b04e58ef28b0c92f541d766fb79a7672534f5c06d",
       "executable": false
     },
     "public/fonts/outfit/LICENSE.txt": {
@@ -620,7 +812,7 @@
       "executable": false
     },
     "public/rer-theme.css": {
-      "sha256": "9b0a94bba5bcc9bc7540ae43d3a0658905ea5875edc953a03ea98c18959154fa",
+      "sha256": "e349d642dc9ba54215a0fba8d0a1fb1966432973332d888a81f7fe13b160a8ff",
       "executable": false
     },
     "README.md": {
@@ -661,6 +853,14 @@
     },
     "scripts/operations-config.mjs": {
       "sha256": "decbd8619e40c741708b49639d54282bd19edc4581a782b240d96a423ad47f01",
+      "executable": false
+    },
+    "scripts/site/docs.d.mts": {
+      "sha256": "0b9a8900d39849fb38d314cf9e32afd6e64b141a3c2577665a451eac2041ea7e",
+      "executable": false
+    },
+    "scripts/site/docs.mjs": {
+      "sha256": "2ebf00ed1ad8712a7b2c2d71ae0beaf68e06606815d027fa045da6ca1aed371d",
       "executable": false
     },
     "scripts/stump/local-only.d.mts": {
@@ -2155,6 +2355,10 @@
       "sha256": "f7c7e71539d79a8ebdf0f55262163adb067a1d8856317aac8d1a8c8051d037c6",
       "executable": false
     },
+    "src/routes/app.pause.tsx": {
+      "sha256": "fffb72a5c186bae2638945c76d4c237e910a827cb5e1d7a68c48abdca175934c",
+      "executable": false
+    },
     "src/routes/app.settings.agents.tsx": {
       "sha256": "914dddbae2b791774454691cbe25ba3dd40d5c63574f9f90666004ccf0d52e40",
       "executable": false
@@ -2183,12 +2387,48 @@
       "sha256": "58d1deac930ab29feaf8d88c26d8019e95142388fee85d2b726d5f61a350948f",
       "executable": false
     },
+    "src/site/docs/Docs.tsx": {
+      "sha256": "06fd9f6e141796d46da1f284b4f004342313d4cd5b15f0825b32b07069128799",
+      "executable": false
+    },
+    "src/site/landing/Landing.tsx": {
+      "sha256": "821e2562d8c590b324f7bb8d495b830dc0a578a2623e0db3af3418f9fb61ff7f",
+      "executable": false
+    },
     "src/site/pages.ts": {
       "sha256": "cc9347678fe22a9967a30ae3b8df2ec1d3277f7f7953d2b926ad82acd1bed243",
       "executable": false
     },
     "src/site/run.json": {
       "sha256": "df13d38816d6f2c2a32bfc00b98a4033dc5cd31deb982b3fc853cd82be5fd92a",
+      "executable": false
+    },
+    "src/site/shell/document.ts": {
+      "sha256": "599129a7d1be4f450cafac59ed9da7beb2b198f7bd2588200a651b0720a0a9fa",
+      "executable": false
+    },
+    "src/site/shell/Footer.tsx": {
+      "sha256": "35969c23f6672eb70637f526a7b965c947de6063de953a24f0adf546bf2a95e8",
+      "executable": false
+    },
+    "src/site/shell/Header.tsx": {
+      "sha256": "1a3cfa952f2144bf0fa339ac7e77d179d885769213c3e80792daa6b82f61483d",
+      "executable": false
+    },
+    "src/site/shell/links.ts": {
+      "sha256": "1677863cca9f197a649340468a40f086b8dd2377707f0812cac896f829704909",
+      "executable": false
+    },
+    "src/site/styles/docs.css": {
+      "sha256": "8897f688df73372368da1a1cc0cfb960066ff15c2140c3b0fe7d53f63603dabd",
+      "executable": false
+    },
+    "src/site/styles/landing.css": {
+      "sha256": "be782849c58ac6d3dc60393507a9a065f66e861008f3c11a1aeacd0c4bd2cb1c",
+      "executable": false
+    },
+    "src/site/styles/site.css": {
+      "sha256": "b3c3a581fa608829686b7fe3fd7eba248ca0b18693dbf787f2882cfd06363345",
       "executable": false
     },
     "src/stump/actions/refusals.ts": {
@@ -2731,12 +2971,20 @@
       "sha256": "4b3fff1d9d5473f331a4fce0fc8f4c4d9966e7d3e438a5d0c39e212ba9896be1",
       "executable": false
     },
+    "src/stump/ui/icons.tsx": {
+      "sha256": "b9641001f6812ded0ea1365da716e836ba068f3d635d25a03b986a795f0de3e4",
+      "executable": false
+    },
     "src/stump/ui/kit.tsx": {
       "sha256": "eda7d1f0b6fb0e116af383f3af6e7dc6f453a23882e732222badfd4a9ae0c1e6",
       "executable": false
     },
     "src/stump/ui/nav.ts": {
       "sha256": "e99c0a6c42ceea2e7fc3e0b637fb994c8f33dc500ac1d701d264b27526e7c01b",
+      "executable": false
+    },
+    "src/stump/ui/pause.tsx": {
+      "sha256": "ef65597498d572c363c23a4630a21778376c3152c0a161a7b3e935f068404e2a",
       "executable": false
     },
     "src/stump/ui/styles.ts": {
