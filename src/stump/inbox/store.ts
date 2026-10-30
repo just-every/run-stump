@@ -1,11 +1,11 @@
 // Inbox records (STUMP-INBOX-001) as both doors answer them: each post with its
 // author, link and text, whether its author engaged first, the company post it
-// answered, the thread post it answered when that was someone else's, the reply
-// that answers it with its ledger entry, and its author's offer to Orbit.
+// answered, the thread post it answered (the company's own or someone else's), the
+// reply that answers it with its ledger entry, and its author's offer to Orbit.
 
 export interface InboxRow {
   id: string; account_id: string; network: string; network_id: string; kind: 'mention' | 'reply' | 'quote' | 'thread'; url: string; text: string
-  author_id: string | null; author_handle: string | null; author_name: string | null; conversation_id: string | null
+  author_id: string | null; author_handle: string | null; author_name: string | null; author_bio: string | null; author_public_email: string | null; conversation_id: string | null
   parent_network_id: string | null; parent_url: string | null; parent_own: number; engaged_first: number; engagement: string | null
   occurred_at: number | null; received_at: number; reply_item_id: string | null; offer_id: string | null
 }
@@ -51,12 +51,14 @@ export async function inboxViews(db: D1Database, rows: InboxRow[]) {
   const parentIds = [...new Set(rows.filter(row => row.parent_network_id).map(row => row.parent_network_id!))]
   const replyIds = rows.map(row => row.reply_item_id).filter((id): id is string => !!id), offerIds = rows.map(row => row.offer_id).filter((id): id is string => !!id)
   const marks = (list: unknown[]) => list.length ? list.map(() => '?').join(',') : "''"
-  const [parents, replies, offers] = await db.batch([
+  const [account, parents, replies, offers] = await db.batch([
+    db.prepare('SELECT handle,display_name FROM stump_accounts WHERE id=?').bind(accountId),
     db.prepare(`SELECT * FROM stump_inbox_items WHERE account_id=? AND network_id IN (${marks(parentIds)})`).bind(accountId, ...parentIds),
     db.prepare(`SELECT i.id,i.state,i.text,i.url,i.network_id,i.flags,i.hold,i.error,i.ai,i.revision,l.id AS ledger_id,l.charge_usd
       FROM stump_items i LEFT JOIN stump_ledger l ON l.item_id=i.id AND l.account_id=i.account_id AND l.route='published' WHERE i.id IN (${marks(replyIds)})`).bind(...replyIds),
     db.prepare(`SELECT id,state,outcome,sent_at,attempts FROM stump_stack_offers WHERE id IN (${marks(offerIds)})`).bind(...offerIds),
   ])
+  const company = (account!.results as unknown as Array<{ handle: string; display_name: string | null }>)[0] ?? null
   const parentBy = new Map((parents!.results as unknown as InboxRow[]).map(row => [row.network_id, row]))
   const replyBy = new Map((replies!.results as unknown as ReplyRow[]).map(row => [row.id, row]))
   const offerBy = new Map((offers!.results as unknown as OfferRow[]).map(row => [row.id, row]))
@@ -65,16 +67,19 @@ export async function inboxViews(db: D1Database, rows: InboxRow[]) {
     const offer = row.offer_id ? offerBy.get(row.offer_id) ?? null : null
     const parent = row.parent_own === 0 && row.parent_network_id ? parentBy.get(row.parent_network_id) ?? null : null
     const read = row.parent_own === 1 && row.parent_network_id ? parentBy.get(row.parent_network_id) : undefined
-    const company = row.parent_own === 1 && row.parent_network_id
+    const ownPost = row.parent_own === 1 && row.parent_network_id
       ? own.get(row.parent_network_id) ?? { network_id: row.parent_network_id, url: read?.url ?? row.parent_url, text: read?.text ?? null, ledger_id: null } : null
     const answered = !!reply && (ANSWERED as readonly string[]).includes(reply.state)
     return {
       id: row.id, account_id: row.account_id, network: row.network, kind: row.kind, network_id: row.network_id, url: row.url, text: row.text,
-      author: row.author_handle, author_name: row.author_name, author_id: row.author_id, engaged_first: row.engaged_first === 1, engagement: row.engagement,
+      author: row.author_handle, author_name: row.author_name, author_id: row.author_id, author_bio: row.author_bio, author_email: row.author_public_email, engaged_first: row.engaged_first === 1, engagement: row.engagement,
       occurred_at: iso(row.occurred_at), received_at: iso(row.received_at), conversation_id: row.conversation_id,
-      company_post: company ? { network_id: company.network_id, url: company.url ?? row.parent_url, text: company.text, ledger_id: company.ledger_id } : null,
-      thread: parent ? { inbox_item_id: parent.id, network_id: parent.network_id, url: parent.url, author: parent.author_handle, author_name: parent.author_name, text: parent.text, engaged_first: parent.engaged_first === 1 }
-        : row.parent_own === 0 && row.parent_network_id ? { inbox_item_id: null, network_id: row.parent_network_id, url: row.parent_url, author: null, author_name: null, text: null, engaged_first: false } : null,
+      company_post: ownPost ? { network_id: ownPost.network_id, url: ownPost.url ?? row.parent_url, text: ownPost.text, ledger_id: ownPost.ledger_id } : null,
+      // The post this one answers, for every item that answers one: the company's own post (with its ledger entry) or someone else's thread post.
+      thread: ownPost ? { inbox_item_id: read?.id ?? null, network_id: ownPost.network_id, url: ownPost.url ?? row.parent_url, author: company?.handle ?? null, author_name: company?.display_name ?? null,
+          text: ownPost.text, engaged_first: false, own: true, ledger_id: ownPost.ledger_id }
+        : parent ? { inbox_item_id: parent.id, network_id: parent.network_id, url: parent.url, author: parent.author_handle, author_name: parent.author_name, text: parent.text, engaged_first: parent.engaged_first === 1, own: false, ledger_id: null }
+        : row.parent_network_id ? { inbox_item_id: null, network_id: row.parent_network_id, url: row.parent_url, author: null, author_name: null, text: null, engaged_first: false, own: false, ledger_id: null } : null,
       reply: reply ? {
         item_id: reply.id, state: reply.state, text: reply.text, url: reply.url, network_id: reply.network_id, revision: reply.revision, ai_drafted: !!reply.ai,
         flags: json<Array<{ code: string; blocking: boolean }>>(reply.flags) ?? [], hold: json(reply.hold), error: json(reply.error), ledger_id: reply.ledger_id, charge_usd: reply.charge_usd,

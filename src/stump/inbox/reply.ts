@@ -80,10 +80,26 @@ export async function planReply(ctx: ActionContext, args: Args, stage: 'classify
   }
   const broken = ctx.agent ? agentRuleBroken(account) : null
   if (broken) await refuseAct(ctx, REPLY_TOOL, 'reply', broken.source, { account_id: account.id, reason: broken.reason })
+  const pending = earlier && PENDING.includes(earlier.state) ? earlier : null
+  // The claim, disclosure and limit checks stop a reply before anything is written, as they stop every other publish door
+  // (item_flagged). A near-duplicate is the one finding that is written and held until rewritten (STUMP-TRUTH-004).
+  if (text !== null) {
+    const flags = (await checkText(ctx, account, speaker, text, pending?.id)).flags.filter(flag => flag.blocking && !HELD.includes(flag.code))
+    if (flags.length) refuse('item_flagged', { item_id: pending?.id ?? null, inbox_item_id: inbox.id, flag: flags[0]!.code, flags })
+  }
   // X keeps an AI-drafted reply for its own prior approval, which Stump has no record of yet (STUMP-CONNECT-002.3).
   const gated = generate && account.network === 'x'
   const charge_micro = text !== null && account.network === 'x' ? quoteXPost(text, await xPrices(ctx.db)).usd_micro : 0
-  return { inbox, account, speaker, text, generate, gated, charge_micro, pending: earlier && PENDING.includes(earlier.state) ? earlier : null }
+  return { inbox, account, speaker, text, generate, gated, charge_micro, pending }
+}
+
+/** Findings a reply is written and held for, rather than refused: it repeats something recent and waits for a rewrite. */
+const HELD = ['near_duplicate']
+
+/** The drafting module's full check of a reply's text from this account, for the person it speaks for. Writes nothing. */
+async function checkText(ctx: ActionContext, account: AccountRow, speaker: string, text: string, itemId?: string) {
+  return checkDraft(ctx.db, await loadBrand(ctx.db), { ...(itemId ? { id: itemId } : {}), format: 'reply', network: account.network, account_id: account.id, venue_id: null, person_id: speaker,
+    product_id: null, master_id: null, text, parts: null }, await readPerson(ctx.db, speaker), ctx.now())
 }
 
 /** The answered reply is this caller's own, with these words. */
@@ -152,9 +168,10 @@ export async function runReply(ctx: ActionContext, args: Args) {
     }
     return answer(ctx, plan, itemId, { step: X_AI_STEP })
   }
-  // A reply the checks flag waits for a rewrite; a near-duplicate is held naming what it repeats (STUMP-TRUTH-004).
-  const flagged = blockingFlags(row)
-  if (flagged.length) return answer(ctx, plan, itemId, { blocked_by: flagged.map(flag => flag.code) })
+  // A near-duplicate is held naming what it repeats until it is rewritten (STUMP-TRUTH-004); any other finding refuses, as every publish door does.
+  const flagged = blockingFlags(row), refused = flagged.filter(flag => !HELD.includes(flag.code))
+  if (refused.length) refuse('item_flagged', { item_id: row.id, inbox_item_id: inbox.id, flag: refused[0]!.code, flags: refused })
+  if (flagged.length) return answer(ctx, plan, itemId, {})
   const sendable = await prepare(ctx, 'reply', { item_id: itemId, account_id: account.id }, { now: true })
   await commit(ctx, sendable)
   const sent = await sendNow(ctx, itemId, 'scheduled')
@@ -165,9 +182,8 @@ export async function runReply(ctx: ActionContext, args: Args) {
 export async function checkReply(ctx: ActionContext, args: Args) {
   const { inbox, account } = await inboxItemOn(ctx, args)
   const speaker = speakerOf(ctx, account), text = String(args.text)
-  const result = await checkDraft(ctx.db, await loadBrand(ctx.db), { format: 'reply', network: account.network, account_id: account.id, venue_id: null, person_id: speaker,
-    product_id: null, master_id: null, text, parts: null }, await readPerson(ctx.db, speaker), ctx.now())
   const earlier = inbox.reply_item_id ? await readItem(ctx.db, inbox.reply_item_id) : null
+  const result = await checkText(ctx, account, speaker, text, earlier && PENDING.includes(earlier.state) ? earlier.id : undefined)
   return {
     ...checkView(result), may_reply: inbox.engaged_first === 1 && !(earlier && (ANSWERED as readonly string[]).includes(earlier.state)),
     charge_usd: account.network === 'x' ? quoteXPost(text, await xPrices(ctx.db)).usd : 0,

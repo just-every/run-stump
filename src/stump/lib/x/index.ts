@@ -36,7 +36,7 @@ export { normalizeXText, unescapeXText, xPostUrl } from './readback'
 export type { XMediaReadback, XPollReadback, XPostReadback } from './readback'
 
 export { compareXIds, dedupeXPosts, fetchXMentions } from './mentions'
-export type { XMention, XMentionsInput, XMentionsPoll } from './mentions'
+export type { XMention, XMentionAuthor, XMentionsInput, XMentionsPoll } from './mentions'
 
 export { X_HOSTS, checkXAppKeys, describeXApp, maskSecret } from './setup'
 export type { XAppKeyCheck, XAppSetup } from './setup'

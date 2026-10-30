@@ -38,3 +38,18 @@ export function engagementOf(text: string): string | null {
   if (words.length < 5 || REACTIONS.test(plain)) return null
   return 'replied'
 }
+
+// A literal address only: an @handle has no local part, and "name at domain" spellings are not read as one.
+const EMAIL = /(?<![\p{L}\p{N}._%+-])[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,}(?![\p{L}\p{N}_-])/u
+
+/**
+ * The email address a person shows on their own profile (STUMP-STACK-002.3): the
+ * first one written in their bio, or the mailto: link they show as their profile
+ * link. Null when their profile shows none; nothing is guessed or looked up.
+ */
+export function publicEmailOf(profile: { description: string | null; url: string | null } | null): string | null {
+  if (!profile) return null
+  const mailto = profile.url && /^mailto:/i.test(profile.url) ? profile.url.slice(7).split('?')[0]! : null
+  const found = (mailto ? EMAIL.exec(mailto)?.[0] : null) ?? (profile.description ? EMAIL.exec(profile.description)?.[0] : null) ?? null
+  return found ? found.replace(/\.+$/, '') : null
+}

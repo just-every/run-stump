@@ -9,7 +9,7 @@ import { stump } from './instance.mjs'
 const COMPANY = { id: '1500000000000000001', username: 'synthetic_co', name: 'Synthetic Co' }
 const PEOPLE = {
   linh: { id: '1600000000000000001', username: 'synthetic_linh', name: 'Synthetic Linh' },
-  bo: { id: '1600000000000000002', username: 'synthetic_bo', name: 'Synthetic Bo' },
+  bo: { id: '1600000000000000002', username: 'synthetic_bo', name: 'Synthetic Bo', description: 'Front desk lead. Write to bo@synthetic-clinic.test about scheduling.' },
   ana: { id: '1600000000000000003', username: 'synthetic_ana', name: 'Synthetic Ana' },
   kit: { id: '1600000000000000004', username: 'synthetic_kit', name: 'Synthetic Kit' },
 }
@@ -18,7 +18,8 @@ const orbitSecret = randomBytes(32).toString('hex'), signals = []
 let orbitDown = false
 
 const post = (author, text, fields = {}) => { const id = String(x.next++); const value = { id, text, author_id: author.id, created_at: new Date().toISOString(), conversation_id: fields.conversation_id ?? id, edit_history_tweet_ids: [id], ...fields }; x.posts.set(id, value); return value }
-const users = () => [COMPANY, ...Object.values(PEOPLE)]
+// X returns only the user fields a read asks for (user.fields), beside the id.
+const users = url => { const fields = (url.searchParams.get('user.fields') ?? '').split(','); return [COMPANY, ...Object.values(PEOPLE)].map(user => Object.fromEntries(Object.entries(user).filter(([key]) => key === 'id' || fields.includes(key)))) }
 const longer = (a, b) => a.length !== b.length ? a.length > b.length : a > b
 
 async function edge(request) {
@@ -42,7 +43,7 @@ async function edge(request) {
     const since = url.searchParams.get('since_id')
     const data = x.mentions.filter(item => !since || longer(item.id, since)).sort((a, b) => longer(a.id, b.id) ? -1 : 1)
     if (!data.length) return Response.json({ meta: { result_count: 0 } })
-    return Response.json({ data, includes: { users: users() }, meta: { result_count: data.length, newest_id: data[0].id, oldest_id: data.at(-1).id } })
+    return Response.json({ data, includes: { users: users(url) }, meta: { result_count: data.length, newest_id: data[0].id, oldest_id: data.at(-1).id } })
   }
   if (url.pathname === '/2/tweets' && request.method === 'POST') {
     const body = await request.json(), created = post(COMPANY, body.text, body.reply ? { referenced_tweets: [{ type: 'replied_to', id: body.reply.in_reply_to_tweet_id }] } : {})
@@ -50,7 +51,7 @@ async function edge(request) {
     return Response.json({ data: { id: created.id, text: created.text, edit_history_tweet_ids: [created.id] } }, { status: 201 })
   }
   const read = /^\/2\/tweets\/(\d+)$/.exec(url.pathname)
-  if (read && x.posts.has(read[1])) return Response.json({ data: x.posts.get(read[1]), includes: { users: users() } })
+  if (read && x.posts.has(read[1])) return Response.json({ data: x.posts.get(read[1]), includes: { users: users(url) } })
   return Response.json({ title: 'Not Found Error', status: 404, detail: `Could not find ${url.pathname}` }, { status: 404 })
 }
 
@@ -95,6 +96,7 @@ test('the company reads its X mentions once at its read price, answers only peop
   const linh = of(PEOPLE.linh.username), bo = of(PEOPLE.bo.username), ana = listed.items.find(item => item.kind === 'thread' && item.author === PEOPLE.ana.username)
   assert.deepEqual([linh.engaged_first, linh.kind, linh.company_post.network_id, linh.company_post.text, linh.url],
     [true, 'reply', launch.id, launch.text, `https://x.com/${PEOPLE.linh.username}/status/${linh.network_id}`])
+  assert.deepEqual([linh.thread.network_id, linh.thread.own, linh.thread.author, linh.thread.text], [launch.id, true, COMPANY.username, launch.text])
   assert.deepEqual([bo.engaged_first, bo.thread.inbox_item_id, ana.engaged_first, ana.author, ana.may_reply], [true, ana.id, false, PEOPLE.ana.username, false])
 
   // The stranger in the public thread never engaged with the account: no reply, through either door.
@@ -124,10 +126,12 @@ test('the company reads its X mentions once at its read price, answers only peop
   assert.deepEqual([rewritten.item_id, rewritten.state, x.created.length], [repeat.item_id, 'posted', 2])
 })
 
-test('people who engaged first with substance become offers to Orbit, signed, with no email and one identity each; a failed send stays offered', async () => {
+test('people who engaged first with substance become offers to Orbit, signed, with only a publicly shown email and one identity each; a failed send stays offered', async () => {
   const offers = ok(await inbox('stump.stack.send', { action: 'offers', seed: 'orbit' }))
   // A question and a reply with substance are offered; a passing "thanks!" and the stranger who never engaged are not.
   assert.deepEqual(offers.items.map(offer => offer.handle).sort(), [PEOPLE.bo.username, PEOPLE.linh.username])
+  // Only an email the person shows on their own profile travels with them.
+  assert.deepEqual(offers.items.map(offer => [offer.handle, offer.email]).sort(), [[PEOPLE.bo.username, 'bo@synthetic-clinic.test'], [PEOPLE.linh.username, null]])
   const linh = offers.items.find(offer => offer.handle === PEOPLE.linh.username)
   assert.equal((await inbox('stump.stack.send', { action: 'send', offer_id: linh.id })).body.code, 'not_connected')
   ok(await inbox('stump.stack.connect', { action: 'connect', seed: 'orbit', origin: 'https://orbit.example.test', source_id: 'stump', secret: orbitSecret }))
@@ -149,4 +153,8 @@ test('people who engaged first with substance become offers to Orbit, signed, wi
   const later = ok(await inbox('stump.stack.send', { action: 'offers', seed: 'orbit', state: 'offered' })).items.find(offer => offer.handle === PEOPLE.linh.username)
   ok(await inbox('stump.stack.send', { action: 'send', offer_id: later.id }))
   assert.equal(signals[1].identityBasis, signal.identityBasis); assert.notEqual(signals[1].eventId, signal.eventId)
+
+  // Someone who shows an email on their profile reaches Orbit with it, so Orbit can judge contactability from what they made public.
+  ok(await inbox('stump.stack.send', { action: 'send', offer_id: offers.items.find(offer => offer.handle === PEOPLE.bo.username).id }))
+  assert.deepEqual([signals[2].email, signals[2].identityBasis], ['bo@synthetic-clinic.test', `stump:engager:x:id:${PEOPLE.bo.id}`])
 })

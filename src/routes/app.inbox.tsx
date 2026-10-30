@@ -127,7 +127,6 @@ function Item({ item, account, mayAct, onBack, onChange }: { item: InboxView; ac
     if (done.step) { setText(done.text ?? ''); setNote({ text: 'X asks for its approval before an app posts AI-drafted replies, and it is not recorded for the company. Rewrite this in your own words, then reply.', error: false }) }
     else if (done.posted) { setText(''); setNote({ text: 'Replied. It is on the ledger.', error: false }) }
     else if (done.hold?.reason === 'near_duplicate') setNote({ text: 'Held: it nearly repeats an earlier post. Rewrite it to send.', error: true })
-    else if (done.flags.some(flag => flag.blocking)) setNote({ text: 'Not sent. Fix what the checks found.', error: true })
     else setNote({ text: done.error?.message ? `${networkName(account.network)} did not post it: ${done.error.message}` : `Not posted (${done.state}).`, error: true })
     await onChange()
   }

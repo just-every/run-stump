@@ -9,10 +9,10 @@ import type { ActionContext } from '../actions/types.ts'
 import { xPrices } from '../accounts/apps.ts'
 import { xFor } from '../accounts/clients.ts'
 import { needsReconnect, type AccountRow } from '../accounts/store.ts'
-import { fetchXMentions, getXPost, quoteXRead, type XError, type XPostReadback, type XPriceTable } from '../lib/x/index.ts'
+import { fetchXMentions, getXPost, quoteXRead, type XError, type XMention, type XPostReadback, type XPriceTable } from '../lib/x/index.ts'
 import { recordCall } from '../publish/parts.ts'
 import { offerInboxEngager } from '../stack/index.ts'
-import { engagedFirst, engagementOf, kindOf } from './engagement.ts'
+import { engagedFirst, engagementOf, kindOf, publicEmailOf } from './engagement.ts'
 import { ownPostIds, type InboxRow } from './store.ts'
 
 /** One page of up to 100 mentions per read, and at most one thread post for each. */
@@ -78,21 +78,23 @@ export async function pollInbox(ctx: ActionContext, account: AccountRow) {
     return !!parent && (own.has(parent) || (post.inReplyToPostId === parent && post.inReplyToUserId === userId))
   }
 
-  const rowOf = (post: XPostReadback, kind: InboxRow['kind']): InboxRow => {
+  const rowOf = (post: XPostReadback | XMention, kind: InboxRow['kind']): InboxRow => {
+    // What the author shows on their own profile, read with the mention: their name, bio and any email written there.
+    const profile = 'author' in post ? post.author : null
     const engaged = engagedFirst(post, { userId, handle }, own), parent = kind === 'thread' ? post.inReplyToPostId : parentOf(post)
     const parentOwn = kind !== 'thread' && isOwnParent(post)
     return {
       id: crypto.randomUUID(), account_id: account.id, network: 'x', network_id: post.id, kind: kind === 'thread' ? 'thread' : kindOf(post, parentOwn), url: post.url, text: post.text,
-      author_id: post.authorId, author_handle: post.authorUsername, author_name: null, conversation_id: post.conversationId,
+      author_id: post.authorId, author_handle: post.authorUsername, author_name: profile?.name ?? null, author_bio: profile?.description ?? null, author_public_email: publicEmailOf(profile), conversation_id: post.conversationId,
       parent_network_id: parent, parent_url: parent ? `https://x.com/${parentOwn ? handle : 'i'}/status/${parent}` : null, parent_own: parentOwn ? 1 : 0,
       engaged_first: engaged ? 1 : 0, engagement: engaged ? engagementOf(post.text) : null,
       occurred_at: post.createdAt ? Date.parse(post.createdAt) || now : now, received_at: now, reply_item_id: null, offer_id: null,
     }
   }
   const rows = [...threads.map(post => rowOf(post, 'thread')), ...mentions.map(post => rowOf(post, 'mention'))]
-  const inserts = rows.map(row => db.prepare(`INSERT INTO stump_inbox_items(id,account_id,network,network_id,kind,url,text,author_id,author_handle,author_name,conversation_id,
-      parent_network_id,parent_url,parent_own,engaged_first,engagement,occurred_at,received_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(account_id,network_id) DO NOTHING`)
-    .bind(row.id, row.account_id, row.network, row.network_id, row.kind, row.url, row.text, row.author_id, row.author_handle, row.author_name, row.conversation_id,
+  const inserts = rows.map(row => db.prepare(`INSERT INTO stump_inbox_items(id,account_id,network,network_id,kind,url,text,author_id,author_handle,author_name,author_bio,author_public_email,conversation_id,
+      parent_network_id,parent_url,parent_own,engaged_first,engagement,occurred_at,received_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(account_id,network_id) DO NOTHING`)
+    .bind(row.id, row.account_id, row.network, row.network_id, row.kind, row.url, row.text, row.author_id, row.author_handle, row.author_name, row.author_bio, row.author_public_email, row.conversation_id,
       row.parent_network_id, row.parent_url, row.parent_own, row.engaged_first, row.engagement, row.occurred_at, row.received_at))
   const results = inserts.length ? await db.batch(inserts) : []
   const added = rows.filter((_row, index) => results[index]!.meta.changes > 0)

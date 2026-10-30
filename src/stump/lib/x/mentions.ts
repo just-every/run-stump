@@ -29,9 +29,46 @@ import { fieldsParam, xCall } from './http'
 import { parsePost, postFieldList, type XPostReadback } from './readback'
 import type { XChargeQuote, XContext, XError, XPriceTable, XResult } from './types'
 
+/**
+ * The author's public profile as X returns it with the mention (includes.users with
+ * user.fields name, description, url and entities): what the person shows about
+ * themselves, with t.co links in the bio and the profile link expanded.
+ * Source: https://docs.x.com/x-api/fundamentals/data-dictionary (user object; read 30 Oct 2026).
+ */
+export interface XMentionAuthor {
+  id: string
+  username: string | null
+  name: string | null
+  /** The profile bio, or null when it is empty. */
+  description: string | null
+  /** The link the person shows on their profile, or null. */
+  url: string | null
+}
+
 export interface XMention extends XPostReadback {
   /** Always true: the author mentioned the account, which is what lets the account reply by API. */
   engagedFirst: true
+  author: XMentionAuthor | null
+}
+
+/** Replaces each t.co link in profile text with the address it stands for. */
+function expandProfileText(text: string, urls: any[] | undefined): string {
+  let out = text
+  for (const u of urls ?? []) if (typeof u?.url === 'string' && typeof u.expanded_url === 'string') out = out.split(u.url).join(u.expanded_url)
+  return out
+}
+
+export function parseMentionAuthor(user: any): XMentionAuthor | null {
+  if (!user || typeof user.id !== 'string') return null
+  const description = typeof user.description === 'string' ? expandProfileText(user.description, user.entities?.description?.urls).trim() : ''
+  const link = typeof user.url === 'string' ? expandProfileText(user.url, user.entities?.url?.urls).trim() : ''
+  return {
+    id: user.id,
+    username: typeof user.username === 'string' ? user.username : null,
+    name: typeof user.name === 'string' ? user.name : null,
+    description: description || null,
+    url: link || null,
+  }
 }
 
 export interface XMentionsInput {
@@ -139,12 +176,14 @@ export async function fetchXMentions(ctx: XContext, input: XMentionsInput, price
         pagination_token: token,
         [fieldsParam(ctx, 'post')]: postFieldList(ctx),
         expansions: 'author_id',
-        [fieldsParam(ctx, 'user')]: 'username,name',
+        // The author's own profile text comes with each mention, so what they show publicly can be read (and nothing else).
+        [fieldsParam(ctx, 'user')]: 'username,name,description,url,entities',
       },
       parse: (body) => {
         const rows: any[] = Array.isArray(body?.data) ? body.data : []
+        const users: any[] = Array.isArray(body?.includes?.users) ? body.includes.users : []
         return {
-          rows: rows.map((r) => ({ ...parsePost(r, body?.includes, ctx), engagedFirst: true as const })),
+          rows: rows.map((r) => ({ ...parsePost(r, body?.includes, ctx), engagedFirst: true as const, author: parseMentionAuthor(users.find((u) => u?.id === r?.author_id)) })),
           next: typeof body?.meta?.next_token === 'string' && body.meta.next_token ? body.meta.next_token : null,
           count: rows.length,
         }
