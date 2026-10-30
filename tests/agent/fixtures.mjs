@@ -23,6 +23,7 @@ export default async function prepare() {
     orbitSecret: randomBytes(32).toString('hex'),
     xClientId: `synthetic-${randomUUID().slice(0, 8)}`,
     xClientSecret: randomUUID().replaceAll('-', ''),
+    aiKey: `synthetic-stump-${randomUUID()}`,
     xPost: `${sentence()} https://example.com/changelog`,
     xLong: sentence(60),
     xReply: `${sentence(10)} every week`,

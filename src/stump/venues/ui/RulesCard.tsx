@@ -88,9 +88,9 @@ function RuleEditor({ venue, name, rule, onSaved, onClose }: { venue: Venue; nam
       const chosen = next.value ?? (name === 'gates' ? gateValue(now.gate) : now.value)
       const src = (next.source ?? now.source).trim(), date = next.readAt ?? now.readAt, extra = (next.detail ?? now.detail).trim(), threadUrl = (next.thread ?? now.thread).trim()
       if (!remove && (chosen === '' || (typeof chosen === 'object' && !Object.keys(chosen as object).length))) return src || date ? 'Choose the rule first; its source saves with it.' : undefined
-      const saved = await runAction<{ revision: number }>('stump.venues.rules', { action: 'set', idempotency_key: key(), venue_id: venue.id, expected_revision: revision.current,
+      const saved = await runAction<{ venue: { revision: number } }>('stump.venues.rules', { action: 'set', idempotency_key: key(), venue_id: venue.id, expected_revision: revision.current,
         rules: { [name]: remove ? null : { value: chosen, source_url: src || null, read_at: date || null, ...(extra ? { detail: extra } : {}), ...(chosen === 'thread' && threadUrl ? { thread_url: threadUrl } : {}) } } })
-      if (typeof saved?.revision === 'number') revision.current = saved.revision
+      revision.current = saved.venue.revision
       onSaved()
       // A rule is sourced only with both its page and the day it was read (STUMP-VENUE-002.5): say which half is missing.
       if (remove) return 'Saved.'

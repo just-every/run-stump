@@ -80,8 +80,9 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
   const hay = { title: title.text, text: body.text, links: f.links.join('\n'), transcript: spoken.text }
   const reasons: Reason[] = []
 
-  // Matched terms: 12 for a match in the headline or a transcript and +8 more in a title; 5 for a match only deep in a
-  // titled thread's text or links; +6 for a product name, +3 each for up to two more distinct terms.
+  // Matched terms: 12 for a match in the headline or a transcript and +12 more in a title; 4 for a match only deep in a
+  // titled thread's text or links (a comment under a story about something else); +6 for a product name, +3 each for
+  // up to two more distinct terms.
   const m = matchTerms(terms, hay)
   const productHit = matchTerms(products, hay)
   const positives = m.matched_terms.length
@@ -97,11 +98,11 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
     else bits.push('every item of this source')
     if (m.unconstrained || inHeadline || inTranscript) termPoints += 12
     else {
-      termPoints += 5
-      bits.push('only in the text')
+      termPoints += 4
+      bits.push('only in the text, under a title about something else')
     }
     if (positives > 0 && hasTitle && m.matched_in.includes('title')) {
-      termPoints += 8
+      termPoints += 12
       bits.push('in the title')
     }
     termPoints += 3 * Math.min(2, Math.max(0, positives - 1))
@@ -137,7 +138,7 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
     questionPoints = 30
     questionLabel = 'asks a question the company can answer'
   } else if (questions.some(touches)) {
-    questionPoints = 10
+    questionPoints = 8
     questionLabel = 'asks about a watch term deep in its text, under a headline about something else'
   } else if (helpSeeking.length > 0) {
     questionPoints = 4

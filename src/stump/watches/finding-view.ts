@@ -19,7 +19,7 @@ export function chipsFor(finding: FindingView, watch: Pick<WatchView, 'product_i
   for (const reason of finding.reason_details) {
     // Only a question about what the watch is for earns a chip; asking for help about something else does not.
     if (reason.factor === 'question' && reason.points >= reason.max) chips.push({ label: 'asks a question', title: reason.label })
-    else if (reason.factor === 'question' && reason.points >= 10) chips.push({ label: 'asks in its text', title: reason.label })
+    else if (reason.factor === 'question' && reason.points >= 8) chips.push({ label: 'asks in its text', title: reason.label })
     else if (reason.factor === 'matched_terms' && reason.points > 0) {
       // The terms it matched, as the watch names them: "matches invoicing".
       const terms = [...reason.label.matchAll(/"([^"]+)"/g)].map(match => match[1]!).slice(0, 2)

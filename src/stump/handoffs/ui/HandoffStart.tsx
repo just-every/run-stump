@@ -45,7 +45,7 @@ function HandoffForm({ venue, routes, members, team, me, onClose }: { venue: Ven
   if (products.data && !choices.length) return <p className="st-meta" style={{ marginTop: 12 }}>Add your product first in <a href="/app/settings/brand">Brand</a>, then hand off.</p>
   return <form onSubmit={submit} aria-label={`Hand off at ${venue.name}`} style={{ marginTop: 12 }}>
     <div className="st-form">
-      <label className="st-field">Who posts<select name="person" required defaultValue={people[0]?.id}>
+      <label className="st-field">Who posts<select name="person" required defaultValue={people.find(person => person.status === 'active')?.id}>
         {people.map(person => <option key={person.id} value={person.id} disabled={person.status !== 'active'}>
           {person.display_name}{person.status !== 'active' ? ' (has not signed in yet)' : memberIds.has(person.id) ? '' : ' (joins first)'}</option>)}</select></label>
       <label className="st-field">Product<select name="product" required>{choices.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>
@@ -55,7 +55,7 @@ function HandoffForm({ venue, routes, members, team, me, onClose }: { venue: Ven
     </div>
     {draftable ? <>
       <label className="st-field" style={{ marginTop: 12 }}>Draft (optional)<textarea name="text" rows={3} maxLength={25_000} placeholder="Leave empty for a brief with talking points" /></label>
-      <label className="st-field"><span><input name="generate" type="checkbox" /> Or draft it with your AI provider</span></label>
+      <label className="st-field st-check"><input name="generate" type="checkbox" />Or draft it with your AI provider</label>
     </> : <p className="st-note">{venue.name} bans AI-written text: the member gets talking points and facts, and writes their own words.</p>}
     <Outcome message={message} />
     <div className="st-actions" style={{ marginTop: 12 }}>

@@ -105,7 +105,7 @@
     {"id": "erase-engager", "tool": "stump.data.erase", "args": {"action": "erase", "subject": {"kind": "engager", "handles": {"x": "synthetic-stump-engager", "hn": "synthetic-stump-engager"}}}, "expect": [{"class": "destructive", "facts": {"measure": 0}}, {"class": "sensitive", "facts": {"measure": 1, "kind": "public handles and post links"}}, {"class": "external", "facts": {"measure": 0, "counterparty": "public"}}]},
     {"id": "team-list", "tool": "stump.team.manage", "args": {"action": "list"}, "expect": [{"class": "standard", "facts": {"measure": 0}}]},
     {"id": "ai-get", "tool": "stump.setup.ai", "args": {"action": "get"}, "expect": [{"class": "standard", "facts": {"measure": 0}}]},
-    {"id": "ai-set", "tool": "stump.setup.ai", "args": {"action": "set", "base_url": "https://ai.synthetic-stump.example/v1", "model": "synthetic-stump-model", "api_key": "synthetic-stump-ai-1"}, "expect": [{"class": "security", "facts": {"measure": 1, "setting": "ai_provider", "provider": "ai.synthetic-stump.example"}}]},
+    {"id": "ai-set", "tool": "stump.setup.ai", "args": {"action": "set", "base_url": "https://ai.synthetic-stump.example/v1", "model": "synthetic-stump-model", "api_key": {"$fixture": "aiKey", "pointer": ""}}, "expect": [{"class": "security", "facts": {"measure": 1, "setting": "ai_provider", "provider": "ai.synthetic-stump.example"}}]},
     {"id": "ai-clear", "tool": "stump.setup.ai", "args": {"action": "clear"}, "expect": [{"class": "security", "facts": {"measure": 1, "setting": "ai_provider"}}]}
   ],
   "verification": {

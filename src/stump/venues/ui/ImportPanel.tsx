@@ -64,7 +64,7 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
   const changes = plan?.changes ?? [], conflicts = changes.filter(change => change.conflict), replaced = changes.filter(change => !change.conflict)
   const nothing = plan && (plan.applied || (plan.summary.created === 0 && plan.summary.updated === 0 && conflicts.length === 0))
   // Nothing to apply because every row was refused, not because it is all in Stump already.
-  const allRefused = !!plan && !plan.applied && plan.rejected.length > 0 && (plan.summary.venues ?? 0) + (plan.summary.entries ?? 0) + (plan.summary.excluded ?? 0) === 0
+  const allRefused = !!plan && plan.rejected.length > 0 && (plan.summary.venues ?? 0) + (plan.summary.entries ?? 0) + (plan.summary.excluded ?? 0) === 0
   const gone = plan?.differences.gone.length ?? 0
   // Products are bookkeeping here; the venues and entries are what a person recognises.
   const already = (plan?.existing ?? []).filter(row => row.kind !== 'product')
@@ -92,7 +92,7 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
       <p>{applied ? 'Imported.' : allRefused ? 'Every row in this file was refused, so there is nothing to apply. Fix the rows below and upload it again.'
         : nothing ? 'Everything in this file is already in Stump. There is nothing to apply.'
         : `Applying adds ${plural(plan.summary.created, 'record')}${plan.summary.updated ? ` and updates ${plural(plan.summary.updated, 'record')}` : ''}.`}
-        {gone && !applied ? ` ${plural(gone, 'row')} from the last import ${gone === 1 ? 'is' : 'are'} not in this file; Stump keeps ${gone === 1 ? 'it' : 'them'}.` : ''}</p>
+        {gone && !applied && !allRefused ? ` ${plural(gone, 'row')} from the last import ${gone === 1 ? 'is' : 'are'} not in this file; Stump keeps ${gone === 1 ? 'it' : 'them'}.` : ''}</p>
       {replaced.length && !applied ? <>
         <h3>Changed in this file</h3>
         <ul className="st-list">{replaced.map(change => <ChangeRow key={change.source_id} change={change} />)}</ul>

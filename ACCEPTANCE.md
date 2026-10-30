@@ -689,7 +689,7 @@ Core · published · **partial** · From new · Cites BASE-DATA-004
 5. Each draft's record lists the fields sent to the provider and the provider's host, and they match the installation's declared outbound flow.
 
 **Evidence.** `tests/stump/drafting.test.mjs` "a draft from a changelog goes through the company's AI provider with the voice guide and current claims, and a failure leaves no draft"
-**Gap.** Points .1 (declared fields, model and USD cost recorded) and .2 (a provider failure leaves no draft and says why) are asserted; .5 records fields sent and host on each item. .3 is built (output that fails the check stays a flagged draft) and not yet asserted; .4 usage by person, product and month is not built.
+**Gap.** Points .1 (declared fields, model and USD cost recorded) and .2 (a provider failure leaves no draft and says why, with the provider's own message) are asserted, for the installation's AI settings and for the provider an admin saves in Settings (`stump.setup.ai`); .5 records fields sent and host on each item. .3 is built (output that fails the check stays a flagged draft) and not yet asserted; .4 usage by person, product and month is not built.
 
 ### Calendar and queue
 

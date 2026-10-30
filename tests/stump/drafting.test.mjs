@@ -103,7 +103,7 @@ test('a draft from a changelog goes through the company\'s AI provider with the 
   assert.equal(await count(), before)
 
   // The provider an admin saves in Settings drafts instead of the installation's: a refused key shows the provider's own words without the key, and leaves no draft.
-  const wrong = 'synthetic-stump-wrong-key'
+  const wrong = `synthetic-stump-wrong-${Date.now()}`
   const saved = ok(await app.action('owner', 'stump.setup.ai', { action: 'set', base_url: `${AI}/v1`, model: 'synthetic-settings-model', api_key: wrong }))
   assert.deepEqual([saved.source, saved.model, saved.host], ['settings', 'synthetic-settings-model', 'ai.synthetic-stump.example'])
   assert.doesNotMatch(JSON.stringify(saved), new RegExp(wrong), 'the key is never answered back')
@@ -111,7 +111,7 @@ test('a draft from a changelog goes through the company\'s AI provider with the 
   assert.deepEqual([refusedKey.body.code, refusedKey.body.provider_code], ['ai_failed', 'upstream_auth'])
   assert.match(refusedKey.body.provider_message, /Incorrect API key/); assert.doesNotMatch(JSON.stringify(refusedKey.body), new RegExp(wrong))
   assert.equal(await count(), before)
-  ok(await app.action('owner', 'stump.setup.ai', { action: 'set', base_url: `${AI}/v1`, model: 'synthetic-settings-model', api_key: 'synthetic-stump-right-key' }))
+  ok(await app.action('owner', 'stump.setup.ai', { action: 'set', base_url: `${AI}/v1`, model: 'synthetic-settings-model', api_key: `synthetic-stump-right-${Date.now()}` }))
   const viaSettings = ok(await app.action('owner', 'stump.drafts.write', { action: 'create', format: 'post', person_id: owner.id, network: 'bluesky', generate: true, prompt: 'Announce recurring bookings.' }))
   assert.equal(viaSettings.ai.model, 'synthetic-settings-model')
   assert.equal(ok(await app.action('owner', 'stump.setup.ai', { action: 'clear' })).source, 'installation')
