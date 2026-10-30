@@ -88,6 +88,11 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
  if (url.pathname.startsWith('/auth/')) return fontDocumentResponse(await createAuthHandler(operatorAuth(env))(request))
  if (url.pathname === '/setup' || url.pathname === '/app' || url.pathname.startsWith('/app/')) {
   const setup = await firstRunResponse(request, env, operatorAuth(env), { theme })
+  // Once the owner confirms on Base's /setup, Stump's own setup steps follow (src/routes/app.setup.tsx).
+  if (setup && request.method === 'POST' && url.pathname === '/setup' && setup.status === 303 && setup.headers.get('location') === '/app') {
+   const headers = new Headers(setup.headers); headers.set('location', '/app/setup')
+   return new Response(null, { status: 303, headers })
+  }
   if (setup) return setup
  }
  return null

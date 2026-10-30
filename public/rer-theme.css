@@ -26,7 +26,7 @@
 html.rer-themed { background: #F9F3E4 url('/art/grain.png') repeat; }
 html.rer-themed body { background: transparent; font-family: Gantari, Arial, sans-serif; color: #1C1B18; align-content: center; }
 html.rer-themed body::before {
-  content: ""; display: block; width: 220px; height: 139px; margin: 0 auto -6px;
+  content: ""; display: block; width: 220px; height: 141px; margin: 0 auto 12px;
   background: url('/art/stump-small.webp') center bottom / contain no-repeat;
 }
 html.rer-themed body > main {

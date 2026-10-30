@@ -3,6 +3,7 @@ import type { ActionContext, StumpTool } from '../actions/types.ts'
 import { claimStaleness, isIsoDate, validateClaim, type Claim } from '../lib/claims/index.ts'
 import { EDITORS, EVERYONE, type Role } from '../people/roles.ts'
 import { readPerson } from '../people/store.ts'
+import { readSource } from '../drafting/ai.ts'
 import { claimRecord, libProof, parse, productRecord, today, voiceRecord, type ClaimRecord, type Row } from '../drafting/records.ts'
 
 // Products and tone, claims with proof, and a real person's voice guide
@@ -125,6 +126,17 @@ export const brandTools: StumpTool[] = [{
         const [products, settings] = await ctx.db.batch([ctx.db.prepare('SELECT * FROM stump_products ORDER BY name,id'), ctx.db.prepare('SELECT company_names FROM stump_drafting_settings WHERE id=1')])
         const items = (products!.results as Row[]).map(productRecord)
         return { items, total: items.length, company_names: parse<string[]>((settings!.results as Row[])[0]?.company_names, []) }
+      },
+    },
+    site_read: {
+      // URL first (L5): the company site names the company and its product, so first-run setup prefills both; nothing is saved here.
+      roles: EDITORS, read: true, properties: { url }, required: ['url'],
+      classify: () => standard(0),
+      async run(args, ctx) {
+        const given = String(args.url).trim()
+        const page = await readSource(ctx.env, /^https?:\/\//i.test(given) ? given : `https://${given}`, ctx.now())
+        const name = page.title?.split(/\s+[|·•–—:-]\s+/)[0]?.trim() || null
+        return { url: page.url, title: page.title, name }
       },
     },
     company_update: {
