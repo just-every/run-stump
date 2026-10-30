@@ -45,6 +45,12 @@ function goneWords(gone: Variant[]): string {
   const what = states.size === 1 && states.has('scheduled') ? 'scheduled' : states.size === 1 && states.has('posted') ? 'posted' : 'scheduled or posted'
   return gone.length === 1 ? `${networkName(gone[0]!.network)} already ${what}` : `${gone.length} already ${what}`
 }
+/** The title of a post every variant of which has left Compose: its one state ("Posted"), else "Scheduled and posted" or "Sent". */
+function goneTitle(gone: Variant[]): string {
+  const states = new Set(gone.map(variant => variant.state))
+  if (states.size === 1) return GONE[gone[0]!.state]!
+  return [...states].every(state => state === 'scheduled' || state === 'posted') ? 'Scheduled and posted' : 'Sent'
+}
 
 function ComposePage() {
   const { master: masterId, item: itemId, fix } = Route.useSearch()
@@ -92,6 +98,8 @@ function ComposePage() {
   const gone = allVariants.filter(variant => GONE[variant.state])
   const variants = allVariants.filter(variant => !GONE[variant.state])
   const held = variants.filter(variant => blocking(variant.flags).length)
+  // Every variant has gone out: the page reads as the record of what went, with nothing left to edit.
+  const sent = open && allVariants.length > 0 && !variants.length
   // The chosen accounts' own queue zones (Settings · Publishing) are offered too; with no remembered choice the first is the default.
   useEffect(() => {
     let live = true
@@ -112,12 +120,12 @@ function ComposePage() {
     if (made) await navigate({ search: { master: made.master.id } })
   }
   async function saveMaster() {
-    if (!preview || text === preview.master.text || !text.trim()) return
+    if (!preview || sent || text === preview.master.text || !text.trim()) return
     await run(() => runAction('stump.drafts.revise', { action: 'save_master', master_id: preview.master.id, text, expected_revision: preview.master.revision, idempotency_key: key() }), () => 'Saved')
     await refresh()
   }
   async function saveVariant(variant: Variant, next: string) {
-    if (next === variant.text || !next.trim()) return
+    if (GONE[variant.state] || next === variant.text || !next.trim()) return
     await run(() => runAction('stump.drafts.revise', { action: 'save', item_id: variant.item_id, text: next, expected_revision: variant.revision, idempotency_key: key() }), () => 'Saved')
     await refresh()
   }
@@ -170,10 +178,11 @@ function ComposePage() {
         {flagLine(flag, spanOf(flag, claimsOf()))}
         {flag.code.startsWith('claim_') ? <span className="st-fix">
           <button className="st-pill" type="button" onClick={() => setFixing({ item, at: Date.now() })}>Fix claim</button>
-          <Link className="st-quiet-link" to="/app/settings/brand">Update the proof</Link>
+          {/* A banned claim has no proof to update: the words come out of the post. */}
+          {flag.code === 'claim_banned' ? null : <Link className="st-quiet-link" to="/app/settings/brand">Update the proof</Link>}
         </span> : null}
       </span></li>)}
-      {[...toBack.values()].map(flag => <li key={`back-${String(flag.text ?? '')}`}><Disc icon="alert" /><span>
+      {[...toBack.values()].map(flag => <li key={`back-${String(flag.text ?? '')}`}><Disc icon="alert" tone="held" /><span>
         {flagLine(flag)}
         <Link className="st-pill" to="/app/settings/brand">Back claim</Link>
       </span></li>)}
@@ -189,7 +198,7 @@ function ComposePage() {
 
   return <HydrationUnit>
     <section className="st-page st-drafting" aria-labelledby="compose-title">
-      <h1 id="compose-title">{alone ? 'Edit post' : 'New post'}</h1>
+      <h1 id="compose-title">{sent ? goneTitle(gone) : alone ? 'Edit post' : 'New post'}</h1>
       {error ? <p className="st-error">{error}</p> : null}
       {alone ? <div className="st-compose">
         <section className="st-card" aria-labelledby="variants-title">
@@ -200,15 +209,15 @@ function ComposePage() {
       </div> : <div className="st-compose">
         <section className="st-card" aria-labelledby="one-post">
           <h2 className="st-card-head" id="one-post"><Disc icon="pencil" />One post</h2>
-          <label className="st-sr" htmlFor="master-text">Post text</label>
+          {sent && preview ? <p className="st-master-sent">{preview.master.text}</p> : <><label className="st-sr" htmlFor="master-text">Post text</label>
           <div className="st-master">
             <textarea id="master-text" className="st-textarea large" value={text} rows={4} placeholder="Write the post once. Each account gets its own variant."
               onChange={event => setText(event.target.value)} onBlur={() => void saveMaster()} />
             <div className="st-chars">
               {graphemes(text).toLocaleString()}{Number.isFinite(largest) ? ` / ${largest.toLocaleString()}` : ''}
             </div>
-          </div>
-          {preview ? source ? <div className="st-source-chip"><Disc icon="pencil" /><span><span className="st-meta">From a source</span><br />{source.replace(/^https?:\/\//, '')}</span></div> : null
+          </div></>}
+          {preview ? source && !sent ? <div className="st-source-chip"><Disc icon="pencil" /><span><span className="st-meta">From a source</span><br />{source.replace(/^https?:\/\//, '')}</span></div> : null
             : <div className="st-source">
               <label className="st-field">From a source
                 <input type="url" value={source} placeholder="Changelog or docs link" onChange={event => setSource(event.target.value)} />
@@ -235,7 +244,6 @@ function ComposePage() {
         <div className="st-variants">{variantCards}</div>
       </section> : null}
       {open && !(alone && !alone.account_id) && !variants.length ? <div className="st-bar">
-        <span className="st-pill">{goneWords(gone)}</span>
         <Link className="st-quiet-link" to="/app/ledger">See the ledger</Link>
       </div> : null}
       {open && !(alone && !alone.account_id) && variants.length ? <div className="st-bar">
@@ -289,7 +297,7 @@ function VariantCard({ variant, claims, select, onSelected, onSave }: { variant:
       <label className="st-sr" htmlFor={`variant-${variant.item_id}`}>{networkName(variant.network)} text</label>
       <div className="st-variant-field">
         <Marked text={text} network={variant.network} limit={over ? variant.count!.limit : null} claims={text === variant.text ? claims : []} />
-        <textarea ref={field} id={`variant-${variant.item_id}`} value={text} rows={6} spellCheck onChange={event => setText(event.target.value)} onBlur={() => onSave(text)} />
+        <textarea ref={field} id={`variant-${variant.item_id}`} value={text} rows={6} spellCheck readOnly={!!GONE[variant.state]} onChange={event => setText(event.target.value)} onBlur={() => onSave(text)} />
       </div>
     </div>
   </article>

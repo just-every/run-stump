@@ -23,6 +23,8 @@ export const handoffStyles = `
 .st-handoffs .st-ho-draft { display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: 17px; line-height: 1.6; color: var(--stump-text); background: var(--stump-sunk); border: 1px solid var(--stump-hairline); border-radius: var(--stump-radius-field); padding: 16px; min-height: 220px; resize: vertical; field-sizing: content; }
 .st-handoffs .st-ho-draft:focus-visible, .st-handoffs .st-ho-link input:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
 .st-handoffs .st-ho-points { margin: 0 0 16px; padding-left: 20px; display: grid; gap: 8px; }
+.st-handoffs .st-ho-words h3 { margin: 0 0 8px; font-size: var(--stump-size-small); font-weight: 500; color: var(--stump-muted); }
+.st-handoffs .st-ho-words p { margin: 0; font-size: 17px; line-height: 1.6; color: var(--stump-text); background: var(--stump-sunk); border-radius: var(--stump-radius-field); padding: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .st-handoffs .st-ho-buttons { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0 0; }
 .st-handoffs .st-ho-link { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 16px 0 0; }
 .st-handoffs .st-ho-link input { flex: 1 1 220px; min-width: 0; min-height: 44px; font: inherit; font-size: var(--stump-size-body); color: var(--stump-text); background: var(--stump-white); border: 1px solid var(--stump-field-border); border-radius: var(--stump-pill); padding: 0 18px; }

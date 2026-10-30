@@ -14,6 +14,10 @@ export const screenStyles = `
 .st-ledger-screen .st-table td.when { white-space: nowrap; }
 .st-ledger-screen .st-table td.state .st-chip { vertical-align: middle; }
 .st-ledger-screen .st-table tr.open > td { border-bottom-color: transparent; }
+.st-ledger-screen .st-table tr.entry { cursor: pointer; }
+.st-ledger-screen .st-table tr.entry:hover > td { background: var(--stump-sunk); }
+.st-ledger-screen .st-detail-filters { margin: 0; }
+.st-ledger-screen .st-detail-filters .st-row-button { color: var(--stump-emerald-text); text-decoration: underline; text-underline-offset: 3px; }
 .st-ledger-screen .st-table .st-quiet { display: block; margin-top: 4px; font-size: var(--stump-size-small); color: var(--stump-muted); }
 .st-ledger-screen .st-table a { color: var(--stump-emerald-text); font-weight: 500; text-decoration: none; }
 .st-ledger-screen .st-table a:hover { text-decoration: underline; text-underline-offset: 3px; }

@@ -54,7 +54,8 @@ export function BriefPage({ handoffId }: { handoffId: string }) {
           <h1 id="brief-title">{briefTitle(handoff)}</h1>
           <p className="st-ho-sub">
             <span>{handoff.state === 'posted' ? `Posted ${dayOf(handoff.posted_at)}` : dueLine(handoff.due_at)} · {handoff.person_name}</span>
-            {handoff.state !== 'open' ? <Chip tone={STATE[handoff.state]!.tone} tick={STATE[handoff.state]!.tick}>{STATE[handoff.state]!.label}</Chip> : null}
+            {/* Posted says itself once, in the line before it: the notice under it carries the link, with no second "Posted". */}
+            {handoff.state !== 'open' && handoff.state !== 'posted' ? <Chip tone={STATE[handoff.state]!.tone} tick={STATE[handoff.state]!.tick}>{STATE[handoff.state]!.label}</Chip> : null}
           </p>
         </header>
         <Notice handoff={handoff} mine={handoff.person_id === data.who.person.id} onChanged={refresh} />
@@ -107,12 +108,12 @@ function Notice({ handoff, mine, onChanged }: { handoff: Handoff; mine: boolean;
     <Outcome message={message} />
   </div>
   if (handoff.state === 'posted') return <div className="st-ho-notice" role="note">
-    <h2>Posted</h2>
     <p><a href={handoff.url!} target="_blank" rel="noreferrer noopener">{handoff.url!.replace(/^https?:\/\/(www\.)?/, '')}</a> · {handoff.confirmation === 'network' ? 'checked with the network' : `confirmed by ${mine ? 'you' : handoff.person_name}`} · on the <a href="/app/ledger">ledger</a></p>
   </div>
   if (handoff.state === 'skipped' || handoff.state === 'expired') {
     const last = [...handoff.history].reverse().find(entry => entry.to === handoff.state)
-    return <div className="st-ho-notice" role="note"><h2>{STATE[handoff.state]!.label}</h2><p>{String(last?.detail.reason ?? '')}</p></div>
+    // The state is on the chip above; the notice gives the reason, when one was given.
+    return last?.detail.reason ? <div className="st-ho-notice" role="note"><p>{String(last.detail.reason)}</p></div> : null
   }
   return null
 }
@@ -172,8 +173,10 @@ function Work({ handoff, mine, viewer, editor, onChanged }: { handoff: Handoff; 
       <h2 className="st-panel-title" id="draft-title"><Disc icon="pencil" />Talking points</h2>
       <p className="st-ho-voice">{handoff.attestation_required ? 'Say it in your own words; Stump writes no text for you here.' : `${handoff.venue.name} takes no AI-written text.`}</p>
       <ul className="st-ho-points">{handoff.talking_points.map(point => <li key={point}>{point}</li>)}</ul>
-      <label className="st-field">Your own words
-        <textarea className="st-ho-draft" value={own} readOnly={!working} onChange={event => setOwn(event.target.value)} placeholder="Write what you will post." style={{ minHeight: 160 }} /></label>
+      {working ? <label className="st-field">Your own words
+        <textarea className="st-ho-draft" value={own} onChange={event => setOwn(event.target.value)} placeholder="Write what you will post." style={{ minHeight: 160 }} /></label>
+        // Once posted, the words that went out, as the poster recorded them.
+        : handoff.own_words ? <div className="st-ho-words"><h3>{mine ? 'Your own words' : `${(handoff.person_name ?? '').split(/\s+/)[0] || 'Their'}'s own words`}</h3><p>{handoff.own_words}</p></div> : null}
     </>}
     {working ? <>
       <div className="st-ho-buttons">

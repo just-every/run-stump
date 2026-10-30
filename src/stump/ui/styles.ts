@@ -394,6 +394,9 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-rule-thread:focus-visible { outline: 2px solid var(--stump-focus); outline-offset: 2px; }
 .st-rule-source { font-size: var(--stump-size-small); color: var(--stump-muted); white-space: nowrap; }
 .st-rule-source a { color: var(--stump-accent-ink); }
+.st-rule-actions { margin-top: calc(var(--stump-space) * 1.5); }
+.st-rule-actions > .st-note, .st-rule-actions > .st-error { margin: 0; flex: 1 1 100%; order: 1; }
+.st-rule-actions > .st-note:empty, .st-rule-actions > .st-error:empty { display: none; }
 .st-value { font: inherit; text-align: left; background: none; border: 0; padding: 4px 0; color: var(--stump-text); cursor: pointer; min-height: 32px; }
 .st-value:hover { text-decoration: underline; }
 .st-value:focus-visible { outline: 2px solid var(--stump-focus); outline-offset: 2px; }
@@ -455,6 +458,8 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-sub .st-disc, .st-drafting .st-check-list .st-disc { width: 24px; height: 24px; }
 .st-drafting .st-sub .st-disc svg, .st-drafting .st-check-list .st-disc svg { width: 14px; height: 14px; }
 .st-drafting .st-disc.danger { background: var(--stump-danger); }
+/* A sentence to back that does not hold the post: the held tone, never the passing emerald. */
+.st-drafting .st-disc.held { background: var(--stump-held); }
 .st-drafting .st-textarea { font: inherit; font-size: var(--stump-size-body); color: var(--stump-text); background: var(--stump-white); width: 100%; border: 1px solid var(--stump-field-border); border-radius: var(--stump-radius-field); padding: 12px 14px; resize: vertical; }
 .st-drafting .st-textarea.large { font-size: 20px; line-height: 1.45; min-height: 128px; field-sizing: content; }
 .st-drafting .st-textarea:focus-visible, .st-drafting .st-inline input:focus-visible, .st-drafting .st-when input:focus-visible, .st-drafting button.st-chip:focus-visible, .st-drafting .st-icon:focus-visible, .st-drafting .st-variant-head:focus-visible, .st-drafting .st-checks-toggle:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
@@ -537,6 +542,9 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-master { position: relative; }
 .st-drafting .st-master .st-textarea.large { padding-bottom: 36px; display: block; }
 .st-drafting .st-master .st-chars { position: absolute; right: 14px; bottom: 10px; }
+/* A post that has gone out: its words as they went, on the sunk tone, with nothing to edit. */
+.st-drafting .st-master-sent { margin: 0; font-size: 20px; line-height: 1.45; color: var(--stump-ink); background: var(--stump-sunk); border-radius: var(--stump-radius-field); padding: 12px 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .st-drafting .st-master-sent { font-size: 18px; } }
 .st-drafting .st-check-list li.st-check-detail { padding-left: 34px; color: var(--stump-muted); }
 .st-drafting .st-kv > :last-child { border-left: 1px solid var(--stump-hairline); padding-left: calc(var(--stump-space) * 3); min-height: 28px; }
 .st-drafting .st-profile { display: grid; gap: 2px; }
@@ -555,6 +563,14 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-profile-tone > .st-inline { flex: 0 1 auto; min-width: 0; }
 .st-drafting .st-profile-tone > .st-inline input { field-sizing: content; min-width: 12ch; max-width: 100%; }
 .st-drafting .st-add-words.st-add-words-inline { flex: none; font-size: var(--stump-size-small); padding: 4px 0; }
+/* Settings · Brand's product fields (.st-brand-products): a value reads as text a few pixels after its label, so the focus ring sits on
+   the field's own edge and clears the label's colon; an empty field is drawn as a field (SPEC 3.4) with its hint. */
+.st-brand-products .st-profile .st-inline { gap: 4px; }
+.st-brand-products .st-profile .st-inline input { padding-left: 2px; }
+.st-brand-products .st-profile .st-inline input:focus-visible { outline-offset: 0; }
+.st-brand-products .st-profile .st-inline input.st-profile-empty { border-color: var(--stump-field-border); border-radius: var(--stump-radius-field); background: var(--stump-white); padding: 0 12px; min-height: 44px; margin: 4px 0 4px 4px; }
+.st-brand-products .st-profile .st-inline input::placeholder { color: var(--stump-muted); opacity: 1; }
+.st-brand-products .st-profile-tone > .st-inline input.st-profile-empty { min-width: 24ch; }
 /* The held note in the bar keeps one line; the short forms take over at 480 and under. */
 .st-drafting .st-bar-held { white-space: nowrap; }
 .st-drafting .st-held-short, .st-drafting .st-when-tiny { display: none; }

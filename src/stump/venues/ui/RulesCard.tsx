@@ -114,10 +114,12 @@ function RuleEditor({ venue, name, rule, onSaved, onClose }: { venue: Venue; nam
       <label className="st-field">Source page<input type="url" value={source} placeholder="https://" maxLength={2048} onChange={event => setSource(event.target.value)} onBlur={() => void save()} /></label>
       <label className="st-field">Read on<input type="date" value={readAt} onChange={event => setReadAt(event.target.value)} onBlur={event => void save({ readAt: event.target.value })} /></label>
     </div>
-    <Outcome message={message} />
-    <div className="st-actions">
+    {/* The outcome sits beside the buttons, so a save that lands as Done is pressed (a field saves when it loses focus) never moves
+        Done from under the pointer. */}
+    <div className="st-actions st-rule-actions">
       <button className="st-button pill" type="button" onClick={onClose}>Done</button>
       {rule ? <button className="st-button danger pill" type="button" disabled={busy} onClick={() => void save({}, true).then(onClose)}>Remove this rule</button> : null}
+      <Outcome message={message} />
     </div>
   </div>
 }
