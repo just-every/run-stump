@@ -1747,6 +1747,62 @@
       "sha256": "f3a66736c3243874ce1e06589e7a4da30c64fa1f91363701a1720cc897131f36",
       "executable": false
     },
+    "src/stump/lib/imports/buffer.ts": {
+      "sha256": "2194649cc798d1d2bff067c5f5b2f006fae2dcd60d0dea43a35adb703e1e499d",
+      "executable": false
+    },
+    "src/stump/lib/imports/canonical.ts": {
+      "sha256": "b13483521cbb6158b9aac99ebfb164885c17abd262852ceca3aaf4027fb0b942",
+      "executable": false
+    },
+    "src/stump/lib/imports/csv.ts": {
+      "sha256": "00e6b78ae8169ce92b821d7218c121c00552357c74099add497ac319255d7b6f",
+      "executable": false
+    },
+    "src/stump/lib/imports/diff.ts": {
+      "sha256": "dd8b9864ac4897fd46479e01751b60599ea1127a00c839226d17304f7b8a92a8",
+      "executable": false
+    },
+    "src/stump/lib/imports/index.ts": {
+      "sha256": "db325a5244b721212962375ebe553bc89da289863c243a14aa02b0c7e6876484",
+      "executable": false
+    },
+    "src/stump/lib/imports/outreach-md.ts": {
+      "sha256": "43cc4de51bb36c3f3e5e0d6beff454678defd2ac0e9f179518acb0357eb8a809",
+      "executable": false
+    },
+    "src/stump/lib/imports/plan.ts": {
+      "sha256": "0045b0822c79f8ef6f48a37ca251f5de94e1e5b2f6d1156c527a671436e94214",
+      "executable": false
+    },
+    "src/stump/lib/imports/README.md": {
+      "sha256": "e9199a83e140927621f9453b2fc187136eb042b780a56ea4729087cf675e5dca",
+      "executable": false
+    },
+    "src/stump/lib/imports/records.ts": {
+      "sha256": "b7abe3d072da7cdbc5e0a821b81f765b9b73dc97a9ec3ae25fe7a3de1c05aa14",
+      "executable": false
+    },
+    "src/stump/lib/imports/types.ts": {
+      "sha256": "11fb2b3b0d6f2f70abf1ca102d9c299ed06f074f803d899330c38c049dfc0b02",
+      "executable": false
+    },
+    "src/stump/lib/imports/url.ts": {
+      "sha256": "182d3d0709b36b453538185ec113ea2f4812587369b21069b6096f01a381ee7b",
+      "executable": false
+    },
+    "src/stump/lib/imports/venue-assemble.ts": {
+      "sha256": "05250f811b5d94031327737faf54353a544497caf4c2f8f1485253826701abab",
+      "executable": false
+    },
+    "src/stump/lib/imports/venue-fields.ts": {
+      "sha256": "60586afb0185465a1f7e27b1beb271b3119f57ae59da46a11a9cba189dea8b5a",
+      "executable": false
+    },
+    "src/stump/lib/imports/venues-csv.ts": {
+      "sha256": "e8f9ae849a2c5c1ab63d278fd9ca384b7740b4b29683434f0593a8340f436978",
+      "executable": false
+    },
     "tests/incremental-typecheck.test.mjs": {
       "sha256": "a11d6b89e7219137540c7052683c5f4d9ba7ddf16f66d34c1f56ae34029c0a95",
       "executable": false

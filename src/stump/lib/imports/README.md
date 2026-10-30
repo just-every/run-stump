@@ -35,3 +35,5 @@ pass `options.choices` (`keep` or `take_import`, keyed by `targetKey(kind, id)`)
 | `buffer_draft` | `item` (state `draft`) | `buffer-draft:<update id>` |
 
 Values hold product names (`products[{name}]`, `product_name`) and channel references (`channel_key`, `venue_key`, the target id of the parent), which the target adapter resolves to Stump ids.
+
+The door's readers take JSON or NDJSON, while two of these sources are text (Markdown, CSV). The spine runs the matching `parse*` on the uploaded text and hands `toRecords(parsed)` to the kit (for example as NDJSON, one record per line, with `parse: line => line`); `mapRecord` is then the kit mapping. Rejected rows reach the kit as records, so its plan reports each with its reasons.
