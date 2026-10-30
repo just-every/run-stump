@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "title": "stump",
+  "title": "Stump",
   "groups": [
     {
       "id": "application",
@@ -18,7 +18,7 @@
       "help": "The name shown in your new application.",
       "kind": "text",
       "required": true,
-      "default": "stump",
+      "default": "Stump",
       "group": "application"
     },
     {

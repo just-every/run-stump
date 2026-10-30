@@ -9,11 +9,19 @@ import { identity } from '../identity'
 import { runPricing } from '../base/run-pricing'
 import run from './run.json'
 
+// Base's composed homepage carries a fixed sub line; Stump's names the incumbents it replaces.
+const ALTERNATIVE_LINE = 'Open-source alternative to Hootsuite, Buffer and Typefully.'
+function homeHtml(...args: Parameters<typeof siteHomeHtml>): string {
+  const html = siteHomeHtml(...args), sub = /<p class="sub">[^<]*<\/p>/
+  if (!sub.test(html)) throw new Error('The composed homepage no longer has a sub line to replace.')
+  return html.replace(sub, `<p class="sub">${ALTERNATIVE_LINE}</p>`)
+}
+
 export function sitePages({ contract, hosting }: Partial<SiteContext> = {}): SiteBuild {
   const data: RunData = { ...run, pricing: runPricing }
   return {
     pages: [
-      { path: '/', html: siteHomeHtml(identity, data, contract) },
+      { path: '/', html: homeHtml(identity, data, contract) },
       { path: '/run', html: runPageHtml(identity, data, contract) },
       // rer supplies hosting (null when the seed does not deploy to Workers); a caller without it gets no hosting page.
       ...(hosting !== undefined ? [{ path: '/docs/hosting', html: hostingPageHtml(identity, data, hosting, contract) }] : []),

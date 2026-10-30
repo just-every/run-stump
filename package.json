@@ -30,6 +30,7 @@
     "describe": "rer describe",
     "check": "rer check",
     "deps": "rer install",
+    "source:lock": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
     "rer": "rer"
   },
   "dependencies": {

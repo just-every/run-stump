@@ -1,6 +1,5 @@
 // This edition's identity: what its installed Lobby and its run site say.
-// The name and colour are the ones setup saves in src/branding.json; replace
-// the purpose and tagline with the product's own when it has one.
+// The name and colour are the ones setup saves in src/branding.json.
 import type { EditionIdentity } from './base/identity'
 import branding from './branding.json'
 import site from '../deploy-site.json'
@@ -8,8 +7,8 @@ import site from '../deploy-site.json'
 export const identity: EditionIdentity = {
   product: branding.name,
   deployment: branding.name,
-  purpose: '{deployment} runs on a technical foundation: owner sign-in, a D1 database and local development mail.',
-  tagline: 'A technical foundation: owner sign-in, a D1 database and local development mail on one Cloudflare Worker.',
+  purpose: '{deployment} finds where your customers gather, shows up in your own voice and records what it brings in.',
+  tagline: 'Find where your customers gather, show up in your own voice, and see what it brings in.',
   signInPath: '/signin',
   // The run site `rer deploy --site` publishes (deploy-site.json).
   runSite: `https://${site.domain}`,

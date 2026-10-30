@@ -1,22 +1,15 @@
 {
   "id": "stump",
-  "name": "stump",
+  "name": "Stump",
   "version": "0.1.0",
   "maturity": "technical-foundation-not-product",
-  "category": "status",
+  "category": "marketing",
   "spine": {
     "id": "foundation",
     "record": "No domain record selected"
   },
-  "description": "TanStack Start and Hono Worker with real owner authentication, D1 and silent development mail suppression.",
-  "capabilities": [
-    {
-      "id": "http-dispatch",
-      "clauses": [
-        "HTTP-001"
-      ]
-    }
-  ],
+  "description": "Earned-channels marketing desk: find where your customers gather, show up in your own voice, and see what it brings in. New seed: the product target is entirely missing.",
+  "capabilities": [],
   "nonGoals": [
     "Finished product functionality",
     "Speculative domain data"
@@ -84,5 +77,10 @@
       "owner-claim",
       "agent-door"
     ]
-  }
+  },
+  "replaces": [
+    "Hootsuite",
+    "Buffer",
+    "Typefully"
+  ]
 }
