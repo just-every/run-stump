@@ -4,10 +4,12 @@
 // and has zero downtime"), so each sentence is read clause by clause: it is split at
 // ';', commas and the conjunctions 'and' and 'but', and a clause that names no product
 // takes the sentence's subject. A clause is matched to the company's claims by the
-// content words it shares with a claim (a claim is matched when at least three quarters
-// of its content words appear, and two or fewer words must all appear); clauses that
-// match nothing on their own are joined when together they match a claim whose wording
-// spans them. The result for each clause is one of:
+// content words it shares with a claim, both ways: a claim is matched when at least three
+// quarters of its content words appear (two or fewer must all appear), or when at least
+// three quarters of the clause's own content words, two or more and not counting a link,
+// are the claim's and every guarantee, superlative, compliance or comparison phrase the
+// clause has is the claim's too; clauses that match nothing on their own are joined when
+// together they match a claim whose wording spans them. The result for each clause is one of:
 //   matched          a current claim covers it
 //   banned           a claim the company must not make
 //   number_mismatch  it matches a claim but states another number than the claim's or
@@ -24,13 +26,14 @@
 // agent submitting the same draft get the same result: the check reads only the text,
 // the claims, the profiles and today's date.
 
-import { readSentence, startsWithPronoun } from './extract'
+import { readSentence, startsWithPronoun, strongPhrases } from './extract'
 import type { ClaimCandidate } from './extract'
 import { extractMentions, hostOfUrl } from './mentions'
 import type { MentionSet } from './mentions'
 import { extractNumbers, stripNumbers } from './numbers'
 import type { FoundNumber } from './numbers'
 import { contentTokens, foldText, sentenceSpans } from './sentences'
+import { extractUrls } from '../text/urls'
 import type { Span } from './sentences'
 import type { Claim, ClaimFinding, PersonProfile, ProductProfile } from './types'
 import { assertToday, claimStaleness, hasProof, isIsoDate } from './validate'
@@ -91,7 +94,7 @@ type Expected = FoundNumber & { unitless?: boolean }
 
 interface Prepared {
   claim: Claim
-  phrases: Array<{ tokens: Set<string>; numbers: FoundNumber[] }>
+  phrases: Array<{ tokens: Set<string>; numbers: FoundNumber[]; words: string }>
   proofNumbers: Expected[]
 }
 
@@ -115,7 +118,7 @@ function proofNumbersOf(value: string | number | undefined): Expected[] {
 function prepare(claim: Claim): Prepared {
   const phrases = [claim.text, ...(claim.aliases ?? [])].map((p) => {
     const numbers = extractNumbers(p)
-    return { tokens: new Set(contentTokens(stripNumbers(p, numbers))), numbers }
+    return { tokens: new Set(contentTokens(stripNumbers(p, numbers))), numbers, words: wordsOf(p) }
   })
   const proof = claim.proof
   const proofNumbers =
@@ -127,12 +130,31 @@ function prepare(claim: Claim): Prepared {
   return { claim, phrases, proofNumbers }
 }
 
+/** How much of the claim's wording the text says: the share of the claim's content words it covers. */
 function containment(claimTokens: Set<string>, sentenceTokens: Set<string>): number {
   if (claimTokens.size === 0) return 0
   let shared = 0
   for (const t of claimTokens) if (sentenceTokens.has(t)) shared++
   if (claimTokens.size <= 2) return shared === claimTokens.size ? 1 : 0
   return shared >= 2 ? shared / claimTokens.size : 0
+}
+
+/**
+ * How much of the text the claim says: the share of the text's own content words that are
+ * the claim's, counted only when at least two are shared. A sentence that says the core of
+ * a longer claim ("Orbit cuts triage time" against "Orbit cuts triage time by 30% for
+ * support teams") is the claim, though it covers too little of the claim's wording.
+ */
+function containedIn(claimTokens: Set<string>, sentenceTokens: Set<string>): number {
+  if (sentenceTokens.size < 2) return 0
+  let shared = 0
+  for (const t of sentenceTokens) if (claimTokens.has(t)) shared++
+  return shared >= 2 ? shared / sentenceTokens.size : 0
+}
+
+/** A text's words, folded and space-joined with a space at each end, for finding a phrase as whole words. */
+function wordsOf(text: string): string {
+  return ` ${(foldText(text).match(/[\p{L}\p{N}]+/gu) ?? []).join(' ')} `
 }
 
 const MATCH_THRESHOLD = 0.75
@@ -186,6 +208,17 @@ function numberConflict(claimNumbers: readonly FoundNumber[], proofNumbers: read
 }
 
 const label = (n: FoundNumber) => n.raw.trim()
+
+/** The text with every link blanked to spaces (offsets kept): a link's host and path are not words the sentence says. */
+function blankUrls(text: string, ownHosts: readonly string[]): string {
+  let out = ''
+  let cursor = 0
+  for (const u of extractUrls(text, { extraBareHosts: ownHosts })) {
+    out += text.slice(cursor, u.start) + ' '.repeat(u.end - u.start)
+    cursor = u.end
+  }
+  return out + text.slice(cursor)
+}
 
 function relevant(claims: readonly Claim[], productId: string | undefined): Claim[] {
   return claims.filter((c) => {
@@ -297,8 +330,18 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
     const spanNumbers = numbersIn(span)
     const candidate = readSentence(span, ctx, carried?.name, spanNumbers)
     const numbers = candidate?.numbers ?? spanNumbers
+    // How much of the claim the clause says counts every word it writes, a link's included.
     const tokens = new Set(contentTokens(stripNumbers(span.text, numbers)))
-    if (carried) for (const t of contentTokens(carried.name)) tokens.add(t)
+    // How much of the clause the claim says counts the words it says, never a link's host or path.
+    const said = new Set(contentTokens(stripNumbers(blankUrls(span.text, ownHosts), numbers)))
+    // A clause about the product the sentence before named counts that product's name.
+    if (carried) for (const t of contentTokens(carried.name)) {
+      tokens.add(t)
+      said.add(t)
+    }
+    // A guarantee, superlative, compliance or comparison phrase the claim does not say is the
+    // clause's own statement: the clause is not inside the claim, however few words it adds.
+    const strong = candidate ? strongPhrases(candidate).map(wordsOf) : []
     const folded = foldText(span.text)
     let banned: Hit | undefined
     let best: Hit | undefined
@@ -307,7 +350,8 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
       let score = 0
       let conflict: Conflict | undefined
       for (const phrase of p.phrases) {
-        const c = containment(phrase.tokens, tokens)
+        const inside = strong.every((w) => phrase.words.includes(w)) ? containedIn(phrase.tokens, said) : 0
+        const c = Math.max(containment(phrase.tokens, tokens), inside)
         if (c >= MATCH_THRESHOLD && c >= score) {
           score = c
           conflict = numberConflict(phrase.numbers, p.proofNumbers, numbers)

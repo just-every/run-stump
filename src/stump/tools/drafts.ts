@@ -3,10 +3,9 @@ import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
 import { claimStaleness, isCurrentRecord } from '../lib/claims/index.ts'
 import { countText, type Network } from '../lib/text/index.ts'
 import { CONTRIBUTORS, EDITORS, EVERYONE } from '../people/roles.ts'
-import { readPerson } from '../people/store.ts'
-import { checkDraft, checkView, COUNTED, counted, loadBrand, type Draft } from '../drafting/check.ts'
+import { checkView, COUNTED, counted, loadBrand } from '../drafting/check.ts'
 import { wordDiff } from '../drafting/diff.ts'
-import { itemView, mayWrite, prepareSave, readItem, readRevision, saveItem } from '../drafting/items.ts'
+import { checkRow, heldBecause, holdOf, itemView, mayWrite, prepareSave, readItem, readRevision, saveItem, storeCheck } from '../drafting/items.ts'
 import { claimRecord, itemRecord, itemText, libClaim, masterRecord, parse, today, type Row } from '../drafting/records.ts'
 import { createItem, createMaster, draftFromSource, draftingClasses, screen } from '../drafting/write.ts'
 
@@ -48,14 +47,10 @@ async function variants(ctx: ActionContext, masterId: string) {
     WHERE i.master_id=? ORDER BY i.created_at,i.id`).bind(masterId).all<Row>()
   return rows.results
 }
-const draftOf = (row: Row, next?: { text: string | null; parts: string[] | null }): Draft => ({
-  id: String(row.id), format: String(row.format), network: row.network as string | null, account_id: row.account_id as string | null, venue_id: row.venue_id as string | null,
-  person_id: String(row.person_id), product_id: row.product_id as string | null, master_id: row.master_id as string | null,
-  text: next ? next.text : row.text as string | null, parts: next ? next.parts : parse<string[] | null>(row.parts, null),
+/** A held refusal's fields: the rule, its source and the venue where a venue rule holds the item, and the hold itself. */
+const heldFields = (itemId: unknown, hold: Record<string, unknown> | null) => ({
+  item_id: itemId, rule: hold?.rule ?? hold?.reason ?? null, ...(hold?.source_url !== undefined ? { source_url: hold.source_url } : {}), ...(hold?.venue_id ? { venue_id: hold.venue_id } : {}), hold,
 })
-async function freshCheck(ctx: ActionContext, row: Row) {
-  return checkDraft(ctx.db, await loadBrand(ctx.db), draftOf(row), await readPerson(ctx.db, String(row.person_id)), ctx.now())
-}
 const nextText = (args: Args) => {
   if (Array.isArray(args.parts)) return { text: null, parts: args.parts as string[] }
   if (typeof args.text === 'string') return { text: args.text, parts: null }
@@ -167,7 +162,7 @@ export const draftTools: StumpTool[] = [{
     mark_ready: {
       roles: CONTRIBUTORS, properties: { item_id: id }, required: ['item_id'],
       async classify(args, ctx) {
-        const row = await readItem(ctx, args.item_id), check = await freshCheck(ctx, row)
+        const row = await readItem(ctx, args.item_id), check = await checkRow(ctx, row)
         // A connected person's item that mentions the company must disclose it first (D-2, STUMP-TRUTH-002), through every door.
         const flag = check.flags.find(item => item.code === 'disclosure_missing' || item.code === 'disclosure_below_cut')
         if (flag) await refuseAct(ctx, 'stump.drafts.revise', 'mark_ready', { rule: 'D-2', source: 'STUMP-TRUTH-002' }, { item_id: String(row.id), flag: flag.code, because: flag.because ?? null })
@@ -179,21 +174,31 @@ export const draftTools: StumpTool[] = [{
         const row = await readItem(ctx, args.item_id)
         mayWrite(ctx, row.person_id)
         if (row.state === 'ready') return itemView(ctx.db, String(row.id))
-        if (row.state === 'held') refuse('held', { item_id: row.id, hold: parse(row.hold, null) })
+        // A held item names what holds it: the venue rule with its source, or the near-duplicate match.
+        if (row.state === 'held') refuse('held', heldFields(row.id, parse<Record<string, unknown> | null>(row.hold, null)))
         if (row.state !== 'draft') refuse('invalid_state', { item_id: row.id, state: row.state })
-        const check = await freshCheck(ctx, row), now = ctx.now()
-        if (check.duplicates.length) {
-          // Nearly repeats something queued or posted since it was drafted: held, naming the match, until rewritten (STUMP-TRUTH-004).
+        const check = await checkRow(ctx, row), now = ctx.now()
+        if (check.duplicates.length || check.venue_hold) {
+          // Nearly repeats something queued or posted since it was drafted (STUMP-TRUTH-004), or its venue's rules hold it where it is aimed (D-3):
+          // held, naming the match or the rule, until it is rewritten or the rule allows it.
+          const hold = holdOf(check, String(row.person_id))
           await ctx.db.batch([
             ctx.db.prepare("UPDATE stump_items SET state='held',flags=?,hold=?,updated_at=? WHERE id=? AND state='draft' AND revision=?")
-              .bind(JSON.stringify(check.flags), JSON.stringify({ owner_id: row.person_id, reason: 'near_duplicate', matches: check.duplicates, next_attempt_at: null }), now, row.id, row.revision),
-            ctx.db.prepare("INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at) SELECT ?,?,'draft','held',?,?,'near_duplicate',? WHERE changes()=1")
-              .bind(crypto.randomUUID(), row.id, ctx.person.id, ctx.agent?.id ?? null, now),
+              .bind(JSON.stringify(check.flags), hold, now, row.id, row.revision),
+            ctx.db.prepare("INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at) SELECT ?,?,'draft','held',?,?,?,? WHERE changes()=1")
+              .bind(crypto.randomUUID(), row.id, ctx.person.id, ctx.agent?.id ?? null, heldBecause(check), now),
           ])
-          return itemView(ctx.db, String(row.id))
+          if (check.duplicates.length) return itemView(ctx.db, String(row.id))
+          refuse('held', heldFields(row.id, JSON.parse(hold!) as Record<string, unknown>))
         }
+        // Every blocking flag is named: an avoided word, a missing alt text, a claim, a limit (STUMP-BRAND-001.3, -004, STUMP-PUBLISH-002.5).
         const blocking = check.flags.filter(flag => flag.blocking)
-        if (blocking.length) refuse('checks_failed', { item_id: row.id, flags: blocking })
+        if (blocking.length) {
+          // The item keeps what this check found, so its flags name what stops it on every screen and door.
+          await storeCheck(ctx, row, check)
+          const words = blocking.filter(flag => flag.code === 'avoid_word').map(flag => flag.word)
+          refuse('checks_failed', { item_id: row.id, codes: [...new Set(blocking.map(flag => flag.code))], ...(words.length ? { words: [...new Set(words)] } : {}), flags: blocking })
+        }
         const approvers = ctx.approvers.length ? JSON.stringify(ctx.approvers) : null
         const [update] = await ctx.db.batch([
           ctx.db.prepare("UPDATE stump_items SET state='ready',flags=?,claims_used=?,approved_by=?,updated_at=? WHERE id=? AND state='draft' AND revision=?")
@@ -235,8 +240,7 @@ export const draftTools: StumpTool[] = [{
       classify: () => standard(),
       target: itemTarget,
       async run(args, ctx) {
-        const row = await readItem(ctx, args.item_id), check = await freshCheck(ctx, row)
-        await ctx.db.prepare('UPDATE stump_items SET flags=?,claims_used=? WHERE id=? AND revision=?').bind(JSON.stringify(check.flags), JSON.stringify(check.claims_used), row.id, row.revision).run()
+        const row = await readItem(ctx, args.item_id), check = await storeCheck(ctx, row)
         return { item_id: row.id, revision: Number(row.revision), ...checkView(check) }
       },
     },
@@ -261,7 +265,7 @@ export const draftTools: StumpTool[] = [{
         const claim = claimRecord(claimRow)
         // Only a current claim with proof backs a sentence (STUMP-BRAND-004.4).
         if (claim.kind === 'banned' || !isCurrentRecord(libClaim(claim)) || claimStaleness({ review_on: claim.review_on ?? undefined }, today(ctx.now())).stale) refuse('claim_not_current', { claim_id: claim.id, kind: claim.kind })
-        const before = await freshCheck(ctx, row)
+        const before = await checkRow(ctx, row)
         // The claim already covers the sentence (recorded with proof after the draft was flagged): the item is backed as it stands.
         const covered = before.claims.filter(finding => finding.status === 'matched' && finding.claim_id === claim.id && (typeof args.text !== 'string' || finding.text === args.text))
         if (covered.length) {
@@ -273,7 +277,7 @@ export const draftTools: StumpTool[] = [{
         if (chosen.length !== 1) refuse('invalid_arguments', { field: 'text', reason: chosen.length ? 'Name the sentence to back.' : 'Nothing in the item is unmatched.', unmatched: unmatched.map(finding => finding.text) })
         // The wording joins the claim's aliases, so it matches here and in later drafts.
         await ctx.db.prepare('UPDATE stump_claims SET aliases=?,revision=revision+1,updated_at=? WHERE id=?').bind(JSON.stringify([...new Set([...claim.aliases, chosen[0]!.text])]), ctx.now(), claim.id).run()
-        const check = await freshCheck(ctx, row)
+        const check = await checkRow(ctx, row)
         await ctx.db.prepare('UPDATE stump_items SET flags=?,claims_used=? WHERE id=? AND revision=?').bind(JSON.stringify(check.flags), JSON.stringify(check.claims_used), row.id, row.revision).run()
         return { item_id: row.id, backed: { claim_id: claim.id, text: chosen[0]!.text }, ...checkView(check) }
       },

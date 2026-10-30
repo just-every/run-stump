@@ -19,6 +19,30 @@ export async function readItem(ctx: Pick<ActionContext, 'db' | 'person'>, id: un
   return row
 }
 
+/** An item row as the draft check reads it, with new text when a save is being checked. */
+export const draftOf = (row: Row, next?: { text: string | null; parts: string[] | null }): Draft => ({
+  id: String(row.id), format: String(row.format), network: row.network as string | null, account_id: row.account_id as string | null, venue_id: row.venue_id as string | null,
+  person_id: String(row.person_id), product_id: row.product_id as string | null, master_id: row.master_id as string | null,
+  text: next ? next.text : row.text as string | null, parts: next ? next.parts : parse<string[] | null>(row.parts, null),
+  reply_to: parse(row.reply_to, null), options: parse(row.options, {}),
+})
+
+/** The draft check of an item as it stands now. */
+export async function checkRow(ctx: Pick<ActionContext, 'db' | 'now'>, row: Row) {
+  return checkDraft(ctx.db, await loadBrand(ctx.db), draftOf(row), await readPerson(ctx.db, String(row.person_id)), ctx.now())
+}
+
+/**
+ * Runs the draft check on an item as it stands and stores its flags and the claims it used
+ * (the draft-check data contract). Anything that changes what the check reads without a new
+ * revision, such as attaching media or setting its alt text, calls this.
+ */
+export async function storeCheck(ctx: Pick<ActionContext, 'db' | 'now'>, row: Row, check?: CheckResult) {
+  const result = check ?? await checkRow(ctx, row)
+  await ctx.db.prepare('UPDATE stump_items SET flags=?,claims_used=? WHERE id=? AND revision=?').bind(JSON.stringify(result.flags), JSON.stringify(result.claims_used), row.id, row.revision).run()
+  return result
+}
+
 /** Contributors write their own items; editors and above write anyone's. */
 export function mayWrite(ctx: Pick<ActionContext, 'person'>, personId: unknown) {
   if (['owner', 'admin', 'editor'].includes(ctx.person.role)) return
@@ -26,19 +50,23 @@ export function mayWrite(ctx: Pick<ActionContext, 'person'>, personId: unknown) 
   refuse('forbidden', { role: ctx.person.role, person_id: String(personId) })
 }
 
-/** The state an item moves to after a check: held while it nearly repeats something, back to draft once rewritten. */
+/** The state an item moves to after a check: held while it nearly repeats something or its venue's rules hold it, back to draft once rewritten. */
 function nextState(current: ItemState, check: CheckResult, saved: boolean): ItemState {
-  if (check.duplicates.length) return 'held'
+  if (check.duplicates.length || check.venue_hold) return 'held'
   if (current === 'held') return 'draft'
   return saved && ['ready', 'scheduled', 'paused', 'failed'].includes(current) ? 'draft' : current
 }
-const holdFor = (check: CheckResult, ownerId: string) => check.duplicates.length
-  ? JSON.stringify({ owner_id: ownerId, reason: 'near_duplicate', detail: `Nearly repeats ${check.duplicates.map(match => `${match.kind} ${match.id}`).join(', ')}. Rewrite it to clear the hold.`, matches: check.duplicates, next_attempt_at: null })
-  : null
+/** The hold a check puts on an item, naming what holds it: the near-duplicate match, or the venue rule with its source (D-3). */
+export function holdOf(check: CheckResult, ownerId: string) {
+  if (check.duplicates.length) return JSON.stringify({ owner_id: ownerId, reason: 'near_duplicate', detail: `Nearly repeats ${check.duplicates.map(match => `${match.kind} ${match.id}`).join(', ')}. Rewrite it to clear the hold.`, matches: check.duplicates, next_attempt_at: null })
+  const venue = check.venue_hold
+  return venue ? JSON.stringify({ owner_id: ownerId, reason: venue.rule, rule: venue.rule, detail: venue.reason, source_url: venue.source_url, venue_id: venue.venue_id, next_attempt_at: null }) : null
+}
+/** Why an item moved to held, for its history. */
+export const heldBecause = (check: CheckResult) => check.duplicates.length ? 'near_duplicate' : check.venue_hold ? `${check.venue_hold.rule}: ${check.venue_hold.reason}` : 'held'
 
 export interface NewItem extends Draft {
-  id: string; sources?: unknown[]; ai?: unknown; recipient?: unknown; subject?: string | null; reply_to?: unknown; campaign?: string | null
-  options?: Record<string, unknown>; differs_from_master?: 0 | 1
+  id: string; sources?: unknown[]; ai?: unknown; recipient?: unknown; subject?: string | null; campaign?: string | null; differs_from_master?: 0 | 1
 }
 
 /** Statements that insert one new item at revision 1 with its check, and the check itself. */
@@ -54,12 +82,12 @@ export async function prepareInsert(ctx: ActionContext, brand: Brand, item: NewI
         hold,recipient,subject,reply_to,differs_from_master,campaign,options,agent,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
         .bind(item.id, item.format, item.network, item.account_id, item.venue_id, item.person_id, item.product_id, item.master_id, state, item.parts?.length ? null : item.text,
           item.parts?.length ? JSON.stringify(item.parts) : null, JSON.stringify(check.flags), JSON.stringify(check.claims_used), JSON.stringify(item.sources ?? []),
-          item.ai ? JSON.stringify(item.ai) : null, holdFor(check, item.person_id), item.recipient ? JSON.stringify(item.recipient) : null, item.subject ?? null,
+          item.ai ? JSON.stringify(item.ai) : null, holdOf(check, item.person_id), item.recipient ? JSON.stringify(item.recipient) : null, item.subject ?? null,
           item.reply_to ? JSON.stringify(item.reply_to) : null, item.differs_from_master ?? 0, item.campaign ?? null, JSON.stringify(item.options ?? {}), agent, ctx.person.id, now, now),
       ctx.db.prepare('INSERT INTO stump_item_revisions(item_id,revision,text,parts,saved_by,agent_id,at) VALUES(?,1,?,?,?,?,?)')
         .bind(item.id, item.parts?.length ? null : item.text, item.parts?.length ? JSON.stringify(item.parts) : null, ctx.person.id, ctx.agent?.id ?? null, now),
       ctx.db.prepare("INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at) VALUES(?,?,NULL,?,?,?,?,?)")
-        .bind(crypto.randomUUID(), item.id, state, ctx.person.id, ctx.agent?.id ?? null, state === 'held' ? 'near_duplicate' : 'drafted', now),
+        .bind(crypto.randomUUID(), item.id, state, ctx.person.id, ctx.agent?.id ?? null, state === 'held' ? heldBecause(check) : 'drafted', now),
     ],
   }
 }
@@ -80,8 +108,7 @@ export async function insertItems(ctx: ActionContext, items: NewItem[], before: 
 export async function prepareSave(ctx: ActionContext, brand: Brand, row: Row, next: { text: string | null; parts: string[] | null; differs_from_master?: 0 | 1 }, reason: string) {
   const current = row.state as ItemState
   if (NOT_EDITABLE.includes(current)) refuse('not_editable', { item_id: row.id, state: current })
-  const draft: Draft = { id: String(row.id), format: String(row.format), network: row.network as string | null, account_id: row.account_id as string | null,
-    venue_id: row.venue_id as string | null, person_id: String(row.person_id), product_id: row.product_id as string | null, master_id: row.master_id as string | null, ...next }
+  const draft: Draft = draftOf(row, next)
   const person = await readPerson(ctx.db, draft.person_id), now = ctx.now()
   const check = await checkDraft(ctx.db, brand, draft, person, now)
   const state = nextState(current, check, true)
@@ -92,13 +119,13 @@ export async function prepareSave(ctx: ActionContext, brand: Brand, row: Row, ne
   const statements = [
     ctx.db.prepare(`UPDATE stump_items SET text=?,parts=?,flags=?,claims_used=?,state=?,revision=?,hold=?,differs_from_master=?,
       scheduled_at=CASE WHEN ? THEN NULL ELSE scheduled_at END,approved_by=NULL,updated_at=? WHERE id=? AND revision=?`)
-      .bind(text, parts, JSON.stringify(check.flags), JSON.stringify(check.claims_used), state, revision, holdFor(check, draft.person_id),
+      .bind(text, parts, JSON.stringify(check.flags), JSON.stringify(check.claims_used), state, revision, holdOf(check, draft.person_id),
         next.differs_from_master ?? Number(row.differs_from_master ?? 0), unscheduled ? 1 : 0, now, row.id, row.revision),
     ctx.db.prepare('INSERT INTO stump_item_revisions(item_id,revision,text,parts,saved_by,agent_id,at) SELECT ?,?,?,?,?,?,? WHERE changes()=1')
       .bind(row.id, revision, text, parts, ctx.person.id, ctx.agent?.id ?? null, now),
     ...(state !== current ? [ctx.db.prepare(`INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at)
       SELECT ?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM stump_item_revisions WHERE item_id=? AND revision=? AND at=?)`)
-      .bind(crypto.randomUUID(), row.id, current, state, ctx.person.id, ctx.agent?.id ?? null, state === 'held' ? 'near_duplicate' : reason, now, row.id, revision, now)] : []),
+      .bind(crypto.randomUUID(), row.id, current, state, ctx.person.id, ctx.agent?.id ?? null, state === 'held' ? heldBecause(check) : reason, now, row.id, revision, now)] : []),
   ]
   return { statements, check, state, revision }
 }

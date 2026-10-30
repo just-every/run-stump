@@ -7,9 +7,17 @@ export interface Variant { item_id: string; network: string | null; account_id: 
 export interface MasterPreview { master: Master; items: Variant[]; total: number }
 export interface ClaimFinding { status: 'matched' | 'unmatched' | 'banned' | 'stale' | 'number_mismatch'; claim_id?: string; text: string; expected?: string[]; found?: string[]; reason?: string; review_on?: string }
 export interface Check { passed: boolean; claims: ClaimFinding[]; flags: Flag[]; disclosure: { required: boolean; status: string }; duplicates: Array<{ id: string; kind: string }> }
-export interface Product { id: string; name: string; other_names: string[]; description: string | null; tone: string; competitors: string[]; avoid_words: string[]; use_words: string[] }
+export interface Product { id: string; name: string; other_names: string[]; description: string | null; tone: string; competitors: string[]; words_avoid: string[]; words_use: string[] }
 export interface ClaimView { id: string; product_id: string | null; kind: 'allowed' | 'banned' | 'comparative'; text: string; proof: unknown; owner_id: string; review_on: string | null; reason: string | null; competitor: string | null; source_url: string | null; source_date: string | null; stale: boolean }
 export interface VoiceView { id: string; person_id: string; name: string; do: string[]; dont: string[]; state: string; sample_count: number }
+
+/** A claim's proof in a few words: its own label, else where it lives. */
+export function proofLabel(proof: unknown): string {
+  if (typeof proof === 'string') return proof.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+  if (!proof || typeof proof !== 'object') return ''
+  const { text, document, url } = proof as Record<string, unknown>
+  return String(text ?? document ?? (typeof url === 'string' ? url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : ''))
+}
 
 /** Network names are text, written the way each network writes its own. */
 export const NETWORK_NAMES: Record<string, string> = { x: 'X', bluesky: 'Bluesky', mastodon: 'Mastodon', linkedin: 'LinkedIn', threads: 'Threads' }
@@ -31,6 +39,8 @@ export function flagLine(flag: Flag): string {
     case 'disclosure_below_cut': return 'Move the disclosure above "see more"'
     case 'near_duplicate': return `Nearly repeats ${flag.matches?.length ?? 1} earlier ${flag.matches?.length === 1 ? 'post' : 'posts'}`
     case 'vote_request': return `${quote(String(flag.text ?? ''))} asks for votes`
+    case 'alt_text_missing': return `${String(flag.name ?? 'An image')} needs alt text`
+    case 'venue_rule': return String(flag.reason ?? `Held by the venue's ${String(flag.rule ?? '')} rule`)
     default: return flag.code.replace(/_/g, ' ')
   }
 }

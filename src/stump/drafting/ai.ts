@@ -100,8 +100,8 @@ function brief(request: DraftRequest) {
   const fields: Record<string, unknown> = { format: request.format }
   if (request.network) fields.network = request.network
   if (request.limit) fields.limit = request.limit
-  if (request.product) fields.product = { name: request.product.name, description: request.product.description, audience: request.product.audience, positioning: request.product.positioning,
-    tone: request.product.tone, use_words: request.product.use_words, avoid_words: request.product.avoid_words }
+  if (request.product) fields.product = { name: request.product.name, description: request.product.description, audience: request.product.audience,
+    tone: request.product.tone, words_use: request.product.words_use, words_avoid: request.product.words_avoid }
   if (request.voice) fields.voice = { samples: request.voice.samples, do: request.voice.do, dont: request.voice.dont }
   fields.claims = { allowed: claims.allowed, comparative: claims.comparative, banned: claims.banned }
   if (request.venue) fields.venue_rules = { venue: request.venue.name, rules: request.venue.rules }

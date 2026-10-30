@@ -12,18 +12,18 @@ export const today = (now: number) => new Date(now).toISOString().slice(0, 10)
 const text = (value: unknown) => typeof value === 'string' ? value : null
 
 export interface ProductRecord {
-  id: string; name: string; other_names: string[]; description: string | null; audience: string | null; positioning: string | null
-  urls: string[]; competitors: string[]; use_words: string[]; avoid_words: string[]; tone: string; revision: number; updated_at: string | null
+  id: string; name: string; other_names: string[]; description: string | null; audience: string | null
+  urls: string[]; competitors: string[]; words_use: string[]; words_avoid: string[]; tone: string; revision: number; updated_at: string | null
 }
 export const productRecord = (row: Row): ProductRecord => ({
   id: String(row.id), name: String(row.name), other_names: parse(row.names, []), description: text(row.description), audience: text(row.audience),
-  positioning: text(row.positioning), urls: parse(row.urls, []), competitors: parse(row.competitors, []), use_words: parse(row.use_words, []),
-  avoid_words: parse(row.avoid_words, []), tone: (() => { const tone = parse<unknown>(row.tone, ''); return typeof tone === 'string' ? tone : '' })(),
+  urls: parse(row.urls, []), competitors: parse(row.competitors, []), words_use: parse(row.use_words, []),
+  words_avoid: parse(row.avoid_words, []), tone: (() => { const tone = parse<unknown>(row.tone, ''); return typeof tone === 'string' ? tone : '' })(),
   revision: Number(row.revision), updated_at: iso(row.updated_at),
 })
 /** A product as the claim check reads it: names, URLs, competitors and avoided words. */
 export const productProfile = (product: ProductRecord): ProductProfile => ({
-  id: product.id, name: product.name, other_names: product.other_names, urls: product.urls, competitors: product.competitors, avoid: product.avoid_words,
+  id: product.id, name: product.name, other_names: product.other_names, urls: product.urls, competitors: product.competitors, avoid: product.words_avoid,
 })
 
 export interface ClaimRecord {

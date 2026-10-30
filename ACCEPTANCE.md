@@ -542,8 +542,8 @@ Core · published · **partial** · From new
 3. A word on the avoid list is flagged in a draft before it can be marked ready.
 4. Changing the profile changes the next draft and leaves existing drafts as they were.
 
-**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"; `tests/stump/drafting.test.mjs` "a draft from a changelog goes through the company's AI provider with the voice guide and current claims, and a failure leaves no draft"
-**Gap.** Products with names, competitors, use and avoid words and tone, and their recognition in drafts, are built through the person door and MCP; the tone and profile reach each AI request. Not yet asserted in a repo test: two tones from one source (.1), the avoid-word flag (.3) and profile changes (.4); recognition in a finding (.2) waits for the watches lane.
+**Evidence.** `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"; `tests/stump/drafting.test.mjs` "a draft from a changelog goes through the company's AI provider with the voice guide and current claims, and a failure leaves no draft"; `tests/stump/drafting.test.mjs` "an avoided word and an image without alt text keep an item from ready, each named, until they are fixed"
+**Gap.** Products with names, competitors, words to use and avoid and tone, and their recognition in drafts, are built through the person door and MCP; the tone and profile reach each AI request. Point .3 is asserted: a draft with an avoided word cannot be marked ready, and the refusal names the word. Not yet asserted in a repo test: two tones from one source (.1) and profile changes (.4); recognition in a finding (.2) waits for the watches lane. The product fields follow the v0.1.0 interface, which has no positioning field.
 
 #### STUMP-BRAND-002 — A real person's voice
 

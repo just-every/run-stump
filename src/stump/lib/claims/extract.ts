@@ -107,6 +107,21 @@ export function readSentence(span: Span, ctx: ExtractContext, pronounProduct?: s
   return { ...span, reasons, numbers, competitor: reasons.includes('comparison') ? competitor : undefined }
 }
 
+/**
+ * The phrases that make a candidate a guarantee, a superlative, a compliance statement or a
+ * comparison ("guaranteed", "fastest", "SOC 2", "faster than"), folded, for the reasons it carries.
+ */
+export function strongPhrases(candidate: ClaimCandidate): string[] {
+  const folded = foldText(candidate.text)
+  const kinds: Array<[CandidateReason, RegExp]> = [['guarantee', GUARANTEE], ['superlative', SUPERLATIVE], ['compliance', COMPLIANCE], ['comparison', COMPARISON]]
+  const out: string[] = []
+  for (const [reason, re] of kinds) {
+    if (!candidate.reasons.includes(reason)) continue
+    for (const m of folded.matchAll(new RegExp(re.source, 'g'))) out.push(m[0])
+  }
+  return out
+}
+
 export function findClaimCandidates(text: string, ctx: ExtractContext): ClaimCandidate[] {
   const out: ClaimCandidate[] = []
   for (const span of sentenceSpans(text, ctx.own_hosts)) {

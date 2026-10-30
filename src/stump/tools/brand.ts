@@ -1,5 +1,5 @@
 import { refuse, refuseAct } from '../actions/refusals.ts'
-import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
+import type { ActionContext, StumpTool } from '../actions/types.ts'
 import { claimStaleness, isIsoDate, validateClaim, type Claim } from '../lib/claims/index.ts'
 import { EDITORS, EVERYONE, type Role } from '../people/roles.ts'
 import { readPerson } from '../people/store.ts'
@@ -16,28 +16,13 @@ const url = { type: 'string', minLength: 1, maxLength: 2048 }
 // A proof number may carry its unit apart ({number: 30, unit: '%'}); the check reads them as one value ('30%').
 const proof = { anyOf: [{ type: 'string', minLength: 1, maxLength: 2048 }, { type: 'object', properties: { url, document: long, number: { type: ['string', 'number'] }, unit: { type: 'string', minLength: 1, maxLength: 24 }, date, text: long }, additionalProperties: false, minProperties: 1 }] }
 
-// The words a product uses and avoids, as one list or a comma-separated line, under any of the names the profile is written with.
-const wordList = { anyOf: [words(50, 60), { type: 'string', minLength: 1, maxLength: 1000 }] }
-// Each list answers to the ways a profile names it, so a list is never dropped for its spelling.
-const namesFor = (verb: 'use' | 'avoid', past: string) =>
-  [`${verb}_words`, `${past}_words`, `words_${past}`, `words_to_${verb}`, `${verb}_list`, `${verb}_terms`, `terms_to_${verb}`, `${verb}s`, verb]
-const WORD_NAMES = { use_words: namesFor('use', 'used'), avoid_words: namesFor('avoid', 'avoided') } as const
-const productFields = { name: short, other_names: words(20, 120), description: long, audience: long, positioning: long, urls: words(10, 2048), competitors: words(20, 120),
-  ...Object.fromEntries([...WORD_NAMES.use_words, ...WORD_NAMES.avoid_words].map(name => [name, wordList])),
-  words: { type: 'object', additionalProperties: false, minProperties: 1, properties: { use: wordList, avoid: wordList } }, tone: { type: 'string', minLength: 1, maxLength: 280 } }
-const PROFILE_KEYS = ['name', 'other_names', 'description', 'audience', 'positioning', 'urls', 'competitors', 'tone'] as const
+// A product's profile, exactly the interface's fields (V1 stump.brand.manage).
+const productFields = { name: short, other_names: words(20, 120), description: long, audience: long, urls: words(10, 2048), competitors: words(20, 120),
+  words_use: words(50, 60), words_avoid: words(50, 60), tone: { type: 'string', minLength: 1, maxLength: 280 } }
+const PROFILE_KEYS = ['name', 'other_names', 'description', 'audience', 'urls', 'competitors', 'words_use', 'words_avoid', 'tone'] as const
+/** A word list as stored: trimmed, without blanks or repeats. */
+const wordList = (value: unknown) => [...new Set(((value as string[] | undefined) ?? []).map(word => word.trim()).filter(Boolean))]
 
-/** The use and avoid lists a call gives, each only when the call names it. */
-function wordLists(args: Args): Partial<Record<keyof typeof WORD_NAMES, string[]>> {
-  const nested = (args.words ?? {}) as { use?: unknown; avoid?: unknown }
-  const listOf = (value: unknown) => (Array.isArray(value) ? value as string[] : String(value).split(',')).map(word => word.trim()).filter(Boolean)
-  const out: Partial<Record<keyof typeof WORD_NAMES, string[]>> = {}
-  for (const [field, names] of Object.entries(WORD_NAMES) as Array<[keyof typeof WORD_NAMES, readonly string[]]>) {
-    const given = [...names.map(name => args[name]), field === 'use_words' ? nested.use : nested.avoid].filter(value => value !== undefined)
-    if (given.length) out[field] = [...new Set(given.flatMap(listOf))]
-  }
-  return out
-}
 const claimFields = { product_id: id, text: { type: 'string', minLength: 1, maxLength: 500 }, kind: { enum: ['allowed', 'banned', 'comparative'] }, proof, owner_id: id, review_on: date, reason: long, competitor: short, source_url: url, source_date: date }
 const voiceFields = { samples: { type: 'array', minItems: 1, maxItems: 50, items: { type: 'string', minLength: 1, maxLength: 5000 } }, do: words(20, 280), dont: words(20, 280) }
 
@@ -109,9 +94,9 @@ export const brandTools: StumpTool[] = [{
       summary: args => ({ target: { name: `Add product ${String(args.name)}` } }),
       async run(args, ctx) {
         const productId = crypto.randomUUID(), now = ctx.now()
-        await ctx.db.prepare(`INSERT INTO stump_products(id,name,names,description,audience,positioning,urls,competitors,use_words,avoid_words,tone,created_by,created_at,updated_at)
-          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(productId, String(args.name).trim(), JSON.stringify(args.other_names ?? []), args.description ?? null, args.audience ?? null,
-            args.positioning ?? null, JSON.stringify(args.urls ?? []), JSON.stringify(args.competitors ?? []), JSON.stringify(wordLists(args).use_words ?? []), JSON.stringify(wordLists(args).avoid_words ?? []),
+        await ctx.db.prepare(`INSERT INTO stump_products(id,name,names,description,audience,urls,competitors,use_words,avoid_words,tone,created_by,created_at,updated_at)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(productId, String(args.name).trim(), JSON.stringify(args.other_names ?? []), args.description ?? null, args.audience ?? null,
+            JSON.stringify(args.urls ?? []), JSON.stringify(args.competitors ?? []), JSON.stringify(wordList(args.words_use)), JSON.stringify(wordList(args.words_avoid)),
             JSON.stringify(args.tone ?? ''), ctx.person.id, now, now).run()
         ctx.emit('product.created', `stump://products/${productId}`)
         return product(ctx, productId)
@@ -125,10 +110,11 @@ export const brandTools: StumpTool[] = [{
       async run(args, ctx) {
         const current = await product(ctx, args.product_id)
         // A changed profile changes the next draft; drafts already written keep their text (STUMP-BRAND-001.4).
-        const next = { ...current, ...Object.fromEntries(PROFILE_KEYS.filter(key => args[key] !== undefined).map(key => [key, args[key]])), ...wordLists(args) } as typeof current
-        await ctx.db.prepare(`UPDATE stump_products SET name=?,names=?,description=?,audience=?,positioning=?,urls=?,competitors=?,use_words=?,avoid_words=?,tone=?,revision=revision+1,updated_at=? WHERE id=?`)
-          .bind(next.name, JSON.stringify(next.other_names), next.description, next.audience, next.positioning, JSON.stringify(next.urls), JSON.stringify(next.competitors),
-            JSON.stringify(next.use_words), JSON.stringify(next.avoid_words), JSON.stringify(next.tone), ctx.now(), current.id).run()
+        const given = Object.fromEntries(PROFILE_KEYS.filter(key => args[key] !== undefined).map(key => [key, key.startsWith('words_') ? wordList(args[key]) : args[key]]))
+        const next = { ...current, ...given } as typeof current
+        await ctx.db.prepare(`UPDATE stump_products SET name=?,names=?,description=?,audience=?,urls=?,competitors=?,use_words=?,avoid_words=?,tone=?,revision=revision+1,updated_at=? WHERE id=?`)
+          .bind(String(next.name).trim(), JSON.stringify(next.other_names), next.description, next.audience, JSON.stringify(next.urls), JSON.stringify(next.competitors),
+            JSON.stringify(next.words_use), JSON.stringify(next.words_avoid), JSON.stringify(next.tone), ctx.now(), current.id).run()
         return product(ctx, current.id)
       },
     },
