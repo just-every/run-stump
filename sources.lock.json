@@ -1747,6 +1747,106 @@
       "sha256": "f3a66736c3243874ce1e06589e7a4da30c64fa1f91363701a1720cc897131f36",
       "executable": false
     },
+    "src/stump/lib/linkedin/errors.ts": {
+      "sha256": "032483ce792f99e95d687e4ba40f8f30cec65c7f4a19d799eb94fdbf36b2ce09",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/http.ts": {
+      "sha256": "bd29618c3923ce8a6b546e0b92e12fb523703051fa833f67da2291db3c3c11b0",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/images.ts": {
+      "sha256": "6e76467284669c96eabb58048051d65f6a3a0bbfe131d393973bdba1bd38c801",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/index.ts": {
+      "sha256": "ba65f09773cd8b8de8fc6264d01a0fc8ffe97accd9f11524f7c089dcb4a62683",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/limits.ts": {
+      "sha256": "efdca2af4d400ebd183c8bbc46beda75eae6ab6234c5d2ab4a45b262e4d3d9d5",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/oauth.ts": {
+      "sha256": "8da195e4bd0aa969ae479301e66adeb7937b87d6131109d8f5e538d08eac6c91",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/posts.ts": {
+      "sha256": "e83bb41cd0c87fa715024693d9d3a3140d5ee9fa261d8b7d3d9ad2bcc7dca22f",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/setup.ts": {
+      "sha256": "899fe95498e4c72f7013772e24ae2472c0a6588bdbd09a529d6ee506ae143e32",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/text.ts": {
+      "sha256": "9a8e43571dc0747173a69b7cf4cb6e4bafcbd1b8ca91006643b63622cce765ea",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/types.ts": {
+      "sha256": "713d500b9f32de7bfc7380aaa81e64436e66acc68f12123b283ea4e901923a23",
+      "executable": false
+    },
+    "src/stump/lib/linkedin/userinfo.ts": {
+      "sha256": "d091dfb9984c15622dd9191926ab83ab43f2abaee975f4c8f5cdcc36eb288029",
+      "executable": false
+    },
+    "src/stump/lib/x/charge.ts": {
+      "sha256": "4674916a53a4674b2e9776f4f732da6cf7a6ae1a987ea3a9f8bbd2c4664730a1",
+      "executable": false
+    },
+    "src/stump/lib/x/errors.ts": {
+      "sha256": "cdc6306c6af62903115a1205fe0bf675790edca0bec4d12c9bf9c703a841fb73",
+      "executable": false
+    },
+    "src/stump/lib/x/http.ts": {
+      "sha256": "3a4c39a3fa66487971d776b9626e8aacca84b62e27321dbaee57aee78f136686",
+      "executable": false
+    },
+    "src/stump/lib/x/index.ts": {
+      "sha256": "322701f472fe0d4fddae0b95045c588df633f3c2b5193e4cb549d2be330cb481",
+      "executable": false
+    },
+    "src/stump/lib/x/length.ts": {
+      "sha256": "84a45e3cd7542260f35b5739a131e8a4d95a2a791a47a27b29e6c5a720a84072",
+      "executable": false
+    },
+    "src/stump/lib/x/media.ts": {
+      "sha256": "f668d8896aed3c02cc3bbb4e008b0a3c398a349d4cbbf3b7c4d807934acb437a",
+      "executable": false
+    },
+    "src/stump/lib/x/mentions.ts": {
+      "sha256": "f176b3cf79fbc485e58bc684694293bef52807c009194c0fc274c0d11e663669",
+      "executable": false
+    },
+    "src/stump/lib/x/oauth.ts": {
+      "sha256": "0821ab74aee1b735e157acf3476e12407f672233331726126ee743bb4bdfb905",
+      "executable": false
+    },
+    "src/stump/lib/x/posts.ts": {
+      "sha256": "4d692f49775776574e3d813d7eafe8074239c942cff18fa3030295deafb6cd89",
+      "executable": false
+    },
+    "src/stump/lib/x/readback.ts": {
+      "sha256": "275f9e955ee1448de4d646ff34f4339419b335f8c43ff3cd2a65079699d4b7da",
+      "executable": false
+    },
+    "src/stump/lib/x/setup.ts": {
+      "sha256": "6ef393c8b255a45ad607de4f800927e92452d28ea984370e595d66dfef6f50e3",
+      "executable": false
+    },
+    "src/stump/lib/x/types.ts": {
+      "sha256": "dc3c77a1a979babafcb2eb8806b67c35a1aa83f35036da5285f5d42d4b4de390",
+      "executable": false
+    },
+    "src/stump/lib/x/urls.ts": {
+      "sha256": "d45830c118ace1cd41bc9f3f797ac23bfd70f8db5986ad482ed74bfa86e4b206",
+      "executable": false
+    },
+    "src/stump/lib/x/users.ts": {
+      "sha256": "dd23e8e5ac678279f125260868372388030522b3a27d06c7a1874f42035eff82",
+      "executable": false
+    },
     "tests/incremental-typecheck.test.mjs": {
       "sha256": "a11d6b89e7219137540c7052683c5f4d9ba7ddf16f66d34c1f56ae34029c0a95",
       "executable": false
