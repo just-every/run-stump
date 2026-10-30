@@ -148,7 +148,13 @@ date: "2026-10-19"
 - seed: Synthwell
 - platform: Email
 - status: editorial
+- priority: high
 - post_type: pitch
+- human_written_required: false
+- rules_urls: []
+- evidence_urls: []
+- sources: []
+- seeds: []
 - venue_id: journalist-jordanreed
 - why: Jordan Reed covers clinic software
 - notes: Jordan prefers mornings
@@ -177,7 +183,10 @@ Hi Jordan, recurring bookings for small clinics shipped today.
   }
   const listed = await uploadList()
   assert.equal(listed.status, 200, JSON.stringify(listed.body))
-  for (let round = 0; round < 50; round++) if ((await listDoor('apply', { planId: listed.body.planId, reviewedFingerprint: listed.body.fingerprint })).body.job?.state === 'completed') break
+  assert.deepEqual([listed.body.summary.venues, listed.body.summary.entries], [1, 1], JSON.stringify(listed.body))
+  let applied
+  for (let round = 0; round < 50 && applied?.job?.state !== 'completed'; round++) applied = (await listDoor('apply', { planId: listed.body.planId, reviewedFingerprint: listed.body.fingerprint })).body
+  assert.equal(applied.job.state, 'completed', JSON.stringify(applied))
   assert.equal((await act('stump.drafts.revise', { action: 'list', q: 'Jordan' })).total, 1)
 
   const contact = await act('stump.press.contacts', { action: 'create', kind: 'journalist', name: 'Jordan Reed', contact_route: { kind: 'email', value: 'synthetic-stump-reporter@example.com', source_url: 'https://example.com/staff', read_at: '2026-10-30' } })
