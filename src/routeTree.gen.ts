@@ -11,15 +11,20 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppComposeRouteImport } from './routes/app.compose'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
 import { Route as AppListeningRouteImport } from './routes/app.listening'
 import { Route as AppPauseRouteImport } from './routes/app.pause'
+import { Route as AppConnectedNetworkRouteImport } from './routes/app.connected.$network'
+import { Route as AppSettingsAccountsRouteImport } from './routes/app.settings.accounts'
 import { Route as AppSettingsAgentsRouteImport } from './routes/app.settings.agents'
+import { Route as AppSettingsBrandRouteImport } from './routes/app.settings.brand'
 import { Route as AppSettingsConnectionsRouteImport } from './routes/app.settings.connections'
 import { Route as AppSettingsPublishingRouteImport } from './routes/app.settings.publishing'
 import { Route as AppSettingsTeamRouteImport } from './routes/app.settings.team'
 import { Route as AppVenuesIndexRouteImport } from './routes/app.venues.index'
 import { Route as AppVenuesVenueIdRouteImport } from './routes/app.venues.$venueId'
+import { Route as OauthBlueskyClientMetadataDotjsonRouteImport } from './routes/oauth.bluesky.client-metadata[.]json'
 
 const AppRoute = AppRouteImport.update({
   id: '/app',
@@ -29,6 +34,11 @@ const AppRoute = AppRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppComposeRoute = AppComposeRouteImport.update({
+  id: '/compose',
+  path: '/compose',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLedgerRoute = AppLedgerRouteImport.update({
@@ -46,9 +56,24 @@ const AppPauseRoute = AppPauseRouteImport.update({
   path: '/pause',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConnectedNetworkRoute = AppConnectedNetworkRouteImport.update({
+  id: '/connected/$network',
+  path: '/connected/$network',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsAccountsRoute = AppSettingsAccountsRouteImport.update({
+  id: '/settings/accounts',
+  path: '/settings/accounts',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsAgentsRoute = AppSettingsAgentsRouteImport.update({
   id: '/settings/agents',
   path: '/settings/agents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsBrandRoute = AppSettingsBrandRouteImport.update({
+  id: '/settings/brand',
+  path: '/settings/brand',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsConnectionsRoute = AppSettingsConnectionsRouteImport.update({
@@ -76,89 +101,126 @@ const AppVenuesVenueIdRoute = AppVenuesVenueIdRouteImport.update({
   path: '/venues/$venueId',
   getParentRoute: () => AppRoute,
 } as any)
+const OauthBlueskyClientMetadataDotjsonRoute =
+  OauthBlueskyClientMetadataDotjsonRouteImport.update({
+    id: '/oauth/bluesky/client-metadata.json',
+    path: '/oauth/bluesky/client-metadata.json',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
+  '/app/compose': typeof AppComposeRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/pause': typeof AppPauseRoute
   '/app/': typeof AppIndexRoute
+  '/app/connected/$network': typeof AppConnectedNetworkRoute
+  '/app/settings/accounts': typeof AppSettingsAccountsRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/connections': typeof AppSettingsConnectionsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/oauth/bluesky/client-metadata.json': typeof OauthBlueskyClientMetadataDotjsonRoute
   '/app/venues/': typeof AppVenuesIndexRoute
 }
 export interface FileRoutesByTo {
+  '/app/compose': typeof AppComposeRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/pause': typeof AppPauseRoute
   '/app': typeof AppIndexRoute
+  '/app/connected/$network': typeof AppConnectedNetworkRoute
+  '/app/settings/accounts': typeof AppSettingsAccountsRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/connections': typeof AppSettingsConnectionsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/oauth/bluesky/client-metadata.json': typeof OauthBlueskyClientMetadataDotjsonRoute
   '/app/venues': typeof AppVenuesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/app': typeof AppRouteWithChildren
+  '/app/compose': typeof AppComposeRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/listening': typeof AppListeningRoute
   '/app/pause': typeof AppPauseRoute
   '/app/': typeof AppIndexRoute
+  '/app/connected/$network': typeof AppConnectedNetworkRoute
+  '/app/settings/accounts': typeof AppSettingsAccountsRoute
   '/app/settings/agents': typeof AppSettingsAgentsRoute
+  '/app/settings/brand': typeof AppSettingsBrandRoute
   '/app/settings/connections': typeof AppSettingsConnectionsRoute
   '/app/settings/publishing': typeof AppSettingsPublishingRoute
   '/app/settings/team': typeof AppSettingsTeamRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/oauth/bluesky/client-metadata.json': typeof OauthBlueskyClientMetadataDotjsonRoute
   '/app/venues/': typeof AppVenuesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/app'
+    | '/app/compose'
     | '/app/ledger'
     | '/app/listening'
     | '/app/pause'
     | '/app/'
+    | '/app/connected/$network'
+    | '/app/settings/accounts'
     | '/app/settings/agents'
+    | '/app/settings/brand'
     | '/app/settings/connections'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/app/venues/$venueId'
+    | '/oauth/bluesky/client-metadata.json'
     | '/app/venues/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/app/compose'
     | '/app/ledger'
     | '/app/listening'
     | '/app/pause'
     | '/app'
+    | '/app/connected/$network'
+    | '/app/settings/accounts'
     | '/app/settings/agents'
+    | '/app/settings/brand'
     | '/app/settings/connections'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/app/venues/$venueId'
+    | '/oauth/bluesky/client-metadata.json'
     | '/app/venues'
   id:
     | '__root__'
     | '/app'
+    | '/app/compose'
     | '/app/ledger'
     | '/app/listening'
     | '/app/pause'
     | '/app/'
+    | '/app/connected/$network'
+    | '/app/settings/accounts'
     | '/app/settings/agents'
+    | '/app/settings/brand'
     | '/app/settings/connections'
     | '/app/settings/publishing'
     | '/app/settings/team'
     | '/app/venues/$venueId'
+    | '/oauth/bluesky/client-metadata.json'
     | '/app/venues/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  OauthBlueskyClientMetadataDotjsonRoute: typeof OauthBlueskyClientMetadataDotjsonRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -175,6 +237,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/compose': {
+      id: '/app/compose'
+      path: '/compose'
+      fullPath: '/app/compose'
+      preLoaderRoute: typeof AppComposeRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/ledger': {
@@ -198,11 +267,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPauseRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/connected/$network': {
+      id: '/app/connected/$network'
+      path: '/connected/$network'
+      fullPath: '/app/connected/$network'
+      preLoaderRoute: typeof AppConnectedNetworkRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings/accounts': {
+      id: '/app/settings/accounts'
+      path: '/settings/accounts'
+      fullPath: '/app/settings/accounts'
+      preLoaderRoute: typeof AppSettingsAccountsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/settings/agents': {
       id: '/app/settings/agents'
       path: '/settings/agents'
       fullPath: '/app/settings/agents'
       preLoaderRoute: typeof AppSettingsAgentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings/brand': {
+      id: '/app/settings/brand'
+      path: '/settings/brand'
+      fullPath: '/app/settings/brand'
+      preLoaderRoute: typeof AppSettingsBrandRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/settings/connections': {
@@ -240,15 +330,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVenuesVenueIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/oauth/bluesky/client-metadata.json': {
+      id: '/oauth/bluesky/client-metadata.json'
+      path: '/oauth/bluesky/client-metadata.json'
+      fullPath: '/oauth/bluesky/client-metadata.json'
+      preLoaderRoute: typeof OauthBlueskyClientMetadataDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppComposeRoute: typeof AppComposeRoute
   AppLedgerRoute: typeof AppLedgerRoute
   AppListeningRoute: typeof AppListeningRoute
   AppPauseRoute: typeof AppPauseRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppConnectedNetworkRoute: typeof AppConnectedNetworkRoute
+  AppSettingsAccountsRoute: typeof AppSettingsAccountsRoute
   AppSettingsAgentsRoute: typeof AppSettingsAgentsRoute
+  AppSettingsBrandRoute: typeof AppSettingsBrandRoute
   AppSettingsConnectionsRoute: typeof AppSettingsConnectionsRoute
   AppSettingsPublishingRoute: typeof AppSettingsPublishingRoute
   AppSettingsTeamRoute: typeof AppSettingsTeamRoute
@@ -257,11 +358,15 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppComposeRoute: AppComposeRoute,
   AppLedgerRoute: AppLedgerRoute,
   AppListeningRoute: AppListeningRoute,
   AppPauseRoute: AppPauseRoute,
   AppIndexRoute: AppIndexRoute,
+  AppConnectedNetworkRoute: AppConnectedNetworkRoute,
+  AppSettingsAccountsRoute: AppSettingsAccountsRoute,
   AppSettingsAgentsRoute: AppSettingsAgentsRoute,
+  AppSettingsBrandRoute: AppSettingsBrandRoute,
   AppSettingsConnectionsRoute: AppSettingsConnectionsRoute,
   AppSettingsPublishingRoute: AppSettingsPublishingRoute,
   AppSettingsTeamRoute: AppSettingsTeamRoute,
@@ -273,6 +378,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  OauthBlueskyClientMetadataDotjsonRoute:
+    OauthBlueskyClientMetadataDotjsonRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -93,3 +93,51 @@ export async function resolveIdentity(
   }
   return ok({ did, handle, pdsUrl: doc.value.pdsUrl });
 }
+
+/**
+ * Resolves what a person typed against the server they named (their PDS): the handle through its
+ * resolveHandle, then the DID document that server serves for the repo (com.atproto.repo.describeRepo).
+ * The document must name the handle back and name that same server as the account's PDS, so a
+ * server that registers its accounts on its own PLC resolves without the public PLC directory.
+ */
+export async function resolveIdentityAtServer(deps: HttpDeps, serverUrl: string, input: string): Promise<Result<ResolvedIdentity>> {
+  const server = serverUrl.replace(/\/+$/, '');
+  const typed = input.trim().replace(/^@/, '');
+  let did: string;
+  let handle: string | null = null;
+  if (typed.startsWith('did:')) did = typed;
+  else {
+    handle = typed.toLowerCase();
+    const r = await resolveHandle(deps, server, handle);
+    if (!r.ok) return fail(r.error);
+    if (r.value === null) return fail({ kind: 'not_found', code: 'HandleNotFound', message: `No account on ${server} has the handle ${handle}`, outcomeUnknown: false });
+    did = r.value;
+  }
+  const res = await send(deps, {
+    method: 'GET',
+    url: `${server}/xrpc/com.atproto.repo.describeRepo?repo=${encodeURIComponent(did)}`,
+    headers: { accept: 'application/json' },
+    write: false,
+  });
+  if (!res.ok) return fail(res.error);
+  const doc = (res.value.json as Record<string, unknown>).didDoc as Record<string, unknown> | undefined;
+  if (!doc || doc.id !== did) return invalidResponse(`${server} served no DID document for ${did}`, res.value.status);
+  const aka = Array.isArray(doc.alsoKnownAs) ? (doc.alsoKnownAs as unknown[]).filter((a): a is string => typeof a === 'string') : [];
+  if (handle !== null && !aka.some((a) => a.toLowerCase() === `at://${handle}`)) {
+    return fail({ kind: 'validation', code: 'handle_not_verified', message: `${did} does not claim the handle ${handle}`, outcomeUnknown: false });
+  }
+  const pdsUrl = pdsFromDidDoc(doc);
+  if (!pdsUrl) return invalidResponse(`${did} names no PDS in its DID document`);
+  if (sameOrigin(pdsUrl) !== sameOrigin(server)) {
+    return fail({ kind: 'validation', code: 'pds_mismatch', message: `${did} keeps its records on ${pdsUrl}, not ${server}`, outcomeUnknown: false });
+  }
+  if (handle === null) {
+    const named = aka.find((a) => a.startsWith('at://'));
+    handle = named ? named.slice('at://'.length) : null;
+  }
+  return ok({ did, handle, pdsUrl });
+}
+
+function sameOrigin(url: string): string {
+  try { return new URL(url).origin; } catch { return url.replace(/\/+$/, ''); }
+}

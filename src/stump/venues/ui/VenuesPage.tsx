@@ -58,7 +58,7 @@ export function VenuesPage() {
           <button className="st-button pill outline" type="button" aria-expanded={panel === 'filters'} onClick={() => setPanel(panel === 'filters' ? 'none' : 'filters')}>Filters{applied.length ? ` (${applied.length})` : ''}</button>
           {editor ? <button className="st-button primary pill st-end" type="button" onClick={() => setPanel('add')}>+ Add venue</button> : null}
         </div>
-        {applied.length ? <div className="st-chips" aria-label="Applied filters">{applied.map(([name, value]) =>
+        {applied.length ? <div className="st-chips st-applied" aria-label="Applied filters">{applied.map(([name, value]) =>
           <button key={name} className="st-chip" type="button" aria-label={`Remove filter ${FILTER_WORDS[name](String(value), products)}`} onClick={() => set(name, undefined)}>{FILTER_WORDS[name](String(value), products)} ×</button>)}</div> : null}
         {panel === 'filters' ? <div className="st-card" aria-label="Filters">
           <div className="st-form">

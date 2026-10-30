@@ -1,9 +1,15 @@
 import { toolSchema } from '../actions/runner.ts'
 import type { StumpTool } from '../actions/types.ts'
+import { accountTools } from './accounts.ts'
+import { brandTools } from './brand.ts'
 import { calendarTools } from './calendar.ts'
+import { draftTools } from './drafts.ts'
 import { findingsTools } from './findings.ts'
+import { itemTools } from './items.ts'
 import { ledgerTools } from './ledger.ts'
 import { linksTools } from './links.ts'
+import { pressTools } from './press.ts'
+import { setupTools } from './setup.ts'
 import { stackTools } from './stack.ts'
 import { teamTools } from './team.ts'
 import { venueTools } from './venues.ts'
@@ -12,10 +18,16 @@ import { watchesTools } from './watches.ts'
 // Every Stump tool, one line per area (src/stump/README.md). The person door
 // and the MCP door both read this list; nothing else registers tools.
 export const stumpTools: readonly StumpTool[] = [
+  ...accountTools,
+  ...brandTools,
   ...calendarTools,
+  ...draftTools,
   ...findingsTools,
+  ...itemTools,
   ...ledgerTools,
   ...linksTools,
+  ...pressTools,
+  ...setupTools,
   ...stackTools,
   ...teamTools,
   ...venueTools,

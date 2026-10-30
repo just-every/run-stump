@@ -10,6 +10,7 @@ import { setupStateResponse } from './base/setup-state'
 import { authResponse, businessSettings, operatorAuth, runtimeBindings, type Bindings } from './auth.server'
 import { identity } from './identity'
 import { AGENT_PATHS, stumpAgentDoor } from './stump/agent-door/index.ts'
+import { consentCallback } from './stump/accounts/callback.ts'
 import { appDocumentGate } from './stump/http/app-gate.ts'
 import { importDoorResponse } from './stump/imports/door.ts'
 import { personDoorResponse } from './stump/http/routes.ts'
@@ -56,6 +57,9 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
     if (person) return rejectedResponse(request, person)
     const gate = await appDocumentGate(request, env)
     if (gate) return gate
+    // A network's consent screen returns here; the server finishes the connection (src/stump/accounts/callback.ts).
+    const consent = await consentCallback(request, env)
+    if (consent) return consent
     // The installed variant: the Lobby at / and the public claim state it reads.
     // Local dev serves the saved origin's data at its own port (RER_DEV_ORIGIN).
     const state = await setupStateResponse(request, runtimeBindings(env))

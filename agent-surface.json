@@ -4,139 +4,83 @@
   "specialist": "earned-channels-marketer",
   "capabilities": ["tools", "policy", "pause", "audit", "idempotency"],
   "tools": [
-    { "name": "stump.findings.work", "scope": "stump:findings", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-WATCH-001", "STUMP-WATCH-005"] },
-    { "name": "stump.calendar.pause", "scope": "stump:calendar", "readOnly": false, "classes": ["live"], "clauses": ["STUMP-PLAN-007"] },
-    { "name": "stump.ledger.correct", "scope": "stump:ledger", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001"] },
-    { "name": "stump.ledger.search", "scope": "stump:ledger", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001", "STUMP-LEDGER-002"] },
-    { "name": "stump.links.manage", "scope": "stump:links", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-LINK-001"] },
-    { "name": "stump.stack.connect", "scope": "stump:stack", "readOnly": false, "classes": ["security"], "clauses": ["STUMP-STACK-002", "STUMP-STACK-004"], "sponsorEscalation": false },
-    { "name": "stump.stack.send", "scope": "stump:stack", "readOnly": false, "classes": ["standard", "sensitive"], "clauses": ["STUMP-STACK-002", "STUMP-STACK-004", "STUMP-SURFACE-015"] },
-    { "name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001"] },
-    { "name": "stump.venues.fit", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-003"] },
-    { "name": "stump.venues.manage", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-001"] },
-    { "name": "stump.venues.members", "scope": "stump:venues", "readOnly": false, "classes": ["standard", "gated"], "clauses": ["STUMP-VENUE-006"] },
-    { "name": "stump.venues.rules", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-002"] },
-    { "name": "stump.watches.manage", "scope": "stump:watches", "readOnly": false, "classes": ["standard", "external", "security"], "clauses": ["STUMP-WATCH-001", "STUMP-WATCH-002", "STUMP-WATCH-003", "STUMP-WATCH-004", "STUMP-WATCH-013"], "sponsorEscalation": false }
+    {"name": "stump.accounts.connect", "scope": "stump:accounts", "readOnly": false, "classes": ["security", "gated", "accounts"], "clauses": ["STUMP-PUBLISH-001", "STUMP-CONNECT-001"], "sponsorEscalation": false},
+    {"name": "stump.brand.manage", "scope": "stump:brand", "readOnly": false, "classes": ["standard", "sensitive"], "clauses": ["STUMP-BRAND-001", "STUMP-BRAND-002", "STUMP-BRAND-003"]},
+    {"name": "stump.calendar.pause", "scope": "stump:calendar", "readOnly": false, "classes": ["live"], "clauses": ["STUMP-PLAN-007"]},
+    {"name": "stump.calendar.plan", "scope": "stump:calendar", "readOnly": false, "classes": ["standard", "live", "external", "money"], "clauses": ["STUMP-PLAN-002", "STUMP-PLAN-007", "STUMP-IMPORT-001", "STUMP-SURFACE-004"]},
+    {"name": "stump.drafts.check", "scope": "stump:drafts", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-BRAND-004", "STUMP-DRAFT-005", "STUMP-TRUTH-002", "STUMP-TRUTH-004"]},
+    {"name": "stump.drafts.preview", "scope": "stump:drafts", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-DRAFT-004"]},
+    {"name": "stump.drafts.revise", "scope": "stump:drafts", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-DRAFT-003", "STUMP-TEAM-002"]},
+    {"name": "stump.drafts.write", "scope": "stump:drafts", "readOnly": false, "classes": ["standard", "external"], "clauses": ["STUMP-DRAFT-010", "STUMP-DRAFT-001", "STUMP-DRAFT-002", "STUMP-DRAFT-006", "STUMP-DRAFT-011", "STUMP-DRAFT-007", "STUMP-BRAND-002"]},
+    {"name": "stump.findings.work", "scope": "stump:findings", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-WATCH-001", "STUMP-WATCH-005"]},
+    {"name": "stump.items.media", "scope": "stump:items", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-PUBLISH-002", "STUMP-PUBLISH-003", "STUMP-PUBLISH-004", "STUMP-PUBLISH-005"]},
+    {"name": "stump.items.schedule", "scope": "stump:items", "readOnly": false, "classes": ["external", "money", "gated"], "clauses": ["STUMP-PUBLISH-002", "STUMP-PUBLISH-003", "STUMP-PUBLISH-004", "STUMP-PUBLISH-005", "STUMP-PUBLISH-006", "STUMP-DRAFT-010"]},
+    {"name": "stump.ledger.correct", "scope": "stump:ledger", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001"]},
+    {"name": "stump.ledger.search", "scope": "stump:ledger", "readOnly": true, "classes": ["standard"], "clauses": ["STUMP-LEDGER-001", "STUMP-LEDGER-002"]},
+    {"name": "stump.links.manage", "scope": "stump:links", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-LINK-001"]},
+    {"name": "stump.press.contacts", "scope": "stump:press", "readOnly": false, "classes": ["standard", "sensitive"], "clauses": ["STUMP-PITCH-001"]},
+    {"name": "stump.setup.apps", "scope": "stump:setup", "readOnly": false, "classes": ["security", "gated"], "clauses": ["STUMP-CONNECT-002", "STUMP-SURFACE-004"], "sponsorEscalation": false},
+    {"name": "stump.stack.connect", "scope": "stump:stack", "readOnly": false, "classes": ["security"], "clauses": ["STUMP-STACK-002", "STUMP-STACK-004"], "sponsorEscalation": false},
+    {"name": "stump.stack.send", "scope": "stump:stack", "readOnly": false, "classes": ["standard", "sensitive"], "clauses": ["STUMP-STACK-002", "STUMP-STACK-004", "STUMP-SURFACE-015"]},
+    {"name": "stump.team.manage", "scope": "stump:team", "readOnly": false, "classes": ["access"], "clauses": ["STUMP-TEAM-001"]},
+    {"name": "stump.venues.fit", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-003"]},
+    {"name": "stump.venues.manage", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-001"]},
+    {"name": "stump.venues.members", "scope": "stump:venues", "readOnly": false, "classes": ["standard", "gated"], "clauses": ["STUMP-VENUE-006"]},
+    {"name": "stump.venues.rules", "scope": "stump:venues", "readOnly": false, "classes": ["standard"], "clauses": ["STUMP-VENUE-002"]},
+    {"name": "stump.watches.manage", "scope": "stump:watches", "readOnly": false, "classes": ["standard", "external", "security"], "clauses": ["STUMP-WATCH-001", "STUMP-WATCH-002", "STUMP-WATCH-003", "STUMP-WATCH-004", "STUMP-WATCH-013"], "sponsorEscalation": false}
   ],
   "notTools": [
-    { "clauses": ["STUMP-VENUE-004", "STUMP-IMPORT-001"], "reason": "import-door" },
-    { "clauses": ["STUMP-INBOX-005"], "reason": "screen" },
-    { "clauses": ["STUMP-MOBILE-001", "STUMP-MOBILE-002", "STUMP-DRAFT-013"], "reason": "device" }
+    {"clauses": ["STUMP-VENUE-004", "STUMP-IMPORT-001"], "reason": "import-door"},
+    {"clauses": ["STUMP-INBOX-005"], "reason": "screen"},
+    {"clauses": ["STUMP-MOBILE-001", "STUMP-MOBILE-002", "STUMP-DRAFT-013"], "reason": "device"}
   ],
   "resources": [],
   "escalations": [
-    { "id": "self-invite", "tool": "stump.team.manage", "args": { "action": "invite", "email": { "$sponsor": "email" }, "display_name": "Synthetic sponsor", "role": "admin", "connection": "employee" } }
+    {"id": "self-invite", "tool": "stump.team.manage", "args": {"action": "invite", "email": {"$sponsor": "email"}, "display_name": "Synthetic sponsor", "role": "admin", "connection": "employee"}}
   ],
-  "spend": { "none": true },
-  "witness": { "tool": "stump.ledger.search", "args": { "action": "search" } },
+  "spend": {"none": true},
+  "witness": {"tool": "stump.ledger.search", "args": {"action": "search"}},
   "journey": [
-    {
-      "id": "invite",
-      "tool": "stump.team.manage",
-      "args": { "action": "invite", "email": { "$fixture": "invitee", "pointer": "" }, "display_name": "Synthetic contractor", "role": "contributor", "connection": "contractor" },
-      "expect": [{ "class": "access", "facts": { "measure": 1, "direction": "widens" } }],
-      "inject": { "classes": ["standard"], "risk": "none", "internal": true }
-    },
-    {
-      "id": "pause",
-      "tool": "stump.calendar.pause",
-      "args": { "action": "pause", "scope": "all" },
-      "expect": [{ "class": "live", "facts": { "measure": 1, "service": "all publishing" } }]
-    },
-    {
-      "id": "resume",
-      "tool": "stump.calendar.pause",
-      "args": { "action": "resume", "scope": "all" },
-      "expect": [{ "class": "live", "facts": { "measure": 1, "service": "all publishing" } }]
-    },
-    {
-      "id": "ledger",
-      "tool": "stump.ledger.search",
-      "args": { "action": "search" },
-      "expect": [{ "class": "standard" }]
-    },
-    {
-      "id": "venue-create",
-      "tool": "stump.venues.manage",
-      "args": { "action": "create", "kind": "forum", "name": "Synthetic builders forum", "url": { "$fixture": "venue_url", "pointer": "" }, "status": "candidate" },
-      "expect": [{ "class": "standard" }]
-    },
-    {
-      "id": "venue-rules",
-      "tool": "stump.venues.rules",
-      "args": { "action": "set", "venue_id": { "$from": "venue-create", "pointer": "/id" }, "rules": {
-        "posting": { "value": "members_only", "source_url": "https://example.com/rules", "read_at": "2026-10-30" },
-        "gates": { "value": { "approval": true }, "source_url": "https://example.com/rules", "read_at": "2026-10-30" } } },
-      "expect": [{ "class": "standard" }]
-    },
-    {
-      "id": "venue-limit",
-      "tool": "stump.venues.fit",
-      "args": { "action": "set_limit", "venue_id": { "$from": "venue-create", "pointer": "/id" }, "limit": { "posts": 1, "per": "week" } },
-      "expect": [{ "class": "standard" }]
-    },
-    {
-      "id": "venue-apply",
-      "tool": "stump.venues.members",
-      "args": { "action": "apply", "venue_id": { "$from": "venue-create", "pointer": "/id" }, "handle": { "$fixture": "venue_handle", "pointer": "" } },
-      "expect": [{ "class": "gated", "facts": { "step": "join application" } }]
-    },
-    {
-      "id": "venue-approve",
-      "tool": "stump.venues.members",
-      "args": { "action": "approve_application", "application_id": { "$from": "venue-apply", "pointer": "/application/id" } },
-      "expect": [{ "class": "standard" }]
-    },
-    {
-      "id": "watch",
-      "tool": "stump.watches.manage",
-      "args": {
-        "action": "create", "name": "Synthetic watch", "terms": { "any": ["synthetic"] }, "sources": [{ "kind": "rss", "url": "https://feeds.example.invalid/synthetic.xml" }],
-        "alerts": { "immediate_min_relevance": 50, "slack": { "webhook_url": { "$fixture": "slack_webhook", "pointer": "" } }, "webhook": { "url": "https://receiver.example.invalid/hook", "secret": { "$fixture": "webhook_secret", "pointer": "" } } }
-      },
-      "expect": [{ "class": "standard", "facts": { "measure": 1 } }, { "class": "external", "facts": { "measure": 1, "counterparty": "public" } }, { "class": "security", "facts": { "measure": 1, "setting": "alert destinations" } }],
-      "inject": { "classes": ["standard"], "risk": "none", "internal": true }
-    },
-    {
-      "id": "mute",
-      "tool": "stump.watches.manage",
-      "args": { "action": "mute", "watch_id": { "$from": "watch", "pointer": "/id" } },
-      "expect": [{ "class": "standard", "facts": { "measure": 1 } }],
-      "inject": { "classes": ["standard"], "risk": "none", "internal": true }
-    },
-    {
-      "id": "findings",
-      "tool": "stump.findings.work",
-      "args": { "action": "list", "watch_id": { "$from": "watch", "pointer": "/id" } },
-      "expect": [{ "class": "standard", "facts": { "measure": 0 } }]
-    },
-    {
-      "id": "link-rules",
-      "tool": "stump.links.manage",
-      "args": { "action": "set_rules", "own_domains": ["example.com"], "mediums": { "published": "social", "handoff": "community" } },
-      "expect": [{ "class": "standard" }]
-    },
-    {
-      "id": "connect-orbit",
-      "tool": "stump.stack.connect",
-      "args": { "action": "connect", "seed": "orbit", "origin": "https://orbit.invalid", "source_id": "stump", "secret": { "$fixture": "orbitSecret", "pointer": "" } },
-      "expect": [{ "class": "security", "facts": { "measure": 1, "setting": "orbit connection" } }]
-    },
-    {
-      "id": "stack-offers",
-      "tool": "stump.stack.send",
-      "args": { "action": "offers" },
-      "expect": [{ "class": "standard" }, { "class": "sensitive", "facts": { "kind": "public handles and post links" } }]
-    },
-    {
-      "id": "ledger-corrections",
-      "tool": "stump.ledger.correct",
-      "args": { "action": "corrections" },
-      "expect": [{ "class": "standard" }]
-    }
+    {"id": "invite", "tool": "stump.team.manage", "args": {"action": "invite", "email": {"$fixture": "invitee", "pointer": ""}, "display_name": "Synthetic contractor", "role": "contributor", "connection": "contractor"}, "expect": [{"class": "access", "facts": {"measure": 1, "direction": "widens"}}], "inject": {"classes": ["standard"], "risk": "none", "internal": true}},
+    {"id": "pause", "tool": "stump.calendar.pause", "args": {"action": "pause", "scope": "all"}, "expect": [{"class": "live", "facts": {"measure": 1, "service": "all publishing"}}]},
+    {"id": "resume", "tool": "stump.calendar.pause", "args": {"action": "resume", "scope": "all"}, "expect": [{"class": "live", "facts": {"measure": 1, "service": "all publishing"}}]},
+    {"id": "ledger", "tool": "stump.ledger.search", "args": {"action": "search"}, "expect": [{"class": "standard"}]},
+    {"id": "venue-create", "tool": "stump.venues.manage", "args": {"action": "create", "kind": "forum", "name": "Synthetic builders forum", "url": {"$fixture": "venue_url", "pointer": ""}, "status": "candidate"}, "expect": [{"class": "standard"}]},
+    {"id": "venue-rules", "tool": "stump.venues.rules", "args": {"action": "set", "venue_id": {"$from": "venue-create", "pointer": "/id"}, "rules": {"posting": {"value": "members_only", "source_url": "https://example.com/rules", "read_at": "2026-10-30"}, "gates": {"value": {"approval": true}, "source_url": "https://example.com/rules", "read_at": "2026-10-30"}}}, "expect": [{"class": "standard"}]},
+    {"id": "venue-limit", "tool": "stump.venues.fit", "args": {"action": "set_limit", "venue_id": {"$from": "venue-create", "pointer": "/id"}, "limit": {"posts": 1, "per": "week"}}, "expect": [{"class": "standard"}]},
+    {"id": "venue-apply", "tool": "stump.venues.members", "args": {"action": "apply", "venue_id": {"$from": "venue-create", "pointer": "/id"}, "handle": {"$fixture": "venue_handle", "pointer": ""}}, "expect": [{"class": "gated", "facts": {"step": "join application"}}]},
+    {"id": "venue-approve", "tool": "stump.venues.members", "args": {"action": "approve_application", "application_id": {"$from": "venue-apply", "pointer": "/application/id"}}, "expect": [{"class": "standard"}]},
+    {"id": "watch", "tool": "stump.watches.manage", "args": {"action": "create", "name": "Synthetic watch", "terms": {"any": ["synthetic"]}, "sources": [{"kind": "rss", "url": "https://feeds.example.invalid/synthetic.xml"}], "alerts": {"immediate_min_relevance": 50, "slack": {"webhook_url": {"$fixture": "slack_webhook", "pointer": ""}}, "webhook": {"url": "https://receiver.example.invalid/hook", "secret": {"$fixture": "webhook_secret", "pointer": ""}}}}, "expect": [{"class": "standard", "facts": {"measure": 1}}, {"class": "external", "facts": {"measure": 1, "counterparty": "public"}}, {"class": "security", "facts": {"measure": 1, "setting": "alert destinations"}}], "inject": {"classes": ["standard"], "risk": "none", "internal": true}},
+    {"id": "mute", "tool": "stump.watches.manage", "args": {"action": "mute", "watch_id": {"$from": "watch", "pointer": "/id"}}, "expect": [{"class": "standard", "facts": {"measure": 1}}], "inject": {"classes": ["standard"], "risk": "none", "internal": true}},
+    {"id": "findings", "tool": "stump.findings.work", "args": {"action": "list", "watch_id": {"$from": "watch", "pointer": "/id"}}, "expect": [{"class": "standard", "facts": {"measure": 0}}]},
+    {"id": "link-rules", "tool": "stump.links.manage", "args": {"action": "set_rules", "own_domains": ["example.com"], "mediums": {"published": "social", "handoff": "community"}}, "expect": [{"class": "standard"}]},
+    {"id": "connect-orbit", "tool": "stump.stack.connect", "args": {"action": "connect", "seed": "orbit", "origin": "https://orbit.invalid", "source_id": "stump", "secret": {"$fixture": "orbitSecret", "pointer": ""}}, "expect": [{"class": "security", "facts": {"measure": 1, "setting": "orbit connection"}}]},
+    {"id": "stack-offers", "tool": "stump.stack.send", "args": {"action": "offers"}, "expect": [{"class": "standard"}, {"class": "sensitive", "facts": {"kind": "public handles and post links"}}]},
+    {"id": "ledger-corrections", "tool": "stump.ledger.correct", "args": {"action": "corrections"}, "expect": [{"class": "standard"}]},
+    {"id": "product", "tool": "stump.brand.manage", "args": {"action": "product_create", "name": "Synthetic product", "tone": "plain, warm, exact"}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "voice", "tool": "stump.brand.manage", "args": {"action": "voice_create", "person_id": {"$sponsor": "id"}, "samples": ["Shipped the calendar fix today.", "Small change, big relief for anyone booking every week."], "do": ["short", "plain"], "dont": ["exclamation marks"]}, "expect": [{"class": "standard", "facts": {"measure": 1}}, {"class": "sensitive", "facts": {"measure": 1, "kind": "writing samples"}}]},
+    {"id": "draft", "tool": "stump.drafts.write", "args": {"action": "create", "format": "post", "person_id": {"$sponsor": "id"}, "network": "bluesky", "text": "Recurring bookings are here: pick a pattern once and every visit books itself."}, "expect": [{"class": "standard", "facts": {"measure": 1}}], "inject": {"generate": false, "internal": true, "classes": ["standard"]}},
+    {"id": "ai-draft", "tool": "stump.drafts.write", "args": {"action": "create", "format": "post", "person_id": {"$sponsor": "id"}, "network": "mastodon", "generate": true, "prompt": "Announce recurring bookings in two sentences."}, "expect": [{"class": "external", "facts": {"measure": 1, "counterparty": "known", "provider": "ai.synthetic-stump.example"}}]},
+    {"id": "save", "tool": "stump.drafts.revise", "args": {"action": "save", "item_id": {"$from": "draft", "pointer": "/id"}, "text": "Recurring bookings are here: set a pattern once and every visit books itself."}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "check", "tool": "stump.drafts.check", "args": {"action": "run", "item_id": {"$from": "draft", "pointer": "/id"}}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "preview", "tool": "stump.drafts.preview", "args": {"action": "item", "item_id": {"$from": "draft", "pointer": "/id"}}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "publication", "tool": "stump.press.contacts", "args": {"action": "create", "kind": "publication", "name": "Synthetic Weekly", "topics": ["scheduling"]}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "journalist", "tool": "stump.press.contacts", "args": {"action": "create", "kind": "journalist", "name": "Synthetic Reporter", "beat": "small business software", "publication": "Synthetic Weekly", "contact_route": {"kind": "email", "value": "synthetic-stump-reporter@example.com", "source_url": "https://example.com/staff", "read_at": "2026-10-30"}}, "expect": [{"class": "standard", "facts": {"measure": 1}}, {"class": "sensitive", "facts": {"measure": 1, "kind": "contact route"}}]},
+    {"id": "setup-x", "tool": "stump.setup.apps", "args": {"action": "set", "network": "x", "client_id": {"$fixture": "xClientId", "pointer": ""}, "client_secret": {"$fixture": "xClientSecret", "pointer": ""}}, "expect": [{"class": "security", "facts": {"measure": 1, "setting": "x_app"}}, {"class": "gated", "facts": {"measure": 1, "provider": "x", "step": "developer_app"}}]},
+    {"id": "connect-x", "tool": "stump.accounts.connect", "args": {"action": "start", "network": "x", "owner": "company"}, "expect": [{"class": "security", "facts": {"measure": 1, "setting": "network_connection"}}, {"class": "gated", "facts": {"measure": 1, "provider": "x", "step": "consent"}}, {"class": "accounts", "facts": {"measure": 1, "provider": "x"}}]},
+    {"id": "finish-x", "tool": "stump.accounts.connect", "args": {"action": "complete", "connection_id": {"$from": "connect-x", "pointer": "/connection_id"}, "code": "synthetic-consent-code"}, "expect": [{"class": "security", "facts": {"measure": 1, "setting": "network_connection"}}, {"class": "accounts", "facts": {"measure": 1, "provider": "x"}}]},
+    {"id": "slots-x", "tool": "stump.calendar.plan", "args": {"action": "set_slots", "account_id": {"$from": "finish-x", "pointer": "/account/id"}, "time_zone": "America/New_York", "slots": [{"days": ["mon", "wed", "fri"], "times": ["09:00", "14:00"]}]}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "label-x", "tool": "stump.accounts.connect", "args": {"action": "record_label", "account_id": {"$from": "finish-x", "pointer": "/account/id"}, "automated_label": true, "operator_bio": "Posts by the Synthetic Company team and its agent."}, "expect": [{"class": "security", "facts": {"measure": 1, "setting": "automated_label"}}]},
+    {"id": "x-post", "tool": "stump.drafts.write", "args": {"action": "create", "format": "post", "person_id": {"$sponsor": "id"}, "account_id": {"$from": "finish-x", "pointer": "/account/id"}, "network": "x", "text": {"$fixture": "xPost", "pointer": ""}}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "x-media", "tool": "stump.items.media", "args": {"action": "attach", "item_id": {"$from": "x-post", "pointer": "/id"}, "file": {"name": "recurring-bookings.png", "type": "image/png", "base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="}, "alt": "The weekly booking pattern picker with Monday and Thursday selected."}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "x-queue", "tool": "stump.calendar.plan", "args": {"action": "queue", "item_id": {"$from": "x-post", "pointer": "/id"}, "account_id": {"$from": "finish-x", "pointer": "/account/id"}}, "expect": [{"class": "live", "facts": {"measure": 1, "service": "publishing queue"}}, {"class": "external", "facts": {"measure": 1, "counterparty": "public"}}, {"class": "money", "facts": {"measure": 1, "currency": "USD", "counterparty": "known"}}]},
+    {"id": "x-schedule", "tool": "stump.items.schedule", "args": {"action": "schedule", "item_id": {"$from": "x-post", "pointer": "/id"}, "account_id": {"$from": "finish-x", "pointer": "/account/id"}, "at": {"$fixture": "scheduleAt", "pointer": ""}, "time_zone": "America/New_York"}, "expect": [{"class": "external", "facts": {"measure": 1, "counterparty": "public"}}, {"class": "money", "facts": {"measure": 1, "currency": "USD", "counterparty": "known"}}]},
+    {"id": "x-master", "tool": "stump.drafts.write", "args": {"action": "master", "text": {"$fixture": "xLong", "pointer": ""}, "account_ids": [{"$from": "finish-x", "pointer": "/account/id"}], "person_id": {"$sponsor": "id"}}, "expect": [{"class": "standard", "facts": {"measure": 1}}]},
+    {"id": "x-master-schedule", "tool": "stump.items.schedule", "args": {"action": "schedule_master", "master_id": {"$from": "x-master", "pointer": "/master/id"}, "at": {"$fixture": "scheduleAt", "pointer": ""}}, "expect": [{"class": "external", "facts": {"measure": 0, "counterparty": "public"}}, {"class": "gated", "facts": {"measure": 1, "provider": "stump", "step": "rewrite_flagged_variant"}}]}
   ],
   "verification": {
-    "owner": { "bindings": { "INSTALLATION_KEY": "sessionSecret" } },
-    "fixtures": { "module": "tests/agent/fixtures.mjs" }
+    "owner": {"bindings": {"INSTALLATION_KEY": {"module": "tests/agent/installation-key.mjs"}, "AI_ENABLED": {"module": "tests/agent/ai-enabled.mjs"}, "AI_BASE_URL": {"module": "tests/agent/ai-base-url.mjs"}, "AI_API_KEY": {"module": "tests/agent/ai-key.mjs"}, "AI_MODEL": {"module": "tests/agent/ai-model.mjs"}}},
+    "fixtures": {"module": "tests/agent/fixtures.mjs"},
+    "network": {"module": "tests/agent/network.mjs", "origins": ["https://ai.synthetic-stump.example", "https://api.x.com"]}
   }
 }

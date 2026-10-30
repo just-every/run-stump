@@ -12,8 +12,9 @@ and are never edited in place.
 | `http/` | The person door under `/app/api` and the `/app` document gate. |
 | `people/` | Roles, connections, invitations and the person behind a session. |
 | `items/` | The item state machine (`state.ts`) and the Pause fence. |
-| `publish/` | The scheduler tick and the per-network publisher interface. |
-| `ledger/` | Reading, searching, correcting and exporting ledger entries (`query.ts`, `correct.ts`, `csv.ts`); entries are written only by the publishing lane's recorder. |
+| `publish/` | The scheduler tick, scheduling checks, queue slots and one publisher per network (Bluesky, Mastodon, X, LinkedIn). |
+| `accounts/` | Connected accounts and the company's network apps: consent, sealed credentials (`seal.ts`), refresh and disconnect. |
+| `ledger/` | Reading, searching, correcting and exporting ledger entries (`query.ts`, `correct.ts`, `csv.ts`); `record.ts` is the one writer of `stump_ledger` and `stump_ledger_versions`. |
 | `links/` | The company's link rules and `tagOwnLinks`, the one function that puts UTM tags on its own links. |
 | `stack/` | Connections to Orbit and Vane (secrets sealed), offers, signed sends, and `annotateLedgerEntry` for the posting path. |
 | `net/` | `stumpFetch`, the one outbound fetch every network call uses. |
