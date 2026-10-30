@@ -26,8 +26,7 @@ function ConnectionsPage() {
   return <HydrationUnit>
     <style>{screenStyles}</style>
     <section className="st-page st-ledger-screen" aria-labelledby="connections-title">
-      <h1 id="connections-title">Connections</h1>
-      <p className="st-lead">Where people who engage with you go, where each post is marked on your traffic, and how your links are tagged.</p>
+      <h1 id="connections-title" className="st-sr">Connections</h1>
       {error ? <p className="st-error">{error}</p> : null}
       {data ? <>
         {data.editor ? <>

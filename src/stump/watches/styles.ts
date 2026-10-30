@@ -49,10 +49,15 @@ export const listeningStyles = `
 .st-listen .st-blocked { display: flex; flex-wrap: wrap; gap: var(--stump-space); }
 .st-listen .st-blocked .st-button { min-height: 36px; padding: 4px 12px; }
 .st-listen .st-empty { color: var(--stump-muted); padding: calc(var(--stump-space) * 3) 0; display: block; text-align: left; }
+.st-listen .st-listen-next { margin: 0 0 calc(var(--stump-space) * 2); }
+.st-listen .st-chip-more { display: inline-flex; align-items: center; }
+.st-listen .st-finding:not(.focal) .st-finding-body { gap: 4px; }
+.st-listen .st-finding:not(.focal) .st-chips { margin-top: 4px; }
 @media (max-width: 760px) {
   .st-listen-grid { grid-template-columns: minmax(0, 1fr); gap: calc(var(--stump-space) * 2); margin-top: calc(var(--stump-space) * 2); }
   .st-listen .st-watches-list { display: none; }
   .st-listen .st-pick { display: block; }
+  .st-listen .st-new-watch { display: none; }
   .st-listen .st-card { padding: calc(var(--stump-space) * 2); }
   .st-listen .st-card[aria-label="Your watches"] { border: 0; padding: 0; }
   .st-listen .st-card[aria-label="Your watches"] > h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

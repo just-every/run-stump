@@ -11,8 +11,7 @@ function ImportPage() {
   const { data, error } = useLoaded(async () => (await me()).person.role === 'owner')
   return <HydrationUnit>
     <section className="st-page" aria-labelledby="import-title">
-      <h1 id="import-title">Import</h1>
-      <p className="st-lead">Bring your posts, schedules and results from the tool you used before.</p>
+      <h1 id="import-title" className="st-sr">Import</h1>
       {error ? <p className="st-error">{error}</p> : null}
       {data === false ? <p className="st-meta">Only the owner imports.</p> : null}
       {data ? <BufferImport /> : null}

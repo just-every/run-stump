@@ -1,22 +1,29 @@
 // The run site `rer build --site` writes (run-stump.com): the homepage, the
-// docs built from docs/site.json and docs/*.md, /run, /contract and Base's
-// hosting page from Base, and the not-found page. Nothing here reads
-// installation data.
+// docs built from docs/site.json and docs/*.md, /run (which sends the reader
+// on to the install doc), /contract and Base's hosting page from Base, and the
+// not-found page. Nothing here reads installation data.
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { contractPageHtml } from '../base/contract-page'
 import { hostingPageHtml } from '../base/hosting-page'
-import { runPageHtml, siteNotFoundHtml, type RunData, type SiteBuild, type SiteContext } from '../base/run-site'
+import { siteNotFoundHtml, type RunData, type SiteBuild, type SiteContext } from '../base/run-site'
 import { runPricing } from '../base/run-pricing'
 import { identity } from '../identity'
 import { buildDocs } from '../../scripts/site/docs.mjs'
 import { DocsArticle, DocsIndex, docsLead } from './docs/Docs'
 import { Landing } from './landing/Landing'
 import { Header } from './shell/Header'
+import { links } from './shell/links'
 import { siteDocument } from './shell/document'
 import run from './run.json'
 
 const DESCRIPTION = 'Stump turns your changelog into posts for the communities worth showing up in, then shows which posts brought signups.'
+
+/** A page that moved: the header, then one link on to where it lives now. */
+function Moved({ to, title }: { to: string; title: string }) {
+  return createElement('div', { className: 'site-moved-page' }, createElement(Header),
+    createElement('main', { className: 'site-wrap site-moved' }, createElement('h1', null, title), createElement('a', { className: 'site-pill site-pill--large', href: to }, `${title} →`)))
+}
 
 export function sitePages({ contract, hosting, styles = [], clients = {} }: Partial<SiteContext> = {}): SiteBuild {
   const data: RunData = { ...run, pricing: runPricing }
@@ -34,7 +41,9 @@ export function sitePages({ contract, hosting, styles = [], clients = {} }: Part
       page('/docs', 'Docs · Stump', docsLead, createElement(DocsIndex, { sections: docs.sections }), search),
       ...pages.map((entry, index) => page(`/docs/${entry.slug}`, `${entry.title} · Stump docs`, entry.summary,
         createElement(DocsArticle, { page: entry, sections: docs.sections, previous: pages[index - 1], next: pages[index + 1] }), search)),
-      { path: '/run', html: runPageHtml(identity, data, contract, homepage) },
+      // rer requires a /run page; Stump's is the install doc's old address, sent on to it (one path per resource).
+      { path: '/run', html: siteDocument({ title: 'Install Stump · Stump docs', description: DESCRIPTION, path: '/run', canonical: links.run, moved: true, styles,
+        body: renderToStaticMarkup(createElement(Moved, { to: links.run, title: 'Install Stump' })) }) },
       // rer supplies hosting (null when the seed does not deploy to Workers); a caller without it gets no hosting page.
       ...(hosting !== undefined ? [{ path: '/docs/hosting', html: hostingPageHtml(identity, data, hosting, contract, homepage) }] : []),
       ...(contract ? [{ path: '/contract', html: contractPageHtml(identity, data, contract, homepage) }] : []),

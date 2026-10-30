@@ -1,20 +1,18 @@
 // What Today shows, shaped from the records the person door answers: hand-offs
 // due today (the person's own first), what is held and why, what goes out today,
-// threads worth answering and recent results. Times are the viewer's own day.
+// and threads worth answering. Times are the viewer's own day.
 import type { Account, Flag } from '../drafting/view.ts'
-import { flagLine, networkName } from '../drafting/view.ts'
+import { flagLine, networkName, spanOf } from '../drafting/view.ts'
 import type { ItemRecord } from '../drafting/records.ts'
 import type { Handoff } from '../handoffs/ui/words.ts'
 import { rowTitle } from '../handoffs/ui/words.ts'
-import type { LedgerEntry } from '../ledger/entry.ts'
 import type { FindingView } from '../watches/ui-types.ts'
 
 /** Where a row opens: the screen that owns the record. */
 export type Dest =
   | { kind: 'handoff'; id: string }
-  | { kind: 'compose'; master: string }
-  | { kind: 'brand' }
-  | { kind: 'listening'; watch: string; finding: string }
+  | { kind: 'compose'; master?: string; item?: string; fix?: string }
+  | { kind: 'listening'; watch: string; finding: string; act?: boolean }
 
 export interface Day { start: number; end: number; week: number }
 
@@ -54,7 +52,8 @@ export function dueToday(queue: Handoff[], personId: string, day: Day) {
   return { rows, next: next ? { id: next.id, title: rowTitle(next), when: dateOf(next.due_at!) } : null }
 }
 
-export interface HeldRow { key: string; name: string; reason: string; action: { label: string; to: Dest } | null; mine: boolean; at: number }
+/** `thread` links the words in the reason that name a venue's promotion thread; the address itself is never printed. */
+export interface HeldRow { key: string; name: string; reason: string; thread: { words: string; url: string } | null; action: { label: string; to: Dest }; mine: boolean; at: number }
 
 const FORMAT: Record<string, string> = { post: 'Post', thread: 'Thread', reply: 'Reply', pitch: 'Pitch' }
 const blockingOf = (item: ItemRecord) => (item.flags as Flag[]).filter(flag => flag.blocking)
@@ -86,24 +85,26 @@ export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string
     if (handoff && !ACTIVE.includes(handoff.state) && handoff.state !== 'held') continue
     const flag = flags[0]
     const name = itemName(item, names, accounts)
-    const reason = flag ? flagLine(flag) : String((item.hold as { reason?: string } | null)?.reason ?? 'Held for a person to look at')
-    const master = typeof item.master_id === 'string' ? item.master_id : null
+    // A claim reads as the claim itself ("'50% faster' differs from proof (30%)"), as Compose quotes it.
+    const reason = flag ? flagLine(flag, spanOf(flag)) : String((item.hold as { reason?: string } | null)?.reason ?? 'Held for a person to look at')
+    // Every held row has its one action: the draft opens in Compose (its master post, or the item alone), a claim with its span selected.
+    const draft = typeof item.master_id === 'string' ? { master: item.master_id } : { item: item.id }
     const action = handoff ? { label: 'Open hand-off', to: { kind: 'handoff' as const, id: handoff.id } }
-      : flag?.code.startsWith('claim_') ? { label: 'Fix claim', to: { kind: 'brand' as const } }
-      : master ? { label: flag?.code === 'over_limit' ? 'Edit variant' : 'Open draft', to: { kind: 'compose' as const, master } }
-      : null
+      : flag?.code.startsWith('claim_') ? { label: 'Fix claim', to: { kind: 'compose' as const, ...draft, fix: item.id } }
+      : { label: flag?.code === 'over_limit' ? 'Edit variant' : 'Open draft', to: { kind: 'compose' as const, ...draft } }
+    const thread = flag && typeof flag.thread_url === 'string' && typeof flag.where === 'string' && reason.includes(flag.where) ? { words: flag.where, url: flag.thread_url } : null
     rows.push({ key: `item:${item.id}`, name: flag?.code === 'over_limit' ? `${reason} characters` : name, reason: flag?.code === 'over_limit' ? '' : reason,
-      action, mine: item.person_id === personId, at: at(item.updated_at) })
+      thread, action, mine: item.person_id === personId, at: at(item.updated_at) })
   }
   for (const handoff of queue) {
     if (handoff.state !== 'held' || (handoff.item_id && rows.some(row => row.key === `item:${handoff.item_id}`))) continue
-    rows.push({ key: `handoff:${handoff.id}`, name: rowTitle(handoff), reason: String((handoff.hold as { reason?: string } | null)?.reason ?? 'Held'),
+    rows.push({ key: `handoff:${handoff.id}`, name: rowTitle(handoff), reason: String((handoff.hold as { reason?: string } | null)?.reason ?? 'Held'), thread: null,
       action: { label: 'Open hand-off', to: { kind: 'handoff', id: handoff.id } }, mine: handoff.person_id === personId, at: at(handoff.updated_at) })
   }
   return rows.sort((a, b) => Number(b.mine) - Number(a.mine) || b.at - a.at)
 }
 
-export interface OutRow { id: string; time: string; network: string; who: string; text: string; paused: boolean; to: Dest | null }
+export interface OutRow { id: string; time: string; network: string; who: string; text: string; paused: boolean; to: Dest }
 
 /** Items scheduled for the rest of today, in time order; a paused one says so. */
 export function goingOut(items: ItemRecord[], accounts: Map<string, Account>, day: Day): OutRow[] {
@@ -115,7 +116,7 @@ export function goingOut(items: ItemRecord[], accounts: Map<string, Account>, da
       const who = account ? account.network === 'linkedin' ? account.display_name ?? account.handle : account.handle.startsWith('@') ? account.handle : `@${account.handle}` : ''
       const parts = item.parts as string[] | null
       return { id: item.id, time: timeOf(item.scheduled_at!), network: networkName(network || null), who, text: String(item.text ?? parts?.[0] ?? ''),
-        paused: item.state === 'paused', to: typeof item.master_id === 'string' ? { kind: 'compose' as const, master: item.master_id } : null }
+        paused: item.state === 'paused', to: { kind: 'compose' as const, ...(typeof item.master_id === 'string' ? { master: item.master_id } : { item: item.id }) } }
     })
 }
 
@@ -132,28 +133,8 @@ export function ago(iso: string | null, now: number): string {
   return minutes < 60 * 48 ? 'yesterday' : `${Math.round(minutes / 1440)}d ago`
 }
 
-/** Why a finding is worth a look, as the short chips Listening uses. */
-export function findingChips(finding: FindingView, now: number): string[] {
-  const chips: string[] = []
-  if (finding.answerable || finding.reason_details.some(reason => reason.factor === 'question' && reason.points > 0)) chips.push('asks a question')
-  if (finding.venue) chips.push(`fits ${finding.venue.name}`)
-  const product = finding.mentions.find(mention => mention.kind === 'product')
-  if (product) chips.push(`names ${product.product}`)
+/** Why a finding is worth a look: Listening's own chips (a question, the product it fits), then how long ago, as the plate shows them. */
+export function findingChips(chips: Array<{ label: string }>, finding: FindingView, now: number): string[] {
   const when = ago(finding.published_at, now)
-  if (when) chips.push(when)
-  return chips
-}
-
-export interface ResultRow { id: string; title: string; meta: string; url: string | null }
-
-/** Recent posts on the ledger, each with the results it carries. */
-export function resultRows(entries: LedgerEntry[], accounts: Map<string, Account>): ResultRow[] {
-  return entries.map(entry => {
-    const account = entry.account_id ? accounts.get(entry.account_id) : undefined
-    const handle = account ? account.network === 'linkedin' ? account.display_name ?? account.handle : account.handle.startsWith('@') ? account.handle : `@${account.handle}` : null
-    const where = entry.route === 'handed_off' ? `${entry.venue_name ?? 'A venue'} · ${entry.by}` : `${networkName(entry.network)} · ${handle ?? entry.by}`
-    const results = entry.results ? Object.entries(entry.results.values).slice(0, 3).map(([name, value]) => `${value.toLocaleString()} ${name.replace(/_/g, ' ')}`) : []
-    const posted = entry.posted_at ? `${entry.route === 'handed_off' ? 'Posted by hand' : 'Posted'} ${dateOf(entry.posted_at)}` : 'Posted'
-    return { id: entry.id, title: `${where}${entry.text ? ` · ${entry.text}` : ''}`, meta: [posted, ...results].join(' · '), url: entry.url }
-  })
+  return [...chips.map(chip => chip.label).filter(label => label !== 'fresh').slice(0, 2), ...(when ? [when] : [])]
 }

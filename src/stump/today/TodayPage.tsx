@@ -4,13 +4,13 @@ import { HydrationUnit } from '../../base/hydration/unit'
 import type { ItemRecord } from '../drafting/records.ts'
 import type { Account } from '../drafting/view.ts'
 import type { Handoff } from '../handoffs/ui/words.ts'
-import type { LedgerEntry } from '../ledger/entry.ts'
 import { CONTRIBUTORS, READERS, type Role } from '../people/roles.ts'
 import { me, runAction } from '../ui/api.ts'
 import { Icon } from '../ui/icons.tsx'
 import { Chip, PanelTitle, useLoaded } from '../ui/kit.tsx'
+import { JOB_WORDS, chipsFor, jobOf } from '../watches/finding-view.ts'
 import type { FindingList, WatchList } from '../watches/ui-types.ts'
-import { dayOf, dueToday, findingChips, goingOut, heldRows, resultRows, worthAnswering, type Day, type Dest } from './sections.ts'
+import { dayOf, dueToday, findingChips, goingOut, heldRows, worthAnswering, type Day, type Dest } from './sections.ts'
 
 // Today (SPEC §4.2): what needs this person today, each row opening the screen
 // that owns it. Every figure comes from the person door's existing reads.
@@ -39,29 +39,40 @@ async function loadWork() {
 async function loadFindings() {
   const who = await me()
   if (!READERS.includes(who.person.role as Role)) return null
-  const watches = await runAction<WatchList>('stump.watches.manage', { action: 'list' })
+  const [watches, products] = await Promise.all([runAction<WatchList>('stump.watches.manage', { action: 'list' }),
+    runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' })])
   const lists = await Promise.all(watches.items.filter(watch => !watch.muted)
     .map(watch => runAction<FindingList>('stump.findings.work', { action: 'list', watch_id: watch.id, limit: 5 })))
-  return { watches: watches.total, items: worthAnswering(lists.map(list => list.items)) }
+  // Each finding carries Listening's own chips and job, so the two screens say the same thing about it.
+  const byId = new Map(watches.items.map(watch => [watch.id, watch]))
+  const items = worthAnswering(lists.map(list => list.items)).map(finding => ({ finding, chips: chipsFor(finding, byId.get(finding.watch_id), products.items),
+    job: who.person.role === 'viewer' ? null : jobOf(finding) }))
+  return { watches: watches.total, items }
 }
 
-async function loadResults(day: Day) {
+/** The week's counts from the ledger: posts published and posts handed off and confirmed. */
+async function loadWeek(day: Day) {
   const since = new Date(day.week).toISOString()
-  const [posted, handed, recent] = await Promise.all([
-    page<LedgerEntry>('stump.ledger.search', { action: 'search', route: 'published', state: 'posted', from: since, limit: 1 }),
-    page<LedgerEntry>('stump.ledger.search', { action: 'search', route: 'handed_off', state: 'posted', from: since, limit: 1 }),
-    page<LedgerEntry>('stump.ledger.search', { action: 'search', state: 'posted', limit: 4 }),
+  const [posted, handed] = await Promise.all([
+    page<unknown>('stump.ledger.search', { action: 'search', route: 'published', state: 'posted', from: since, limit: 1 }),
+    page<unknown>('stump.ledger.search', { action: 'search', route: 'handed_off', state: 'posted', from: since, limit: 1 }),
   ])
-  return { posted: posted.total, handed: handed.total, recent: recent.items }
+  return { posted: posted.total, handed: handed.total }
 }
 
 function Go({ to, className, children }: { to: Dest; className?: string; children: ReactNode }) {
   switch (to.kind) {
     case 'handoff': return <Link className={className} to="/app/handoffs/$handoffId" params={{ handoffId: to.id }}>{children}</Link>
-    case 'compose': return <Link className={className} to="/app/compose" search={{ master: to.master }}>{children}</Link>
-    case 'brand': return <Link className={className} to="/app/settings/brand">{children}</Link>
-    case 'listening': return <Link className={className} to="/app/listening" search={{ watch: to.watch, finding: to.finding }}>{children}</Link>
+    case 'compose': return <Link className={className} to="/app/compose" search={{ ...(to.master ? { master: to.master } : {}), ...(to.item ? { item: to.item } : {}), ...(to.fix ? { fix: to.fix } : {}) }}>{children}</Link>
+    case 'listening': return <Link className={className} to="/app/listening" search={{ watch: to.watch, finding: to.finding, ...(to.act ? { act: '1' as const } : {}) }}>{children}</Link>
   }
+}
+
+/** A held reason, with the words that name a venue's thread linked to it; the address itself never shows. */
+function Reason({ row }: { row: { reason: string; thread: { words: string; url: string } | null } }) {
+  if (!row.thread) return <>{row.reason}</>
+  const at = row.reason.indexOf(row.thread.words)
+  return <>{row.reason.slice(0, at)}<a href={row.thread.url} target="_blank" rel="noopener noreferrer">{row.thread.words}</a>{row.reason.slice(at + row.thread.words.length)}</>
 }
 
 /** A plain warm line for a section with nothing in it, with the one place that fills it. */
@@ -80,9 +91,11 @@ export function TodayPage() {
   const day = now === null ? null : dayOf(now)
   const work = useLoaded(loadWork)
   const findings = useLoaded(loadFindings)
-  const results = useLoaded(async () => day ? loadResults(day) : null)
-  const resultsRefresh = results.refresh
-  useEffect(() => { if (day) void resultsRefresh() }, [day?.week, resultsRefresh])
+  const week = useLoaded(async () => day ? loadWeek(day) : null)
+  const weekRefresh = week.refresh
+  useEffect(() => { if (day) void weekRefresh() }, [day?.week, weekRefresh])
+  // Held shows three rows; the rest open in place, so the pair of cards stays short and even.
+  const [allHeld, setAllHeld] = useState(false)
 
   const personId = work.data?.who.person.id ?? ''
   const due = work.data && day ? dueToday(work.data.queue, personId, day) : null
@@ -92,7 +105,7 @@ export function TodayPage() {
   const reader = !work.data || READERS.includes(work.data.who.person.role as Role)
   const writer = !!work.data && CONTRIBUTORS.includes(work.data.who.person.role as Role)
   const [focal, ...moreDue] = due?.rows ?? []
-  const shownHeld = held?.slice(0, 5) ?? []
+  const shownHeld = held ? allHeld ? held : held.slice(0, 3) : []
 
   return <HydrationUnit>
     <section className="st-page st-today" aria-labelledby="today-title">
@@ -126,11 +139,12 @@ export function TodayPage() {
               {held && !held.length ? <Nothing>Nothing is held. Every draft is clear to go.</Nothing> : null}
               {shownHeld.length ? <ul className="st-list">
                 {shownHeld.map(row => <li className="st-row" key={row.key}>
-                  <div className="st-row-main"><div className="st-today-line">{row.name}{row.reason ? <> · <span>{row.reason}</span></> : null}</div></div>
-                  {row.action ? <Go className="st-button quiet small" to={row.action.to}>{row.action.label}</Go> : null}
+                  <div className="st-row-main"><div className="st-today-line">{row.name}{row.reason ? <> · <span><Reason row={row} /></span></> : null}</div></div>
+                  <Go className="st-button quiet small" to={row.action.to}>{row.action.label}</Go>
                 </li>)}
               </ul> : null}
-              {held && held.length > shownHeld.length ? <p className="st-meta">And {held.length - shownHeld.length} more held.</p> : null}
+              {held && held.length > 3 ? <button type="button" className="st-today-all" aria-expanded={allHeld} onClick={() => setAllHeld(!allHeld)}>
+                {allHeld ? 'Show fewer' : `And ${held.length - shownHeld.length} more held`}</button> : null}
             </section>
 
             {reader ? <section className="st-panel" aria-labelledby="today-worth">
@@ -139,10 +153,11 @@ export function TodayPage() {
               {findings.data && !findings.data.items.length ? <Nothing>
                 {findings.data.watches ? 'No new threads worth answering. Your watches keep looking.' : <>Nothing to answer yet. <Link to="/app/listening">Add a watch</Link> and threads worth answering show up here.</>}
               </Nothing> : null}
-              {findings.data?.items.map((finding, index) => <div className="st-today-finding" key={finding.id}>
+              {findings.data?.items.map(({ finding, chips, job }, index) => <div className="st-today-finding" key={finding.id}>
                 <Go className="st-today-finding-title" to={{ kind: 'listening', watch: finding.watch_id, finding: finding.id }}>{finding.title || finding.text.slice(0, 100)}</Go>
-                <ul className="st-chips" aria-label="Why it is worth a look">{findingChips(finding, now ?? Date.now()).map(chip => <li className="st-chip" key={chip}>{chip}</li>)}</ul>
-                {index === 0 ? <Go className="st-button primary small" to={{ kind: 'listening', watch: finding.watch_id, finding: finding.id }}>Open in Listening <Icon name="arrowRight" /></Go> : null}
+                <ul className="st-chips" aria-label="Why it is worth a look">{findingChips(chips, finding, now ?? Date.now()).map(chip => <li className="st-chip" key={chip}>{chip}</li>)}</ul>
+                {/* The finding's own job, as Listening's focal row offers it; it opens there with the job started. */}
+                {index === 0 ? <Go className="st-button primary small" to={{ kind: 'listening', watch: finding.watch_id, finding: finding.id, act: !!job }}>{job ? JOB_WORDS[job] : 'Open in Listening'} <Icon name="arrowRight" /></Go> : null}
               </div>)}
             </section> : null}
           </div>
@@ -154,32 +169,17 @@ export function TodayPage() {
             {out?.length ? <ul className="st-list">
               {out.map(row => {
                 const line = <><span className="st-today-out-line">{row.time} · {row.network}{row.who ? ` · ${row.who}` : ''}{row.text ? ` · ${row.text}` : ''}</span>{row.paused ? <Chip tone="held">Paused</Chip> : null}</>
-                return <li className="st-row" key={row.id}>{row.to ? <Go className="st-today-out" to={row.to}>{line}</Go> : <span className="st-today-out">{line}</span>}</li>
+                return <li className="st-row" key={row.id}><Go className="st-today-out" to={row.to}>{line}</Go></li>
               })}
             </ul> : null}
-          </section>
-
-          <section className="st-panel" aria-labelledby="today-results">
-            <PanelTitle icon="ledger" id="today-results">Recent results</PanelTitle>
-            <Failed error={results.error} />
-            {results.data && !results.data.recent.length ? <Nothing>No posts yet. Once one goes out, it shows here with what it brought.</Nothing> : null}
-            {results.data?.recent.length ? <>
-              <ul className="st-list">
-                {resultRows(results.data.recent, work.data?.accounts ?? new Map()).map(row => <li className="st-row" key={row.id}>
-                  <div className="st-row-main"><div className="st-today-line st-today-clip">{row.title}</div><div className="st-meta">{row.meta}</div></div>
-                  {row.url ? <a className="st-button quiet small" href={row.url} target="_blank" rel="noopener noreferrer">View post ↗</a> : null}
-                </li>)}
-              </ul>
-              <Link className="st-today-all" to="/app/ledger">Everything on the ledger</Link>
-            </> : null}
           </section>
         </div>
 
         <aside className="st-panel side st-today-week" aria-labelledby="today-week">
           <PanelTitle icon="chart" id="today-week">This week</PanelTitle>
           <ul>
-            <li><span className="st-disc big">{results.data?.posted ?? ' '}</span>posted</li>
-            <li><span className="st-disc big">{results.data?.handed ?? ' '}</span>handed off</li>
+            <li><Link className="st-today-count" to="/app/ledger"><span className="st-disc big">{week.data?.posted ?? ' '}</span>posted</Link></li>
+            <li><span className="st-disc big">{week.data?.handed ?? ' '}</span>handed off</li>
           </ul>
         </aside>
       </div>

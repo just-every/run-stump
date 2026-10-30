@@ -2,11 +2,11 @@ import { Link } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
-import { Outcome, Tip, monthYear, networkWord, useLoaded, useRun, words } from '../../ui/kit.tsx'
+import { Disc, Outcome, Tip, monthYear, useLoaded, useRun } from '../../ui/kit.tsx'
 import type { Team } from '../../ui/types.ts'
 import { DETAIL_LABELS } from '../kinds.ts'
 import { kindLabel, limitWords, nextOpen, routeLabel, statusLabel, statusTone } from './labels.ts'
-import { RulesCard, threadWords } from './RulesCard.tsx'
+import { RulesCard } from './RulesCard.tsx'
 import type { Members, RouteAnswer, Venue, VenueItem } from './types.ts'
 import { VenueForm } from './VenueForm.tsx'
 
@@ -30,7 +30,7 @@ export function VenuePage({ venueId }: { venueId: string }) {
   const venue = data?.venue
   const changed = () => { void refresh() }
   return <HydrationUnit>
-    <section className="st-page" aria-labelledby="venue-title" style={{ maxWidth: 1120 }}>
+    <section className="st-page st-venue" aria-labelledby="venue-title" style={{ maxWidth: 1120 }}>
       <Link className="st-back" to="/app/venues">← All venues</Link>
       {error ? <p className="st-error" role="alert">{error}</p> : null}
       {venue ? <>
@@ -46,8 +46,8 @@ export function VenuePage({ venueId }: { venueId: string }) {
           <div className="st-aside">
             <RoutesCard venue={venue} routes={data.routes} editor={editor} onChanged={changed} />
             <MembersCard venue={venue} members={data.members} team={data.team} me={data.who.person} editor={editor} onChanged={changed} />
+            <About venue={venue} />
           </div>
-          <DetailsCard venue={venue} items={data.items} />
         </div>
       </> : null}
     </section>
@@ -91,7 +91,7 @@ function RoutesCard({ venue, routes, editor, onChanged }: { venue: Venue; routes
   }
   const closed = routes.reasons.filter(reason => !reason.open)
   return <section className="st-card" aria-labelledby="routes-title">
-    <h2 id="routes-title">Routes</h2>
+    <h2 className="st-panel-title" id="routes-title"><Disc icon="arrows" />Routes</h2>
     {routes.routes.length ? <div className="st-chips">{routes.routes.map(route => <span className="st-chip ok" key={route}>{routeLabel(route)}</span>)}</div> : <p>No route is open.</p>}
     {closed.length ? <ul className="st-list">{closed.map(reason => <li className="st-meta" key={reason.route} style={{ padding: '2px 0' }}>{routeLabel(reason.route)}: {reason.because}</li>)}</ul> : null}
     <div style={{ borderTop: '1px solid var(--stump-line)', marginTop: 16, paddingTop: 16 }}>
@@ -127,7 +127,7 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
   const gateWords = (gate: { gate: string; need: number | boolean }) => gate.gate === 'karma' ? `needs ${gate.need} karma` : gate.gate === 'account_age' ? `account needs ${gate.need} days` : gate.gate === 'approval' ? 'needs approval' : 'not a member'
   const pending = members.applications.filter(application => application.state === 'applied')
   return <section className="st-card" aria-labelledby="members-title">
-    <h2 id="members-title">Members</h2>
+    <h2 className="st-panel-title" id="members-title"><Disc icon="people" />Members</h2>
     {members.items.length ? <ul className="st-list">{members.items.map(member => <li className="st-row" key={member.person_id}>
       <div className="st-row-main">
         <div className="st-name">{member.display_name ?? names.get(member.person_id) ?? 'Teammate'}</div>
@@ -156,37 +156,18 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
   </section>
 }
 
-function DetailsCard({ venue, items }: { venue: Venue; items: VenueItem[] }) {
+/** The venue's address, why it matters and its other details, as quiet lines under the right column. The title and
+ * subline already say what it is, so details that repeat them (its platform, subreddit and priority) do not show. */
+function About({ venue }: { venue: Venue }) {
   const howTo = Object.entries(venue.how_to_post).filter(([, value]) => value).map(([name, value]) => name === 'text' ? String(value) : `${name}: ${String(value)}`).join(' · ')
-  const rows: Array<[string, string | null]> = [
-    ['Address', venue.url], ['Platform', venue.platform ? networkWord(venue.platform) : null], ['Priority', venue.priority ? `${venue.priority[0]!.toUpperCase()}${venue.priority.slice(1)}` : null],
-    ...Object.entries(venue.details).filter(([, value]) => value !== null && value !== '').map(([name, value]) => [DETAIL_LABELS[name] ?? name, Array.isArray(value) ? value.join(', ') : String(value)] as [string, string]),
-    ['Who reads it', venue.audience], ['Why it matters', venue.why], ['What readers get', venue.reader_value], ['How to post', howTo || null],
-    ['Reception', venue.reception], ['Notes', venue.notes],
-  ]
-  return <section className="st-card" aria-labelledby="details-title">
-    <h2 id="details-title">About this venue</h2>
-    <dl className="st-kv">{rows.filter(([, value]) => value).map(([label, value]) => <div key={label} style={{ display: 'contents' }}><dt>{label}</dt><dd>{label === 'Address' || label === DETAIL_LABELS.guest_intake ? <a href={value!} target="_blank" rel="noreferrer noopener">{value}</a> : value}</dd></div>)}</dl>
-    {venue.products.length ? <>
-      <h3 style={{ fontSize: 'var(--stump-size-body)', margin: '16px 0 4px' }}>Products</h3>
-      <ul className="st-list">{venue.products.map(product => <li className="st-row" key={product.product_id}><div className="st-row-main"><div className="st-name">{product.name ?? 'Product'}</div>
-        <div className="st-meta">{[product.fit !== null ? `fit ${product.fit}` : null, `${product.items} ${product.items === 1 ? 'item' : 'items'} here`].filter(Boolean).join(' · ')}</div></div></li>)}</ul>
-    </> : null}
-    {items.length ? <>
-      <h3 style={{ fontSize: 'var(--stump-size-body)', margin: '16px 0 4px' }}>Items aimed here</h3>
-      <ul className="st-list">{items.map(item => <li className="st-row" key={item.id}><div className="st-row-main"><div className="st-name">{item.format[0]!.toUpperCase() + item.format.slice(1)} · {words(item.state)}</div>
-        <div className="st-meta">{holdWords(venue, item)}</div></div></li>)}</ul>
-    </> : null}
-  </section>
-}
-
-/** Why an item aimed here waits, in words: the rule that holds it, never its code. */
-function holdWords(venue: Venue, item: VenueItem): string {
-  const rule = item.hold?.rule ?? (item.hold?.reason && /^[a-z_]+$/.test(item.hold.reason) ? item.hold.reason : null)
-  if (rule === 'self_promotion') return `Held: outside the ${venue.rules.self_promotion ? threadWords(venue.rules.self_promotion) : 'promotion thread'}`
-  if (rule === 'links') return 'Held: links are not allowed here'
-  if (rule === 'posting') return 'Held: members post here, so it goes to a member'
-  if (rule) return `Held by the ${words(rule)} rule`
-  const reason = item.hold?.reason ?? item.history[0]?.reason ?? ''
-  return /^[a-z_]+$/.test(reason) ? words(reason) : reason
+  const details = Object.entries(venue.details).filter(([name, value]) => name !== 'subreddit' && value !== null && value !== '')
+    .map(([name, value]) => [DETAIL_LABELS[name] ?? name, Array.isArray(value) ? value.join(', ') : String(value)] as const)
+  const lines = [...details, ['Who reads it', venue.audience], ['What readers get', venue.reader_value], ['How to post', howTo || null], ['Reception', venue.reception], ['Notes', venue.notes]] as const
+  if (!venue.url && !venue.why && !lines.some(([, value]) => value)) return null
+  const link = (value: string) => /^https?:\/\//.test(value) ? <a href={value} target="_blank" rel="noreferrer noopener">{value.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')} ↗</a> : value
+  return <div className="st-venue-about">
+    {venue.url ? <p className="st-meta">{link(venue.url)}</p> : null}
+    {venue.why ? <p className="st-meta">{venue.why}</p> : null}
+    {lines.filter(([, value]) => value).map(([label, value]) => <p className="st-meta" key={label}>{label}: {link(value!)}</p>)}
+  </div>
 }

@@ -10,10 +10,12 @@ const copyScript = "document.querySelectorAll('[data-copy]').forEach(function(b)
 const tocScript = "(function(){var l=[].slice.call(document.querySelectorAll('.docs-toc a[href^=\"#\"],.docs-toc-compact a[href^=\"#\"]'));if(!l.length)return;var h=l.map(function(a){return document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)))});function m(){var c=null;h.forEach(function(e){if(e&&e.getBoundingClientRect().top<=120&&(!c||e.getBoundingClientRect().top>=c.getBoundingClientRect().top))c=e});c=c||h.filter(Boolean)[0];l.forEach(function(a,i){if(h[i]===c)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current')})}m();addEventListener('scroll',m,{passive:true})})()"
 
 /** `scripts` are the module URLs of the site islands the page uses (rer build --site bundles them). */
-export function siteDocument({ title, description, path, styles, scripts = [], body }: { title: string; description: string; path: string; styles: string[]; scripts?: string[]; body: string }) {
+/** `canonical` names the page this one stands for, and `moved` sends the browser on to it at once (a static host has no redirects). */
+export function siteDocument({ title, description, path, styles, scripts = [], body, canonical = path, moved = false }: { title: string; description: string; path: string; styles: string[]; scripts?: string[]; body: string; canonical?: string; moved?: boolean }) {
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+    + (moved ? `<meta http-equiv="refresh" content="0; url=${escape(canonical)}">` : '')
     + `<title>${escape(title)}</title><meta name="description" content="${escape(description)}">`
-    + `<link rel="canonical" href="${SITE}${path === '/' ? '/' : path}">`
+    + `<link rel="canonical" href="${SITE}${canonical === '/' ? '/' : canonical}">`
     + `<meta property="og:type" content="website"><meta property="og:site_name" content="Stump"><meta property="og:title" content="${escape(title)}"><meta property="og:description" content="${escape(description)}">`
     + `<meta property="og:url" content="${SITE}${path}"><meta property="og:image" content="${SITE}/brand/social.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">`
     + '<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32"><link rel="apple-touch-icon" href="/apple-touch-icon.png">'

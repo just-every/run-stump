@@ -71,3 +71,7 @@ a { color: inherit; }
   .site-footer-text { border: 0; padding: 0; }
   .site-footer-nav { gap: 28px; }
 }
+
+/* /run: the install doc's old address, sent on to it */
+.site-moved { display: flex; flex-direction: column; align-items: center; gap: 24px; padding-top: 96px; padding-bottom: 96px; text-align: center; }
+.site-moved h1 { margin: 0; font: 800 clamp(32px, 3.6vw, 52px)/1.02 var(--font); letter-spacing: -0.025em; color: var(--ink); }

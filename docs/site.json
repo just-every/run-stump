@@ -10,9 +10,9 @@
           "summary": "What Stump does, the daily job it runs and what it will not do."
         },
         {
-          "slug": "getting-started",
+          "slug": "install",
           "title": "Install Stump",
-          "file": "getting-started.md",
+          "file": "install.md",
           "summary": "Run Stump on your own computer with one line, then sign in as the owner."
         },
         {

@@ -52,8 +52,7 @@ function AccountsPage() {
   const showForm = connecting || (data !== null && !accounts.length && !viewer)
   return <HydrationUnit>
     <section className="st-page" aria-labelledby="accounts-title">
-      <h1 id="accounts-title">Accounts</h1>
-      <p className="st-lead">The accounts Stump posts from. Each one belongs to one person or to the company.</p>
+      <h1 id="accounts-title" className="st-sr">Accounts</h1>
       {error ? <p className="st-error">{error}</p> : null}
       {note ? <p className="st-note" role="status">{note}</p> : null}
       {accounts.length ? <ul className="st-list st-box">

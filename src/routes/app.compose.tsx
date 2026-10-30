@@ -6,12 +6,29 @@ import { Disc } from '../stump/drafting/disc.tsx'
 import { Outcome, Tip, useLoaded, useRun } from '../stump/ui/kit.tsx'
 import { Icon } from '../stump/ui/icons.tsx'
 import { countText, extractUrls, type Network } from '../stump/lib/text/index.ts'
-import { accountLabel, claimSpan, flagLine, networkName, proofLabel, type Account, type Check, type ClaimView, type Flag, type MasterPreview, type Variant } from '../stump/drafting/view.ts'
+import { accountLabel, flagLine, networkName, proofLabel, spanAt, spanOf, type Account, type Check, type ClaimFinding, type ClaimView, type Count, type Flag, type MasterPreview, type Variant } from '../stump/drafting/view.ts'
+import type { ItemRecord } from '../stump/drafting/records.ts'
 
+// `master` opens a master post and its variants; `item` opens one draft that has no master; `fix` names the
+// variant whose claim to select, so "Fix claim" (here or on Today) lands on the words to change.
+type Search = { master?: string; item?: string; fix?: string }
 export const Route = createFileRoute('/app/compose')({
-  validateSearch: (search: Record<string, unknown>): { master?: string } => typeof search.master === 'string' ? { master: search.master } : {},
+  validateSearch: (search: Record<string, unknown>): Search => ({
+    ...(typeof search.master === 'string' ? { master: search.master } : typeof search.item === 'string' ? { item: search.item } : {}),
+    ...(typeof search.fix === 'string' ? { fix: search.fix } : {}),
+  }),
   component: ComposePage,
 })
+
+/** One draft with no master post, read as a variant so it edits and checks the same way. */
+async function draftAlone(itemId: string, accounts: Account[]): Promise<Variant> {
+  const [item, shown] = await Promise.all([runAction<ItemRecord>('stump.drafts.revise', { action: 'get', item_id: itemId }),
+    runAction<{ items: Array<{ count: Count | null }> }>('stump.drafts.preview', { action: 'item', item_id: itemId })])
+  const account = accounts.find(entry => entry.id === item.account_id)
+  const parts = item.parts as string[] | null
+  return { item_id: item.id, network: item.network as string | null, account_id: item.account_id as string | null, handle: account?.handle ?? null, account_name: account?.display_name ?? null,
+    text: parts?.length ? parts.join('\n\n') : String(item.text ?? ''), count: shown.items[0]?.count ?? null, flags: item.flags as Flag[], state: String(item.state), revision: item.revision, differs_from_master: false }
+}
 
 const key = () => crypto.randomUUID()
 const blocking = (flags: Flag[]) => flags.filter(flag => flag.blocking)
@@ -20,17 +37,21 @@ const graphemes = (value: string) => [...new Intl.Segmenter().segment(value)].le
 const localNow = () => { const at = new Date(Date.now() + 3_600_000); at.setMinutes(0, 0, 0); return new Date(at.getTime() - at.getTimezoneOffset() * 60_000).toISOString().slice(0, 16) }
 
 function ComposePage() {
-  const { master: masterId } = Route.useSearch()
+  const { master: masterId, item: itemId, fix } = Route.useSearch()
   const navigate = useNavigate({ from: '/app/compose' })
   const { data, error, refresh } = useLoaded(async () => {
     const [who, targets, claims] = await Promise.all([me(), runAction<{ items: Account[] }>('stump.drafts.preview', { action: 'targets' }),
       runAction<{ items: ClaimView[] }>('stump.brand.manage', { action: 'claim_list' })])
     const preview = masterId ? await runAction<MasterPreview>('stump.drafts.preview', { action: 'master', master_id: masterId }) : null
-    const checks = preview ? await Promise.all(preview.items.map(variant =>
-      runAction<Check & { item_id: string }>('stump.drafts.check', { action: 'run', item_id: variant.item_id, idempotency_key: key() }).catch(() => null))) : []
-    return { who, accounts: targets.items, claims: claims.items, preview, checks: checks.filter((check): check is Check & { item_id: string } => !!check) }
+    const alone = !masterId && itemId ? await draftAlone(itemId, targets.items) : null
+    const checks = await Promise.all((preview?.items ?? (alone ? [alone] : [])).map(variant =>
+      runAction<Check & { item_id: string }>('stump.drafts.check', { action: 'run', item_id: variant.item_id, idempotency_key: key() }).catch(() => null)))
+    return { who, accounts: targets.items, claims: claims.items, preview, alone, checks: checks.filter((check): check is Check & { item_id: string } => !!check) }
   })
-  useEffect(() => { void refresh() }, [masterId, refresh])
+  useEffect(() => { void refresh() }, [masterId, itemId, refresh])
+  // The variant whose claim is selected for fixing: from the address on arrival, then from each "Fix claim".
+  const [fixing, setFixing] = useState<{ item: string; at: number } | null>(fix ? { item: fix, at: 0 } : null)
+  useEffect(() => { if (fix) setFixing({ item: fix, at: Date.now() }) }, [fix])
   const { busy, message, run } = useRun()
   const [text, setText] = useState('')
   const [source, setSource] = useState('')
@@ -39,16 +60,18 @@ function ComposePage() {
   const [checksOpen, setChecksOpen] = useState(false)
   const [note, setNote] = useState<{ text: string; error: boolean } | null>(null)
   const preview = data?.preview ?? null
+  const alone = data?.alone ?? null
   useEffect(() => { if (preview) setText(preview.master.text) }, [preview?.master.id, preview?.master.revision])
   useEffect(() => { if (preview?.master.sources[0]) setSource(preview.master.sources[0].url) }, [preview?.master.id])
 
   const accounts = data?.accounts ?? []
   const chosen = preview ? preview.master.account_ids : picked
-  const variants = preview?.items ?? []
+  const variants = preview?.items ?? (alone ? [alone] : [])
+  const open = !!(preview || alone)
   const held = variants.filter(variant => blocking(variant.flags).length)
   const tightest = Math.min(...variants.map(variant => variant.count?.limit ?? Infinity), ...accounts.filter(account => chosen.includes(account.id)).map(account => ({ x: 280, bluesky: 300, mastodon: 500, linkedin: 3000 } as Record<string, number>)[account.network] ?? Infinity))
 
-  async function open() {
+  async function start() {
     const generate = !text.trim() && !!source.trim()
     const made = await run(() => runAction<{ master: { id: string } }>('stump.drafts.write', { action: 'master', account_ids: picked, ...(generate ? { generate: true, source_url: source.trim() } : { text, ...(source.trim() ? { source_url: source.trim() } : {}) }), idempotency_key: key() }))
     if (made) await navigate({ search: { master: made.master.id } })
@@ -64,10 +87,11 @@ function ComposePage() {
     await refresh()
   }
   async function schedule(action: 'schedule_master' | 'queue') {
-    if (!preview) return
+    if (!open) return
     setNote(null)
     try {
-      if (action === 'schedule_master') await runAction('stump.items.schedule', { action: 'schedule_master', master_id: preview.master.id, at: new Date(when).toISOString(), idempotency_key: key() })
+      if (action === 'schedule_master' && preview) await runAction('stump.items.schedule', { action: 'schedule_master', master_id: preview.master.id, at: new Date(when).toISOString(), idempotency_key: key() })
+      else if (action === 'schedule_master' && alone) await runAction('stump.items.schedule', { action: 'schedule', item_id: alone.item_id, account_id: alone.account_id, at: new Date(when).toISOString(), idempotency_key: key() })
       else await Promise.all(variants.filter(variant => !blocking(variant.flags).length).map(variant => runAction('stump.calendar.plan', { action: 'queue', item_id: variant.item_id, account_id: variant.account_id, idempotency_key: key() })))
       setNote({ text: action === 'schedule_master' ? 'Scheduled.' : 'Added to the queue.', error: false })
     } catch (cause) {
@@ -79,17 +103,20 @@ function ComposePage() {
   }
 
   const matched = new Set(data?.checks.flatMap(check => check.claims.filter(claim => claim.status === 'matched').map(claim => claim.claim_id)) ?? [])
-  const flagRows = new Map<string, Flag>()
+  const flagRows = new Map<string, { flag: Flag; item: string }>()
   // One row per thing to fix: a limit per variant, a sentence, an image or a venue rule once however many variants share it.
-  for (const variant of variants) for (const flag of blocking(variant.flags)) flagRows.set(flag.code === 'over_limit' ? `over:${variant.item_id}` : `${flag.code}:${String(flag.text ?? flag.media_id ?? flag.rule ?? '')}`, flag)
+  for (const variant of variants) for (const flag of blocking(variant.flags)) {
+    const id = flag.code === 'over_limit' ? `over:${variant.item_id}` : `${flag.code}:${String(flag.text ?? flag.media_id ?? flag.rule ?? '')}`
+    if (!flagRows.has(id)) flagRows.set(id, { flag, item: variant.item_id })
+  }
   // Sentences to back that do not stop the post: what the product does, with no number or comparison in it.
   const toBack = new Map<string, Flag>()
   for (const variant of variants) for (const flag of variant.flags) if (!flag.blocking && flag.code === 'claim_unmatched' && !flagRows.has(`${flag.code}:${String(flag.text ?? '')}`)) toBack.set(String(flag.text ?? ''), flag)
   // The claim itself, as the check found it in its sentence ("50% faster"), not the whole sentence.
-  const spanOf = (flag: Flag) => {
-    const found = data?.checks.flatMap(check => check.claims).find(claim => claim.status === 'number_mismatch' && claim.text === flag.text)
-    return found ? claimSpan(found.text, found.found) : null
-  }
+  const claimsOf = (itemId?: string): ClaimFinding[] => data?.checks.filter(check => !itemId || check.item_id === itemId).flatMap(check => check.claims) ?? []
+  // Each variant's claims that differ from their proof, as ranges of its text to mark on the danger tint.
+  const claimRanges = (variant: Variant) => blocking(variant.flags).filter(flag => flag.code === 'claim_number_mismatch')
+    .map(flag => spanAt(variant.text, flag, claimsOf(variant.item_id))).filter((range): range is [number, number] => !!range)
   const disclosure = data?.checks.find(check => check.disclosure.required)
   const repeats = variants.some(variant => variant.flags.some(flag => flag.code === 'near_duplicate'))
 
@@ -102,9 +129,12 @@ function ComposePage() {
     <ul className="st-check-list">
       <li><Disc icon="check" /><span>{matched.size} {matched.size === 1 ? 'claim' : 'claims'} matched</span></li>
       {(data?.claims ?? []).filter(claim => matched.has(claim.id)).map(claim => <li key={claim.id} className="st-check-detail"><span>{claim.text}{proofLabel(claim.proof) ? ` · ${proofLabel(claim.proof)}` : ''}</span></li>)}
-      {[...flagRows.values()].map(flag => <li key={`${flag.code}-${String(flag.text ?? flag.network)}`} className="danger"><Disc icon="alert" tone="danger" /><span>
-        {flagLine(flag, spanOf(flag))}
-        {flag.code.startsWith('claim_') ? <Link className="st-pill" to="/app/settings/brand">Fix claim</Link> : null}
+      {[...flagRows.values()].map(({ flag, item }) => <li key={`${flag.code}-${String(flag.text ?? flag.network)}`} className="danger"><Disc icon="alert" tone="danger" /><span>
+        {flagLine(flag, spanOf(flag, claimsOf()))}
+        {flag.code.startsWith('claim_') ? <span className="st-fix">
+          <button className="st-pill" type="button" onClick={() => setFixing({ item, at: Date.now() })}>Fix claim</button>
+          <Link className="st-quiet-link" to="/app/settings/brand">Update the proof</Link>
+        </span> : null}
       </span></li>)}
       {[...toBack.values()].map(flag => <li key={`back-${String(flag.text ?? '')}`}><Disc icon="alert" /><span>
         {flagLine(flag)}
@@ -116,11 +146,21 @@ function ComposePage() {
     </ul>
   </section>
 
+  const variantCards = variants.map(variant => <VariantCard key={`${variant.item_id}-${variant.revision}`} variant={variant} claims={claimRanges(variant)}
+    select={fixing?.item === variant.item_id ? { range: claimRanges(variant)[0] ?? null, at: fixing.at } : null} onSelected={() => setFixing(null)}
+    onSave={next => void saveVariant(variant, next)} />)
+
   return <HydrationUnit>
     <section className="st-page st-drafting" aria-labelledby="compose-title">
-      <h1 id="compose-title">New post</h1>
+      <h1 id="compose-title">{alone ? 'Edit post' : 'New post'}</h1>
       {error ? <p className="st-error">{error}</p> : null}
-      <div className="st-compose">
+      {alone ? <div className="st-compose">
+        <section className="st-card" aria-labelledby="variants-title">
+          <h2 className="st-card-head" id="variants-title"><Disc icon="pencil" />{alone.handle ? accountLabel({ handle: alone.handle, network: alone.network ?? '', display_name: alone.account_name }) : `${networkName(alone.network)} post`}</h2>
+          <div className="st-variants">{variantCards}</div>
+        </section>
+        {checks}
+      </div> : <div className="st-compose">
         <section className="st-card" aria-labelledby="one-post">
           <h2 className="st-card-head" id="one-post"><Disc icon="pencil" />One post</h2>
           <label className="st-sr" htmlFor="master-text">Post text</label>
@@ -146,22 +186,22 @@ function ComposePage() {
                 onClick={() => setPicked(picked.includes(account.id) ? picked.filter(item => item !== account.id) : [...picked, account.id])}>{accountLabel(account)}</button>)}
           </div>
           {!preview ? <div className="st-actions st-open">
-            <button className="st-button primary" type="button" disabled={busy || !picked.length || (!text.trim() && !source.trim())} onClick={() => void open()}>
+            <button className="st-button primary" type="button" disabled={busy || !picked.length || (!text.trim() && !source.trim())} onClick={() => void start()}>
               {!text.trim() && source.trim() ? 'Draft from source' : 'Open variants'}
             </button>
           </div> : null}
         </section>
         {preview ? checks : null}
-      </div>
+      </div>}
       {preview ? <section className="st-card" aria-labelledby="variants-title">
         <h2 className="st-card-head" id="variants-title"><Disc icon="grid" />Variants</h2>
-        <div className="st-variants">{variants.map(variant => <VariantCard key={`${variant.item_id}-${variant.revision}`} variant={variant} onSave={next => void saveVariant(variant, next)} />)}</div>
+        <div className="st-variants">{variantCards}</div>
       </section> : null}
-      {preview ? <div className="st-bar">
+      {open && !(alone && !alone.account_id) ? <div className="st-bar">
         {held.length === variants.length
           ? <span className="st-pill held">{variants.length === 1 ? `The ${networkName(held[0]!.network)} variant holds until fixed` : `All ${variants.length} variants hold until fixed`}</span>
           : <button className="st-button ink" type="button" disabled={busy} onClick={() => void schedule('schedule_master')}>
-            {held.length ? `Schedule ${variants.length - held.length} ${variants.length - held.length === 1 ? 'post' : 'posts'}` : 'Schedule all'} →
+            {alone ? 'Schedule' : held.length ? `Schedule ${variants.length - held.length} ${variants.length - held.length === 1 ? 'post' : 'posts'}` : 'Schedule all'} →
           </button>}
         <WhenPicker value={when} onChange={setWhen} />
         {held.length === variants.length ? null : held.length
@@ -173,11 +213,26 @@ function ComposePage() {
   </HydrationUnit>
 }
 
-function VariantCard({ variant, onSave }: { variant: Variant; onSave: (text: string) => void }) {
+function VariantCard({ variant, claims, select, onSelected, onSave }: { variant: Variant; claims: Array<[number, number]>; select: { range: [number, number] | null; at: number } | null; onSelected(): void; onSave: (text: string) => void }) {
   const flags = blocking(variant.flags)
   const [open, setOpen] = useState(flags.length > 0)
   const [text, setText] = useState(variant.text)
+  const field = useRef<HTMLTextAreaElement>(null)
   const over = variant.count ? variant.count.count > variant.count.limit : false
+  // "Fix claim": open the card, put the cursor in its text and select the claim, so typing replaces it.
+  useEffect(() => {
+    if (!select) return
+    setOpen(true)
+    const frame = requestAnimationFrame(() => {
+      const box = field.current
+      if (!box) return
+      box.focus({ preventScroll: true })
+      if (select.range) box.setSelectionRange(select.range[0], select.range[1])
+      box.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      onSelected()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [select?.at])
   return <article className={flags.length ? 'st-variant flagged' : 'st-variant'} aria-label={`${networkName(variant.network)} variant`}>
     <button className="st-variant-head" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
       <strong>{networkName(variant.network)}</strong>
@@ -187,8 +242,8 @@ function VariantCard({ variant, onSave }: { variant: Variant; onSave: (text: str
     <div className={open ? 'st-variant-body open' : 'st-variant-body'}>
       <label className="st-sr" htmlFor={`variant-${variant.item_id}`}>{networkName(variant.network)} text</label>
       <div className="st-variant-field">
-        <Marked text={text} network={variant.network} limit={over ? variant.count!.limit : null} />
-        <textarea id={`variant-${variant.item_id}`} value={text} rows={6} spellCheck onChange={event => setText(event.target.value)} onBlur={() => onSave(text)} />
+        <Marked text={text} network={variant.network} limit={over ? variant.count!.limit : null} claims={text === variant.text ? claims : []} />
+        <textarea ref={field} id={`variant-${variant.item_id}`} value={text} rows={6} spellCheck onChange={event => setText(event.target.value)} onBlur={() => onSave(text)} />
       </div>
     </div>
   </article>
@@ -208,16 +263,17 @@ function overAt(text: string, network: string, limit: number): number {
   return extractUrls(text).find(link => cut > link.start && cut < link.end)?.start ?? cut
 }
 
-/** The variant's text drawn under its field: links in emerald text, and the part past the limit on the danger tint. */
-function Marked({ text, network, limit }: { text: string; network: string | null; limit: number | null }) {
+/** The variant's text drawn under its field: links in emerald text, and the part past the limit and each claim that differs from its proof on the danger tint. */
+function Marked({ text, network, limit, claims }: { text: string; network: string | null; limit: number | null; claims: Array<[number, number]> }) {
   const cut = limit !== null && network ? overAt(text, network, limit) : text.length
   const links = extractUrls(text)
-  const stops = [...new Set([0, cut, text.length, ...links.flatMap(link => [link.start, link.end])])].filter(at => at <= text.length).sort((a, b) => a - b)
+  const stops = [...new Set([0, cut, text.length, ...links.flatMap(link => [link.start, link.end]), ...claims.flat()])].filter(at => at <= text.length).sort((a, b) => a - b)
   const parts = stops.slice(0, -1).map((start, index) => ({ start, end: stops[index + 1]! })).filter(part => part.end > part.start)
   return <div className="st-variant-marks" aria-hidden="true">{parts.map(part => {
     const piece = text.slice(part.start, part.end), link = links.some(item => part.start >= item.start && part.end <= item.end)
+    const claim = claims.some(([start, end]) => part.start >= start && part.end <= end)
     const inner = link ? <span className="st-link">{piece}</span> : piece
-    return part.start >= cut ? <mark key={part.start}>{inner}</mark> : <span key={part.start}>{inner}</span>
+    return part.start >= cut || claim ? <mark key={part.start}>{inner}</mark> : <span key={part.start}>{inner}</span>
   })}{'\n'}</div>
 }
 
@@ -234,11 +290,14 @@ function WhenPicker({ value, onChange }: { value: string; onChange(value: string
   }, [open])
   const at = new Date(value)
   const zone = (() => { try { return new Intl.DateTimeFormat('en-US', { timeZoneName: 'shortGeneric' }).formatToParts(at).find(part => part.type === 'timeZoneName')?.value ?? '' } catch { return '' } })()
-  const label = Number.isNaN(at.getTime()) ? 'Pick a time' : `${new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(at)} · ${new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(at)}${zone ? ` ${zone}` : ''}`
+  const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' })
+  const label = Number.isNaN(at.getTime()) ? 'Pick a time' : `${new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(at)} · ${time.format(at)}${zone ? ` ${zone}` : ''}`
+  // Under 600 px the bar shows the short form ("Oct 30 · 7:00 AM"), so the time always reads whole.
+  const short = Number.isNaN(at.getTime()) ? label : `${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(at)} · ${time.format(at)}`
   const [dayPart, timePart] = value.split('T')
   return <div className="st-when" ref={box}>
-    <button type="button" className="st-when-pill" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(!open)}>
-      <Icon name="calendar" /><span>{label}</span><Icon name="chevronDown" />
+    <button type="button" className="st-when-pill" aria-haspopup="dialog" aria-expanded={open} aria-label={label} onClick={() => setOpen(!open)}>
+      <Icon name="calendar" /><span className="st-when-long">{label}</span><span className="st-when-short" aria-hidden="true">{short}</span><Icon name="chevronDown" />
     </button>
     {open ? <div className="st-when-pop" role="dialog" aria-label="When it goes out">
       <label className="st-field">Day<input type="date" value={dayPart ?? ''} onChange={event => event.target.value && onChange(`${event.target.value}T${timePart ?? '09:00'}`)} /></label>

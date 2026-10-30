@@ -112,7 +112,8 @@ export function routesFor(venue: VenueRow): RouteAnswer {
 export const generatedTextBanned = (venue: VenueRow) => !routesFor(venue).routes.includes('handoff_draft')
 
 export interface ItemAtVenue { id: string; state: ItemState; format: string; account_id: string | null; text: string | null; parts: string | null; reply_to: string | null; options: string; routes: string; flags: string; hold: string | null }
-export interface VenueHold { rule: RuleKey; reason: string; source_url: string | null }
+/** A hold in words; `where` and `thread_url` name the promotion thread, so a screen links the words and never prints the address. */
+export interface VenueHold { rule: RuleKey; reason: string; source_url: string | null; where?: string; thread_url?: string }
 
 const threadOf = (venue: VenueRow, item: ItemAtVenue) => {
   const reply = item.reply_to ? (JSON.parse(item.reply_to) as { url?: string }).url : undefined
@@ -147,9 +148,13 @@ export function holdFor(venue: VenueRow, item: ItemAtVenue): VenueHold | null {
   const hold = (rule: RuleKey, reason: string): VenueHold => ({ rule, reason, source_url: rules[rule]?.source_url ?? null })
   if (said(rules.self_promotion, 'thread')) {
     const rule = rules.self_promotion!, aimed = threadOf(venue, item)
-    const where = rule.thread_url ?? rule.detail ?? 'its promotion thread'
+    // The thread in words, never its address: the rule's own description, else its cadence ("its weekly thread").
+    const cadence = /(daily|weekly|monthly)/i.exec(rule.thread_url ?? '')?.[1]?.toLowerCase()
+    const where = rule.detail ?? (cadence ? `its ${cadence} thread` : rule.thread_url ? 'its thread' : 'its promotion thread')
     // With the thread's address recorded, anything outside that thread is held; without it, anything not in a thread at all.
-    if (rule.thread_url ? !aimed || !inThread(rule.thread_url, aimed) : !aimed) return hold('self_promotion', `${name} allows self-promotion only in ${where}.`)
+    if (rule.thread_url ? !aimed || !inThread(rule.thread_url, aimed) : !aimed) {
+      return { ...hold('self_promotion', `${name} allows self-promotion only in ${where}.`), where, ...(rule.thread_url ? { thread_url: rule.thread_url } : {}) }
+    }
   }
   if (said(rules.links, 'banned') && /https?:\/\//i.test(textOf(item))) return hold('links', `${name} does not allow links.`)
   if (item.account_id && !routesFor(venue).routes.includes('publish')) return hold('posting', `${name} keeps posting for its members; hand it to a member instead.`)

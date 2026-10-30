@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { runAction } from '../../ui/api.ts'
-import { Outcome, useLoaded, useRun, when } from '../../ui/kit.tsx'
+import { FilePick, Outcome, useLoaded, useRun, when } from '../../ui/kit.tsx'
 import { applyPlan, ImportError, planFile, undoPlan, type ImportSourceId, type Kept, type Plan } from '../../venues/ui/importer.ts'
 
 // Switching from Buffer (STUMP-IMPORT-001): the file Buffer's API gives, its
@@ -51,7 +51,7 @@ export function BufferImport() {
     <h2 id="buffer-title">Switch from Buffer</h2>
     <p className="st-meta">Your channels, sent posts with their results, posting schedules and queued posts. Nothing is written until you apply, and Undo takes it back.</p>
     {!plan ? <form onSubmit={review} className="st-spaced" aria-label="Buffer export">
-      <div className="st-form"><label className="st-field">Buffer export (JSON)<input name="file" type="file" accept=".json,application/json" required /></label></div>
+      <FilePick name="file" label="Choose the Buffer export" accept=".json,application/json" />
       <div className="st-actions st-spaced">
         <button className="st-button primary" type="submit" disabled={busy}>{busy ? 'Reading…' : 'Review import'}</button>
         {data?.applied ? <button className="st-button" type="button" disabled={busy}
