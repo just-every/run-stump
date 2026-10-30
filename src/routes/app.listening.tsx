@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { ActionError, explain, me, runAction } from '../stump/ui/api.ts'
-import { Outcome, Tip, useLoaded, useRun } from '../stump/ui/kit.tsx'
+import { Icon } from '../stump/ui/icons.tsx'
+import { MoreMenu, Outcome, accountWord, useLoaded, useRun } from '../stump/ui/kit.tsx'
+import { flagLine, type Flag } from '../stump/drafting/view.ts'
 import { listeningStyles } from '../stump/watches/styles.ts'
 import type { BlockedAuthor, FindingList, FindingView, PollView, WatchList, WatchView } from '../stump/watches/ui-types.ts'
 
@@ -15,7 +17,6 @@ export const Route = createFileRoute('/app/listening')({
 
 const key = () => crypto.randomUUID()
 const KINDS: Record<string, string> = { hn: 'Hacker News', rss: 'RSS', bluesky: 'Bluesky', mastodon: 'Mastodon' }
-const ROUTES: Record<string, string> = { publish: 'Reply from an account', handoff_draft: 'Hand off with draft', handoff_brief: 'Hand off with brief' }
 const kindsOf = (watch: WatchView) => [...new Set(watch.sources.map(source => KINDS[source.kind]))].join(', ') || 'No sources yet'
 
 /** A refusal in its own words where the door gave them, else the app's plain words. */
@@ -38,7 +39,13 @@ function until(iso: string | null): string {
 
 function Listening() {
   const search = Route.useSearch(), navigate = useNavigate({ from: '/app/listening' })
-  const watches = useLoaded(async () => ({ me: await me(), list: await runAction<WatchList>('stump.watches.manage', { action: 'list' }) }))
+  const watches = useLoaded(async () => {
+    const who = await me()
+    const [list, products, targets] = await Promise.all([runAction<WatchList>('stump.watches.manage', { action: 'list' }),
+      runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' }).catch(() => ({ items: [] })),
+      who.actions.includes('stump.drafts.preview') ? runAction<{ items: Account[] }>('stump.drafts.preview', { action: 'targets' }).catch(() => ({ items: [] as Account[] })) : Promise.resolve({ items: [] as Account[] })])
+    return { me: who, list, products: products.items, accounts: targets.items }
+  })
   const [editing, setEditing] = useState<'new' | 'edit' | null>(null)
   const items = watches.data?.list.items ?? []
   const selected = items.find(watch => watch.id === search.watch) ?? items[0] ?? null
@@ -67,7 +74,7 @@ function Listening() {
           <ul className="st-watches st-watches-list">
             {items.map(watch => <li key={watch.id}>
               <button type="button" className="st-watch" aria-current={watch.id === selected?.id} onClick={() => choose(watch.id)}>
-                <span className="st-tick" aria-hidden="true">{watch.id === selected?.id ? <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7.5l2.5 2.5L11 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}</span>
+                <span className="st-watch-mark" aria-hidden="true">{watch.id === selected?.id ? <Icon name="check" /> : null}</span>
                 <span className="st-watch-main"><div className="st-watch-name">{watch.name}</div><div className="st-meta">{kindsOf(watch)}{watch.muted ? ' · muted' : ''}</div></span>
               </button>
             </li>)}
@@ -79,6 +86,8 @@ function Listening() {
           {editing === 'new' ? <Editor role={role} onDone={async id => { setEditing(null); await reload(); choose(id) }} onCancel={() => setEditing(null)} /> : null}
           {editing === 'edit' && selected ? <Editor role={role} watch={selected} blocked={watches.data?.list.blocked_authors ?? []} onDone={async () => { setEditing(null); await reload() }} onCancel={() => setEditing(null)} /> : null}
           {!editing ? <Findings watch={selected} data={findings.data?.watch.id === selected?.id ? findings.data : null} error={findings.error} focus={search.finding} may={mayEdit}
+            context={{ me: watches.data?.me.person.id ?? '', role, products: watches.data?.products ?? [], accounts: watches.data?.accounts ?? [] }}
+            onFocus={id => void navigate({ search: { ...(selected ? { watch: selected.id } : {}), finding: id } })}
             onEdit={() => setEditing('edit')} onChange={reload} /> : null}
         </div>
       </div>
@@ -86,7 +95,11 @@ function Listening() {
   </HydrationUnit>
 }
 
-function Findings({ watch, data, error, focus, may, onEdit, onChange }: { watch: WatchView | null; data: FindingList | null; error: string | null; focus?: string; may: boolean; onEdit(): void; onChange(): Promise<void> }) {
+interface Account { id: string; network: string; handle: string; display_name: string | null; state: string }
+/** What a finding's action needs: who is acting, the products and the accounts that can reply. */
+interface Context { me: string; role: string; products: Array<{ id: string; name: string }>; accounts: Account[] }
+
+function Findings({ watch, data, error, focus, may, context, onFocus, onEdit, onChange }: { watch: WatchView | null; data: FindingList | null; error: string | null; focus?: string; may: boolean; context: Context; onFocus(id: string): void; onEdit(): void; onChange(): Promise<void> }) {
   const { busy, message, run } = useRun()
   if (!watch) return <><h2>Top findings</h2><p className="st-empty">Create a watch to see the threads worth answering.</p></>
   async function checkNow() {
@@ -110,40 +123,62 @@ function Findings({ watch, data, error, focus, may, onEdit, onChange }: { watch:
     {data && !data.items.length ? <p className="st-empty">No findings yet. Matches from the last 30 days and anything new will show here.</p> : null}
     {!data && !error ? <p className="st-empty">Loading findings.</p> : null}
     <ol className="st-findings">
-      {data?.items.map((finding, index) => <Finding key={finding.id} finding={finding} rank={index + 1} watch={watch} focal={focus ? finding.id === focus : index === 0} may={may} onChange={onChange} />)}
+      {data?.items.map((finding, index) => <Finding key={finding.id} finding={finding} rank={index + 1} watch={watch} focal={focus ? finding.id === focus : index === 0} may={may} context={context}
+        onFocus={() => onFocus(finding.id)} onChange={onChange} />)}
     </ol>
   </>
 }
 
-/** The short reasons a row shows; the full sentence of each stays in its tooltip. */
-function chipsFor(finding: FindingView): Array<{ label: string; title: string }> {
+/** The reasons worth a chip (H16): a question, a fit with a product or venue, freshness, a product or competitor named. Matching the watch's terms and coming from the backfill are every finding's default, so they show nothing. */
+function chipsFor(finding: FindingView, watch: WatchView, products: Context['products']): Array<{ label: string; title: string }> {
   const chips: Array<{ label: string; title: string }> = []
+  const product = products.find(item => watch.product_ids.includes(item.id))
   for (const reason of finding.reason_details) {
-    if (reason.factor === 'matched_terms' && reason.points > 0) chips.push({ label: finding.transcript_match && /episode transcript:/.test(reason.label) ? 'matches the transcript' : 'matches your terms', title: reason.label })
-    else if (reason.factor === 'question' && reason.points > 0) chips.push({ label: reason.points >= reason.max ? 'asks a question' : 'asks for help', title: reason.label })
-    else if (reason.factor === 'venue_fit' && !/no venue fit/.test(reason.label) && reason.points >= reason.max / 2) chips.push({ label: finding.venue ? `fits ${finding.venue.name}` : 'fits a venue', title: reason.label })
-    else if (reason.factor === 'author_standing' && !/unknown/.test(reason.label) && reason.points >= reason.max * 0.6) chips.push({ label: 'known author', title: reason.label })
+    if (reason.factor === 'question' && reason.points > 0) chips.push({ label: reason.points >= reason.max ? 'asks a question' : 'asks for help', title: reason.label })
+    else if (reason.factor === 'matched_terms' && reason.points > 0 && product) chips.push({ label: `fits ${product.name}`, title: reason.label })
+    else if (reason.factor === 'venue_fit' && !/no venue fit/.test(reason.label) && reason.points >= reason.max / 2 && finding.venue) chips.push({ label: `fits ${finding.venue.name}`, title: reason.label })
     else if (reason.factor === 'freshness' && reason.points >= reason.max * 0.6) chips.push({ label: 'fresh', title: reason.label })
   }
   for (const mention of finding.mentions.slice(0, 2)) chips.push({ label: `names ${mention.kind === 'product' ? mention.product : mention.matched}`, title: mention.kind === 'product' ? 'One of your products' : 'A competitor you track' })
-  return chips
+  const rank = (label: string) => /^asks/.test(label) ? 0 : /^fits/.test(label) ? 1 : label === 'fresh' ? 2 : 3
+  return chips.filter((chip, index) => chips.findIndex(other => other.label === chip.label) === index).sort((a, b) => rank(a.label) - rank(b.label)).slice(0, 3)
 }
 
-function Finding({ finding, rank, watch, focal, may, onChange }: { finding: FindingView; rank: number; watch: WatchView; focal: boolean; may: boolean; onChange(): Promise<void> }) {
+/** A title cut at a word, never inside one. */
+function wordClip(text: string, max = 110): string {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  const cut = clean.endsWith('…') ? clean.slice(0, -1).trimEnd() : clean
+  if (cut.length <= max && !clean.endsWith('…')) return clean
+  const head = cut.slice(0, max), space = head.lastIndexOf(' ')
+  return `${(space > max * 0.5 ? head.slice(0, space) : head).replace(/[\s,.;:–—-]+$/, '')}…`
+}
+
+/** The one job a finding's route allows, as its primary action: reply from an account, or hand it to the member who posts there. */
+const jobOf = (finding: FindingView) => finding.routes.includes('publish') ? 'reply' as const
+  : finding.venue && finding.routes.includes('handoff_draft') ? 'handoff_draft' as const
+  : finding.venue && finding.routes.includes('handoff_brief') ? 'handoff_brief' as const : null
+const JOB_WORDS = { reply: 'Draft a reply', handoff_draft: 'Hand off with draft', handoff_brief: 'Hand off with brief' } as const
+
+function Finding({ finding, rank, watch, focal, may, context, onFocus, onChange }: { finding: FindingView; rank: number; watch: WatchView; focal: boolean; may: boolean; context: Context; onFocus(): void; onChange(): Promise<void> }) {
   const { run } = useRun()
+  const [working, setWorking] = useState(false)
+  const job = context.role === 'viewer' ? null : jobOf(finding)
+  const chips = chipsFor(finding, watch, context.products)
+  const title = wordClip(finding.title || finding.text)
   return <li className={focal ? 'st-finding focal' : 'st-finding'} id={`finding-${finding.id}`}>
     <span className="st-numeral" aria-hidden="true">{rank}</span>
     <div className="st-finding-body">
-      <h3>{finding.title || finding.text.slice(0, 100)}</h3>
+      <h3>{focal ? title : <button type="button" className="st-finding-title" onClick={onFocus}>{title}</button>}</h3>
       <div className="st-meta">{KINDS[finding.source] ?? finding.source} · {ago(finding.published_at)}{finding.author ? ` · ${finding.author}` : ''}{finding.points !== null && finding.source === 'hn' ? ` · ${finding.points} points` : ''}</div>
-      <ul className="st-chips" aria-label="Why it ranks here">
-        {chipsFor(finding).map(chip => <li className="st-chip" key={chip.label} title={chip.title}>{chip.label}</li>)}
-        {finding.routes.filter(route => route !== 'dismiss').slice(0, 1).map(route => <li className="st-chip route" key={route}>{ROUTES[route]}</li>)}
-        {finding.backfill ? <li className="st-chip quiet">from the last 30 days</li> : null}
-      </ul>
+      {chips.length ? <ul className="st-chips" aria-label="Why it ranks here">
+        {chips.map(chip => <li className="st-chip" key={chip.label} title={chip.title}>{chip.label}</li>)}
+      </ul> : null}
       <div className="st-finding-actions">
-        <a className={focal ? 'st-button primary st-open' : 'st-open-link'} href={finding.url} target="_blank" rel="noopener noreferrer">Open thread ↗</a>
+        {focal && job && !working ? <button type="button" className="st-button primary" onClick={() => setWorking(true)}>{JOB_WORDS[job]} <span aria-hidden="true">→</span></button> : null}
+        <a className="st-open-link" href={finding.url} target="_blank" rel="noopener noreferrer">Open thread ↗</a>
       </div>
+      {focal && working && job === 'reply' ? <ReplyForm finding={finding} context={context} onClose={() => setWorking(false)} /> : null}
+      {focal && working && job && job !== 'reply' ? <HandOffForm finding={finding} watch={watch} context={context} onClose={() => setWorking(false)} /> : null}
     </div>
     {may ? <MoreMenu items={[
       { label: watch.muted ? 'Unmute watch' : 'Mute watch', run: async () => { await run(() => runAction('stump.watches.manage', { action: 'mute', watch_id: watch.id, muted: !watch.muted, idempotency_key: key() })); await onChange() } },
@@ -153,21 +188,72 @@ function Finding({ finding, rank, watch, focal, may, onChange }: { finding: Find
   </li>
 }
 
-/** The row's one menu (the design keeps Mute, Block author and Dismiss here, not printed in the row). */
-function MoreMenu({ items }: { items: Array<{ label: string; run(): Promise<void> }> }) {
-  const [open, setOpen] = useState(false)
-  const box = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const outside = (event: MouseEvent) => { if (!box.current?.contains(event.target as Node)) setOpen(false) }
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
-    document.addEventListener('mousedown', outside); document.addEventListener('keydown', escape)
-    return () => { document.removeEventListener('mousedown', outside); document.removeEventListener('keydown', escape) }
-  }, [open])
-  return <div className="st-more" ref={box}>
-    <Tip label="More actions"><button type="button" className="st-more-button" aria-haspopup="menu" aria-expanded={open} aria-label="More actions" onClick={() => setOpen(!open)}>⋯</button></Tip>
-    {open ? <div className="st-menu" role="menu">{items.map(item => <button key={item.label} type="button" role="menuitem" onClick={() => { setOpen(false); void item.run() }}>{item.label}</button>)}</div> : null}
-  </div>
+/** A reply from one of the company's accounts on the thread's network: drafted, checked, then posted (STUMP-DRAFT-001, the draft check, the publisher). */
+function ReplyForm({ finding, context, onClose }: { finding: FindingView; context: Context; onClose(): void }) {
+  const accounts = context.accounts.filter(account => account.network === finding.source && account.state === 'connected')
+  const [account, setAccount] = useState(accounts[0]?.id ?? '')
+  const [text, setText] = useState('')
+  const [flags, setFlags] = useState<Flag[]>([])
+  const [posted, setPosted] = useState<string | null>(null)
+  const { busy, message, run } = useRun()
+  if (!accounts.length) return <div className="st-finding-work"><p className="st-meta">Connect a {KINDS[finding.source]} account to reply from it. <a href={`/app/settings/accounts?connect=${finding.source}`}>Connect an account</a></p></div>
+  async function send(event: FormEvent) {
+    event.preventDefault()
+    const chosen = accounts.find(item => item.id === account)!
+    const draft = await run(() => runAction<{ id: string; flags: Flag[] }>('stump.drafts.write', { action: 'create', format: 'reply', person_id: context.me, account_id: chosen.id, network: chosen.network,
+      reply_to: { url: finding.url }, text: text.trim(), ...(context.products[0] ? { product_id: context.products[0].id } : {}), idempotency_key: key() }))
+    if (!draft) return
+    const holding = draft.flags.filter(flag => flag.blocking)
+    setFlags(holding)
+    if (holding.length) return
+    const out = await run(() => runAction<{ url?: string | null }>('stump.items.schedule', { action: 'publish', item_id: draft.id, account_id: chosen.id, idempotency_key: key() }), () => 'Replied. It is on the ledger.')
+    if (out) setPosted(out.url ?? finding.url)
+  }
+  if (posted) return <div className="st-finding-work"><p className="st-note" role="status">Replied. It is on the <a href="/app/ledger">ledger</a>.</p></div>
+  return <form className="st-finding-work" onSubmit={send} aria-label="Draft a reply">
+    {accounts.length > 1 ? <label className="st-field">From<select value={account} onChange={event => setAccount(event.target.value)}>{accounts.map(item => <option key={item.id} value={item.id}>{accountWord(item)}</option>)}</select></label>
+      : <p className="st-meta">From {accountWord(accounts[0]!)}</p>}
+    <label className="st-field"><span className="st-sr">Your reply</span><textarea value={text} required maxLength={4000} rows={4} placeholder="Write a reply…" onChange={event => setText(event.target.value)} /></label>
+    {flags.length ? <ul className="st-finding-flags">{flags.map((flag, index) => <li key={`${flag.code}-${index}`}>{flagLine(flag)}</li>)}</ul> : null}
+    <Outcome message={message} />
+    <div className="st-actions">
+      <button className="st-button primary" type="submit" disabled={busy || !text.trim()}>Post reply</button>
+      <button className="st-button quiet" type="button" onClick={onClose}>Cancel</button>
+    </div>
+  </form>
+}
+
+/** A hand-off to the venue's member who posts there by hand, with the thread and a due day; the brief opens next (STUMP-HANDOFF-001). */
+function HandOffForm({ finding, watch, context, onClose }: { finding: FindingView; watch: WatchView; context: Context; onClose(): void }) {
+  const venue = finding.venue!
+  const navigate = useNavigate()
+  const members = useLoaded(() => runAction<{ items: Array<{ person_id: string; display_name: string | null; eligible: boolean }> }>('stump.venues.members', { action: 'list', venue_id: venue.id }))
+  const product = context.products.find(item => watch.product_ids.includes(item.id)) ?? context.products[0] ?? null
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+  const { busy, message, run } = useRun()
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const due = new Date(`${String(form.get('due'))}T17:00:00`)
+    const made = await run(() => runAction<{ id: string }>('stump.handoffs.prepare', { action: 'prepare', venue_id: venue.id, person_id: String(form.get('person')), product_id: product!.id,
+      thread_url: finding.url, due_at: due.toISOString(), lapse: 'expire', idempotency_key: key() }))
+    if (made) await navigate({ to: '/app/handoffs/$handoffId', params: { handoffId: made.id } })
+  }
+  if (!product) return <div className="st-finding-work"><p className="st-meta">Add your product first. <a href="/app/settings/brand">Brand</a></p></div>
+  const people = members.data?.items ?? []
+  if (members.data && !people.length) return <div className="st-finding-work"><p className="st-meta">No one on the team is a member of {venue.name} yet. <a href={`/app/venues/${venue.id}`}>Record a member</a></p></div>
+  return <form className="st-finding-work" onSubmit={submit} aria-label="Hand off">
+    <div className="st-form">
+      <label className="st-field">Who posts in {venue.name}<select name="person" required defaultValue={people.find(person => person.eligible)?.person_id ?? people[0]?.person_id}>
+        {people.map(person => <option key={person.person_id} value={person.person_id}>{person.display_name ?? 'Teammate'}{person.eligible ? '' : ' (not yet eligible)'}</option>)}</select></label>
+      <label className="st-field">Due<input name="due" type="date" required defaultValue={tomorrow} min={new Date().toISOString().slice(0, 10)} /></label>
+    </div>
+    <Outcome message={message} />
+    <div className="st-actions">
+      <button className="st-button primary" type="submit" disabled={busy || !members.data}>Hand off <span aria-hidden="true">→</span></button>
+      <button className="st-button quiet" type="button" onClick={onClose}>Cancel</button>
+    </div>
+  </form>
 }
 
 type HnTypes = 'both' | 'ask_show' | 'stories' | 'keep'
