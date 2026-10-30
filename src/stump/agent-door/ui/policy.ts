@@ -20,8 +20,8 @@ async function door<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T
 }
 export const agentState = () => door<AgentState>('/agents/api/state')
-/** The policy as it stands and this week's counts, for owners, admins and editors (Stump's /app/api/agent-overview). */
-export const agentOverview = () => door<{ document: PolicyDocument | null; week: { since: string; counts: Array<{ class: string; decision: string; count: number }> } }>('/app/api/agent-overview')
+/** The policy as it stands, the latest 20 agent calls (newest first) and this week's counts, for owners, admins and editors (Stump's /app/api/agent-overview). */
+export const agentOverview = () => door<{ document: PolicyDocument | null; recent: ActivityRow[]; week: { since: string; counts: Array<{ class: string; decision: string; count: number }> } }>('/app/api/agent-overview')
 export const savePolicy = (document: PolicyDocument) => door<{ revision: number; complete: boolean }>('/agents/api/policy', { method: 'PUT', body: JSON.stringify({ document }) })
 export const setPaused = (paused: boolean) => door<{ paused: { business: boolean; local: boolean } }>('/agents/api/pause', { method: 'POST', body: JSON.stringify({ paused }) })
 export const approvals = () => door<{ approvals: ApprovalItem[] }>('/agents/api/approvals')
@@ -32,17 +32,6 @@ export const readAnswers = () => door<{ answers: Record<string, Disposition> }>(
 export const saveAnswer = (cls: string, answer: Disposition) => door<unknown>('/app/api/agent-policy/answers', { method: 'PUT', body: JSON.stringify({ class: cls, answer }) })
 export const clearAnswers = () => door<unknown>('/app/api/agent-policy/answers', { method: 'DELETE' })
 
-/** The latest agent calls, newest first: the audit door pages forward from the start, so read to its end. */
-export async function recentActivity(limit = 20): Promise<ActivityRow[]> {
-  let after = '0', rows: ActivityRow[] = []
-  for (;;) {
-    const page = await door<{ rows: ActivityRow[]; cursor: string | null }>(`/agents/api/audit?after=${encodeURIComponent(after)}`)
-    rows = [...rows, ...page.rows].slice(-limit)
-    if (page.rows.length < 200 || !page.cursor || page.cursor === after) break
-    after = page.cursor
-  }
-  return rows.reverse()
-}
 
 const CLASS_LABELS: Record<ClassId, string> = {
   standard: 'Everyday work', external: 'Sending outside the company', money: 'Moving money', commitment: 'Commitments',

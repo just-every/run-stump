@@ -1,12 +1,16 @@
 // What Settings · Agents shows the people who answer for agents (owner, admin and editor, Base's "owner" and
-// "editor"): the company's agent policy as it stands, and this week's agent calls by kind of action and how the
-// policy handled them. Stump's app replaces Base's /agents page (agentsPageRedirect), so this reads Base's agent
-// door tables exactly as that page does (src/modules/agent-door/policy-store.ts policyState, pages.ts dashboard).
+// "editor"): the company's agent policy as it stands, the latest agent calls, and this week's agent calls by kind
+// of action and how the policy handled them. Stump's app replaces Base's /agents page (agentsPageRedirect), so this
+// reads Base's agent door tables exactly as that page does (src/modules/agent-door/policy-store.ts policyState,
+// pages.ts dashboard): one query each, whatever the number of calls ever made.
 import type { StumpEnv } from '../env.ts'
+import type { AuditRow } from '../../modules/agent-door/audit.ts'
 import { agentDoorTrust } from './index.ts'
 
 export interface WeekCount { class: string; decision: string; count: number }
-export interface AgentOverview { document: unknown; week: { since: string; counts: WeekCount[] } }
+export interface AgentOverview { document: unknown; recent: AuditRow[]; week: { since: string; counts: WeekCount[] } }
+/** How many of the latest agent calls the page lists, as Base's dashboard does. */
+export const RECENT_LIMIT = 20
 
 /** Monday 00:00 UTC of the week holding `now`, as Base's dashboard counts it. */
 export function weekStart(now: number): number {
@@ -21,7 +25,8 @@ export async function agentOverview(env: StumpEnv, now: number): Promise<AgentOv
   const parsed = source ? JSON.parse(source) as Record<string, unknown> : null
   const document = business ? parsed?.document ?? null : parsed
   const since = weekStart(now)
-  const counts = await env.DB.prepare("SELECT c.value AS class, json_extract(a.row,'$.decision') AS decision, count(*) AS count FROM agent_door_audit a, json_each(a.classes) c WHERE a.at>=? AND a.at<=? GROUP BY c.value, json_extract(a.row,'$.decision') ORDER BY c.value, decision")
-    .bind(new Date(since).toISOString(), new Date(now).toISOString()).all<WeekCount>()
-  return { document, week: { since: new Date(since).toISOString(), counts: counts.results.filter(item => item.count > 0) } }
+  const [counts, recent] = await Promise.all([env.DB.prepare("SELECT c.value AS class, json_extract(a.row,'$.decision') AS decision, count(*) AS count FROM agent_door_audit a, json_each(a.classes) c WHERE a.at>=? AND a.at<=? GROUP BY c.value, json_extract(a.row,'$.decision') ORDER BY c.value, decision")
+    .bind(new Date(since).toISOString(), new Date(now).toISOString()).all<WeekCount>(),
+    env.DB.prepare('SELECT sequence, row FROM agent_door_audit ORDER BY sequence DESC LIMIT ?').bind(RECENT_LIMIT).all<{ sequence: number; row: string }>()])
+  return { document, recent: recent.results.map(record => ({ ...JSON.parse(record.row) as AuditRow, sequence: record.sequence })), week: { since: new Date(since).toISOString(), counts: counts.results.filter(item => item.count > 0) } }
 }
