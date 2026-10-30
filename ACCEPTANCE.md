@@ -123,7 +123,7 @@ Core · published · **partial** · From new · Cites BASE-ROLE-001 · Rules D-1
 8. Only the named person, or an agent acting for them, can record the post; anyone else is refused and changes nothing.
 
 **Evidence.** `tests/stump/handoffs.test.mjs` "a member gets a brief and a draft for a venue that keeps posting for its members, and the link they post is checked onto the ledger"; `agent-surface.json` journey steps handoff, handoff-draft, handoff-text
-**Gap.** Points 1 to 8 hold through MCP and the person door: the brief with the venue's rules and their sources, facts with proof and the disclosure for the person's connection; talking points and an own-words field where AI text is banned; join-first with the join steps; the disclosure kept in the draft; talking points and attestation for an outside voice who recommends; each person's queue by due date; skip with its reason freeing the shared-limit place; only the named person or their agent records. The screens `/app/handoffs` and `/app/handoffs/:id` have no committed browser journey at 1440 and 390 yet.
+**Gap.** Points 1 to 8 hold through MCP and the person door: the brief with the venue's rules and their sources, facts with proof and the disclosure for the person's connection; talking points and an own-words field where AI text is banned, with no AI call and the unused text logged in the hand-off's history; join-first with the join steps; the disclosure kept in the draft, including its line, and in the words recorded as posted; talking points and attestation for an outside voice who recommends; a full shared limit holding the hand-off with the next open date until its period has room; each person's queue by due date; skip with its reason freeing the shared-limit place; only the named person or their agent records. The screens `/app/handoffs` and `/app/handoffs/:id` have no committed browser journey at 1440 and 390 yet.
 
 #### STUMP-HANDOFF-002 — The posted link, recorded and checked
 
@@ -142,7 +142,7 @@ Core · published · **partial** · From new · Rules D-5
 8. Recording the same link twice has one effect; a different second link asks which is the post.
 
 **Evidence.** `tests/stump/handoffs.test.mjs` "a member gets a brief and a draft for a venue that keeps posting for its members, and the link they post is checked onto the ledger"; `agent-surface.json` journey steps handoff-record, handoff-sky-record
-**Gap.** Points 1, 2, 4 and 8 hold through the person door and MCP, and point 3 for a Bluesky author. Mastodon (statuses API), X (oEmbed) and Hacker News (Algolia) checks are built in `src/stump/handoffs/link.ts`, and LinkedIn and members-only links record as confirmed by the person (points 5 and 6), without a committed test. Point 7, recording by email reply, is not built.
+**Gap.** Points 1, 2, 4 and 8 hold through the person door and MCP, and point 3 for a Bluesky author, read by the post's author DID against the DID the member's handle resolves to. Mastodon (statuses API), X (oEmbed) and Hacker News (Algolia) checks are built in `src/stump/handoffs/link.ts`, and LinkedIn and members-only links record as confirmed by the person (points 5 and 6), without a committed test. Point 7, recording by email reply, is not built.
 
 #### STUMP-HANDOFF-003 — Held, skipped and expired hand-offs
 
@@ -158,7 +158,7 @@ Core · published · **partial** · From new
 5. Removing a person from the team lists their open hand-offs for reassignment, and none is lost.
 
 **Evidence.** `tests/stump/handoffs.test.mjs` "a hand-off never waits in silence: a hold returns at its review date, a rule change holds it, and removing a person moves it on"
-**Gap.** Points 3 to 5 hold: a held hand-off shows its holder, reason and review date and returns to the queue at that date with the change logged; a rule change that forbids the post holds it with the rule named; removing a person moves each open hand-off to the venue's next member with its history, or expires it when nobody else there can take it. Expire and reassign on lapse (points 1 and 2) run on the Worker's scheduled tick (`src/stump/handoffs/lapse.ts`), which the test instance cannot trigger; the reassign notice is not built.
+**Gap.** Points 3 to 5 hold: a held hand-off shows its holder, reason and review date, and at that date its lapse action runs and is logged; a rule change that forbids the post holds it with the rule named; removing a person moves each open hand-off to the venue's next member with its history, or expires it when nobody else there can take it. Expire and reassign on lapse (points 1 and 2) run on the Worker's scheduled tick and on any read past the due time (`src/stump/handoffs/refresh.ts`, `lapse.ts`), with the superseded draft named in the history; the test instance cannot trigger the tick, and the reassign notice is not built.
 
 ### Ledger
 

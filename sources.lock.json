@@ -392,7 +392,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "6f7d64702e63a7a9418c079fc669c25f14d1b8e2e8df7d4040d7127086eaa67d",
+      "sha256": "53b406da6f822dddff3110ae9894ae470d84cda288c934a1fa5067e0e7548d12",
       "executable": false
     },
     "agent-surface.json": {
@@ -420,7 +420,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "ed8d9bd40c75773b54c7e29f73beded095f73d13f7ad097d370848b693780226",
+      "sha256": "a9ae541342f92f0981e598aedc534a45814c342018d6fcc499834741a1b3375d",
       "executable": false
     },
     "deploy-demo.json": {
@@ -3392,7 +3392,7 @@
       "executable": false
     },
     "src/server.ts": {
-      "sha256": "4be83a710fb516daaceaba2ea4a2c0fbc0c91edace1fde20c27cbf04d9360df4",
+      "sha256": "f19731e47fb7a2a7a8a83c2c09bb663717ac0f4d46b63e6cd540a9d18548f5a4",
       "executable": false
     },
     "src/site/docs/Docs.tsx": {
@@ -3527,8 +3527,16 @@
       "sha256": "bbd63a7fa79d30f06405183137b52bfb6e3752e87af44b97c175c218002804bb",
       "executable": false
     },
+    "src/stump/handoffs/disclosure.ts": {
+      "sha256": "22501fc111e29a4900cc0a73b9f743b37018bb1edb70ebd6149493045cff0e0b",
+      "executable": false
+    },
+    "src/stump/handoffs/holds.ts": {
+      "sha256": "7d6b12435cdf46ce89c86521df04dce9763ee9fc95972b21b13bd3e604ccb92d",
+      "executable": false
+    },
     "src/stump/handoffs/lapse.ts": {
-      "sha256": "5603e7eb1e1a386109616d381f095df632caa6e80708f3a62b73afa2b5b3736f",
+      "sha256": "135c5517cfd0fcc292f1fa9048652159628555d688e64cffb1486ab383bb51d5",
       "executable": false
     },
     "src/stump/handoffs/ledger.ts": {
@@ -3536,31 +3544,31 @@
       "executable": false
     },
     "src/stump/handoffs/link.ts": {
-      "sha256": "94bb129b304a349cb381f243f10056749b17eb47e2b500968c80e2076f01039e",
+      "sha256": "6e6d796dbd54631e1be3ad1fe5198483411ce5b4382ffca4f02773e956df5388",
       "executable": false
     },
     "src/stump/handoffs/manage.ts": {
-      "sha256": "6754be04c18bb831c371624e560d58364b8fa15d7da9a6f034f40afc7a636ff1",
+      "sha256": "3defb9170ea7f097561d231964c9bbfa5933e14d7bf7f16c1155f90f3053049d",
       "executable": false
     },
     "src/stump/handoffs/model.ts": {
-      "sha256": "888292ba45aee33e83de339cf7b442e9cec0ab4c42dc2369de6d5737aad56f24",
+      "sha256": "6904c56f0350f56f02b9f1eb828e0afaf9becfcf992f98928a31ca354935bd6a",
       "executable": false
     },
     "src/stump/handoffs/posted.ts": {
-      "sha256": "91157343b6bb3f7b0d2ce58ad31b04ec5ec46b3bb7f9e11924e3daa51b3969ae",
+      "sha256": "7ffd1bc37e85f4ca67a435295bfba3749aca061629e7b5186f9aa89764bcf303",
       "executable": false
     },
     "src/stump/handoffs/prepare.ts": {
-      "sha256": "4adc93fdac06fd8736df96507ea5d472ea21f15445c91bceab29d22826081901",
+      "sha256": "a076e2518379486c6b684ac1482a1b65e99d6b83a3dd16d0842bd2201767456d",
       "executable": false
     },
     "src/stump/handoffs/refresh.ts": {
-      "sha256": "aada1ce35d6561f86d7e33bd1bda8c0f22a56a6694fdafb65149216ccb5600ca",
+      "sha256": "8685e51e0b5377353e15b79516c58f66d13c2c59c383cf398ca6c356ad2bcfbb",
       "executable": false
     },
     "src/stump/handoffs/ui/BriefPage.tsx": {
-      "sha256": "fcbb70ce54e2a60d4365b811b1c3478372271b0edb47a45fcf742e4909e6fff5",
+      "sha256": "c0c97f12ec5328ac6c351d792ff4ae8ac600cc2e4cc3bb9b3827d3df888455e9",
       "executable": false
     },
     "src/stump/handoffs/ui/QueuePage.tsx": {
@@ -3572,7 +3580,7 @@
       "executable": false
     },
     "src/stump/handoffs/ui/words.ts": {
-      "sha256": "64d7ecb45ca309826367c1b24c1d6c5cc7d6d99433b9edcffa0385e10c36e9b0",
+      "sha256": "e4a9d975307291cbcc20fb38b520bd4d338d759b52e76d22f27f06f1a4e8b963",
       "executable": false
     },
     "src/stump/handoffs/view.ts": {
@@ -4440,7 +4448,7 @@
       "executable": false
     },
     "tests/agent/network.mjs": {
-      "sha256": "cd6b65473f8e0b9cb3364f20cf0a6ec743dc76980f7a9e0fba285cc4eff09f50",
+      "sha256": "c20bfa3620b2bb1a76f0d3692e389f3d8ee0a39a62ed4e36b1cb9d656373f079",
       "executable": false
     },
     "tests/incremental-typecheck.test.mjs": {
@@ -4460,7 +4468,7 @@
       "executable": false
     },
     "tests/stump/handoffs.test.mjs": {
-      "sha256": "eb17312a54375ddf3758574f8d380817a7b92cf3de520057241cd4a5c711f970",
+      "sha256": "8a9841524fdd5f0f69eab40c54de64d22187edb6be261b19df40d0286426e4f1",
       "executable": false
     },
     "tests/stump/instance.mjs": {

@@ -4,8 +4,9 @@
 //   draft and its usage and cost;
 // - X API v2: the OAuth 2.0 token exchange and the account read, so the
 //   journey connects the company's X account through its own app;
-// - Bluesky's public AppView: a post thread by the handle in its URI, so the
-//   journey records a hand-off's link checked with the network.
+// - Bluesky's public AppView: a handle resolved to its DID (a did:web naming the
+//   handle's host), and a post thread read by that DID's at-URI, so the journey
+//   records a hand-off's link checked with the network.
 const AI = 'https://ai.synthetic-stump.example'
 const X = 'https://api.x.com'
 const APPVIEW = 'https://public.api.bsky.app'
@@ -36,9 +37,13 @@ async function x(request, url) {
 }
 
 function appview(url) {
-  const [, actor, rkey] = /^at:\/\/([^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/.exec(url.searchParams.get('uri') ?? '') ?? []
-  if (url.pathname !== '/xrpc/app.bsky.feed.getPostThread' || !actor) return json({ error: 'NotFound', message: 'Post not found' }, 400)
-  return json({ thread: { $type: 'app.bsky.feed.defs#threadViewPost', post: { uri: `at://did:plc:synthetic/app.bsky.feed.post/${rkey}`, cid: 'bafysynthetic', author: { did: 'did:plc:synthetic', handle: actor },
+  if (url.pathname === '/xrpc/com.atproto.identity.resolveHandle') {
+    const handle = url.searchParams.get('handle') ?? ''
+    return handle.endsWith('.bsky.social') ? json({ did: `did:web:${handle}` }) : json({ error: 'InvalidRequest', message: 'Unable to resolve handle' }, 400)
+  }
+  const [, did, rkey] = /^at:\/\/(did:web:[^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/.exec(url.searchParams.get('uri') ?? '') ?? []
+  if (url.pathname !== '/xrpc/app.bsky.feed.getPostThread' || !did) return json({ error: 'NotFound', message: 'Post not found' }, 400)
+  return json({ thread: { $type: 'app.bsky.feed.defs#threadViewPost', post: { uri: `at://${did}/app.bsky.feed.post/${rkey}`, cid: 'bafysynthetic', author: { did, handle: did.slice('did:web:'.length) },
     record: { $type: 'app.bsky.feed.post', text: 'Synthetic hand-off post.', createdAt: new Date().toISOString() }, indexedAt: new Date().toISOString() } } })
 }
 
