@@ -50,9 +50,13 @@ function BrandPage() {
         <h2 className="st-card-head" id="products-title"><Disc icon="box" />Products</h2>
         <ul className="st-list">{data?.products.map(product => <li className="st-kv" key={product.id}>
           <div className="st-name">{product.name}{product.other_names.length ? <div className="st-meta">also {product.other_names.join(', ')}</div> : null}</div>
-          {editor ? <label className="st-inline">tone:
-            <input defaultValue={product.tone} aria-label={`${product.name} tone`} onBlur={event => { if (event.target.value.trim() && event.target.value !== product.tone) void act({ action: 'product_update', product_id: product.id, tone: event.target.value.trim() }) }} />
-          </label> : <span className="st-meta">tone: {product.tone || 'not set'}</span>}
+          {editor ? <div className="st-profile">
+            <ProfileField label="tone" product={product.name} value={product.tone} onSave={tone => act({ action: 'product_update', product_id: product.id, tone })} />
+            <ProfileField label="use" product={product.name} value={product.words_use.join(', ')} placeholder="words the product says"
+              onSave={value => act({ action: 'product_update', product_id: product.id, words_use: list(value) })} allowEmpty />
+            <ProfileField label="avoid" product={product.name} value={product.words_avoid.join(', ')} placeholder="words a draft may not use"
+              onSave={value => act({ action: 'product_update', product_id: product.id, words_avoid: list(value) })} allowEmpty />
+          </div> : <span className="st-meta">tone: {product.tone || 'not set'}{product.words_use.length ? ` · use: ${product.words_use.join(', ')}` : ''}{product.words_avoid.length ? ` · avoid: ${product.words_avoid.join(', ')}` : ''}</span>}
         </li>)}</ul>
         {editor ? <ProductForm open={data !== null && !data.products.length} busy={busy} onAdd={args => act({ action: 'product_create', ...args }, 'Product added')} /> : null}
       </section>
@@ -84,6 +88,14 @@ function BrandPage() {
   </HydrationUnit>
 }
 
+/** One profile field edited in place: it saves when the field loses focus, with no Save button. */
+function ProfileField({ label, product, value, placeholder, allowEmpty = false, onSave }: { label: string; product: string; value: string; placeholder?: string; allowEmpty?: boolean; onSave: (value: string) => unknown }) {
+  return <label className="st-inline">{label}:
+    <input defaultValue={value} placeholder={placeholder} aria-label={`${product} ${label}`}
+      onBlur={event => { const next = event.target.value.trim(); if (next !== value && (next || allowEmpty)) void onSave(next) }} />
+  </label>
+}
+
 function Adder({ open, label, children }: { open: boolean; label: string; children: (close: () => void) => ReactNode }) {
   const [shown, setShown] = useState(open)
   if (!shown && !open) return <button className="st-button st-add" type="button" onClick={() => setShown(true)}>{label}</button>
@@ -91,16 +103,18 @@ function Adder({ open, label, children }: { open: boolean; label: string; childr
 }
 
 function ProductForm({ open, busy, onAdd }: { open: boolean; busy: boolean; onAdd: (args: Record<string, unknown>) => Promise<unknown> }) {
-  const [form, setForm] = useState({ name: '', other_names: '', tone: '', competitors: '', avoid_words: '' })
+  const empty = { name: '', other_names: '', tone: '', competitors: '', words_use: '', words_avoid: '' }
+  const [form, setForm] = useState(empty)
   const field = (name: keyof typeof form, label: string, placeholder = '') => <label className="st-field">{label}
     <input value={form[name]} placeholder={placeholder} onChange={event => setForm({ ...form, [name]: event.target.value })} /></label>
   return <Adder open={open} label="Add product">{close => <form className="st-form" onSubmit={async event => {
     event.preventDefault()
-    const done = await onAdd({ name: form.name.trim(), ...(form.tone.trim() ? { tone: form.tone.trim() } : {}), other_names: list(form.other_names), competitors: list(form.competitors), avoid_words: list(form.avoid_words) })
-    if (done) { setForm({ name: '', other_names: '', tone: '', competitors: '', avoid_words: '' }); close() }
+    const done = await onAdd({ name: form.name.trim(), ...(form.tone.trim() ? { tone: form.tone.trim() } : {}), other_names: list(form.other_names), competitors: list(form.competitors),
+      words_use: list(form.words_use), words_avoid: list(form.words_avoid) })
+    if (done) { setForm(empty); close() }
   }}>
     {field('name', 'Name')}{field('tone', 'Tone', 'plain, warm, exact')}{field('other_names', 'Other names', 'comma separated')}
-    {field('competitors', 'Compared with', 'comma separated')}{field('avoid_words', 'Words to avoid', 'comma separated')}
+    {field('competitors', 'Compared with', 'comma separated')}{field('words_use', 'Words to use', 'comma separated')}{field('words_avoid', 'Words to avoid', 'comma separated')}
     <button className="st-button primary" type="submit" disabled={busy || !form.name.trim()}>Add product</button>
   </form>}</Adder>
 }

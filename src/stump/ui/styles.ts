@@ -359,14 +359,17 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-drafting .st-chip[aria-pressed="true"] { background: var(--stump-emerald-tint); font-weight: 600; }
 .st-drafting .st-chip:disabled { cursor: default; }
 .st-drafting .st-open { margin-top: calc(var(--stump-space) * 3); }
-.st-drafting .st-compose { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: calc(var(--stump-space) * 3); align-items: start; }
+.st-drafting .st-compose { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: calc(var(--stump-space) * 3); align-items: start; }
 .st-drafting .st-compose > * { min-width: 0; }
+.st-drafting .st-compose { margin-bottom: calc(var(--stump-space) * 3); }
+.st-drafting .st-compose > .st-card { margin-bottom: 0; }
 .st-drafting .st-source-chip { display: inline-flex; align-items: center; gap: 12px; margin-top: calc(var(--stump-space) * 2); padding: 10px 18px 10px 12px; border-radius: var(--stump-pill); background: var(--stump-emerald-tint); overflow-wrap: anywhere; }
 .st-drafting .st-source-chip .st-disc { width: 28px; height: 28px; }
 .st-drafting .st-variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: calc(var(--stump-space) * 2); }
 .st-drafting .st-variant { border: 1px solid var(--stump-hairline); border-radius: var(--stump-radius); padding: calc(var(--stump-space) * 2); background: var(--stump-white); min-width: 0; }
 .st-drafting .st-variant:focus-within { border-color: var(--stump-emerald); }
-.st-drafting .st-variant.flagged { border-color: var(--stump-danger); background: var(--stump-danger-tint); }
+.st-drafting .st-variant.flagged { border-color: var(--stump-danger); }
+.st-drafting .st-variant.flagged .st-variant-head strong { color: var(--stump-danger); }
 .st-drafting .st-variant-head { font: inherit; display: flex; align-items: center; gap: var(--stump-space); width: 100%; background: none; border: 0; padding: 0 0 var(--stump-space); color: var(--stump-text); cursor: default; text-align: left; }
 .st-drafting .st-variant textarea { font: inherit; font-size: var(--stump-size-body); color: var(--stump-text); width: 100%; border: 0; padding: 0; background: transparent; resize: none; field-sizing: content; min-height: 96px; outline: none; }
 .st-drafting .st-flag-list { list-style: none; margin: var(--stump-space) 0 0; padding: 0; color: var(--stump-danger); font-size: var(--stump-size-small); }
@@ -390,6 +393,14 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
 .st-drafting .st-add { margin-top: calc(var(--stump-space) * 2); }
 .st-drafting .st-span { grid-column: 1 / -1; }
 .st-drafting .st-saved { display: flex; justify-content: flex-end; }
+.st-drafting .st-master { position: relative; }
+.st-drafting .st-master .st-textarea.large { padding-bottom: 36px; display: block; }
+.st-drafting .st-master .st-chars { position: absolute; right: 14px; bottom: 10px; }
+.st-drafting .st-check-list li.st-check-detail { padding-left: 34px; color: var(--stump-muted); }
+.st-drafting .st-kv > :last-child { border-left: 1px solid var(--stump-hairline); padding-left: calc(var(--stump-space) * 3); min-height: 28px; }
+.st-drafting .st-profile { display: grid; gap: 2px; }
+.st-drafting .st-profile .st-inline { display: grid; grid-template-columns: 56px minmax(0, 1fr); }
+.st-drafting .st-profile .st-inline input { padding: 2px 8px; min-height: 32px; }
 @media (max-width: 760px) {
   .st-drafting .st-compose { grid-template-columns: 1fr; }
   .st-drafting .st-checks-toggle { display: flex; align-items: center; gap: 10px; font: inherit; width: 100%; background: none; border: 0; padding: 0; color: var(--stump-text); text-align: left; min-height: 44px; }
@@ -401,9 +412,10 @@ button.st-chip { cursor: pointer; border: 0; font-family: inherit; }
   .st-drafting .st-bar { position: sticky; bottom: 0; z-index: 2; background: var(--stump-white); padding: 12px 0; gap: var(--stump-space); flex-wrap: nowrap; }
   .st-drafting .st-bar .st-button.ink { padding: 0 16px; flex: none; }
   .st-drafting .st-bar .st-when { flex: 1; min-width: 0; }
-  .st-drafting .st-when input { padding: 8px 10px; width: 100%; font-size: var(--stump-size-small); }
+  .st-drafting .st-when input { padding: 6px 8px; width: 100%; font-size: var(--stump-size-chip); }
   .st-drafting .st-bar > :nth-child(n+3) { display: none; }
   .st-drafting .st-kv { grid-template-columns: 1fr; gap: 4px; }
+  .st-drafting .st-kv > :last-child { border-left: 0; padding-left: 0; min-height: 0; }
   .st-drafting .st-textarea.large { font-size: 18px; }
 }
 `

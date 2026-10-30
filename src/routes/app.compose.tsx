@@ -4,7 +4,7 @@ import { HydrationUnit } from '../base/hydration/unit'
 import { ActionError, explain, me, runAction } from '../stump/ui/api.ts'
 import { Disc } from '../stump/drafting/disc.tsx'
 import { Outcome, Tip, useLoaded, useRun } from '../stump/ui/kit.tsx'
-import { accountLabel, flagLine, networkName, type Account, type Check, type Flag, type MasterPreview, type Variant } from '../stump/drafting/view.ts'
+import { accountLabel, flagLine, networkName, proofLabel, type Account, type Check, type ClaimView, type Flag, type MasterPreview, type Variant } from '../stump/drafting/view.ts'
 
 export const Route = createFileRoute('/app/compose')({
   validateSearch: (search: Record<string, unknown>): { master?: string } => typeof search.master === 'string' ? { master: search.master } : {},
@@ -21,11 +21,12 @@ function ComposePage() {
   const { master: masterId } = Route.useSearch()
   const navigate = useNavigate({ from: '/app/compose' })
   const { data, error, refresh } = useLoaded(async () => {
-    const [who, targets] = await Promise.all([me(), runAction<{ items: Account[] }>('stump.drafts.preview', { action: 'targets' })])
+    const [who, targets, claims] = await Promise.all([me(), runAction<{ items: Account[] }>('stump.drafts.preview', { action: 'targets' }),
+      runAction<{ items: ClaimView[] }>('stump.brand.manage', { action: 'claim_list' })])
     const preview = masterId ? await runAction<MasterPreview>('stump.drafts.preview', { action: 'master', master_id: masterId }) : null
     const checks = preview ? await Promise.all(preview.items.map(variant =>
       runAction<Check & { item_id: string }>('stump.drafts.check', { action: 'run', item_id: variant.item_id, idempotency_key: key() }).catch(() => null))) : []
-    return { who, accounts: targets.items, preview, checks: checks.filter((check): check is Check & { item_id: string } => !!check) }
+    return { who, accounts: targets.items, claims: claims.items, preview, checks: checks.filter((check): check is Check & { item_id: string } => !!check) }
   })
   useEffect(() => { void refresh() }, [masterId, refresh])
   const { busy, message, run } = useRun()
@@ -77,7 +78,8 @@ function ComposePage() {
 
   const matched = new Set(data?.checks.flatMap(check => check.claims.filter(claim => claim.status === 'matched').map(claim => claim.claim_id)) ?? [])
   const flagRows = new Map<string, Flag>()
-  for (const variant of variants) for (const flag of blocking(variant.flags)) flagRows.set(flag.code === 'over_limit' ? `over:${variant.item_id}` : `${flag.code}:${String(flag.text ?? '')}`, flag)
+  // One row per thing to fix: a limit per variant, a sentence, an image or a venue rule once however many variants share it.
+  for (const variant of variants) for (const flag of blocking(variant.flags)) flagRows.set(flag.code === 'over_limit' ? `over:${variant.item_id}` : `${flag.code}:${String(flag.text ?? flag.media_id ?? flag.rule ?? '')}`, flag)
   // Sentences to back that do not stop the post: what the product does, with no number or comparison in it.
   const toBack = new Map<string, Flag>()
   for (const variant of variants) for (const flag of variant.flags) if (!flag.blocking && flag.code === 'claim_unmatched' && !flagRows.has(`${flag.code}:${String(flag.text ?? '')}`)) toBack.set(String(flag.text ?? ''), flag)
@@ -92,6 +94,7 @@ function ComposePage() {
     <h2 className="st-card-head" id="checks-title"><Disc icon="check" />Checks</h2>
     <ul className="st-check-list">
       <li><Disc icon="check" /><span>{matched.size} {matched.size === 1 ? 'claim' : 'claims'} matched</span></li>
+      {(data?.claims ?? []).filter(claim => matched.has(claim.id)).map(claim => <li key={claim.id} className="st-check-detail"><span>{claim.text}{proofLabel(claim.proof) ? ` · ${proofLabel(claim.proof)}` : ''}</span></li>)}
       {[...flagRows.values()].map(flag => <li key={`${flag.code}-${String(flag.text ?? flag.network)}`} className="danger"><Disc icon="alert" tone="danger" /><span>
         {flagLine(flag)}
         {flag.code.startsWith('claim_') ? <Link className="st-pill" to="/app/settings/brand">Fix claim</Link> : null}
@@ -114,10 +117,12 @@ function ComposePage() {
         <section className="st-card" aria-labelledby="one-post">
           <h2 className="st-card-head" id="one-post"><Disc icon="pencil" />One post</h2>
           <label className="st-sr" htmlFor="master-text">Post text</label>
-          <textarea id="master-text" className="st-textarea large" value={text} rows={4} placeholder="Write the post once. Each account gets its own variant."
-            onChange={event => setText(event.target.value)} onBlur={() => void saveMaster()} />
-          <div className={Number.isFinite(tightest) && graphemes(text) > tightest ? 'st-chars over' : 'st-chars'}>
-            {graphemes(text).toLocaleString()}{Number.isFinite(tightest) ? ` / ${tightest.toLocaleString()}` : ''}
+          <div className="st-master">
+            <textarea id="master-text" className="st-textarea large" value={text} rows={4} placeholder="Write the post once. Each account gets its own variant."
+              onChange={event => setText(event.target.value)} onBlur={() => void saveMaster()} />
+            <div className={Number.isFinite(tightest) && graphemes(text) > tightest ? 'st-chars over' : 'st-chars'}>
+              {graphemes(text).toLocaleString()}{Number.isFinite(tightest) ? ` / ${tightest.toLocaleString()}` : ''}
+            </div>
           </div>
           {preview ? source ? <div className="st-source-chip"><Disc icon="pencil" /><span><span className="st-meta">From a source</span><br />{source.replace(/^https?:\/\//, '')}</span></div> : null
             : <div className="st-source">
@@ -151,7 +156,7 @@ function ComposePage() {
         </button>
         <label className="st-when"><span className="st-sr">Time</span><input type="datetime-local" value={when} onChange={event => setWhen(event.target.value)} /></label>
         {held.length ? <span className="st-pill quiet">{held.length === 1 ? `${networkName(held[0]!.network)} variant holds alone` : `${held.length} variants hold`}</span>
-          : <button className="st-button" type="button" disabled={busy} onClick={() => void schedule('queue')}>Add to queue</button>}
+          : <button className="st-button quiet" type="button" disabled={busy} onClick={() => void schedule('queue')}>Add to queue</button>}
       </div> : null}
       <Outcome message={note ?? message} />
     </section>

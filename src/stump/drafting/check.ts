@@ -5,6 +5,8 @@
 import { bannedAct, checkClaims, checkDisclosure, claimsUsed, extractMentions, screenDraftForVenue, type ClaimFinding, type MentionSet } from '../lib/claims/index.ts'
 import { countText, nearDuplicates, type Network, type TextCount } from '../lib/text/index.ts'
 import type { StumpPerson } from '../people/store.ts'
+import { readVenue, rulesOf, type VenueRow } from '../venues/model.ts'
+import { holdFor, type VenueHold } from '../venues/rules.ts'
 import { claimRecord, itemText, libClaim, parse, productProfile, productRecord, today, type ClaimRecord, type Flag, type ProductRecord, type Row } from './records.ts'
 
 /** The networks whose counting rule Stump knows (lib/text). */
@@ -37,9 +39,10 @@ export async function loadBrand(db: D1Database): Promise<Brand> {
 export interface Draft {
   id?: string; format: string; network: string | null; account_id: string | null; venue_id: string | null
   person_id: string; product_id: string | null; master_id: string | null; text: string | null; parts: string[] | null
+  /** Where the item is aimed inside its venue: the post it answers, or options.thread_url / options.post_url. */
+  reply_to?: unknown; options?: Record<string, unknown> | null
 }
 export interface Account { id: string; network: string; handle: string; display_name: string | null; owner_kind: 'person' | 'company'; owner_person_id: string | null }
-interface Venue { id: string; name: string; platform: string | null; rules: Record<string, { value?: unknown } | undefined> }
 
 export interface CheckResult {
   passed: boolean
@@ -50,17 +53,31 @@ export interface CheckResult {
   disclosure: { required: boolean; status: string; because: string[] }
   duplicates: Array<{ id: string; kind: 'item' | 'ledger'; score: number; url: string | null }>
   claims_used: string[]
+  /** The venue rule that holds the item where it is aimed, if any (D-3, STUMP-VENUE-002.3). */
+  venue_hold: (VenueHold & { venue_id: string; venue_name: string }) | null
 }
 
 export const readAccount = (db: D1Database, id: string) =>
   db.prepare('SELECT id,network,handle,display_name,owner_kind,owner_person_id FROM stump_accounts WHERE id=?').bind(id).first<Account>()
-async function readVenue(db: D1Database, id: string): Promise<Venue | null> {
-  const row = await db.prepare('SELECT id,name,platform,rules FROM stump_venues WHERE id=?').bind(id).first<Row>()
-  return row ? { id: String(row.id), name: String(row.name), platform: row.platform as string | null, rules: parse(row.rules, {}) } : null
-}
-export const venueDisclosureLine = (venue: { rules: Venue['rules'] } | null) => {
-  const value = venue?.rules.disclosure_line?.value
+export const venueDisclosureLine = (venue: Pick<VenueRow, 'rules'> | null) => {
+  const value = venue ? rulesOf(venue).disclosure_line?.value : undefined
   return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+/** The venue rule holding this draft where it is aimed, read the way the venue register reads its items. */
+function venueHold(venue: VenueRow, draft: Draft): CheckResult['venue_hold'] {
+  const hold = holdFor(venue, {
+    id: draft.id ?? '', state: 'draft', format: draft.format, account_id: draft.account_id, text: draft.text, parts: draft.parts?.length ? JSON.stringify(draft.parts) : null,
+    reply_to: draft.reply_to ? JSON.stringify(draft.reply_to) : null, options: JSON.stringify(draft.options ?? {}), routes: '[]', flags: '[]', hold: null,
+  })
+  return hold ? { ...hold, venue_id: venue.id, venue_name: venue.name } : null
+}
+
+/** Attached media without alt text: each one stops the item until its alt text is set (STUMP-PUBLISH-002.5). */
+async function mediaWithoutAlt(db: D1Database, itemId: string | undefined) {
+  if (!itemId) return []
+  const rows = await db.prepare("SELECT id,name,type FROM stump_media WHERE item_id=? AND (alt IS NULL OR trim(alt)='') ORDER BY created_at,id").bind(itemId).all<{ id: string; name: string; type: string }>()
+  return rows.results
 }
 
 /** Every company and product name the brand profile knows: what makes "we" and "our" a disclosure. */
@@ -113,7 +130,8 @@ export function countDraft(draft: Pick<Draft, 'network' | 'text' | 'parts'>): { 
  */
 export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, person: StumpPerson | null, now: number): Promise<CheckResult> {
   const text = itemText(draft)
-  const [account, venue] = await Promise.all([draft.account_id ? readAccount(db, draft.account_id) : null, draft.venue_id ? readVenue(db, draft.venue_id) : null])
+  const [account, venue, unlabelled] = await Promise.all([draft.account_id ? readAccount(db, draft.account_id) : null, draft.venue_id ? readVenue(db, draft.venue_id) : null,
+    mediaWithoutAlt(db, draft.id)])
   const network = draft.network ?? account?.network ?? null
   const flags: Flag[] = []
 
@@ -124,7 +142,13 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   const avoided = new Set<string>()
   const unmatched = new Map(claimCheck.claims.filter(finding => finding.status === 'unmatched').map(finding => [`${finding.start}:${finding.end}`, finding.because ?? []]))
   for (const flag of claimCheck.flags) {
-    if (flag.code === 'avoid_word') { if (avoided.has(`${flag.start}:${flag.end}`)) continue; avoided.add(`${flag.start}:${flag.end}`) }
+    if (flag.code === 'avoid_word') {
+      if (avoided.has(`${flag.start}:${flag.end}`)) continue
+      avoided.add(`${flag.start}:${flag.end}`)
+      // The avoided word as the product records it (STUMP-BRAND-001.3).
+      flags.push({ ...flag, word: flag.reason, blocking: true })
+      continue
+    }
     if (flag.code !== 'claim_unmatched') { flags.push({ ...flag, blocking: true }); continue }
     // An unmatched sentence stays flagged until it is backed or removed. Only one that states a number, a comparison, a superlative,
     // compliance or a guarantee stops the item; one that only describes what the product does is flagged for a person to back.
@@ -144,6 +168,14 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   if (disclosure.status === 'missing') flags.push({ code: 'disclosure_missing', blocking: true, rule: 'D-2', because: disclosure.because, connection: person?.connection ?? null, ...(venueDisclosureLine(venue) ? { venue_line: venueDisclosureLine(venue) } : {}) })
   if (disclosure.status === 'below_cut') flags.push({ code: 'disclosure_below_cut', blocking: true, rule: 'D-2', cut, network })
 
+  // An image without alt text (STUMP-PUBLISH-002.5).
+  for (const media of unlabelled) flags.push({ code: 'alt_text_missing', blocking: true, media_id: media.id, name: media.name, type: media.type })
+
+  // The venue's rules where the item is aimed: outside its promotion thread, a link where links are banned,
+  // or the company's account where only members post (D-3). The flag has the venue register's shape.
+  const held = venue ? venueHold(venue, draft) : null
+  if (held) flags.push({ code: 'venue_rule', blocking: true, venue_id: held.venue_id, rule: held.rule, reason: held.reason, source_url: held.source_url })
+
   // Vote requests where the venue's platform bans them (STUMP-TRUTH-003.5).
   for (const finding of venue?.platform ? screenDraftForVenue(text, venue.platform) : []) {
     const act = bannedAct(finding.act)
@@ -162,7 +194,7 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
 
   return {
     passed: !flags.some(flag => flag.blocking), claims: claimCheck.claims, mentions: claimCheck.mentions, flags, counts: counts.counts,
-    disclosure: { required: disclosure.required, status: disclosure.status, because: disclosure.because }, duplicates, claims_used: claimsUsed(claimCheck.claims),
+    disclosure: { required: disclosure.required, status: disclosure.status, because: disclosure.because }, duplicates, claims_used: claimsUsed(claimCheck.claims), venue_hold: held,
   }
 }
 

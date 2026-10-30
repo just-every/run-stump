@@ -100,3 +100,33 @@ test('a draft from a changelog goes through the company\'s AI provider with the 
   assert.equal(unreadable.body.code, 'source_unreadable')
   assert.equal(await count(), before)
 })
+
+test('an avoided word and an image without alt text keep an item from ready, each named, until they are fixed', async () => {
+  const { owner } = records
+  const product = ok(await app.action('owner', 'stump.brand.manage', { action: 'product_create', name: 'Brightwell Desk', words_use: ['visit'], words_avoid: ['revolutionary'], tone: 'plain' }))
+  assert.deepEqual([product.words_use, product.words_avoid], [['visit'], ['revolutionary']])
+  const item = ok(await app.action('owner', 'stump.drafts.write', { action: 'create', format: 'post', person_id: owner.id, network: 'mastodon', product_id: product.id, text: 'A revolutionary booking screen.' }))
+  const word = await app.action('owner', 'stump.drafts.revise', { action: 'mark_ready', item_id: item.id })
+  assert.equal(word.body.code, 'checks_failed'); assert.deepEqual(word.body.words, ['revolutionary'])
+  ok(await app.action('owner', 'stump.drafts.revise', { action: 'save', item_id: item.id, expected_revision: 1, text: 'The new booking screen.' }))
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+  const media = ok(await app.action('owner', 'stump.items.media', { action: 'attach', item_id: item.id, file: { name: 'screen.png', type: 'image/png', base64: png } })).media
+  const alt = await app.action('owner', 'stump.drafts.revise', { action: 'mark_ready', item_id: item.id })
+  assert.equal(alt.body.code, 'checks_failed'); assert.ok(alt.body.flags.some(flag => flag.code === 'alt_text_missing' && flag.media_id === media.id))
+  ok(await app.action('owner', 'stump.items.media', { action: 'set_alt', media_id: media.id, alt: 'The weekly booking screen.' }))
+  assert.equal(ok(await app.action('owner', 'stump.drafts.revise', { action: 'mark_ready', item_id: item.id })).state, 'ready')
+})
+
+test('a venue that keeps self-promotion to its weekly thread holds an item outside it, naming the rule, and lets one in the thread be marked ready', async () => {
+  const { owner } = records
+  const venue = ok(await app.action('owner', 'stump.venues.manage', { action: 'create', kind: 'subreddit', name: 'r/smallclinics', url: 'https://www.reddit.com/r/smallclinics', platform: 'reddit', status: 'ready' }))
+  const thread = 'https://www.reddit.com/r/smallclinics/comments/wk44/weekly_self_promotion_thread/', source = 'https://www.reddit.com/r/smallclinics/wiki/rules'
+  ok(await app.action('owner', 'stump.venues.rules', { action: 'set', venue_id: venue.id, rules: { self_promotion: { value: 'thread', thread_url: thread, source_url: source, read_at: '2026-10-28' } } }))
+  const outside = ok(await app.action('owner', 'stump.drafts.write', { action: 'create', format: 'post', person_id: owner.id, venue_id: venue.id, network: 'reddit', text: 'I made a scheduling tool for front desks.' }))
+  assert.equal(outside.state, 'held'); assert.equal(outside.hold.reason, 'self_promotion'); assert.equal(outside.hold.source_url, source)
+  const refused = await app.action('owner', 'stump.drafts.revise', { action: 'mark_ready', item_id: outside.id })
+  assert.equal(refused.body.code, 'held'); assert.equal(refused.body.rule, 'self_promotion')
+  const inside = ok(await app.action('owner', 'stump.drafts.write', { action: 'create', format: 'reply', person_id: owner.id, venue_id: venue.id, network: 'reddit', reply_to: { url: thread }, text: 'I made a scheduling tool for front desks; ask me anything here.' }))
+  assert.equal(inside.state, 'draft')
+  assert.equal(ok(await app.action('owner', 'stump.drafts.revise', { action: 'mark_ready', item_id: inside.id })).state, 'ready')
+})

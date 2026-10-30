@@ -2,7 +2,7 @@ Stump keeps your products, the claims you may make with their proof, and each pe
 
 ## Products
 
-For each product: its name and other names, a one-line description, audience, positioning, URLs, the competitors it is compared with, the words it uses and avoids, and its tone. Drafting, disclosure and listening all read this, so a mention of a product or a competitor is recognised wherever it appears.
+For each product: its name and other names, a one-line description, audience, URLs, the competitors it is compared with, the words it uses and the words it avoids, and its tone. A draft that uses an avoided word cannot be marked ready until the word is gone. Drafting, disclosure and listening all read this, so a mention of a product or a competitor is recognised wherever it appears.
 
 ## Claims
 
@@ -17,7 +17,8 @@ Before a post can be marked ready, Stump finds its factual product claims and ma
 - an unmatched claim is flagged for someone to back or remove;
 - a banned claim stops the post;
 - a stale claim is flagged;
-- a number that differs from its proof is flagged with the proof's number.
+- a number that differs from its proof is flagged with the proof's number;
+- an attached image without alt text stops the post until its alt text is set.
 
 The check runs the same way for people and for agents.
 
