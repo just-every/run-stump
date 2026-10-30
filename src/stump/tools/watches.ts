@@ -1,4 +1,4 @@
-import { refuse } from '../actions/refusals.ts'
+import { automationRule, refuse, refuseAct } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpAction, StumpTool } from '../actions/types.ts'
 import type { TermLogic } from '../lib/discovery/index.ts'
 import { ADMINS, EDITORS, READERS } from '../people/roles.ts'
@@ -42,6 +42,19 @@ async function validProducts(ctx: ActionContext, ids: unknown): Promise<string[]
   const list = [...new Set(Array.isArray(ids) ? ids as string[] : [])]
   for (const product of list) if (!await ctx.db.prepare('SELECT 1 FROM stump_products WHERE id=?').bind(product).first()) refuse('not_found', { product_id: product })
   return list
+}
+
+/**
+ * A watch alerts people, who answer by hand: alerts that would reply, like or repost by themselves are a banned
+ * automation, refused with D-4 and the network's source before anything is saved (STUMP-TRUTH-003.4).
+ */
+async function noAutomation(args: Args, ctx: ActionContext) {
+  const alerts = args.alerts
+  if (!alerts || typeof alerts !== 'object' || Array.isArray(alerts)) return
+  for (const [key, value] of Object.entries(alerts as Args)) {
+    const rule = automationRule(key, value && typeof value === 'object' ? (value as Args).network : undefined)
+    if (rule) await refuseAct(ctx, 'stump.watches.manage', String(args.action), rule, { field: `alerts.${key}`, reason: 'Watches alert people, who answer by hand; nothing replies, likes or reposts by itself.' })
+  }
 }
 
 /** Alert destinations carry credentials, so only owners and admins set them. */
@@ -106,7 +119,7 @@ export const watchesTools: StumpTool[] = [{
     create: {
       roles: EDITORS,
       properties: { name: schemas.name, product_ids: schemas.product_ids, terms: schemas.terms, sources: schemas.sources, alerts: schemas.alerts, interval_minutes: schemas.interval_minutes },
-      required: ['name'],
+      required: ['name'], refuses: noAutomation,
       classify: args => [standard(1), ...(Array.isArray(args.sources) && args.sources.length ? [reaches(args.sources.length)] : []), ...(setsDestination(args.alerts) ? [destinations] : [])],
       summary: args => ({ target: { name: String(args.name) } }),
       async run(args, ctx) {
@@ -144,7 +157,7 @@ export const watchesTools: StumpTool[] = [{
     }),
     update: mutating({
       properties: { watch_id: schemas.watch_id, name: schemas.name, product_ids: schemas.product_ids, terms: schemas.terms, sources: schemas.sources, alerts: schemas.alerts, interval_minutes: schemas.interval_minutes },
-      required: ['watch_id'],
+      required: ['watch_id'], refuses: noAutomation,
       async classify(args, ctx) {
         await need(ctx, args)
         return [standard(1), ...(Array.isArray(args.sources) && args.sources.length ? [reaches(args.sources.length)] : []), ...(setsDestination(args.alerts) ? [destinations] : [])]

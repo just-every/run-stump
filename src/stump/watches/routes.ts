@@ -22,7 +22,7 @@ function homes(finding: Pick<Finding, 'source' | 'source_ref' | 'url'>): { exact
 /**
  * The routes a venue's rules open, read as the venues area reads them (D-3, STUMP-VENUE-002.1, .2):
  * publish needs a rule that lets software post from the company's account; a hand-off with a draft
- * needs a rule that allows AI-written text, with or without disclosure; a banned self-promotion rule
+ * is open unless a rule bans AI-written text; a banned self-promotion rule
  * closes both. Each rule decides by its value, sourced or not. A hand-off with a brief and facts is always open.
  */
 export function venueRoutes(rulesJson: string): Route[] {
@@ -31,7 +31,7 @@ export function venueRoutes(rulesJson: string): Route[] {
   if (says(ruleOf(rules, 'self_promotion'), 'banned')) return ['handoff_brief']
   return [
     ...(says(posting, 'api', 'company_account') ? ['publish' as const] : []),
-    ...(says(ai, 'allowed', 'allowed_with_disclosure') ? ['handoff_draft' as const] : []),
+    ...(says(ai, 'banned') ? [] : ['handoff_draft' as const]),
     'handoff_brief',
   ]
 }

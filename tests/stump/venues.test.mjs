@@ -61,6 +61,9 @@ test('the register keeps one venue per place, and its rules decide the routes an
   const sourced = await app.mcp(token, 'stump.venues.rules', { action: 'set', venue_id: journalist.result.structuredContent.id, rules: { posting: { value: 'members_only', source_url: source, read_at: '2026-10-29' } } })
   assert.deepEqual(sourced.result.structuredContent.routes.routes, ['handoff_draft', 'handoff_brief'])
   assert.deepEqual(sourced.result.structuredContent.routes.unsourced, ['ai_text'])
+  // Only a rule that bans AI-written text closes the draft; with no AI text rule recorded the member still gets one.
+  const noAiRule = await app.mcp(token, 'stump.venues.rules', { action: 'set', venue_id: journalist.result.structuredContent.id, rules: { ai_text: null } })
+  assert.deepEqual(noAiRule.result.structuredContent.routes.routes, ['handoff_draft', 'handoff_brief'])
 
   const limit = await app.action('owner', 'stump.venues.fit', { action: 'set_limit', venue_id: subreddit.id, limit: { posts: 1, per: 'week' } })
   assert.deepEqual(limit.body.result.venue.shared_limit, { posts: 1, per: 'week', text: null })

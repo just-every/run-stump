@@ -47,7 +47,8 @@ const mayUse = (tool: StumpTool, role: ActionContext['person']['role']) => Objec
 /**
  * The action a call names, after the checks every door applies in the same
  * order: a tool outside the person's list (forbidden), refused acts
- * (act_refused with rule and source), unknown actions, a call that would widen
+ * (act_refused with rule and source), unknown actions, an argument naming a
+ * banned act and the action's own product rules (act_refused), a call that would widen
  * the caller's own authority (self_escalation, whatever their role or the
  * company policy), the person's role, then the action's own arguments.
  * `args` holds what the caller sent, without idempotency_key and expected_revision.
@@ -61,6 +62,10 @@ export async function resolveAction(tool: StumpTool, args: Args, ctx: ActionCont
     if (rule) await refuseAct(ctx, tool.name, name, rule, { action: name })
     refuse('unknown_action', { action: name, actions: Object.keys(tool.actions) })
   }
+  // An argument the action does not take that names a banned act (`auto_reply`, `like`, ...) is that act asked for by name.
+  const banned = Object.keys(args).find(key => !Object.hasOwn(action.properties ?? {}, key) && Object.hasOwn(BANNED_ACTS, key))
+  if (banned) await refuseAct(ctx, tool.name, name, BANNED_ACTS[banned]!, { action: name, field: banned })
+  if (action.refuses) await action.refuses(args, ctx)
   const allowed = action.roles.includes(ctx.person.role)
   if (action.authority) {
     // A record the person may not act on reads as forbidden, never as found or missing.

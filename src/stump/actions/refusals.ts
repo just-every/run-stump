@@ -62,5 +62,18 @@ export const BANNED_ACTS: Readonly<Record<string, RuleSource>> = Object.fromEntr
   scrape: { rule: 'D-4', source: SOURCES.linkedin },
 }).map(([act, rule]) => [act, { ...rule, read_at: READ_AT }]))
 
+/**
+ * An automation a setting asks for by key (`auto_reply`, `keyword_reply`, `reply`, `like`, ...): a banned act named
+ * outright, or a reply sent by software rather than a person (D-4, STUMP-TRUTH-003.4), with the network's own source.
+ */
+export function automationRule(key: string, network?: unknown): RuleSource | null {
+  const word = key.toLowerCase().replace(/[^a-z]/g, '')
+  const act = Object.keys(BANNED_ACTS).find(name => name.replace(/_/g, '') === word)
+  if (act) return BANNED_ACTS[act]!
+  if (!/repl(y|ies)|respon(d|se)/.test(word)) return null
+  const on = String(network ?? '').toLowerCase()
+  return BANNED_ACTS[on === 'linkedin' ? 'comment_linkedin' : on === 'hn' ? 'comment_hn' : 'auto_reply']!
+}
+
 /** D-1: a person exists only through an accepted invitation and sign-in. */
 export const NO_PERSONAS: RuleSource = { rule: 'D-1', source: 'STUMP-TRUTH-001' }

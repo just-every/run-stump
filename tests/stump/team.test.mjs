@@ -22,6 +22,9 @@ test('people join only by invitation, with the invited role, through the person 
   assert.equal(invited.status, 200); assert.equal(invited.body.result.status, 'invited')
   // The invited person has their id before they sign in; it is the one they keep.
   const id = invited.body.result.id
+  // Nobody connects an account for someone who has not signed in (D-1).
+  const forThem = await app.action('owner', 'stump.accounts.connect', { action: 'start', network: 'mastodon', owner: 'me', instance: 'mastodon.example', person_id: id })
+  assert.deepEqual([forThem.status, forThem.body.code, forThem.body.rule], [403, 'act_refused', 'D-1'])
   assert.equal((await app.action('owner', 'stump.team.manage', { action: 'set_role', person_id: id, role: 'poster' })).body.result.role, 'poster')
   const team = async () => (await app.action('owner', 'stump.team.manage', { action: 'list' })).body.result.items.find(item => item.id === id)
   assert.equal((await team()).status, 'invited')
@@ -86,6 +89,8 @@ test('an agent credential acts for its person with exactly their role, follows r
   await app.action('owner', 'stump.team.manage', { action: 'set_role', person_id: person.id, role: 'admin' })
   const asAdmin = await app.mcp(issued.body.token, 'stump.team.manage', { action: 'invite', email: app.email('y'), display_name: 'Y', role: 'viewer' })
   assert.ok(!asAdmin.result.isError, asAdmin.error?.code); assert.equal(asAdmin.result.structuredContent.status, 'invited')
+  const connectFor = await app.mcp(issued.body.token, 'stump.accounts.connect', { action: 'start', network: 'mastodon', owner: 'me', instance: 'mastodon.example', person_id: asAdmin.result.structuredContent.id })
+  assert.deepEqual([connectFor.error?.code, connectFor.error?.rule], ['act_refused', 'D-1'])
   // Pause and resume through the agent are recorded with its person and the time.
   for (const action of ['pause', 'resume']) assert.ok(!(await app.mcp(issued.body.token, 'stump.calendar.pause', { action, scope: 'all' })).result.isError, action)
   const history = (await app.action('owner', 'stump.calendar.pause', { action: 'state' })).body.result.history
