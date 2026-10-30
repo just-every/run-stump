@@ -8,8 +8,9 @@ import { moveItem, type ItemState } from '../items/state.ts'
 import { readVenue } from '../venues/model.ts'
 import { handoffEligibility } from '../venues/members.ts'
 import { ACTIVE, handoffOrRefuse, move, type HandoffRow, type Hold } from './model.ts'
-import { disclosureKept } from './prepare.ts'
-import { refreshed, ruleHold, ruleHoldJson } from './refresh.ts'
+import { disclosureKept } from './disclosure.ts'
+import { limitHold, ruleHold, ruleHoldJson } from './holds.ts'
+import { refreshed } from './refresh.ts'
 import { one, records } from './view.ts'
 
 const actorOf = (ctx: ActionContext) => ({ db: ctx.db, person: ctx.person, agent: ctx.agent, now: ctx.now })
@@ -54,14 +55,16 @@ export async function edit(args: Args, ctx: ActionContext) {
       reason: 'This hand-off takes the person\'s own words: they write them when they record the link.' })
   }
   const text = String(args.draft_text)
-  // STUMP-HANDOFF-001.4: the disclosure stays in a draft that names the product.
-  await disclosureKept(ctx, item, text, row.disclosure_line)
-  const saved = await saveItem(ctx, item, { text, parts: null }, 'edited in the hand-off')
-  // The edited text is read against the venue's rules again: a link where links are banned holds it, naming the rule.
-  const venue = (await readVenue(ctx.db, row.venue_id))!, hold = ruleHold(venue, { draft_text: text, thread_url: row.thread_url })
+  const venue = (await readVenue(ctx.db, row.venue_id))!
+  // STUMP-HANDOFF-001.4: the disclosure stays in a draft that names the product, and its line stays in the draft.
+  await disclosureKept(ctx.db, row, venue, String(item!.text ?? row.draft_text ?? ''), text, ctx.now())
+  const saved = await saveItem(ctx, item!, { text, parts: null }, 'edited in the hand-off')
+  // The edited text is read against the venue's rules again: a link where links are banned holds it, naming the rule. A full shared limit still holds it.
+  const hold = ruleHold(venue, { draft_text: text, thread_url: row.thread_url })
   const current = row.hold ? JSON.parse(row.hold) as Hold : null
-  const to = hold ? 'held' : current?.kind === 'rule' ? (await handoffEligibility(ctx.db, venue, row.person_id, ctx.now())).join_first ? 'join_first' : 'open' : row.state
-  const set = { draft_text: saved.item.text, ...(hold ? { hold: ruleHoldJson(hold, ctx.now()) } : current?.kind === 'rule' ? { hold: null } : {}) }
+  const cleared = !hold && current?.kind === 'rule' && current.rule !== 'shared_limit'
+  const to = hold ? 'held' : cleared ? (await handoffEligibility(ctx.db, venue, row.person_id, ctx.now())).join_first ? 'join_first' : 'open' : row.state
+  const set = { draft_text: saved.item.text, ...(hold ? { hold: ruleHoldJson(hold, ctx.now()) } : cleared ? { hold: null } : {}) }
   return changed(ctx, move(actorOf(ctx), row, to, 'edited', set, { item_revision: saved.item.revision, ...(hold ? { rule: hold.rule, reason: hold.reason } : {}) }), row)
 }
 
@@ -76,10 +79,11 @@ export async function skip(args: Args, ctx: ActionContext) {
   const row = await working(ctx, args.handoff_id)
   if (!ACTIVE.includes(row.state)) refuse('not_open', { handoff_id: row.id, state: row.state })
   const reason = String(args.reason).trim()
-  return changed(ctx, [...move(actorOf(ctx), row, 'skipped', 'skipped', { hold: null }, { reason }), ...await supersede(ctx, row, `The hand-off was skipped: ${reason}`)], row)
+  const draft = await supersede(ctx, row, `The hand-off was skipped: ${reason}`)
+  return changed(ctx, [...move(actorOf(ctx), row, 'skipped', 'skipped', { hold: null }, { reason, ...(draft.length ? { item_id: row.item_id, draft: 'superseded' } : {}) }), ...draft], row)
 }
 
-/** STUMP-HANDOFF-003.3: a held hand-off shows who holds it, why, and its review date, when it returns to the queue. */
+/** STUMP-HANDOFF-003.3: a held hand-off shows who holds it, why, and its review date, when its lapse action runs. */
 export async function hold(args: Args, ctx: ActionContext) {
   const row = await working(ctx, args.handoff_id)
   if (row.state !== 'open' && row.state !== 'join_first') refuse('not_open', { handoff_id: row.id, state: row.state })
@@ -97,5 +101,8 @@ export async function release(args: Args, ctx: ActionContext) {
   const current = JSON.parse(row.hold!) as Hold
   if (current.kind === 'rule') refuse('rule_hold', { handoff_id: row.id, rule: current.rule, reason: current.reason, source_url: current.source_url })
   const venue = (await readVenue(ctx.db, row.venue_id))!, joined = !(await handoffEligibility(ctx.db, venue, row.person_id, ctx.now())).join_first
+  // A held hand-off holds no place in the shared limit: if its period filled meanwhile, the limit holds it with the next open date (D-3).
+  const full = row.due_at === null ? null : await limitHold(ctx.db, venue, row.due_at, row.id)
+  if (full) return changed(ctx, move(actorOf(ctx), row, 'held', 'released', { hold: ruleHoldJson(full, ctx.now()) }, { held_by: current.by, reason: current.reason, rule: full.rule, next_open_at: full.next_open_at }), row)
   return changed(ctx, move(actorOf(ctx), row, joined ? 'open' : 'join_first', 'released', { hold: null }, { held_by: current.by, reason: current.reason }), row)
 }

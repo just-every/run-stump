@@ -9,8 +9,9 @@ import { readPerson } from '../people/store.ts'
 import { annotateLedgerEntry } from '../stack/index.ts'
 import { memberOf } from '../venues/members.ts'
 import { rulesOf, venueOrRefuse, type VenueRow } from '../venues/model.ts'
+import { recordedDisclosure } from './disclosure.ts'
 import { recordHandedOff } from './ledger.ts'
-import { checkLink, onVenue, parseLink, sameAuthor, sameLink, venueMethod, type Checked } from './link.ts'
+import { authorMatches, checkLink, methodFor, onVenue, parseLink, sameLink, venueMethod, type Checked } from './link.ts'
 import { handoffOrRefuse, move, type HandoffRow, type Hold } from './model.ts'
 import { refreshed } from './refresh.ts'
 
@@ -61,15 +62,22 @@ export async function record(args: Args, ctx: ActionContext) {
   if (!onVenue(venue, link)) refuse('link_not_on_venue', { handoff_id: row!.id, venue_id: venue.id, venue: venue.name, url: link.href, reason: `That link is not on ${venue.name}.` })
   // D-8: the person attests their words are their own.
   if (row!.attestation_required === 1 && args.attest_own_words !== true) refuse('attestation_required', { handoff_id: row!.id, rule: 'D-8', reason: 'Attest that the words you posted are your own.' })
+  const ownWords = typeof args.own_words === 'string' && args.own_words.trim() ? args.own_words.trim() : null
+  // D-2: words that name the product say how the person is connected before they are recorded as posted, checked before any request.
+  if (ownWords !== null) await recordedDisclosure(ctx.db, row!, ownWords, 'own_words', methodFor(venue, link).network, ctx.now())
 
   const checked: Checked = await checkLink(ctx.env, venue, link)
   if (checked.confirmation === 'network') {
     const member = (await memberOf(ctx.db, venue.id, row!.person_id)).member
-    if (!checked.author || !member || !sameAuthor(checked.method, member.handle, checked.author, link.hostname)) {
-      refuse('author_mismatch', { handoff_id: row!.id, network: checked.network, author: checked.author, handle: member?.handle ?? null, reason: `The post's author is not ${member?.handle ?? 'the person'} on ${venue.name}.` })
+    if (!member || !await authorMatches(ctx.env, checked, member.handle, link.hostname)) {
+      const author = checked.author_handle ?? checked.author
+      refuse('author_mismatch', { handoff_id: row!.id, network: checked.network, author, ...(checked.author_handle ? { author_did: checked.author } : {}), handle: member?.handle ?? null,
+        reason: `The post's author is not ${member?.handle ?? 'the person'} on ${venue.name}.` })
     }
   }
-  const ownWords = typeof args.own_words === 'string' && args.own_words.trim() ? args.own_words.trim() : null
+  // The text as the network shows it carries the disclosure too; with none read back, the draft the person posted does.
+  if (checked.text !== null) await recordedDisclosure(ctx.db, row!, checked.text, 'url', checked.network, ctx.now())
+  else if (ownWords === null && row!.draft_text !== null) await recordedDisclosure(ctx.db, row!, row!.draft_text, 'draft_text', checked.network, ctx.now())
   // With no draft and no text read back, the person's own words are what the ledger keeps (the venue's AI text rule, or a superseded draft).
   if (row!.draft_text === null && checked.text === null && ownWords === null) {
     refuse('own_words_required', { handoff_id: row!.id, rule: row!.route === 'handoff_brief' ? 'ai_text' : 'own_words', source_url: rulesOf(venue).ai_text?.source_url ?? null, reason: 'Paste the words you posted.' })

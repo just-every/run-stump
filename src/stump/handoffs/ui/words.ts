@@ -33,6 +33,9 @@ export function dueLine(iso: string | null): string {
 }
 export const dayOf = (iso: string | null) => iso ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(iso)) : ''
 
+/** What happens at a person's review date: the hand-off's lapse action. */
+export const LAPSE_AT: Record<string, string> = { expire: 'Expires', reassign: 'Moves to the next member', next_slot: 'Moves to the next opening' }
+
 export const STATE: Record<string, { label: string; tone: ChipTone; tick?: boolean }> = {
   open: { label: 'Open', tone: 'success' }, join_first: { label: 'Join first', tone: 'neutral' }, held: { label: 'Held', tone: 'held' },
   posted: { label: 'Posted', tone: 'success', tick: true }, skipped: { label: 'Skipped', tone: 'neutral' }, expired: { label: 'Expired', tone: 'neutral' },
@@ -65,7 +68,7 @@ export function say(error: unknown): string {
     link_conflict: `This hand-off already has a link: ${String(f.recorded_url)}.`,
     own_words_required: 'Paste the words you posted.',
     attestation_required: 'Confirm the words are your own.',
-    disclosure_required: `Keep the disclosure: "${String(f.disclosure_line ?? '')}"`,
+    disclosure_required: f.field === 'draft_text' ? `Keep the disclosure: "${String(f.disclosure_line ?? '')}"` : String(f.reason ?? 'Say how you are connected in the post.'),
     handoff_not_open: String(f.reason ?? 'This hand-off is not open.'),
     rule_hold: String(f.reason ?? 'A venue rule holds it.'),
   }

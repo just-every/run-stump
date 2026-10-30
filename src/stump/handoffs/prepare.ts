@@ -1,20 +1,21 @@
 // stump.handoffs.prepare: a brief and a draft for one named member at a venue
 // whose rules keep posting for its members (STUMP-HANDOFF-001, STUMP-VENUE-006,
 // STUMP-VENUE-003.4, D-1, D-2, D-3, D-8). Generated and hand-written drafts go
-// through the drafting module exactly as stump.drafts.write does them.
+// through the drafting module exactly as stump.drafts.write does them; where the
+// venue bans AI-written text or the person is an outside voice, the brief carries
+// talking points and facts, and no text is generated or kept.
 import { refuse, refuseAct } from '../actions/refusals.ts'
 import type { ActionContext, Args } from '../actions/types.ts'
-import { checkDraft, loadBrand, type Brand } from '../drafting/check.ts'
+import { loadBrand, type Brand } from '../drafting/check.ts'
 import { saveItem } from '../drafting/items.ts'
 import { createItem, draftingClasses, screen } from '../drafting/write.ts'
 import { readPerson, type StumpPerson } from '../people/store.ts'
-import { sharedLimitHold } from '../venues/limits.ts'
 import { handoffEligibility } from '../venues/members.ts'
 import { rulesOf, venueOrRefuse, type VenueRow } from '../venues/model.ts'
 import { routesFor } from '../venues/rules.ts'
 import { disclosureFor, factsFor, nextOpening, outsideVoice, talkingPoints } from './brief.ts'
+import { limitHold, ruleHold, ruleHoldJson, type RuleHold } from './holds.ts'
 import { onVenue, parseLink } from './link.ts'
-import { ruleHold, ruleHoldJson } from './refresh.ts'
 import { history } from './model.ts'
 
 export const TOOL = 'stump.handoffs.prepare'
@@ -22,6 +23,8 @@ export const TOOL = 'stump.handoffs.prepare'
 export interface Plan {
   venue: VenueRow; person: StumpPerson; product: Brand['products'][number]; brand: Brand; due: number
   route: 'handoff_draft' | 'handoff_brief'; d8: boolean; writes: boolean
+  /** Text the call asked for or gave that the brief does not use, and the rule why (D-3, D-8). */
+  unused: { field: 'generate' | 'text'; rule: 'D-3' | 'D-8'; source: string; because: string } | null
 }
 
 /** Someone on the team who has signed in and may post by hand: everyone but a viewer (D-1, STUMP-TEAM-001). */
@@ -34,8 +37,9 @@ async function poster(ctx: ActionContext, id: unknown): Promise<StumpPerson> {
 
 /**
  * The refusals a prepare meets before any policy decision and before anything
- * is written: who it is for, the venue's route from its rules, and text the
- * route does not take (D-1, D-3, D-8).
+ * is written: who it is for and the venue's route from its rules (D-1, D-3).
+ * Text the route does not take is not refused: the brief gets talking points
+ * and facts instead, and its history says why (D-3, D-8).
  */
 export async function plan(ctx: ActionContext, args: Args): Promise<Plan> {
   // Editors prepare for anyone; a contributor (or their agent) only for themselves.
@@ -55,19 +59,18 @@ export async function plan(ctx: ActionContext, args: Args): Promise<Plan> {
   if (!Number.isFinite(due) || due <= ctx.now()) refuse('invalid_arguments', { field: 'due_at', reason: 'Give a time in the future.' })
   if (typeof args.thread_url === 'string' && !onVenue(venue, parseLink(args.thread_url))) refuse('link_not_on_venue', { field: 'thread_url', venue_id: venue.id, venue: venue.name, url: args.thread_url })
 
-  // D-8: an outside voice recommending the product gets talking points and facts only.
-  const d8 = args.recommends === true && outsideVoice(person)
+  // D-8: an outside voice recommending the product, or one Stump would write about it for, gets talking points and facts only.
+  const d8 = outsideVoice(person) && (args.recommends === true || args.generate === true)
   const route = routes.routes.includes('handoff_draft') && !d8 ? 'handoff_draft' : 'handoff_brief'
-  const writes = args.generate === true || typeof args.text === 'string'
-  if (writes) {
-    // The drafting module's own refusals first, as stump.drafts.write meets them (D-1, D-3, D-4, D-8).
-    if (args.generate === true) await screen(ctx, draftArgs(args), 'create')
-    if (route === 'handoff_brief') {
-      await refuseAct(ctx, TOOL, 'prepare', d8 ? { rule: 'D-8', source: 'STUMP-HANDOFF-001' } : { rule: 'D-3', source: rulesOf(venue).ai_text?.source_url ?? 'STUMP-VENUE-002' },
-        { venue_id: venue.id, venue: venue.name, route, field: args.generate === true ? 'generate' : 'text', offer: 'talking_points' })
-    }
-  }
-  return { venue, person, product, brand, due, route, d8, writes }
+  const asked = args.generate === true ? 'generate' : typeof args.text === 'string' ? 'text' : null
+  // The drafting module's own refusals, as stump.drafts.write meets them (D-1, D-4), for a draft the brief will carry.
+  if (asked && route === 'handoff_draft') await screen(ctx, draftArgs(args), 'create')
+  const draftReason = routes.reasons.find(reason => reason.route === 'handoff_draft')
+  const unused: Plan['unused'] = asked && route === 'handoff_brief'
+    ? d8 ? { field: asked, rule: 'D-8', source: 'STUMP-HANDOFF-001', because: `${person.display_name} is not a founder or employee: they post their own words from talking points and facts.` }
+      : { field: asked, rule: 'D-3', source: rulesOf(venue).ai_text?.source_url ?? 'STUMP-VENUE-002', because: `${venue.name}: ${draftReason?.because ?? 'AI-written text is not allowed.'} The member writes their own words from talking points and facts.` }
+    : null
+  return { venue, person, product, brand, due, route, d8, writes: !!asked && route === 'handoff_draft', unused }
 }
 
 /**
@@ -82,10 +85,9 @@ export async function admit(ctx: ActionContext, planned: Plan) {
   if (!eligibility.join_first && !eligibility.eligible) {
     refuse('gate_unmet', { venue_id: venue.id, venue: venue.name, person_id: person.id, gates: eligibility.unmet.map(unmet => unmet.gate), unmet: eligibility.unmet })
   }
-  // STUMP-VENUE-003.4: the company's shared limit there, counted across people and products.
-  const full = await sharedLimitHold(ctx.db, venue, due, null)
-  if (full) refuse('shared_limit', { venue_id: venue.id, venue: venue.name, rule: 'shared_limit', limit: JSON.parse(venue.shared_limit!), reason: full.reason, next_open_at: full.next_open_at })
-  return eligibility
+  // STUMP-VENUE-003.4, D-3: the company's shared limit there, counted across people and products. A full period holds the hand-off with the next open date.
+  const full = await limitHold(ctx.db, venue, due, null)
+  return { eligibility, full }
 }
 
 /** The drafting request a hand-off makes: one post for the person at the venue. */
@@ -97,13 +99,13 @@ const draftArgs = (args: Args): Args => ({
 /** A hand-off is a step the venue keeps for a person: gated, with the venue and "a member posts" (STUMP-SURFACE-005.1); an AI draft adds the provider. */
 export async function classes(args: Args, ctx: ActionContext) {
   const planned = await plan(ctx, args)
-  return [{ class: 'gated' as const, facts: { measure: 1, provider: planned.venue.name, step: 'a member posts' } }, ...draftingClasses(ctx.env, args.generate === true ? 1 : 0, 1)]
+  return [{ class: 'gated' as const, facts: { measure: 1, provider: planned.venue.name, step: 'a member posts' } }, ...draftingClasses(ctx.env, args.generate === true && planned.route === 'handoff_draft' ? 1 : 0, 1)]
 }
 
 /** Writes the hand-off: the draft item through the drafting module where the route takes one, then the brief. */
 export async function prepare(ctx: ActionContext, args: Args, planned: Plan): Promise<string> {
-  const eligibility = await admit(ctx, planned)
-  const { venue, person, product, brand, due, route, d8 } = planned
+  const { eligibility, full } = await admit(ctx, planned)
+  const { venue, person, product, brand, due, route, d8, unused } = planned
   const disclosure = disclosureFor(venue, person, brand, product.name)
   let itemId: string | null = null, draft: string | null = null, used: string[] = []
   if (planned.writes) {
@@ -123,9 +125,9 @@ export async function prepare(ctx: ActionContext, args: Args, planned: Plan): Pr
   }
   const facts = factsFor(brand, product.id, ctx.now(), used)
   const id = crypto.randomUUID(), now = ctx.now()
-  const hold = ruleHold(venue, { draft_text: draft, thread_url: (args.thread_url as string | undefined) ?? null })
+  const hold: RuleHold | null = ruleHold(venue, { draft_text: draft, thread_url: (args.thread_url as string | undefined) ?? null }) ?? full
   const state = hold ? 'held' : eligibility.join_first ? 'join_first' : 'open'
-  const opening = await nextOpening(ctx.db, venue, now)
+  const opening = hold?.rule === 'shared_limit' ? Date.parse(hold.next_open_at ?? '') || null : await nextOpening(ctx.db, venue, now)
   const actor = { db: ctx.db, person: ctx.person, agent: ctx.agent, now: ctx.now }
   const holdJson = hold ? ruleHoldJson(hold, now) : null
   await ctx.db.batch([
@@ -135,18 +137,11 @@ export async function prepare(ctx: ActionContext, args: Args, planned: Plan): Pr
         JSON.stringify(draft === null ? talkingPoints(venue, product, facts, disclosure) : []), draft === null ? 1 : 0, d8 ? 1 : 0, JSON.stringify(eligibility.join_steps),
         opening, holdJson, (args.thread_url as string | undefined) ?? null, (args.campaign as string | undefined) ?? null,
         ctx.agent ? JSON.stringify({ id: ctx.agent.id, name: ctx.agent.name }) : null, ctx.person.id, now, now, route, args.recommends === true ? 1 : 0),
-    history(actor, id, 'prepared', null, state, { route, lapse: args.lapse, due_at: new Date(due).toISOString(), item_id: itemId, ...(hold ? { rule: hold.rule, reason: hold.reason } : {}),
-      ...(eligibility.join_first ? { join_first: true } : {}), ...(d8 ? { rule: 'D-8' } : {}) }),
+    history(actor, id, 'prepared', null, state, { route, lapse: args.lapse, due_at: new Date(due).toISOString(), item_id: itemId,
+      ...(hold ? { rule: hold.rule, reason: hold.reason, ...(hold.next_open_at !== undefined ? { next_open_at: hold.next_open_at } : {}) } : {}),
+      ...(eligibility.join_first ? { join_first: true } : {}), ...(d8 ? { d8: true } : {}),
+      ...(unused ? { text_not_used: { field: unused.field, rule: unused.rule, source: unused.source, reason: unused.because } } : {}) }),
   ])
   ctx.emit('handoff.prepared', `stump://handoffs/${id}`, { person_id: person.id, venue_id: venue.id })
   return id
-}
-
-/** The check a hand-off draft edit must pass before it saves: the disclosure stays in a draft that names the product (STUMP-HANDOFF-001.4). */
-export async function disclosureKept(ctx: ActionContext, item: Record<string, unknown>, text: string, disclosure: string | null) {
-  const brand = await loadBrand(ctx.db), person = await readPerson(ctx.db, String(item.person_id))
-  const check = await checkDraft(ctx.db, brand, { id: String(item.id), format: 'post', network: null, account_id: null, venue_id: item.venue_id as string | null,
-    person_id: String(item.person_id), product_id: item.product_id as string | null, master_id: null, text, parts: null }, person, ctx.now())
-  const missing = check.flags.find(flag => flag.code === 'disclosure_missing' || flag.code === 'disclosure_below_cut')
-  if (missing && !(disclosure && text.includes(disclosure))) refuse('disclosure_required', { rule: 'D-2', disclosure_line: disclosure, reason: 'A hand-off that names the product keeps its disclosure.' })
 }

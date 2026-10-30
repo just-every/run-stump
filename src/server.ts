@@ -15,7 +15,7 @@ import { appDocumentGate } from './stump/http/app-gate.ts'
 import { importDoorResponse } from './stump/imports/door.ts'
 import { personDoorResponse } from './stump/http/routes.ts'
 import { publishDue } from './stump/publish/tick.ts'
-import { tickHandoffs } from './stump/handoffs/lapse.ts'
+import { tickHandoffs } from './stump/handoffs/refresh.ts'
 import { pollDueWatches } from './stump/watches/scheduled.ts'
 
 const api = new Hono<{ Bindings: Bindings }>()

@@ -16,6 +16,8 @@ export interface Fact { claim_id: string; text: string; proof: unknown }
 export interface Hold {
   kind: 'person' | 'rule'; reason: string; by: string | null; by_name: string | null; agent: { id: string; name: string } | null
   review_at: string | null; rule: string | null; source_url: string | null; at: string
+  /** A shared-limit hold: when the venue next has room. */
+  next_open_at?: string | null
 }
 
 export interface HandoffRow {

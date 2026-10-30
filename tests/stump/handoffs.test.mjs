@@ -8,6 +8,7 @@ import { stump } from './instance.mjs'
 const AI = 'https://ai.synthetic-stump.example'
 const seen = []
 const posts = new Map()
+const handles = new Map([['someone.bsky.social', 'did:plc:someone'], ['maya.synthetic.bsky.social', 'did:plc:maya']])
 async function edge(request) {
   seen.push(request.url)
   if (request.url === `${AI}/v1/chat/completions`) {
@@ -19,6 +20,10 @@ async function edge(request) {
   if (url.origin === 'https://public.api.bsky.app' && url.pathname === '/xrpc/app.bsky.feed.getPostThread') {
     const post = posts.get(url.searchParams.get('uri'))
     return post ? Response.json({ thread: { $type: 'app.bsky.feed.defs#threadViewPost', post } }) : Response.json({ error: 'NotFound', message: 'Post not found' }, { status: 400 })
+  }
+  if (url.origin === 'https://public.api.bsky.app' && url.pathname === '/xrpc/com.atproto.identity.resolveHandle') {
+    const did = handles.get(url.searchParams.get('handle'))
+    return did ? Response.json({ did }) : Response.json({ error: 'InvalidRequest', message: 'Unable to resolve handle' }, { status: 400 })
   }
   return null
 }
@@ -76,22 +81,25 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
   assert.deepEqual(handoff.facts.map(fact => fact.claim_id), [claim.id])
   assert.ok(drafted.result._meta['com.runeditrun/decision'].classes.some(item => item.class === 'gated' && item.facts.step === 'a member posts' && item.facts.provider === 'r/synthetic1'))
 
-  // Where AI text is banned: no AI call, talking points and facts, and someone not yet a member joins first.
+  // Where AI text is banned, asking for a draft gets the brief: no AI call, talking points and facts, and someone not yet a member joins first.
   const asked = seen.length
-  assert.equal((await prepare('owner', { venue_id: noAi.id, person_id: maya.id, due_at: new Date(week(1)).toISOString(), generate: true })).body.code, 'act_refused')
+  const brief = ok(await prepare('owner', { venue_id: noAi.id, person_id: maya.id, due_at: new Date(week(1)).toISOString(), generate: true }))
   assert.ok(!seen.slice(asked).some(url => url.startsWith(AI)))
-  const brief = ok(await prepare('owner', { venue_id: noAi.id, person_id: maya.id, due_at: new Date(week(1)).toISOString() }))
   assert.equal(brief.state, 'join_first'); assert.equal(brief.draft_text, null); assert.ok(brief.talking_points.length && brief.join_steps.length && brief.own_words_required)
-  // A friend recommending the product gets talking points only and must attest; the venue's shared limit counts across people and products.
-  const friend = ok(await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(2) + 2 * DAY).toISOString(), recommends: true }))
-  assert.equal(friend.attestation_required, true); assert.equal(friend.draft_text, null)
-  const full = await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(1) + 4 * DAY).toISOString() })
-  assert.equal(full.body.code, 'shared_limit'); assert.equal(full.body.venue_id, subreddit.id)
-  // Skipping records the reason and frees the place.
+  assert.equal(brief.history[0].detail.text_not_used.rule, 'D-3')
+  // A friend recommending the product gets talking points only and must attest, with no AI call.
+  const friend = ok(await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(2) + 2 * DAY).toISOString(), recommends: true, generate: true }))
+  assert.equal(friend.attestation_required, true); assert.equal(friend.draft_text, null); assert.equal(friend.history[0].detail.text_not_used.rule, 'D-8')
+  assert.ok(!seen.slice(asked).some(url => url.startsWith(AI)))
+  // The venue's shared limit counts across people and products: a full week holds the hand-off with the next open date.
+  const full = ok(await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(1) + 4 * DAY).toISOString() }))
+  assert.deepEqual([full.state, full.hold.rule, full.next_open_at], ['held', 'shared_limit', new Date(week(3)).toISOString()])
+  // Skipping records the reason and frees the place; the hand-off the limit held is back in the queue.
   const spare = ok(await prepare('owner', { venue_id: subreddit.id, person_id: maya.id, thread_url: thread, due_at: new Date(week(3) + DAY).toISOString() }))
-  assert.equal((await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(3) + 2 * DAY).toISOString() })).body.code, 'shared_limit')
+  const waiting = ok(await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(3) + 2 * DAY).toISOString() }))
+  assert.deepEqual([waiting.state, waiting.hold.rule], ['held', 'shared_limit'])
   assert.equal(ok(await app.action('maya', 'stump.handoffs.manage', { action: 'skip', handoff_id: spare.id, reason: 'Nothing new that week.' })).history.at(-1).detail.reason, 'Nothing new that week.')
-  ok(await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(3) + 2 * DAY).toISOString() }))
+  assert.equal(ok(await app.action('owner', 'stump.handoffs.manage', { action: 'get', handoff_id: waiting.id })).state, 'open')
 
   // Maya's queue holds only her own, by due date; the disclosure cannot be edited out of her draft.
   const queue = ok(await app.action('maya', 'stump.handoffs.manage', { action: 'queue' })).items.filter(item => item.state !== 'skipped')
@@ -121,26 +129,27 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
 
   // Bluesky is read back from the AppView: its author must be Maya's handle, and the ledger keeps the text as posted.
   const sky = ok(await prepare('owner', { venue_id: bluesky.id, person_id: maya.id, due_at: new Date(week(1)).toISOString(), generate: true }))
-  posts.set('at://someone.bsky.social/app.bsky.feed.post/3kaa', { uri: 'at://did:plc:someone/app.bsky.feed.post/3kaa', author: { did: 'did:plc:someone', handle: 'someone.bsky.social' }, record: { text: 'Not Maya.', createdAt: new Date().toISOString() } })
+  posts.set('at://did:plc:someone/app.bsky.feed.post/3kaa', { uri: 'at://did:plc:someone/app.bsky.feed.post/3kaa', author: { did: 'did:plc:someone', handle: 'someone.bsky.social' }, record: { text: 'Not Maya.', createdAt: new Date().toISOString() } })
   assert.equal((await record('maya', { handoff_id: sky.id, url: 'https://bsky.app/profile/someone.bsky.social/post/3kaa' })).body.code, 'author_mismatch')
-  posts.set('at://maya.synthetic.bsky.social/app.bsky.feed.post/3kbb', { uri: 'at://did:plc:maya/app.bsky.feed.post/3kbb', author: { did: 'did:plc:maya', handle: 'maya.synthetic.bsky.social' }, record: { text: 'I work at Brightwell. Recurring bookings are here.', createdAt: new Date().toISOString() } })
+  posts.set('at://did:plc:maya/app.bsky.feed.post/3kbb', { uri: 'at://did:plc:maya/app.bsky.feed.post/3kbb', author: { did: 'did:plc:maya', handle: 'maya.synthetic.bsky.social' }, record: { text: 'I work at Brightwell. Recurring bookings are here.', createdAt: new Date().toISOString() } })
   const checked = ok(await record('maya', { handoff_id: sky.id, url: 'https://bsky.app/profile/maya.synthetic.bsky.social/post/3kbb' }))
   assert.equal(checked.confirmation, 'network')
   assert.equal(ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: checked.ledger_id })).entry.text, 'I work at Brightwell. Recurring bookings are here.')
 })
 
-test('a hand-off never waits in silence: a hold returns at its review date, a rule change holds it, and removing a person moves it on', async () => {
+test('a hand-off never waits in silence: a hold runs its lapse at its review date, a rule change holds it, and removing a person moves it on', async () => {
   const { people: { jo, sam }, product } = await team([['jo', 'Jo Park', 'employee'], ['sam', 'Sam Ortiz', 'employee']])
   const slack = await venue({ kind: 'slack', name: 'Synthetic ops Slack', url: 'https://synthetic-ops.slack.com/', platform: 'slack' }, { posting: sourced('members_only'), ai_text: sourced('allowed') }, [[jo, 'jo-p'], [sam, 'sam-o']])
-  const prepare = async (person, due) => ok(await app.action('owner', 'stump.handoffs.prepare', { action: 'prepare', venue_id: slack.id, person_id: person.id, product_id: product.id, due_at: new Date(due).toISOString(), lapse: 'expire', generate: true }))
-  const first = await prepare(jo, week(2)), second = await prepare(jo, week(2) + DAY)
+  const prepare = async (person, due, lapse) => ok(await app.action('owner', 'stump.handoffs.prepare', { action: 'prepare', venue_id: slack.id, person_id: person.id, product_id: product.id, due_at: new Date(due).toISOString(), lapse, generate: true }))
+  const first = await prepare(jo, week(2), 'next_slot'), second = await prepare(jo, week(2) + DAY, 'expire')
 
-  // Jo holds one until a review date; when it comes, the hand-off is back in the queue with the hold in its history.
+  // Jo holds one until a review date; at that date its lapse action runs and is logged: next_slot moves it to the venue's next opening.
   const held = ok(await app.action('jo', 'stump.handoffs.manage', { action: 'hold', handoff_id: first.id, reason: 'After the release.', review_at: new Date(Date.now() + 1500).toISOString() }))
   assert.deepEqual([held.state, held.hold.by, held.hold.reason], ['held', jo.id, 'After the release.'])
   await new Promise(resolve => setTimeout(resolve, 2000))
   const back = ok(await app.action('jo', 'stump.handoffs.manage', { action: 'get', handoff_id: first.id }))
-  assert.deepEqual([back.state, back.history.at(-1).action], ['open', 'review_date'])
+  assert.deepEqual([back.state, back.history.at(-1).action, back.history.at(-1).detail.trigger, back.history.at(-1).detail.lapse], ['open', 'lapsed', 'review_date', 'next_slot'])
+  assert.ok(back.due_at !== first.due_at && Date.parse(back.due_at) > Date.now(), back.due_at)
 
   // A rule change that forbids the draft holds it, naming the rule; changing it back releases it.
   ok(await app.action('owner', 'stump.venues.rules', { action: 'set', venue_id: slack.id, rules: { ai_text: sourced('banned') } }))

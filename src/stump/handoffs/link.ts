@@ -4,6 +4,7 @@
 // members-only and other pages are confirmed by the person, with no request.
 import { refuse } from '../actions/refusals.ts'
 import type { StumpEnv } from '../env.ts'
+import { resolveHandle } from '../lib/bluesky/index.ts'
 import { htmlToText } from '../lib/mastodon/index.ts'
 import { stumpFetch } from '../net/fetch.ts'
 import type { VenueRow } from '../venues/model.ts'
@@ -34,7 +35,11 @@ export const sameLink = (a: string, b: string) => {
 }
 
 export type Method = 'bluesky' | 'mastodon' | 'x' | 'hn' | 'person'
-export interface Checked { network: string; method: Method; confirmation: 'network' | 'person'; network_id: string | null; author: string | null; text: string | null; posted_at: number | null }
+export interface Checked {
+  network: string; method: Method; confirmation: 'network' | 'person'; network_id: string | null; author: string | null; text: string | null; posted_at: number | null
+  /** Bluesky: the post's author handle as the AppView shows it, and the handles this check resolved to DIDs. */
+  author_handle?: string | null; resolved?: Map<string, string | null>
+}
 
 /** How docs/networks.md checks a link at this venue: by its host, or by the venue's own platform for a Mastodon instance. */
 export function methodFor(venue: Pick<VenueRow, 'platform' | 'kind'>, link: URL): { method: Method; network: string } {
@@ -58,12 +63,37 @@ export function venueMethod(venue: Pick<VenueRow, 'platform' | 'kind' | 'url'>):
 const bare = (handle: string) => handle.trim().replace(/^@/, '').toLowerCase()
 
 /** Whether the post's author is the person's recorded handle at the venue (STUMP-HANDOFF-002.3). */
-export function sameAuthor(method: Method, recorded: string, author: string, host: string): boolean {
+function sameAuthor(method: Method, recorded: string, author: string, host: string): boolean {
   const mine = bare(recorded), theirs = bare(author)
   if (method !== 'mastodon') return mine === theirs
   // Mastodon: a local account's acct has no instance; the recorded handle may carry one.
   const full = (acct: string) => acct.includes('@') ? acct : `${acct}@${host}`
   return mine.includes('@') ? full(mine) === full(theirs) : mine === theirs.split('@')[0]
+}
+
+const APPVIEW = 'https://public.api.bsky.app'
+
+/** A Bluesky handle's DID through the AppView's com.atproto.identity.resolveHandle; a DID stands for itself. Null when no account has that handle. */
+async function blueskyDid(env: StumpEnv, actor: string, resolved: Map<string, string | null>): Promise<string | null> {
+  const handle = actor.trim().replace(/^@/, '')
+  if (handle.startsWith('did:')) return handle
+  const key = handle.toLowerCase()
+  if (resolved.has(key)) return resolved.get(key)!
+  const answer = await resolveHandle({ fetch: stumpFetch(env), timeoutMs: 15_000 }, APPVIEW, key)
+  if (!answer.ok) return refuse('link_check_failed', { network: 'bluesky', status: answer.error.status ?? null, reason: `Bluesky could not resolve ${key} when the link was checked. Try again.` })
+  resolved.set(key, answer.value)
+  return answer.value
+}
+
+/**
+ * Whether the checked post is by the person's recorded handle at the venue
+ * (STUMP-HANDOFF-002.3): on Bluesky, the post's author DID against the DID the
+ * recorded handle resolves to; elsewhere, the handle the network shows.
+ */
+export async function authorMatches(env: StumpEnv, checked: Checked, recorded: string, host: string): Promise<boolean> {
+  if (!checked.author) return false
+  if (checked.method !== 'bluesky') return sameAuthor(checked.method, recorded, checked.author, host)
+  return (await blueskyDid(env, recorded, checked.resolved ?? new Map())) === checked.author
 }
 
 async function read(env: StumpEnv, url: string, network: string): Promise<Record<string, unknown> | null> {
@@ -86,12 +116,16 @@ export async function checkLink(env: StumpEnv, venue: VenueRow, link: URL): Prom
   const person: Checked = { network, method, confirmation: 'person', network_id: null, author: null, text: null, posted_at: null }
   if (method === 'person') return person
   if (method === 'bluesky') {
+    // docs/networks.md: the post record and its author DID, from the public AppView. The link names a handle (or a DID); the record lives under the DID.
     const [, actor, rkey] = /^\/profile\/([^/]+)\/post\/([^/]+)\/?$/.exec(link.pathname) ?? []
     if (!actor || !rkey) return notFound(network, url)
-    const body = await read(env, `https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread?uri=${encodeURIComponent(`at://${actor}/app.bsky.feed.post/${rkey}`)}&depth=0&parentHeight=0`, network)
+    const resolved = new Map<string, string | null>(), did = await blueskyDid(env, decodeURIComponent(actor), resolved)
+    if (!did) return notFound(network, url)
+    const body = await read(env, `${APPVIEW}/xrpc/app.bsky.feed.getPostThread?uri=${encodeURIComponent(`at://${did}/app.bsky.feed.post/${rkey}`)}&depth=0&parentHeight=0`, network)
     const post = (body?.thread as { post?: { uri?: string; author?: { did?: string; handle?: string }; record?: { text?: string; createdAt?: string } } } | undefined)?.post
     if (!post?.uri) return notFound(network, url)
-    return { ...person, confirmation: 'network', network_id: post.uri, author: post.author?.handle ?? post.author?.did ?? null, text: post.record?.text ?? null, posted_at: Date.parse(post.record?.createdAt ?? '') || null }
+    return { ...person, confirmation: 'network', network_id: post.uri, author: post.author?.did ?? null, author_handle: post.author?.handle ?? null, resolved,
+      text: post.record?.text ?? null, posted_at: Date.parse(post.record?.createdAt ?? '') || null }
   }
   if (method === 'mastodon') {
     const id = /\/(\d+)\/?$/.exec(link.pathname)?.[1]
