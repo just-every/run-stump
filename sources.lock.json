@@ -680,11 +680,11 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "d72f7e603665fd226dffb164918d572c4714b969d72f3a9ad9c8306fdb89a78a",
+      "sha256": "c7439e7ca1a73df8a08c98a0733a67179108965833cbbf25956a00b72e36fd5c",
       "executable": false
     },
     "pnpm-lock.yaml": {
-      "sha256": "92effd85f6101558c4b1567ee9b41e1e873487fc9cb926859a972d139b4fef5f",
+      "sha256": "6c77b86957f4a2772c69a51402d1b0454d8ac4a19ef5a8eab2f776b050323794",
       "executable": false
     },
     "public/apple-touch-icon.png": {
@@ -1597,6 +1597,18 @@
     },
     "src/modules/dependencies/store.mjs": {
       "sha256": "cd3c17373565ff5e4ffd1222299bcc9f8f018ec476db7def8d6d3aef52fa610f",
+      "executable": false
+    },
+    "src/modules/docs-search/client.ts": {
+      "sha256": "9d1c3d573c5cab0ef24e1a629f58733126cdb56c90190ec7e21cfa33bf882519",
+      "executable": false
+    },
+    "src/modules/docs-search/search.css": {
+      "sha256": "44ce24bd0708975375a8f46bda17dc6a4750019c338cdc18d9e591c1fdabb8e4",
+      "executable": false
+    },
+    "src/modules/docs-search/SearchField.tsx": {
+      "sha256": "f9bbdac81b7072be60f2e8d3d4e184328d48f09524a61d1022a6c9768d3acb15",
       "executable": false
     },
     "src/modules/mail/.gitignore": {
