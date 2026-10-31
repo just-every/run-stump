@@ -476,7 +476,7 @@
       "executable": false
     },
     "docs/disclosure.md": {
-      "sha256": "16f071211e53a34f491548aee762a030d3cf75cadcb211d4da1e8e9f1a18bf29",
+      "sha256": "8db8c39d443c27aae035a364e27f82818e4519e3c21e5bd8e14d7ea422875ea0",
       "executable": false
     },
     "docs/handoffs.md": {
@@ -3372,7 +3372,7 @@
       "executable": false
     },
     "src/routes/app.compose.tsx": {
-      "sha256": "219bb2a76fded28d83f4abbf86b2834aefad56153e4e7bdbc5ded16e9b8c1a9f",
+      "sha256": "3c2e850514a955751e6e3d976092f41727f7eb61f4c997420a772cad5f7aebe4",
       "executable": false
     },
     "src/routes/app.connected.$network.tsx": {
@@ -3388,7 +3388,7 @@
       "executable": false
     },
     "src/routes/app.inbox.tsx": {
-      "sha256": "05a802a2ffee400083dc164e22c658f88954aee23b97fde551f8c3cd675effab",
+      "sha256": "0cea5b7b5b62920330ced722c470896fbf612052195ea51cee84853c5c2128d5",
       "executable": false
     },
     "src/routes/app.index.tsx": {
@@ -3632,7 +3632,7 @@
       "executable": false
     },
     "src/stump/drafting/check.ts": {
-      "sha256": "51c27f38b4c3a398e15c1eb5f3d2779211a5f305d5255c8dbdd7f00e1881f159",
+      "sha256": "5749d0b13d8d5107befe83c7479f7f933c7750bd0d6e1e9e0ff1736059a5232f",
       "executable": false
     },
     "src/stump/drafting/diff.ts": {
@@ -3684,7 +3684,7 @@
       "executable": false
     },
     "src/stump/handoffs/disclosure.ts": {
-      "sha256": "22501fc111e29a4900cc0a73b9f743b37018bb1edb70ebd6149493045cff0e0b",
+      "sha256": "0ceb0a986de3c874b2e333cabef46f02ae0cc6169e9b93b479288246572787e3",
       "executable": false
     },
     "src/stump/handoffs/holds.ts": {
@@ -3912,11 +3912,11 @@
       "executable": false
     },
     "src/stump/lib/claims/check.ts": {
-      "sha256": "67f0788afe283c7188d49eb316689041e36eebb8611b60743154dc847b43a7cc",
+      "sha256": "13d6bda906eafc2413e8e25694f7eba34419e58decaf90e4fe468a44afd73797",
       "executable": false
     },
     "src/stump/lib/claims/disclosure.ts": {
-      "sha256": "ba78e4a01f16449e4d12814b0b529cb948eb866b028d3920afb59555a88b5f41",
+      "sha256": "13621a3593d6d48c77cfde85933df76f304f582163ed82c91c5ff61452d0edd3",
       "executable": false
     },
     "src/stump/lib/claims/extract.ts": {
@@ -3924,7 +3924,7 @@
       "executable": false
     },
     "src/stump/lib/claims/index.ts": {
-      "sha256": "7fed7d28323ade135a558e779679750ad1ed483dc887b9b6a277f0c78aab38b6",
+      "sha256": "f9aa1a23f7e1dda12f8d73a70b749e069d927c892deb24f195d8209145c170aa",
       "executable": false
     },
     "src/stump/lib/claims/mentions.ts": {
@@ -4304,7 +4304,7 @@
       "executable": false
     },
     "src/stump/people/disclosure-lines.ts": {
-      "sha256": "bac7d31b777df639507bd661963563a794db34296d1e0924f809ab7a1a1a0884",
+      "sha256": "746bd92965c8880acaa5559021637e593e3a23e75f453b506a87801b04fa3ec7",
       "executable": false
     },
     "src/stump/people/invite.ts": {
@@ -4428,7 +4428,7 @@
       "executable": false
     },
     "src/stump/today/sections.ts": {
-      "sha256": "da9c3b77e2c5d3787671bc104f35cd15dfd451a12a17c3167f1a21f81e225426",
+      "sha256": "b6c2c4108db1a51be4ffcd6c504c443d02bd1873ab78d5985b823283d1d92f31",
       "executable": false
     },
     "src/stump/today/TodayPage.tsx": {
@@ -4724,7 +4724,7 @@
       "executable": false
     },
     "tests/stump/drafting.test.mjs": {
-      "sha256": "80ddb662e59b36d5f63e32bbd1ef7d66e2ffb134cea323c57cca2d6d1b390436",
+      "sha256": "872563885ddca7f6995ed2f1f1cb4b16eefd45c459716d24d83138607d08a0bc",
       "executable": false
     },
     "tests/stump/handoffs.test.mjs": {

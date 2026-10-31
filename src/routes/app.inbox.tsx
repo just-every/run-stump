@@ -4,6 +4,7 @@ import { HydrationUnit } from '../base/hydration/unit'
 import type { Account, Flag } from '../stump/drafting/view.ts'
 import { flagLine, networkName } from '../stump/drafting/view.ts'
 import type { InboxView } from '../stump/inbox/store.ts'
+import { withDisclosureLine } from '../stump/people/disclosure-lines.ts'
 import { inboxStyles } from '../stump/inbox/styles.ts'
 import { ActionError, explain, me, runAction } from '../stump/ui/api.ts'
 import { Icon } from '../stump/ui/icons.tsx'
@@ -182,7 +183,7 @@ function Item({ item, account, mayAct, onBack, onChange }: { item: InboxView; ac
         {blocking.length ? blocking.map((flag, index) => <li key={`${flag.code}-${index}`} className="bad">{flagLine(flag)}
           {/* A missing disclosure offers the person's line, added at the start of the reply in one click. */}
           {flag.code === 'disclosure_missing' && typeof flag.line === 'string'
-            ? <button className="st-inbox-add-line" type="button" onClick={() => setText(`${String(flag.line)} ${text}`.trim())}>Add line</button> : null}</li>)
+            ? <button className="st-inbox-add-line" type="button" onClick={() => setText(withDisclosureLine(String(flag.line), text))}>Add line</button> : null}</li>)
           : <li className="ok">Claims, disclosure and repeats check out{account.network === 'x' && checked.charge_usd ? ` · X charges ${usd(checked.charge_usd)}` : ''}</li>}
       </ul> : null}
       {text.length ? <span className="st-meta st-inbox-count">{[...new Intl.Segmenter().segment(text)].length}{'\u00a0'}characters</span> : null}

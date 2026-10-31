@@ -9,6 +9,7 @@ import { rowTitle } from '../handoffs/ui/words.ts'
 import type { FindingView } from '../watches/ui-types.ts'
 import { dateIn, dayStartIn, timeIn } from '../ui/zones.ts'
 import { statesConnection } from '../lib/claims/index.ts'
+import { plainDisclosureLines } from '../people/disclosure-lines.ts'
 
 /** Where a row opens: the screen that owns the record. */
 export type Dest =
@@ -75,15 +76,16 @@ function placedName(item: ItemRecord, venues: Map<string, string>, products: Map
 
 /**
  * A post with no master, named by its opening words: its first sentence, links left out, or the sentence after it when the first
- * only says how the writer is connected ("I'm a founder at Brightwell."), so a draft is named by what it is about. `terms` are the
- * company's and its products' names, which a disclosure names. The row cuts it to one line itself.
+ * only says how the writer is connected ("I'm a founder of Brightwell.", or the plain line Stump offers for a connection), so a
+ * draft is named by what it is about. `terms` are the company's and its products' names, which a disclosure names. The row cuts
+ * it to one line itself.
  */
 export function openingWords(text: string, terms: readonly string[] = []): string {
   const clean = text.replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim()
   if (!clean) return 'Untitled draft'
   const sentence = (from: string) => /^.+?[.!?](?=\s|$)/.exec(from)?.[0] ?? from
   const first = sentence(clean), rest = clean.slice(first.length).trim()
-  return rest && statesConnection(first, terms) ? sentence(rest) : first
+  return rest && statesConnection(first, terms, plainDisclosureLines(terms)) ? sentence(rest) : first
 }
 
 /** "X variant", "X and Mastodon variants", "Bluesky, X and Mastodon variants", in Compose's order of networks. */

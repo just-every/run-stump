@@ -3,7 +3,7 @@
 // the brief gave them counting as one of that person's disclosure lines. Text
 // that names the product without it is not saved, handed off or recorded posted.
 import { refuse } from '../actions/refusals.ts'
-import { brandTerms, checkDraft, loadBrand } from '../drafting/check.ts'
+import { checkDraft, disclosureReading, loadBrand } from '../drafting/check.ts'
 import { detectDisclosure } from '../lib/claims/index.ts'
 import { readPerson } from '../people/store.ts'
 import { rulesOf, type VenueRow } from '../venues/model.ts'
@@ -41,8 +41,8 @@ export async function recordedDisclosure(db: D1Database, row: Spoken, text: stri
 /**
  * A draft edit keeps the disclosure (STUMP-HANDOFF-001.4): text that names the
  * product discloses the connection, and an edit cannot drop the hand-off's line
- * (or the venue's own line) unless the new text still makes the connection plain
- * in its own words.
+ * (or the venue's own line) unless the new text still discloses the connection
+ * another way Stump recognises (a line, or a fixed statement of connection).
  */
 export async function disclosureKept(db: D1Database, row: Spoken, venue: VenueRow, current: string, text: string, now: number) {
   const { brand, person, flag } = await undisclosed(db, row, text, null, now)
@@ -50,7 +50,8 @@ export async function disclosureKept(db: D1Database, row: Spoken, venue: VenueRo
   const lines = [row.disclosure_line, venueLine(venue)].filter((line): line is string => !!line)
   const had = !!venueLine(venue) || lines.some(line => current.includes(line))
   if (!had || lines.some(line => text.includes(line))) return
-  if (!detectDisclosure(text, { lines: [...lines, ...(person?.disclosure_lines ?? [])], terms: brandTerms(brand) }).disclosed) {
+  const reading = disclosureReading(brand, venueLine(venue), person)
+  if (!detectDisclosure(text, { ...reading, lines: [...lines, ...reading.lines] }).disclosed) {
     refuseDisclosure(row, 'draft_text', 'disclosure_removed', 'The edit removes the hand-off\'s disclosure line. Keep it in the draft.')
   }
 }

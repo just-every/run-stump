@@ -77,12 +77,12 @@ test('the claim check, disclosure and near-duplicate hold stop a draft the same 
   assert.equal((await app.mcp(agent.token, 'stump.drafts.revise', { action: 'mark_ready', item_id: reply.id })).error.rule, 'D-2')
   const stale = await app.mcp(agent.token, 'stump.drafts.revise', { action: 'save', item_id: reply.id, expected_revision: 2, text: 'A stale edit.' })
   assert.equal(stale.error.code, 'revision_conflict')
-  const disclosed = ok(await app.action('sam', 'stump.drafts.revise', { action: 'save', item_id: reply.id, expected_revision: 1, text: 'We shipped recurring bookings in Brightwell for this.' }))
+  const disclosed = ok(await app.action('sam', 'stump.drafts.revise', { action: 'save', item_id: reply.id, expected_revision: 1, text: 'We shipped Brightwell recurring bookings for this.' }))
   assert.equal(disclosed.revision, 2)
   assert.equal(ok(await app.action('sam', 'stump.drafts.revise', { action: 'mark_ready', item_id: reply.id })).state, 'ready')
 
   // Nearly repeating what is queued holds the item, naming the match, until it is rewritten.
-  const repeat = ok(await app.action('sam', 'stump.drafts.write', { action: 'create', format: 'reply', person_id: sam.id, network: 'x', reply_to: { url: 'https://x.com/other/status/2' }, text: 'We shipped recurring bookings in Brightwell for exactly this.' }))
+  const repeat = ok(await app.action('sam', 'stump.drafts.write', { action: 'create', format: 'reply', person_id: sam.id, network: 'x', reply_to: { url: 'https://x.com/other/status/2' }, text: 'We shipped Brightwell recurring bookings for exactly this.' }))
   assert.equal(repeat.state, 'held'); assert.equal(repeat.hold.matches[0].id, reply.id)
   const rewritten = ok(await app.action('sam', 'stump.drafts.revise', { action: 'save', item_id: repeat.id, text: 'We added weekly patterns to Brightwell after clinics asked; glad to show your desk.' }))
   assert.equal(rewritten.state, 'draft')

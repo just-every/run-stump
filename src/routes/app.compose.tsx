@@ -10,6 +10,7 @@ import { accountLabel, claimRange, flagLine, networkName, proofLabel, spanAt, sp
 import type { ItemRecord } from '../stump/drafting/records.ts'
 import { openDrafts, venuesFor, type VenueChoice } from '../stump/drafting/drafts-list.ts'
 import { earlierPosts, postsOf, type EarlierPost } from '../stump/drafting/repeats.ts'
+import { withDisclosureLine } from '../stump/people/disclosure-lines.ts'
 import { US_ZONES, deviceZone, instantIn, nextHour, storeZone, storedZone, zoneName } from '../stump/ui/zones.ts'
 
 // `master` opens a master post and its variants; `item` opens one draft that has no master; `fix` names the
@@ -174,7 +175,7 @@ function ComposePage() {
   async function addLine(line: string) {
     const flagged = variants.filter(variant => variant.flags.some(flag => flag.code === 'disclosure_missing' && flag.line === line))
     if (!flagged.length) return
-    const withLine = (body: string) => `${line} ${body}`.trim()
+    const withLine = (body: string) => withDisclosureLine(line, body)
     if (preview && flagged.length === variants.length && flagged.every(variant => !variant.differs_from_master)) {
       await run(() => runAction('stump.drafts.revise', { action: 'save_master', master_id: preview.master.id, text: withLine(preview.master.text), expected_revision: preview.master.revision, idempotency_key: key() }), () => 'Disclosure added')
     } else {
