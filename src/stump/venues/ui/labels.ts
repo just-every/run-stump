@@ -27,11 +27,10 @@ const PITCHED = ['podcast', 'newsletter', 'journalist', 'publication']
 export const pitched = (venue: Pick<Venue, 'kind' | 'status'>) => venue.status !== 'candidate' && (PITCHED.includes(venue.kind) || venue.status === 'editorial')
 
 /**
- * The one route a list shows (display only; the routes field keeps the interface's words): none yet for a candidate, a pitch
- * for a venue you pitch, else the widest route open there, the same routes the venue's own page lists.
+ * The one route a list shows (display only; the routes field keeps the interface's words): a pitch for a venue you pitch,
+ * else the widest route its rules open, the same routes the venue's own page lists, a candidate's included.
  */
 export function primaryRoute(venue: Pick<Venue, 'kind' | 'status' | 'routes'>): string | null {
-  if (venue.status === 'candidate') return null
   if (pitched(venue)) return 'Pitch'
   const route = ['publish', 'handoff_draft', 'handoff_brief'].find(item => venue.routes.includes(item))
   return route ? routeLabel(route) : null

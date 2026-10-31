@@ -59,6 +59,16 @@ test('the claim check, disclosure and near-duplicate hold stop a draft the same 
   assert.equal(own.person_id, sam.id)
   assert.equal(own.check.passed, false)
   assert.ok(own.check.claims.some(claim => claim.status === 'unmatched' && /weekly summary email/.test(claim.text)), JSON.stringify(own.check.claims))
+  // Each number is weighed against the proof on its own: keeping the claim's 30 minutes does not back a wrong 1 minute, for either door.
+  const timed = ok(await app.action('owner', 'stump.brand.manage', { action: 'claim_create', product_id: product.id, owner_id: owner.id, text: 'Turns a 30-minute visit into a booking in 2 minutes', kind: 'allowed',
+    proof: { url: 'https://brightwell.example/timing', text: '2 minutes median for a 30-minute visit' }, review_on: '2099-01-01' }))
+  const wrong = text => ({ action: 'create', format: 'post', person_id: owner.id, network: 'mastodon', product_id: product.id, text })
+  for (const check of [ok(await app.action('owner', 'stump.drafts.write', wrong('Brightwell turns a 30-minute visit into a booking in 1 minute.'))).check,
+    (await app.mcp(agent.token, 'stump.drafts.write', wrong('Brightwell now turns a 30-minute visit into a booking in 5 minutes.'))).result.structuredContent.check]) {
+    const finding = check.claims.find(claim => claim.claim_id === timed.id)
+    assert.equal(finding?.status, 'number_mismatch', JSON.stringify(check.claims)); assert.ok(finding.expected.includes('2 minutes'), JSON.stringify(finding))
+    assert.equal(check.passed, false)
+  }
 
   // An employee naming the product outside the company's accounts discloses first (D-2), through both doors.
   const reply = ok(await app.action('sam', 'stump.drafts.write', { action: 'create', format: 'reply', person_id: sam.id, network: 'x', reply_to: { url: 'https://x.com/someone/status/1' }, text: 'Brightwell has recurring bookings for this.' }))

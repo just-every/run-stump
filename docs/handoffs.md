@@ -19,7 +19,7 @@ An agent starts one with `stump.handoffs.prepare` (`venue_id`, `person_id`, `pro
 - The facts and claims, each with its proof.
 - The disclosure line.
 - A draft in the person's voice, or talking points and an empty box for their own words where the venue bans AI-written text.
-- The product's link with its [tags](/docs/links), and **Copy link**: `utm_content` is the hand-off's short id, so signups from the post join to its ledger entry. A venue that bans links gets none, and a company with no own domain set under **Settings › Connections › Link tags** has no link to tag.
+- The product's link with its [tags](/docs/links): `utm_content` is the hand-off's short id, so signups from the post join to its ledger entry. A draft that holds the product's link shows it tagged in its text, and **Copy text** copies both; where the text to post does not hold it (talking points, or a draft without the link), the link shows on its own with **Copy link**. A venue that bans links gets none, and a company with no own domain set under **Settings › Connections › Link tags** has no link to tag.
 
 Someone outside the company, such as an investor or a friend, who recommends a product gets talking points and facts only, and says the words are their own before the post is recorded.
 
@@ -37,7 +37,7 @@ Each person works their own queue, ordered by due date. **Hand-offs** has two ta
 
 ## Record the link
 
-Paste the link to the post. Stump checks that it belongs to the venue (for a Discord server, that the message link's server is the venue's server; see [Venues](/docs/venues)), and where the network offers an official way to confirm the post and its author, uses it. Reddit, LinkedIn and members-only links are recorded as confirmed by the person, and Stump makes no request to their pages.
+Paste the link to the post. Stump checks that it belongs to the venue (for a Discord server, that the message link's server is the venue's server; for a Slack community, that it is on the venue's workspace; see [Venues](/docs/venues)), and where the network offers an official way to confirm the post and its author, uses it. Reddit, LinkedIn and members-only links are recorded as confirmed by the person, and Stump makes no request to their pages.
 
 A confirmed link marks the hand-off posted and writes the [ledger](/docs/ledger) entry with the posted text. A link to another venue or another author is refused, with the reason.
 

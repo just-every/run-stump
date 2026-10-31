@@ -32,7 +32,7 @@
 // agent submitting the same draft get the same result: the check reads only the text,
 // the claims, the profiles and today's date.
 
-import { blankUrls, readSentence, refersToProduct, strongPhrases } from './extract'
+import { blankUrls, NEW_LEAD, readSentence, refersToProduct, strongPhrases } from './extract'
 import type { ClaimCandidate } from './extract'
 import { extractMentions, hostOfUrl } from './mentions'
 import type { MentionSet } from './mentions'
@@ -177,11 +177,15 @@ const backs = (e: Expected, f: FoundNumber) => equal(f, e) || (e.unitless === tr
 type Conflict = { expected: FoundNumber[]; found: FoundNumber[] }
 
 /**
- * Numbers the draft states for a claim when none of them is the claim's or its proof's.
+ * The numbers the draft states for a claim that neither the claim nor its proof states. Every
+ * number counts on its own: "a 30-minute meeting ... in 1 minute" against a claim of "a
+ * 30-minute meeting ... in 2 minutes" is a mismatch, though 30 minutes is the claim's.
  * Ratios (percent and multiplier) are compared across kinds, "2x" against a proven 30% is
  * a mismatch, and a unitless proof number backs a percent or multiplier of the same value.
  * Money is compared with money, and counts within one unit. A ratio or a price the claim
- * and its proof state none of is unbacked: a mismatch with nothing expected.
+ * and its proof state none of is unbacked: a mismatch with nothing expected. What is
+ * expected is the claim's and its proof's numbers of that measure the draft does not state,
+ * or all of them when it states each.
  */
 function numberConflict(claimNumbers: readonly FoundNumber[], proofNumbers: readonly Expected[], clauseNumbers: readonly FoundNumber[]): Conflict | undefined {
   const expectedAll: Expected[] = [...claimNumbers, ...proofNumbers]
@@ -191,24 +195,24 @@ function numberConflict(claimNumbers: readonly FoundNumber[], proofNumbers: read
     [isRatio, (e) => isRatio(e) || e.unitless === true],
     [(n) => n.kind === 'money', (e) => e.kind === 'money'],
   ]
+  const record = (found: readonly FoundNumber[], expected: readonly Expected[], backed: (e: Expected, f: FoundNumber) => boolean) => {
+    const unbacked = found.filter((f) => !expected.some((e) => backed(e, f)))
+    if (unbacked.length === 0) return
+    const unsaid = expected.filter((e) => !found.some((f) => backed(e, f)))
+    conflicts.expected.push(...(unsaid.length > 0 ? unsaid : expected))
+    conflicts.found.push(...unbacked)
+  }
   for (const [stated, expects] of measures) {
     const found = clauseNumbers.filter(stated)
-    if (found.length === 0) continue
-    const expected = expectedAll.filter(expects)
-    if (found.some((f) => expected.some((e) => backs(e, f)))) continue
-    conflicts.expected.push(...expected)
-    conflicts.found.push(...found)
+    if (found.length > 0) record(found, expectedAll.filter(expects), backs)
   }
 
   const units = new Set(clauseNumbers.filter((n) => n.kind === 'count' && n.unit !== '').map((n) => n.unit))
   for (const unit of units) {
     const found = clauseNumbers.filter((n) => n.kind === 'count' && n.unit === unit)
     const expected = expectedAll.filter((e) => found.some((f) => sameUnit(f, e)))
-    if (expected.length === 0) continue
-    if (!found.some((f) => expected.some((e) => equal(f, e)))) {
-      conflicts.expected.push(...expected)
-      conflicts.found.push(...found)
-    }
+    // A count of something the claim and its proof never count ("for 20 staff" against a claim of minutes) is not compared.
+    if (expected.length > 0) record(found, expected, equal)
   }
   return conflicts.found.length > 0 ? conflicts : undefined
 }
@@ -234,11 +238,13 @@ const SUBORDINATE = /^(?:when|whenever|if|once|after|before|until|unless|while|a
 
 /**
  * A sentence's clauses, with offsets into the draft. A piece of fewer than three words
- * ("Slack, Teams and Discord") stays with the clause before it, and a break inside a
- * number ("one hundred and twenty percent") is not a break.
+ * ("Slack, Teams and Discord") stays with the clause before it, unless a ';' or a colon
+ * parts it from that clause and a comma joins it to the next ("...by 30%; unlike HubSpot,
+ * it never loses a ticket"), and a break inside a number ("one hundred and twenty
+ * percent") is not a break.
  */
 function clauseSpans(span: Span, numbers: readonly FoundNumber[]): Span[] {
-  const pieces: Array<{ start: number; end: number }> = []
+  const pieces: Array<{ start: number; end: number; forward?: boolean }> = []
   let n = 0
   const insideNumber = (at: number) => {
     while (n < numbers.length && (numbers[n] as FoundNumber).end <= at) n++
@@ -247,23 +253,34 @@ function clauseSpans(span: Span, numbers: readonly FoundNumber[]): Span[] {
   }
   const words = (from: number, to: number) => span.text.slice(from, to).match(/[\p{L}\p{N}]+/gu)?.length ?? 0
   let cursor = 0
-  const push = (from: number, to: number) => {
+  let strongBefore = false
+  const push = (from: number, to: number, commaAfter: boolean) => {
     const raw = span.text.slice(from, to)
     const text = raw.trim()
     if (text === '') return
     const start = from + (raw.length - raw.trimStart().length)
     const end = start + text.length
     const last = pieces[pieces.length - 1]
-    if (last && words(start, end) < MIN_CLAUSE_WORDS) last.end = end
-    else pieces.push({ start, end })
+    if (last?.forward) {
+      last.end = end
+      last.forward = undefined
+    } else if (last && words(start, end) < MIN_CLAUSE_WORDS && !(strongBefore && commaAfter)) last.end = end
+    else pieces.push({ start, end, forward: last !== undefined && words(start, end) < MIN_CLAUSE_WORDS ? true : undefined })
   }
   for (const m of span.text.matchAll(CLAUSE_BREAK)) {
     const at = m.index ?? 0
     if (insideNumber(at)) continue
-    push(cursor, at)
+    push(cursor, at, m[0].startsWith(','))
+    strongBefore = /^[;:]/.test(m[0])
     cursor = at + m[0].length
   }
-  push(cursor, span.text.length)
+  push(cursor, span.text.length, false)
+  // A piece left waiting for a clause after it, with none, stays with the one before.
+  const waiting = pieces[pieces.length - 1]
+  if (waiting?.forward && pieces.length > 1) {
+    (pieces[pieces.length - 2] as { end: number }).end = waiting.end
+    pieces.pop()
+  }
   const first = pieces[0]
   if (first && pieces.length > 1 && words(first.start, first.end) < MIN_CLAUSE_WORDS) {
     first.end = (pieces[1] as { end: number }).end
@@ -309,6 +326,43 @@ function claimSentences(text: string, ownHosts: readonly string[]): Span[] {
   return out
 }
 
+/**
+ * Whether a word at `at` starts a sentence: nothing but space, closing quotes or brackets after a sentence's end (or a
+ * colon) stands before it. Looks back a bounded way, so a long draft costs no more per word.
+ */
+function opensSentence(text: string, at: number): boolean {
+  let k = at - 1
+  const stop = Math.max(-1, at - 64)
+  while (k > stop && /\s/u.test(text[k] as string)) k--
+  while (k > stop && /["'”’)\]]/u.test(text[k] as string)) k--
+  if (k <= -1) return true
+  if (k === stop) return false
+  return /[.!?:…]/u.test(text[k] as string)
+}
+
+const NOT_NAMES = new Set(
+  'monday tuesday wednesday thursday friday saturday sunday january february march april may june july august september october november december'.split(' '),
+)
+
+/**
+ * The names a clause says, folded: each word written as a proper name ("Asana", "GitHub"), never the first word of a
+ * sentence (or of what follows a colon), a link, a day or a month, or one of `known` (the company's products and people).
+ * A claim covers a clause only when it names each of them too: "it now sends tasks to Asana as well as Linear and Jira"
+ * says more than "Sends tasks to Linear and Jira".
+ */
+function namesIn(text: string, span: Span, known: ReadonlySet<string>, ownHosts: readonly string[]): string[] {
+  const shown = blankUrls(span.text, ownHosts)
+  const out: string[] = []
+  for (const m of shown.matchAll(/(?<![\p{L}\p{N}_@#'’.-])\p{Lu}[\p{Ll}\p{N}]*\p{Ll}[\p{L}\p{N}]*/gu)) {
+    const at = m.index ?? 0
+    if (opensSentence(at === 0 ? text : shown, at === 0 ? span.start : at)) continue
+    const word = foldText(m[0])
+    if (NOT_NAMES.has(word) || known.has(word)) continue
+    out.push(word)
+  }
+  return [...new Set(out)]
+}
+
 /** At most this many clauses after a clause are joined with it to match one claim. */
 const JOIN_WINDOW = 6
 
@@ -321,6 +375,10 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
   const competitorNames = (input.products ?? []).flatMap((p) => (p.competitors ?? []).flatMap((c) => (typeof c === 'string' ? [c] : [c.name, ...(c.aliases ?? [])])))
   const ownHosts = [...new Set((input.products ?? []).flatMap((p) => (p.urls ?? []).map(hostOfUrl)).filter(Boolean))]
   const ctx = { product_names: [...productNames, ...(input.company_names ?? [])], competitor_names: competitorNames, own_hosts: ownHosts }
+  // Names that never make a clause say more than a claim: the company's own products and people.
+  const known = new Set(
+    [...ctx.product_names, ...(input.people ?? []).flatMap((p) => [p.name, ...(p.aliases ?? [])])].flatMap((n) => foldText(n).match(/[\p{L}\p{N}]+/gu) ?? []),
+  )
   const profileById = new Map((input.products ?? []).map((p) => [p.id, p]))
   const named = mentions.products // sorted by start
   /** The product named last inside a span. */
@@ -358,13 +416,16 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
     return out
   }
 
+  // Where the sentence being read stops announcing ("New in Quillo 2.4: "): a clause after it is a feature.
+  let announcedFrom = Number.POSITIVE_INFINITY
   /** Match one piece of text, read with `subject` as its product when it names none. */
   const assess = (span: Span, subject: ProductProfile | undefined): Unit => {
     const own = productIn(span)
     const carried = own ? undefined : subject
     const spanNumbers = numbersIn(span)
     // A clause that names the product only by its link is about the product too.
-    const candidate = readSentence(span, ctx, (own ?? carried)?.name, spanNumbers)
+    const candidate = readSentence(span, ctx, (own ?? carried)?.name, spanNumbers, span.start >= announcedFrom)
+    const names = namesIn(input.text, span, known, ownHosts)
     const numbers = candidate?.numbers ?? spanNumbers
     // How much of the claim the clause says counts every word it writes, a link's included.
     const tokens = new Set(contentTokens(stripNumbers(span.text, numbers)))
@@ -386,6 +447,8 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
       let score = 0
       let conflict: Conflict | undefined
       for (const phrase of p.phrases) {
+        // A clause naming something the claim does not name says more than the claim (a banned claim stays banned).
+        if (p.claim.kind !== 'banned' && names.some((n) => !phrase.words.includes(` ${n} `))) continue
         const inside = strong.every((w) => phrase.words.includes(w)) ? containedIn(phrase.tokens, said) : 0
         const c = Math.max(containment(phrase.tokens, tokens), inside)
         if (c >= MATCH_THRESHOLD && c >= score) {
@@ -417,6 +480,8 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
     const carried = before && refersToProduct(sentence.text) ? before : undefined
     previousProduct = productIn(sentence) ?? before
 
+    const lead = NEW_LEAD.exec(sentence.text)
+    announcedFrom = lead ? sentence.start + lead[0].length : Number.POSITIVE_INFINITY
     const ownNumbers = extractNumbers(sentence.text)
     sentenceNumbers = ownNumbers.map((n) => ({ ...n, start: n.start + sentence.start, end: n.end + sentence.start }))
     const clauses = clauseSpans(sentence, ownNumbers)

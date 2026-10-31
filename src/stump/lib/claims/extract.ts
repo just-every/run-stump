@@ -56,6 +56,17 @@ const CAPABILITY =
 const FIRST_PERSON_PLURAL = /\b(we|we're|we've|we'll|our|ours)\b/
 /** "You can", "lets you", "you'll get": what a product does, told to its reader. */
 const SECOND_PERSON = /\b(?:you can|you(?:'ll| will)? (?:get|receive|see)|lets? you|helps? you|gives? you|shows? you|emails? you)\b/
+/**
+ * "Now" before a verb says what the product newly does: "recurring meetings now carry last week's tasks
+ * forward", "it now sends tasks to Asana", "Now with offline mode". Not when it says only that something is out
+ * ("is now live", "now available", "now in beta") or starts another phrase ("now that", "now the").
+ */
+const NOW_DOES = /\bnow\s+(?:also\s+|automatically\s+)?(?!(?:is|are|was|were|be|been|being|live|available|out|here|open|in|on|at|the|a|an|that|this|these|those|and|or|but|for|to|you|we|it|i|ready|official|shipping|underway)\b)[a-z]{3,}\b/
+/**
+ * A lead-in that announces what follows as new: "New in Quillo 2.4:", "New:", "Just shipped:", "Shipped in 2.4:".
+ * What comes after it is a feature of the product, so it is a claim to back whatever verb it uses.
+ */
+export const NEW_LEAD = /^(?:new(?:\s+in\s+[^:\n]{1,40})?|what's\s+new(?:\s+in\s+[^:\n]{1,40})?|(?:just\s+)?shipped(?:\s+in\s+[^:\n]{1,40})?|introducing)\s*:\s*/i
 /** Words that may stand before a sentence's verb: "and", "also", "now", "new:". */
 const LEAD_IN = '(?:(?:now|also|and|plus|new|then|even|still|automatically|already)[,:]?\\s+)*'
 /** A sentence that opens with what it does: "Adds a weekly summary", "Now syncs with Stripe". */
@@ -102,7 +113,7 @@ function wordCount(folded: string): number {
 export function refersToProduct(sentence: string): boolean {
   const folded = foldText(sentence)
   const opening = folded.trimStart()
-  return /^(?:it|its|this|that|they|these|those)\b/.test(opening) || SECOND_PERSON.test(folded) || OPENS_WITH_CAPABILITY.test(opening)
+  return /^(?:it|its|this|that|they|these|those)\b/.test(opening) || SECOND_PERSON.test(folded) || OPENS_WITH_CAPABILITY.test(opening) || NEW_LEAD.test(opening)
 }
 
 /** The clause after the product's name or "it" when it opens with one, else the whole clause ("asks before counting it"). */
@@ -150,9 +161,10 @@ function statesAction(opening: string, names: readonly string[]): boolean {
  * Read one sentence; `undefined` when it is not a claim. `subject` is the product the sentence
  * is about when it names none itself, given only when it refers to that product (see
  * `refersToProduct`), or names it by its link. `found` is the sentence's numbers when the
- * caller has already read them (offsets within `span.text`).
+ * caller has already read them (offsets within `span.text`). `announced` is a clause after a
+ * lead-in that says what follows is new (NEW_LEAD): a feature of the product, whatever its verb.
  */
-export function readSentence(span: Span, ctx: ExtractContext, subject?: string, found?: readonly FoundNumber[]): ClaimCandidate | undefined {
+export function readSentence(span: Span, ctx: ExtractContext, subject?: string, found?: readonly FoundNumber[], announced = false): ClaimCandidate | undefined {
   const folded = foldText(span.text)
   if (isQuestion(span.text, ctx.own_hosts)) return undefined
   if (wordCount(folded) < 3) return undefined
@@ -181,7 +193,7 @@ export function readSentence(span: Span, ctx: ExtractContext, subject?: string, 
   if (anchored && SUPERLATIVE.test(said)) reasons.push('superlative')
   if (GUARANTEE.test(said) && (anchored || hasMetric)) reasons.push('guarantee')
   if (product !== undefined || firstPerson) {
-    if (CAPABILITY.test(said) || (product !== undefined && statesAction(said.trimStart(), ctx.product_names))) reasons.push('capability')
+    if (CAPABILITY.test(said) || NOW_DOES.test(said) || announced || (product !== undefined && statesAction(said.trimStart(), ctx.product_names))) reasons.push('capability')
   }
   if (reasons.length === 0) return undefined
   return { ...span, reasons, numbers, competitor: reasons.includes('comparison') ? competitor : undefined }

@@ -21,6 +21,8 @@ export interface FindingView {
   passing: boolean
   /** Short passages of its text around the terms it matched (or its opening, when only the title matched). */
   excerpts: string[]
+  /** For a link post with no text of its own, the page it links to. */
+  linked_url: string | null
   reason_details: Array<{ factor: string; label: string; points: number; max: number }>
   routes: Array<'publish' | 'handoff_draft' | 'handoff_brief' | 'dismiss'>; venue: { id: string; name: string } | null
   transcript_match: { terms: string[]; excerpts: string[] } | null

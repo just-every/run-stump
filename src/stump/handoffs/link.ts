@@ -40,7 +40,25 @@ export function discordServer(venue: Pick<VenueRow, 'url' | 'details'>): string 
   return venue.url ? fromUrl(venue.url) : null
 }
 
-/** The link's place, compared the way a person would: the same site, for a subreddit the same subreddit, and for a Discord server the same server. */
+/**
+ * A Slack venue's workspace address (rands-leadership.slack.com), from its recorded Workspace (the address, or a link
+ * on it) or from its own address when that is on the workspace. A community recorded by its public join page names
+ * no workspace until Workspace is set.
+ */
+export function slackWorkspace(venue: Pick<VenueRow, 'url' | 'details'>): string | null {
+  const fromText = (value: string) => {
+    const text = value.trim().toLowerCase()
+    if (!text) return null
+    let host: string
+    try { host = new URL(/^[a-z][a-z\d+.-]*:\/\//.test(text) ? text : `https://${text}`).hostname.replace(/^www\./, '') } catch { return null }
+    return onDomain(host, 'slack.com') && host !== 'slack.com' && host !== 'app.slack.com' ? host : null
+  }
+  let recorded: unknown = null
+  try { recorded = (JSON.parse(venue.details || '{}') as { workspace?: unknown }).workspace } catch { recorded = null }
+  return (typeof recorded === 'string' ? fromText(recorded) : null) ?? (venue.url ? fromText(venue.url) : null)
+}
+
+/** The link's place, compared the way a person would: the same site, for a subreddit the same subreddit, for a Discord server the same server, and for a Slack community the same workspace. */
 export function onVenue(venue: Pick<VenueRow, 'url' | 'kind' | 'details'>, link: URL): boolean {
   if (!venue.url) return false
   const home = new URL(venue.url)
@@ -48,6 +66,11 @@ export function onVenue(venue: Pick<VenueRow, 'url' | 'kind' | 'details'>, link:
     // A message link is discord.com/channels/<server>/<channel>/<message>; the venue is usually recorded by its invite link.
     const server = discordServer(venue), linked = hostOf(link) === 'discord.com' ? /^\/channels\/(\d{5,25})\//.exec(link.pathname)?.[1] ?? null : null
     return !!server && server === linked
+  }
+  // A message link is <workspace>.slack.com/archives/<channel>/p<message>; the venue is often recorded by its join page.
+  if (venue.kind === 'slack') {
+    const workspace = slackWorkspace(venue)
+    if (workspace) return hostOf(link) === workspace
   }
   if (hostOf(home) !== hostOf(link)) return false
   const subreddit = /^\/r\/([A-Za-z0-9_]+)/.exec(home.pathname)?.[1]?.toLowerCase()
@@ -61,6 +84,11 @@ export function notOnVenueReason(venue: Pick<VenueRow, 'url' | 'kind' | 'details
     return `${venue.name} is recorded by its invite link, which names no server. Edit the venue and set Server to the server's id (the first number in a discord.com/channels/<server>/… link), then record the link again.`
   }
   if (venue.kind === 'discord') return `That link is not a message in ${venue.name}'s server. Copy the message link (discord.com/channels/…) from that server.`
+  if (venue.kind === 'slack') {
+    const workspace = slackWorkspace(venue)
+    if (!workspace) return `${venue.name} is recorded by an address that names no Slack workspace. Edit the venue and set Workspace to the workspace's address (the <name>.slack.com part of a message link), then record the link again.`
+    return `That link is not a message in ${venue.name}'s workspace. Copy the message link (${workspace}/archives/…) from that workspace.`
+  }
   return `That link is not on ${venue.name}.`
 }
 
