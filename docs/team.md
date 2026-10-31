@@ -17,6 +17,8 @@ A role change applies from the person's next request.
 
 An owner or admin invites a person by email with their name, role and connection: founder, employee, contractor, investor, advisor, friend or family. They may add the person's disclosure lines. The person joins when they sign in with that email. Nobody joins without an invitation.
 
+The owner gives their own connection in first-run setup. An owner or admin sets or changes a teammate's connection from the ⋯ menu on their row in **Settings › Team**; the owner's own is changed only by the owner, and an admin never changes another admin's.
+
 Until they sign in, an invited person holds nothing: a hand-off, a draft in their voice or a voice guide for them is refused with "<name> has not accepted their invitation yet".
 
 ### On your own computer
