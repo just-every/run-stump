@@ -47,7 +47,8 @@
     },
     {
       "binding": "MAIL_FROM",
-      "environment": "MAIL_FROM"
+      "environment": "MAIL_FROM",
+      "verifyStandIn": "auth@example.test"
     },
     {
       "binding": "AI_ENABLED",
