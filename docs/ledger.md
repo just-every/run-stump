@@ -1,4 +1,4 @@
-The ledger is the company's record of everything that went out in its name: posts, threads, replies, pitches and hand-off posts.
+The ledger is the company's record of everything that went out in its name: posts, threads, replies and hand-off posts.
 
 ## An entry
 
@@ -9,7 +9,7 @@ Each entry holds:
 - the agent that drafted or published it, shown as "agent for person";
 - the exact text as posted, the disclosure line and the claims it used;
 - the product and campaign;
-- the route: published, handed off, or sent through Orbit;
+- the route: published or handed off;
 - the time and the state: posted, failed, uncertain, deleted or removed.
 
 A post reads as posted only with the network's own id and URL read back, or, for a hand-off, with the link the named person recorded. An unknown outcome becomes a hold with an owner, and is never retried blindly.

@@ -2667,8 +2667,8 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 13 | 29 | 8 | 50 |
-| Target and push further | 10 | 36 | 84 | 130 |
-| All | 23 | 65 | 92 | 180 |
+| Target and push further | 10 | 38 | 82 | 130 |
+| All | 23 | 67 | 90 | 180 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -2692,8 +2692,8 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | `STUMP-WATCH-011` | X search, metered | published | missing | | Not built: no X search watch. |
 | `STUMP-PUBLISH-001` | Accounts bound to a person or the company | published | done | `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back"; held-out acceptance A09, A10, A19 | |
 | `STUMP-CONNECT-001` | Connection ownership and disconnect | published | partial | `tests/stump/accounts.test.mjs` "X refusing the account's token marks it expired, holds its posts with the reconnect step, and only its owner's reconnect brings it back"; `tests/stump/accounts.test.mjs` "removing a person disconnects their own X account at X and returns their posts waiting on a rate limit to draft"; held-out acceptance A09, A10 | A company account outliving the admin who connected it (point 2) is built and not proven. |
-| `STUMP-PUBLISH-002` | Bluesky posts and threads | published | partial | `src/stump/publish/bluesky.ts`; held-out acceptance A10 | Video (point 7) is not built. Rate-limit holds (point 6) are built and not proven. |
-| `STUMP-PUBLISH-003` | Mastodon posts and threads | published | partial | `src/stump/publish/mastodon.ts`; held-out acceptance A09 | The bot-flag rule for agents (point 7) is built and not proven. |
+| `STUMP-PUBLISH-002` | Bluesky posts and threads | published | partial | `src/stump/publish/bluesky.ts`; held-out acceptance A10 | Video (point 7) is not built. Rate-limit holds (point 6) are built and not proven. A thread that fails mid-way and resumes (part of point 3) is built and not proven on Bluesky. |
+| `STUMP-PUBLISH-003` | Mastodon posts and threads | published | partial | `src/stump/publish/mastodon.ts`; held-out acceptance A09 | The bot-flag rule for agents (point 7) is built and not proven. An instance set to 1,000 characters (part of point 2) is not proven. |
 | `STUMP-PUBLISH-004` | X posts and threads | published | partial | `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `agent-surface.json` journey steps label-x, x-schedule; held-out acceptance A11 | Video (part of point 6) is not built. The composer does not show the charge before a person's post goes out (part of point 2). |
 | `STUMP-PUBLISH-005` | LinkedIn member posts | published | done | `src/stump/publish/linkedin.ts`; held-out acceptance A12, A18 | |
 | `STUMP-PUBLISH-007` | Threads posts | published | missing | | Not built: no Threads connection. |
@@ -2724,7 +2724,7 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | `STUMP-TRUTH-004` | Near-duplicate blocking | published | partial | `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"; held-out acceptance A18 | The labelled near-duplicate fixture and its measured rates in docs/measures.md (point 7) are not built. |
 | `STUMP-VENUE-005` | Rules freshness and change review | target | missing | | Not built: rule pages are not re-read or reviewed. |
 | `STUMP-VENUE-007` | Reception and venue history | target | partial | `tests/stump/ledger-stack.test.mjs` "the ledger is searched with combined filters, corrected into versions, marked removed and exported as the rows on screen"; held-out acceptance A15 | A venue's history lists its posts and removals (part of point 3). Moderator warnings, lowering fit and holding a warned venue's items (points 1, 2 and 4) are not built. |
-| `STUMP-BRAND-005` | Media library with rights and alt text | target | missing | | Not built: images attach to one item at a time, with no library or rights record. |
+| `STUMP-BRAND-005` | Media library with rights and alt text | target | partial | `tests/stump/drafting.test.mjs` "an avoided word and an image without alt text keep an item from ready, each named, until they are fixed"; held-out acceptance A10; `src/stump/tools/items.ts` | No media library: rights and recorded permission (point 3 and the rights in point 1) and where each image was used (point 4) are not built; the size refusal (point 5) is built and not proven. |
 | `STUMP-BRAND-006` | AI-made images and short video | target | missing | | Not built: no AI-made images or video. |
 | `STUMP-BRAND-007` | Designs from Canva | target | missing | | Not built: no Canva connection. |
 | `STUMP-BRAND-008` | Media from Google Drive and Dropbox | target | missing | | Not built: no Google Drive or Dropbox connection. |
@@ -2734,7 +2734,7 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | `STUMP-DRAFT-013` | Browser extension | target | missing | | Not built: no browser extension. |
 | `STUMP-DRAFT-014` | Preview links for reviewers without a seat | target | missing | | Not built: no preview links. |
 | `STUMP-DRAFT-005` | Venue-fit check before ready | target | partial | `tests/stump/drafting.test.mjs` "a venue that keeps self-promotion to its weekly thread holds an item outside it, naming the rule, and lets one in the thread be marked ready"; `src/stump/venues/rules.ts` | A link where the venue bans links is held, naming the rule (point 2), built and not proven. Flair, the thread's day and recording a pass (points 1, 3 and 4) are not built. |
-| `STUMP-DRAFT-007` | Alternates and talking points | target | missing | | Not built: an item holds one draft, with no alternates. |
+| `STUMP-DRAFT-007` | Alternates and talking points | target | partial | `src/stump/venues/import/source.ts`; `src/stump/drafting/records.ts` | Imported entries keep their alternates on the item (part of point 1), built and not proven; talking points beside the draft, choosing an alternate and recording which went out (points 1 to 3) are not built. |
 | `STUMP-DRAFT-008` | Articles with canonical links | target | missing | | Not built: no articles. |
 | `STUMP-DRAFT-009` | Other languages, locales and non-US disclosure rules | target | missing | | Not built: US English only. |
 | `STUMP-PLAN-003` | Campaigns | target | partial | `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"; held-out acceptance A15 | There is no campaign record or page: a campaign's items, hand-offs and pitches with their states (point 1), its summed results (point 3) and archiving (point 4) are not built. |
@@ -2742,7 +2742,7 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | `STUMP-PLAN-005` | Pacing as data | target | partial | `tests/stump/accounts.test.mjs` "removing a person disconnects their own X account at X and returns their posts waiting on a rate limit to draft"; held-out acceptance A11, A12 | Per-account daily budgets and minimum intervals (points 1, 2 and 4) are not built. |
 | `STUMP-PLAN-006` | Bulk scheduling from CSV | target | missing | | Not built: no bulk scheduling from CSV. |
 | `STUMP-PLAN-007` | Pause publishing | target | done | `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `agent-surface.json` journey steps pause, resume; held-out acceptance A21 | |
-| `STUMP-PUBLISH-009` | Images, video and alt text per network | target | partial | `src/stump/lib/bluesky/post.ts`; held-out acceptance A12 | Converting images between formats (point 2) and video (point 3) are not built. A fifth Bluesky image (point 1) is refused, built and not proven; alt text read back (point 4) is proven on LinkedIn only. |
+| `STUMP-PUBLISH-009` | Images, video and alt text per network | target | partial | `src/stump/lib/bluesky/post.ts`; held-out acceptance A10; held-out acceptance A12 | Converting images between formats (point 2) and video (point 3) are not built. A fifth Bluesky image (point 1) is refused, built and not proven; alt text read back (point 4) is proven on Bluesky and LinkedIn, not on Mastodon or X. |
 | `STUMP-PUBLISH-010` | Edit and delete published posts | target | partial | `tests/stump/accounts.test.mjs` "removing a post the company's account made deletes it at the network and keeps the entry on the record, unless the entry is under legal hold"; `agent-surface.json` journey steps ledger-remove | Editing a published post (points 1 and 3) is not built. Deletion is proven on X, not yet on Bluesky (point 2), and a failed deletion (point 4) is not proven. |
 | `STUMP-PUBLISH-022` | Follow-ups on your own posts | target | missing | | Not built: no auto-plugs, reposts or evergreen re-queues. |
 | `STUMP-PUBLISH-011` | Own community announcements | target | missing | | Not built: no Discord, Slack or Telegram announcements. |

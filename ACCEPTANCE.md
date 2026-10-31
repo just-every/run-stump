@@ -8,10 +8,10 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 18 | 46 | 80 | 144 |
+| Core | 18 | 48 | 78 | 144 |
 | Agent surface | 5 | 19 | 4 | 28 |
 | Later | 0 | 0 | 8 | 8 |
-| Full target | 23 | 65 | 92 | 180 |
+| Full target | 23 | 67 | 90 | 180 |
 
 Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c8f` (31 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
@@ -387,7 +387,7 @@ Core · published · **partial** · From new · Rules D-5 · Register R-6
 7. A video with alt text publishes and reads back with its alt text.
 
 **Evidence.** `src/stump/publish/bluesky.ts`; held-out acceptance A10
-**Gap.** Video (point 7) is not built. Rate-limit holds (point 6) are built and not proven.
+**Gap.** Video (point 7) is not built. Rate-limit holds (point 6) are built and not proven. A thread that fails mid-way and resumes (part of point 3) is built and not proven on Bluesky.
 
 #### STUMP-PUBLISH-003 — Mastodon posts and threads
 
@@ -405,7 +405,7 @@ Core · published · **partial** · From new · Rules D-4, D-5 · Register R-6
 7. On an instance whose rules require the bot flag, an agent's publish to an account without it returns `act_refused` naming the rule, and the same post from a person's own composer publishes.
 
 **Evidence.** `src/stump/publish/mastodon.ts`; held-out acceptance A09
-**Gap.** The bot-flag rule for agents (point 7) is built and not proven.
+**Gap.** The bot-flag rule for agents (point 7) is built and not proven. An instance set to 1,000 characters (part of point 2) is not proven.
 
 #### STUMP-PUBLISH-004 — X posts and threads
 
@@ -917,7 +917,7 @@ Core · target · **partial** · From new
 
 #### STUMP-BRAND-005 — Media library with rights and alt text
 
-Core · target · **missing** · From new · Cites BASE-INPUT-003
+Core · target · **partial** · From new · Cites BASE-INPUT-003
 
 **Requirement.** The company keeps its images, screenshots, GIFs and videos in one library, each with alt text, its rights (made by the company, licensed with a source, or someone else's with recorded permission) and where it has been used. Media without alt text or without recorded rights cannot be attached to an item that is marked ready.
 
@@ -928,8 +928,8 @@ Core · target · **missing** · From new · Cites BASE-INPUT-003
 4. The image lists every item and ledger entry that used it.
 5. An upload over the limits is refused with the limit named.
 
-**Evidence.** None.
-**Gap.** Not built: images attach to one item at a time, with no library or rights record.
+**Evidence.** `tests/stump/drafting.test.mjs` "an avoided word and an image without alt text keep an item from ready, each named, until they are fixed"; held-out acceptance A10; `src/stump/tools/items.ts`
+**Gap.** No media library: rights and recorded permission (point 3 and the rights in point 1) and where each image was used (point 4) are not built; the size refusal (point 5) is built and not proven.
 
 #### STUMP-BRAND-006 — AI-made images and short video
 
@@ -1090,7 +1090,7 @@ Core · target · **partial** · From new · Rules D-3
 
 #### STUMP-DRAFT-007 — Alternates and talking points
 
-Core · target · **missing** · From new
+Core · target · **partial** · From new
 
 **Requirement.** An item can hold alternate drafts and the original talking points beside its chosen draft. A person picks which one goes out; the ledger records which one it was.
 
@@ -1099,8 +1099,8 @@ Core · target · **missing** · From new
 2. Choosing an alternate makes it the next revision.
 3. The ledger records which alternate went out.
 
-**Evidence.** None.
-**Gap.** Not built: an item holds one draft, with no alternates.
+**Evidence.** `src/stump/venues/import/source.ts`; `src/stump/drafting/records.ts`
+**Gap.** Imported entries keep their alternates on the item (part of point 1), built and not proven; talking points beside the draft, choosing an alternate and recording which went out (points 1 to 3) are not built.
 
 #### STUMP-DRAFT-008 — Articles with canonical links
 
@@ -1206,8 +1206,8 @@ Core · target · **partial** · From new · Cites BASE-INPUT-003 · Register R-
 3. A video over a network's length limit is refused with the limit.
 4. The read-back post carries the alt text on every network that supports it.
 
-**Evidence.** `src/stump/lib/bluesky/post.ts`; held-out acceptance A12
-**Gap.** Converting images between formats (point 2) and video (point 3) are not built. A fifth Bluesky image (point 1) is refused, built and not proven; alt text read back (point 4) is proven on LinkedIn only.
+**Evidence.** `src/stump/lib/bluesky/post.ts`; held-out acceptance A10; held-out acceptance A12
+**Gap.** Converting images between formats (point 2) and video (point 3) are not built. A fifth Bluesky image (point 1) is refused, built and not proven; alt text read back (point 4) is proven on Bluesky and LinkedIn, not on Mastodon or X.
 
 #### STUMP-PUBLISH-010 — Edit and delete published posts
 

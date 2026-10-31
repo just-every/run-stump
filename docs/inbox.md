@@ -1,4 +1,4 @@
-The inbox holds replies and mentions on the company's and your people's connected accounts, so you answer the people who engaged with you first.
+The inbox holds the replies to and mentions of your connected X accounts, the company's and your people's, so you answer the people who engaged with you first.
 
 ## What arrives
 
@@ -6,7 +6,7 @@ Replies, mentions and quotes, each with its thread, author and link, rendered as
 
 ## Answering
 
-Reply to someone who engaged with your account first, in public or in a conversation they started. On X, Stump allows one reply per interaction, as X's developer guidelines ask, and an AI-drafted reply on X needs X's prior approval, which you record for your app.
+Reply to someone who engaged with your account first, in public or in a conversation they started. On X, Stump allows one reply per interaction, as X's developer guidelines ask, and an AI-drafted reply on X waits for X's prior approval, so on X write the reply yourself.
 
 Every reply passes the same checks as a post: [disclosure](/docs/disclosure), claims and near-duplicates.
 

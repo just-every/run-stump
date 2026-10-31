@@ -38,7 +38,7 @@ X's pricing page carries no date and also advertises new-user credits; prices ca
 | --- | --- | --- |
 | X | A developer app on pay-per-use; the Automated label and operator bio for automated accounts; X's prior approval for AI-generated replies | No app: X not connected. No label: agent-initiated publishing refused (D-4). No approval: AI-drafted X replies gated. |
 | LinkedIn member | Share on LinkedIn (self-serve, `w_member_social`) | Not connected |
-| LinkedIn page and member analytics | Community Management API (vetted: Development, then Standard tier with a screencast). LinkedIn asks for it on a new app with no other product. Member post analytics need `r_member_postAnalytics`. `r_member_social` (reading members' posts) is closed. | Page not connected; member results entered by a person |
+| LinkedIn page and member analytics | Community Management API (vetted: Development, then Standard tier with a screencast). LinkedIn asks for it on a new app with no other product. Member post analytics need `r_member_postAnalytics`. `r_member_social` (reading members' posts) is closed. | Page not connected; member post results are not read |
 | Threads, Instagram, Facebook | Meta App Review for people without a role on the app (Business Verification where Meta asks) | Only role holders and invited testers connect |
 | YouTube | API audit (and Google OAuth verification for the upload scope) | Uploads from unaudited projects stay private |
 | TikTok | Content Posting API audit | Posts from unaudited clients stay private |

@@ -396,7 +396,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "71289b39d212fb2345f585996d3acf664b709f5c3767a3fe8ebef401341dfabc",
+      "sha256": "c56b071db693d0fc12a07a670b5084f2a4e18f71e74ef234808714bd8f9e19b4",
       "executable": false
     },
     "agent-surface.json": {
@@ -424,7 +424,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "24ab38a6599ddad3a8164c013a3c0c3b5b8aa277b4348751fa8e4f56416e37c2",
+      "sha256": "1abe1c9254c18480bbb2d71904c9d739ab89332232b7decb537b516ef0a6501a",
       "executable": false
     },
     "deploy-demo.json": {
@@ -488,7 +488,7 @@
       "executable": false
     },
     "docs/inbox.md": {
-      "sha256": "96cca7f732ed6168765db4e24250d87f5c64f5b3eb8b1c266f6272e4a0f689e0",
+      "sha256": "2cc70c008afd2df0f77a78d537232362cbc8731f294a75f51fa13d35b95a9250",
       "executable": false
     },
     "docs/install.md": {
@@ -496,7 +496,7 @@
       "executable": false
     },
     "docs/ledger.md": {
-      "sha256": "8764c7b0ae5255b7848bfd376fae70eb34fb8914bf615d39fcee02910f1b85bf",
+      "sha256": "16277a2097153db173d23acf049ec0abe31133eec30313bb00cb4288ee4a2eb2",
       "executable": false
     },
     "docs/links.md": {
@@ -504,7 +504,7 @@
       "executable": false
     },
     "docs/listening.md": {
-      "sha256": "ad4f98b9ec2808a20699db4284dfef8ea2729a458b1aa1632b38f5f8ad79e889",
+      "sha256": "c8693f01a8e2e67428d7ac8204aab09ea305cbac72bc411d7a44dbe0b4e1809e",
       "executable": false
     },
     "docs/measures.md": {
@@ -512,7 +512,7 @@
       "executable": false
     },
     "docs/networks.md": {
-      "sha256": "4e15823854ce06a6323cd219af52af9ca9f350ee78f7a961a169e18169002f1d",
+      "sha256": "3703e971fe7322e83aff5db45a7f30dbfe336ef96551b3034e14a53af75fd4ea",
       "executable": false
     },
     "docs/overview.md": {

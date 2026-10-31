@@ -4,7 +4,7 @@ A watch finds the threads worth answering on open sources, ranks them, and says 
 
 - **Hacker News**, through its public search: stories and comments, with points, author and time.
 - **RSS and Atom feeds**: blogs, newsletters, podcasts and release feeds. Podcast transcripts linked from a feed are matched too.
-- **Bluesky** search, and **Mastodon** search and hashtags on the instances you choose. Where an instance limits full-text search, the watch says it covers hashtags only there.
+- **Bluesky** search, and **Mastodon** hashtags on the instances you choose.
 
 Reddit feeds are not a source. Feeds, transcripts and instances are read from public web addresses only.
 
