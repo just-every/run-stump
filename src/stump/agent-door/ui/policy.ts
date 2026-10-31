@@ -60,8 +60,10 @@ const CLASS_EXAMPLES: Partial<Record<ClassId, string>> = {
 }
 export const className = (cls: string) => cls === '*' ? 'Everything else' : isClass(cls) ? CLASS_LABELS[cls] : words(cls)
 export const classHelp = (cls: string) => isClass(cls) ? CLASS_EXAMPLES[cls] ?? classDefinition(cls).when : 'Any kind of action no other answer covers.'
-/** "stump.drafts.write" reads "Drafts write", as Base names an action it has no title for. */
-export const actionName = (tool: string) => words(tool.replace(/^[^./]+[./]/, ''))
+/** Every Stump action's own title by tool name ("Prepare a hand-off for a named member"), from the person door's action list. */
+export const toolTitles = () => door<{ titles: Record<string, string> }>('/app/api/actions').then(answer => answer.titles)
+/** An action in its own title, the words Base's approval page shows; only a tool Stump no longer has reads as its name in words, as Base does. */
+export const actionName = (tool: string, titles: Record<string, string>) => titles[tool] ?? words(tool.replace(/^[^./]+[./]/, ''))
 export const principal = (value: string | { name: string }) => typeof value === 'string' ? value : value.name
 
 export function outcomeWords(row: Pick<ActivityRow, 'decision' | 'outcome' | 'code'>): string {

@@ -42,7 +42,8 @@ export async function personDoorResponse(request: Request, original: StumpEnv): 
     }
     if (path === '/app/api/actions') {
       if (request.method !== 'GET') return refusal('method_not_allowed')
-      return json({ actions: allowedTools(stumpTools, person.role) })
+      // `titles` names every action in its own words, so a screen that lists what an agent did never shows a tool id.
+      return json({ actions: allowedTools(stumpTools, person.role), titles: Object.fromEntries(stumpTools.map(tool => [tool.name, tool.title])) })
     }
     const action = /^\/app\/api\/actions\/([a-z0-9._-]+)$/.exec(path)
     if (action) {

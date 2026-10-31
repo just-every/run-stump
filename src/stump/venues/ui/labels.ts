@@ -21,16 +21,12 @@ export const kindLabel = (kind: string, platform?: string | null, name?: string 
 export const statusLabel = (status: string) => STATUS_LABELS[status] ?? status
 export const routeLabel = (route: string) => ROUTE_LABELS[route] ?? route
 
-/** Venues a company pitches, never posts in: a person there decides what runs. */
-const PITCHED = ['podcast', 'newsletter', 'journalist', 'publication']
-
 /**
- * The one route a list shows (display only; the routes field keeps the interface's words): none yet for a candidate, a pitch
- * for a venue you pitch, else the widest route open there, the same routes the venue's own page lists.
+ * The one route a list shows (display only; the routes field keeps the interface's words): none yet for a candidate, else the widest
+ * route open there, in the words the venue's own page lists its routes.
  */
-export function primaryRoute(venue: Pick<Venue, 'kind' | 'status' | 'routes'>): string | null {
+export function primaryRoute(venue: Pick<Venue, 'status' | 'routes'>): string | null {
   if (venue.status === 'candidate') return null
-  if (PITCHED.includes(venue.kind) || venue.status === 'editorial') return 'Pitch'
   const route = ['publish', 'handoff_draft', 'handoff_brief'].find(item => venue.routes.includes(item))
   return route ? routeLabel(route) : null
 }

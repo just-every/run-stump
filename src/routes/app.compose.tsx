@@ -233,6 +233,18 @@ function ComposePage() {
     select={fixing?.item === variant.item_id ? { range: fixRange(variant, fixing.flag), at: fixing.at } : null} onSelected={() => setFixing(null)}
     onSave={next => void saveVariant(variant, next)} />)
 
+  const variantsPanel = <section className="st-card" aria-labelledby="variants-title">
+    <h2 className="st-card-head" id="variants-title"><Disc icon="grid" />Variants</h2>
+    <div className="st-variants">{variantCards}</div>
+  </section>
+  // With nothing open, the drafts waiting to be opened take the side column beside One post, where Checks sits once a post is open.
+  const drafts = !open && data?.drafts.length ? <section className="st-card st-compose-drafts" aria-labelledby="drafts-title">
+    <h2 className="st-card-head" id="drafts-title"><Disc icon="doc" />Drafts</h2>
+    <ul className="st-list">{data.drafts.map(draft => <li className="st-row" key={draft.key}>
+      <Link className="st-compose-draft" to="/app/compose" search={draft.to}><span className="st-name">{draft.name}</span><span className="st-meta">{draft.meta}</span></Link>
+    </li>)}</ul>
+  </section> : null
+
   return <HydrationUnit>
     <section className="st-page st-drafting" aria-labelledby="compose-title">
       <h1 id="compose-title">{sent ? goneTitle(gone) : alone ? 'Edit post' : 'New post'}</h1>
@@ -247,18 +259,22 @@ function ComposePage() {
           <div className="st-variants">{variantCards}</div>
         </section>
         {checks}
+      </div> : sent ? <div className="st-compose">
+        {/* Every variant has gone out: the page leads with the words that went, never the master text, which is not posted itself. */}
+        {variantsPanel}
+        {checks}
       </div> : <div className="st-compose">
         <section className="st-card" aria-labelledby="one-post">
           <h2 className="st-card-head" id="one-post"><Disc icon="pencil" />One post</h2>
-          {sent && preview ? <p className="st-master-sent">{preview.master.text}</p> : <><label className="st-sr" htmlFor="master-text">Post text</label>
+          <label className="st-sr" htmlFor="master-text">Post text</label>
           <div className="st-master">
             <textarea id="master-text" className="st-textarea large" value={text} rows={4} placeholder="Write the post once. Each account gets its own variant."
               onChange={event => setText(event.target.value)} onBlur={() => void saveMaster()} />
             <div className="st-chars">
               {graphemes(text).toLocaleString()}{Number.isFinite(largest) ? ` / ${largest.toLocaleString()}` : ''}
             </div>
-          </div></>}
-          {preview ? source && !sent ? <div className="st-source-chip"><Disc icon="pencil" /><span><span className="st-meta">From a source</span><br />{source.replace(/^https?:\/\//, '')}</span></div> : null
+          </div>
+          {preview ? source ? <div className="st-source-chip"><Disc icon="pencil" /><span><span className="st-meta">From a source</span><br />{source.replace(/^https?:\/\//, '')}</span></div> : null
             : <div className="st-source">
               <label className="st-field">From a source
                 <input type="url" value={source} placeholder="Changelog or docs link" onChange={event => setSource(event.target.value)} />
@@ -290,19 +306,10 @@ function ComposePage() {
             </button>
           </div> : null}
         </section>
-        {preview ? checks : null}
+        {preview ? checks : drafts}
       </div>}
-      {!open && data?.drafts.length ? <section className="st-card st-compose-drafts" aria-labelledby="drafts-title">
-        <h2 className="st-card-head" id="drafts-title"><Disc icon="doc" />Drafts</h2>
-        <ul className="st-list">{data.drafts.map(draft => <li className="st-row" key={draft.key}>
-          <div className="st-row-main"><Link className="st-name" to="/app/compose" search={draft.to}>{draft.name}</Link><div className="st-meta">{draft.meta}</div></div>
-        </li>)}</ul>
-      </section> : null}
-      {preview ? <section className="st-card" aria-labelledby="variants-title">
-        <h2 className="st-card-head" id="variants-title"><Disc icon="grid" />Variants</h2>
-        <div className="st-variants">{variantCards}</div>
-      </section> : null}
-      {open && !(alone && !aloneAccount) && !variants.length ? <div className="st-bar">
+      {preview && !sent ? variantsPanel : null}
+      {open && !(alone && !aloneAccount) && !variants.length ? <div className="st-bar st-bar-done">
         <Link className="st-quiet-link" to="/app/ledger">See the ledger</Link>
       </div> : null}
       {open && !(alone && !aloneAccount) && variants.length ? <div className="st-bar">

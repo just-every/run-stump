@@ -462,7 +462,7 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-disc.held { background: var(--stump-held); }
 .st-drafting .st-textarea { font: inherit; font-size: var(--stump-size-body); color: var(--stump-text); background: var(--stump-white); width: 100%; border: 1px solid var(--stump-field-border); border-radius: var(--stump-radius-field); padding: 12px 14px; resize: vertical; }
 .st-drafting .st-textarea.large { font-size: 20px; line-height: 1.45; min-height: 128px; field-sizing: content; }
-.st-drafting .st-textarea:focus-visible, .st-drafting .st-inline input:focus-visible, .st-drafting .st-when input:focus-visible, .st-drafting button.st-chip:focus-visible, .st-drafting .st-icon:focus-visible, .st-drafting .st-variant-head:focus-visible, .st-drafting .st-checks-toggle:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
+.st-drafting .st-textarea:focus-visible, .st-drafting .st-inline :is(input, textarea):focus-visible, .st-drafting .st-when input:focus-visible, .st-drafting button.st-chip:focus-visible, .st-drafting .st-icon:focus-visible, .st-drafting .st-variant-head:focus-visible, .st-drafting .st-checks-toggle:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
 .st-drafting .st-chars { font-size: var(--stump-size-small); color: var(--stump-muted); text-align: right; margin-left: auto; white-space: nowrap; }
 .st-drafting .st-chars.over { color: var(--stump-danger); font-weight: 600; }
 .st-drafting .st-source { display: flex; align-items: flex-end; gap: var(--stump-space); margin-top: calc(var(--stump-space) * 2); max-width: 520px; }
@@ -535,8 +535,10 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-kv:first-child { border-top: 0; }
 .st-drafting .st-proof-link { color: var(--stump-emerald-text); overflow-wrap: anywhere; }
 .st-drafting .st-inline { display: flex; align-items: center; gap: var(--stump-space); color: var(--stump-muted); }
-.st-drafting .st-inline input { font: inherit; color: var(--stump-text); flex: 1; min-width: 0; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; background: transparent; }
-.st-drafting .st-inline input:hover { border-color: var(--stump-hairline); }
+.st-drafting .st-inline :is(input, textarea) { font: inherit; color: var(--stump-text); flex: 1; min-width: 0; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; background: transparent; }
+/* A profile value wraps onto the lines it needs rather than running past the column (one line of text, edited in place). */
+.st-drafting .st-inline textarea { resize: none; field-sizing: content; overflow: hidden; line-height: inherit; overflow-wrap: anywhere; }
+.st-drafting .st-inline :is(input, textarea):hover { border-color: var(--stump-hairline); }
 .st-drafting .st-adder { margin-top: calc(var(--stump-space) * 2); padding-top: calc(var(--stump-space) * 2); border-top: 1px solid var(--stump-hairline); }
 .st-drafting .st-add { margin-top: calc(var(--stump-space) * 2); }
 .st-drafting .st-span { grid-column: 1 / -1; }
@@ -549,15 +551,19 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-master { position: relative; }
 .st-drafting .st-master .st-textarea.large { padding-bottom: 36px; display: block; }
 .st-drafting .st-master .st-chars { position: absolute; right: 14px; bottom: 10px; }
-/* A post that has gone out: its words as they went, on the sunk tone, with nothing to edit. */
-.st-drafting .st-master-sent { margin: 0; font-size: 20px; line-height: 1.45; color: var(--stump-ink); background: var(--stump-sunk); border-radius: var(--stump-radius-field); padding: 12px 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
-@media (max-width: 760px) { .st-drafting .st-master-sent { font-size: 18px; } }
+/* Compose's Drafts beside One post: each row one link, the name first in plain 16 px / 500 and one quiet meta line under it, like a Hand-offs row. */
+.st-drafting .st-compose-drafts .st-row { padding: 0; min-height: 0; }
+.st-drafting .st-compose-draft { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; padding: 12px 0; color: inherit; text-decoration: none; }
+.st-drafting .st-compose-drafts .st-row:first-child .st-compose-draft { padding-top: 0; }
+.st-drafting .st-compose-drafts .st-row:last-child .st-compose-draft { padding-bottom: 0; }
+.st-drafting .st-compose-draft:hover .st-name { text-decoration: underline; text-underline-offset: 3px; }
+.st-drafting .st-compose-draft:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; border-radius: 8px; }
 .st-drafting .st-check-list li.st-check-detail { padding-left: 34px; color: var(--stump-muted); }
 .st-drafting .st-kv > :last-child { border-left: 1px solid var(--stump-hairline); padding-left: calc(var(--stump-space) * 3); min-height: 28px; }
 .st-drafting .st-profile { display: grid; gap: 2px; }
 /* "tone: plain, warm, exact" reads as one run: the label, one space, then the value, still edited in place. */
 .st-drafting .st-profile .st-inline { display: flex; align-items: baseline; gap: 1px; }
-.st-drafting .st-profile .st-inline input { padding: 2px 6px 2px 3px; min-height: 32px; }
+.st-drafting .st-profile .st-inline :is(input, textarea) { padding: 2px 6px 2px 3px; min-height: 32px; }
 /* Fix claim selects the claim in its variant; Update the proof is the quiet way to Brand */
 .st-drafting button.st-pill { border: 0; font: inherit; font-size: var(--stump-size-small); line-height: 20px; cursor: pointer; }
 .st-drafting button.st-pill:focus-visible, .st-drafting .st-quiet-link:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
@@ -568,16 +574,18 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-kv { align-items: baseline; }
 .st-drafting .st-profile-tone { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
 .st-drafting .st-profile-tone > .st-inline { flex: 0 1 auto; min-width: 0; }
-.st-drafting .st-profile-tone > .st-inline input { field-sizing: content; min-width: 12ch; max-width: 100%; }
+.st-drafting .st-profile-tone > .st-inline :is(input, textarea) { field-sizing: content; min-width: 12ch; max-width: 100%; }
 .st-drafting .st-add-words.st-add-words-inline { flex: none; font-size: var(--stump-size-small); padding: 4px 0; }
 /* Settings · Brand's product fields (.st-brand-products): a value reads as text a few pixels after its label, so the focus ring sits on
    the field's own edge and clears the label's colon; an empty field is drawn as a field (SPEC 3.4) with its hint. */
 .st-brand-products .st-profile .st-inline { gap: 4px; }
-.st-brand-products .st-profile .st-inline input { padding-left: 2px; }
-.st-brand-products .st-profile .st-inline input:focus-visible { outline-offset: 0; }
-.st-brand-products .st-profile .st-inline input.st-profile-empty { border-color: var(--stump-field-border); border-radius: var(--stump-radius-field); background: var(--stump-white); padding: 0 12px; min-height: 44px; margin: 4px 0 4px 4px; }
-.st-brand-products .st-profile .st-inline input::placeholder { color: var(--stump-muted); opacity: 1; }
-.st-brand-products .st-profile-tone > .st-inline input.st-profile-empty { min-width: 24ch; }
+.st-brand-products .st-profile .st-inline :is(input, textarea) { padding-left: 2px; }
+.st-brand-products .st-profile .st-inline :is(input, textarea):focus-visible { outline-offset: 0; }
+.st-brand-products .st-profile .st-inline :is(input, textarea).st-profile-empty { border-color: var(--stump-field-border); border-radius: var(--stump-radius-field); background: var(--stump-white); padding: 0 12px; min-height: 44px; margin: 4px 0 4px 4px; }
+/* An empty field's hint sits on the 44 px field's middle, as in an input. */
+.st-brand-products .st-profile .st-inline textarea.st-profile-empty { padding: 10px 12px; line-height: 22px; }
+.st-brand-products .st-profile .st-inline :is(input, textarea)::placeholder { color: var(--stump-muted); opacity: 1; }
+.st-brand-products .st-profile-tone > .st-inline :is(input, textarea).st-profile-empty { min-width: 24ch; }
 /* The held note in the bar keeps one line; the short forms take over at 480 and under. */
 .st-drafting .st-bar-held { white-space: nowrap; }
 .st-drafting .st-held-short, .st-drafting .st-when-tiny { display: none; }
@@ -590,7 +598,8 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
   .st-drafting .st-checks.open .st-check-list { margin-top: 12px; }
   .st-drafting .st-variant-head .st-chevron { display: inline-flex; }
   .st-drafting .st-variants { grid-template-columns: 1fr; }
-  .st-drafting .st-variant-head { cursor: pointer; min-height: 44px; padding: 0; }
+  .st-drafting .st-variant-head { cursor: pointer; min-height: 44px; padding: 0; flex-wrap: wrap; row-gap: 4px; }
+  .st-drafting .st-variant-head .st-pill { margin: 0; }
   .st-drafting .st-variant-body:not(.open) { display: none; }
   .st-drafting .st-bar { position: sticky; bottom: 0; z-index: 2; background: var(--stump-white); padding: 12px 0; gap: var(--stump-space); flex-wrap: nowrap; }
   .st-drafting .st-bar .st-button.ink { padding: 0 16px; flex: none; }
@@ -598,6 +607,8 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
   .st-drafting .st-when-pill { width: 100%; padding: 0 12px; font-size: 14px; gap: 6px; justify-content: center; }
   .st-drafting .st-when-pop { left: auto; right: 0; width: min(280px, calc(100vw - 32px)); }
   .st-drafting .st-bar > :nth-child(n+3) { display: none; }
+  /* With every variant gone out there is nothing to act on, so the bar ("See the ledger") stays in the flow under the cards. */
+  .st-drafting .st-bar.st-bar-done { position: static; }
   .st-drafting .st-kv { grid-template-columns: 1fr; gap: 4px; }
   .st-drafting .st-kv > :last-child { border-left: 0; padding-left: 0; min-height: 0; }
   .st-drafting .st-textarea.large { font-size: 18px; }
@@ -629,6 +640,10 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 /* Settings · Agents (src/stump/agent-door/ui/AgentsSettings.tsx): each kind of action with its answer at the right */
 .st-agents .st-agents-policy .st-select { flex: none; min-width: 200px; }
 .st-agents .st-agents-sub { margin: -8px 0 8px; }
+/* The once-shown token with its Copy button beside it; under a narrow column the button wraps under the token. */
+.st-agents .st-agents-token { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.st-agents .st-agents-token .st-secret { flex: 1 1 240px; min-width: 0; }
+.st-agents .st-agents-token .st-button { flex: none; }
 .st-agents .st-agents-sub > .st-meta { margin: 0; }
 .st-agents .st-agents-policy > .st-meta { margin: 12px 0 0; }
 /* The folded policy document: a line-icon chevron (turned when open), then the JSON in code type across the panel, saved on leaving it */

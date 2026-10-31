@@ -65,6 +65,8 @@ function BrandPage() {
   const editor = data ? ['owner', 'admin', 'editor'].includes(data.who.person.role) : false
   const writer = data ? data.who.person.role !== 'viewer' : false
   const name = (id: string) => data?.team.find(person => person.id === id)?.display_name ?? 'Someone who left'
+  /** The product a claim backs, first on its line: one product's name, or "Every product" for a claim recorded for all of them. */
+  const productOf = (claim: ClaimView) => claim.product_id === null ? 'Every product' : data?.products.find(product => product.id === claim.product_id)?.name ?? null
 
   async function act(args: Record<string, unknown>, done?: string) {
     const result = await run(() => runAction('stump.brand.manage', { ...args, idempotency_key: key() }), () => done)
@@ -93,7 +95,7 @@ function BrandPage() {
         {data && !data.claims.length ? <p className="st-meta">No claims yet. Drafts flag every product claim until one here backs it.</p> : null}
         <ul className="st-list">{data?.claims.map(claim => <li className="st-kv" key={claim.id}>
           <div className="st-name">{claim.kind === 'banned' ? <span className="st-pill danger">banned</span> : claim.stale ? <span className="st-pill danger">stale</span> : null}{claim.text}</div>
-          <div className="st-meta">{claim.kind === 'banned' ? `reason: ${claim.reason ?? ''}`
+          <div className="st-meta">{productOf(claim) ? `${productOf(claim)} · ` : ''}{claim.kind === 'banned' ? `reason: ${claim.reason ?? ''}`
             : claim.kind === 'comparative' ? `vs ${claim.competitor ?? ''} · source ${shortDate(claim.source_date)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on)}`
             : <>proof: <Proof proof={claim.proof} /> · owner {name(claim.owner_id)} · review {shortDate(claim.review_on)}</>}</div>
         </li>)}</ul>
@@ -155,13 +157,15 @@ function ProductProfile({ product, save }: { product: Product; save: (args: Reco
 const joined = (items: string[]) => items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0] ?? ''
 
 /**
- * One profile field edited in place: it saves when the field loses focus, with no Save button. A field holding a value reads as
- * text; an empty one is drawn as a field (SPEC 3.4) with a hint, so it reads as a place to type, never as a value.
+ * One profile field edited in place: it saves when the field loses focus (or on Enter), with no Save button. A field holding a value
+ * reads as text and wraps onto as many lines as it needs at any width; an empty one is drawn as a field (SPEC 3.4) with a hint, so it
+ * reads as a place to type, never as a value. Each value is one line of text, so a line break typed or pasted becomes a space.
  */
 function ProfileField({ label, product, value, hint, focus = false, allowEmpty = false, onSave }: { label: string; product: string; value: string; hint: string; focus?: boolean; allowEmpty?: boolean; onSave: (value: string) => unknown }) {
   return <label className="st-inline">{label}:
-    <input className={value ? undefined : 'st-profile-empty'} defaultValue={value} placeholder={hint} aria-label={`${product} ${label}`} autoFocus={focus}
-      onBlur={event => { const next = event.target.value.trim(); if (next !== value && (next || allowEmpty)) void onSave(next) }} />
+    <textarea className={value ? undefined : 'st-profile-empty'} rows={1} defaultValue={value} placeholder={hint} aria-label={`${product} ${label}`} autoFocus={focus}
+      onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur() } }}
+      onBlur={event => { const next = event.target.value.replace(/\s*\n\s*/g, ' ').trim(); if (next !== value && (next || allowEmpty)) void onSave(next) }} />
   </label>
 }
 

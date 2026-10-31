@@ -19,7 +19,9 @@ export function venuesFor(venues: VenueChoice[], account: Pick<Account, 'network
 
 export interface DraftRow { key: string; name: string; meta: string; to: { master: string } | { item: string } }
 
-const STATES: Record<string, string> = { draft: 'Draft', ready: 'Ready', held: 'Held' }
+/** A draft its check stops reads "Held", the word Today uses; one marked ready reads "Ready"; a plain draft says nothing (H16). */
+const held = (item: ItemRecord) => item.state === 'held' || (item.state === 'draft' && (item.flags as Array<{ blocking?: boolean }> | null ?? []).some(flag => flag.blocking))
+const stateWord = (items: ItemRecord[]) => items.some(held) ? 'Held' : items.every(item => item.state === 'ready') ? 'Ready' : null
 const ago = (iso: string | null, now: number) => {
   if (!iso) return ''
   const minutes = Math.round((now - Date.parse(iso)) / 60_000)
@@ -30,7 +32,8 @@ const ago = (iso: string | null, now: number) => {
 
 /**
  * Drafts not yet scheduled, newest first: one row per master post (its variants together), else per item, each saying who wrote
- * it ("Release agent for Dana Reyes"), where it goes and its state. A hand-off's own draft lives in its brief, so it is left out.
+ * it ("Release agent for Dana Reyes"), where it goes and, when it is not a plain draft, its state. A hand-off's own draft lives in
+ * its brief, so it is left out.
  */
 export async function openDrafts(now = Date.now()): Promise<DraftRow[]> {
   const list = (state: string) => runAction<{ items: ItemRecord[] }>('stump.drafts.revise', { action: 'list', state })
@@ -41,18 +44,19 @@ export async function openDrafts(now = Date.now()): Promise<DraftRow[]> {
   const names = new Map(team.items.map(person => [person.id, person.display_name]))
   const items = [...draft.items, ...ready.items, ...held.items].filter(item => !handedOff.has(item.id))
     .sort((a, b) => Date.parse(String(b.updated_at)) - Date.parse(String(a.updated_at)))
-  const rows = new Map<string, DraftRow & { networks: string[] }>()
+  const rows = new Map<string, Omit<DraftRow, 'meta'> & { networks: string[]; who: string; at: string | null; items: ItemRecord[] }>()
   for (const item of items) {
     const master = typeof item.master_id === 'string' ? item.master_id : null
     const key = master ? `master:${master}` : `item:${item.id}`
     const network = item.network ? networkName(String(item.network)) : null
     const row = rows.get(key)
-    if (row) { if (network && !row.networks.includes(network)) row.networks.push(network); continue }
+    if (row) { row.items.push(item); if (network && !row.networks.includes(network)) row.networks.push(network); continue }
     const person = names.get(String(item.person_id)) ?? 'Someone who left'
     const agent = (item.agent as { name?: string } | null)?.name
     const words = item.format === 'pitch' && item.subject ? String(item.subject) : openingWords(String(item.text ?? (item.parts as string[] | null)?.[0] ?? ''))
-    rows.set(key, { key, name: words, networks: network ? [network] : [], meta: [agent ? `${agent} for ${person}` : person, STATES[String(item.state)] ?? String(item.state), ago(item.updated_at, now)].join(' · '),
+    rows.set(key, { key, name: words, networks: network ? [network] : [], who: agent ? `${agent} for ${person}` : person, at: item.updated_at as string | null, items: [item],
       to: master ? { master } : { item: item.id } })
   }
-  return [...rows.values()].map(({ networks, ...row }) => ({ ...row, meta: networks.length ? `${networks.join(', ')} · ${row.meta}` : row.meta }))
+  return [...rows.values()].map(({ networks, who, at, items: group, ...row }) => ({ ...row,
+    meta: [networks.join(', '), who, stateWord(group), ago(at, now)].filter(Boolean).join(' · ') }))
 }
