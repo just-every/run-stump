@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
-import { Chip, Disc, Outcome, pageName, useLoaded } from '../../ui/kit.tsx'
+import { Chip, Disc, Outcome, pageName, proofText, useLoaded } from '../../ui/kit.tsx'
 import { Icon, type IconName } from '../../ui/icons.tsx'
 import { handoffStyles } from './styles.ts'
 import { briefTitle, dayOf, dueLine, LAPSE_AT, limitLine, ruleLines, say, STATE, type Handoff } from './words.ts'
@@ -87,7 +87,7 @@ export function BriefPage({ handoffId }: { handoffId: string }) {
 
 /** A fact's proof named by its page ("changelog"), or by its own words. */
 const proofWords = (proof: unknown): string | null => {
-  if (typeof proof === 'string') return /^https?:\/\//.test(proof) ? pageName(proof) : proof
+  if (typeof proof === 'string') { const { url, words } = proofText(proof); return words || (url ? pageName(url) : null) }
   if (proof && typeof proof === 'object') { const value = proof as { text?: string; document?: string; url?: string }; return value.text ?? value.document ?? (value.url ? pageName(value.url) : null) }
   return null
 }

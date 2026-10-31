@@ -2,7 +2,7 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, type ReactNode } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, Saved, useLoaded, useRun, useSaved, words } from '../stump/ui/kit.tsx'
+import { Outcome, Saved, proofText, useLoaded, useRun, useSaved, words } from '../stump/ui/kit.tsx'
 import type { Team } from '../stump/ui/types.ts'
 import { Disc } from '../stump/drafting/disc.tsx'
 import type { ClaimView, Product, VoiceView } from '../stump/drafting/view.ts'
@@ -25,14 +25,13 @@ const shortDate = (value: string | null) => {
 }
 const bare = (value: string) => value.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
 /**
- * A proof as the claims list shows it: its own words (label, number, date), then the page that backs it as its address
- * ("brightwell.app/changelog/3-2"), linked, so the reader sees which page it is and can open it.
+ * A proof as the claims list shows it: its own words (label, number, date, or the note typed after a link), then the page
+ * that backs it as its address ("brightwell.app/changelog/3-2"), linked, so the reader sees which page it is and can open it.
  */
 function Proof({ proof }: { proof: unknown }) {
   const isUrl = (value: unknown): value is string => typeof value === 'string' && /^https?:\/\//.test(value)
   let words = '', url: string | null = null
-  if (isUrl(proof)) url = proof
-  else if (typeof proof === 'string') words = bare(proof)
+  if (typeof proof === 'string') ({ url, words } = proofText(proof))
   else if (proof && typeof proof === 'object') {
     const { text, document, number, unit, url: page, date } = proof as Record<string, string | number | undefined>
     const amount = number === undefined ? undefined : unit === undefined ? number : /^[$€£¥]$/u.test(String(unit)) ? `${unit}${number}` : /^(%|x|×)$/iu.test(String(unit)) ? `${number}${unit}` : `${number} ${unit}`

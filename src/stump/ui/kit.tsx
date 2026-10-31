@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { explain } from './api.ts'
+import { extractUrls } from '../lib/text/index.ts'
 import { Icon, type IconName } from './icons.tsx'
 
 /** The one tooltip every icon-only control uses: 2-4 words, after ~300 ms on hover, at once on focus. `below` for controls at the top of the page. */
@@ -129,6 +130,17 @@ export const handleWord = (handle: string, network?: string | null, name?: strin
 /** The one way an account reads on every screen: "@brightwell · X". */
 export const accountWord = (account: { handle: string; network: string; display_name?: string | null }) =>
   `${handleWord(account.handle, account.network, account.display_name)} · ${networkWord(account.network)}`
+
+/**
+ * A proof typed as one line ("https://brightwell.app/benchmarks (10 minutes median, 20 staff)"): the page it names, and its
+ * own words around that page, a note's brackets dropped ("10 minutes median, 20 staff"). Only the page is ever a link.
+ */
+export function proofText(proof: string): { url: string | null; words: string } {
+  const link = extractUrls(proof, { bare: false })[0]
+  if (!link) return { url: null, words: proof.trim() }
+  const words = `${proof.slice(0, link.start)} ${proof.slice(link.end)}`.replace(/\s+/g, ' ').trim()
+  return { url: link.url, words: words.replace(/^\((.*)\)$/, '$1').trim() }
+}
 
 /** A web page named by itself: "changelog" for brightwell.app/changelog/3-2, "r/healthIT rules" for a subreddit's rules page. */
 export function pageName(url: string): string {
