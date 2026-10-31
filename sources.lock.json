@@ -400,7 +400,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "f58c919b18821d2d275195a55df7295e0c88fbf22ab66a187209730c1527fa26",
+      "sha256": "29a6f83c027f8fac455ca20a57db05de3dd81f1499a90aa4bef7c0bd4c00b121",
       "executable": false
     },
     "AGENTS.md": {
@@ -4692,7 +4692,7 @@
       "executable": false
     },
     "tests/agent/fixtures.mjs": {
-      "sha256": "8963ea19893f4ebd21b45e4fc8309b2e7a475a2d242fcbdec3fcd0a48ff74f5a",
+      "sha256": "cc34e1d665ee8bc52710214970c6a4423be88c8a3fac9f887be26e5fdecaef86",
       "executable": false
     },
     "tests/agent/installation-key.mjs": {
