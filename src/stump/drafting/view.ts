@@ -37,11 +37,13 @@ export function claimSpan(sentence: string, found: string[] | undefined): string
   for (const number of found ?? []) {
     const at = sentence.indexOf(number)
     if (at < 0) continue
+    // The word it measures ("50% faster"), never a little word after it ("$12 a month" is the $12).
     const after = /^[\s-]*([\p{L}]+)/u.exec(sentence.slice(at + number.length))
-    return after ? `${number} ${after[1]}` : number
+    return after && !LITTLE_WORDS.has(after[1]!.toLowerCase()) ? `${number} ${after[1]}` : number
   }
   return null
 }
+const LITTLE_WORDS = new Set(['a', 'an', 'the', 'per', 'each', 'every', 'for', 'of', 'in', 'on', 'at', 'to', 'by', 'and', 'or', 'with', 'from'])
 const NUMBER = /[$€£]?\d+(?:[.,]\d+)*\s?(?:%|x\b|×)?/gi
 const plainNumber = (value: string) => value.replace(/\s+/g, '').toLowerCase()
 /** A number's kind, so "50%" is weighed against "30%" and never against a version like "3.2". */
@@ -74,7 +76,7 @@ export function spanAt(text: string, flag: Flag, claims: ClaimFinding[] = []): [
 
 /**
  * Where a claim flag's words sit in a variant's text, to select them for fixing: a mismatch's number and the word it measures
- * ("$12 a"), any other claim flag its whole sentence (the banned claim, the unproven statement). Null when the text no longer holds it.
+ * ("50% faster", or "$12" alone in "$12 a month"), any other claim flag its whole sentence (the banned claim, the unproven statement). Null when the text no longer holds it.
  */
 export function claimRange(text: string, flag: Flag, claims: ClaimFinding[] = []): [number, number] | null {
   if (flag.code === 'claim_number_mismatch') return spanAt(text, flag, claims)

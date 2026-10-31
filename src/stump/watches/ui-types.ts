@@ -21,6 +21,8 @@ export interface FindingView {
   routes: Array<'publish' | 'handoff_draft' | 'handoff_brief' | 'dismiss'>; venue: { id: string; name: string } | null
   transcript_match: { terms: string[]; excerpts: string[] } | null
   backfill: boolean; mentions: Array<{ kind: 'product' | 'competitor'; product: string; matched: string }>
+  /** The thread a comment or reply sits in, when it is not the finding itself. */
+  thread_url: string | null
 }
 export interface BlockedAuthor { handle: string; source: WatchSourceView['kind'] | null }
 export interface WatchList { items: WatchView[]; total: number; blocked_authors: BlockedAuthor[] }

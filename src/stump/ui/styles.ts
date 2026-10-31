@@ -467,10 +467,15 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-chars.over { color: var(--stump-danger); font-weight: 600; }
 .st-drafting .st-source { display: flex; align-items: flex-end; gap: var(--stump-space); margin-top: calc(var(--stump-space) * 2); max-width: 520px; }
 .st-drafting .st-source .st-field { flex: 1; }
+.st-drafting .st-compose-noai { margin-top: var(--stump-space); }
+.st-drafting .st-compose-from { max-width: 520px; margin: 0 0 calc(var(--stump-space) * 2); }
 .st-drafting .st-icon { font: inherit; font-size: 20px; line-height: 1; width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--stump-sunk); color: var(--stump-text); cursor: pointer; }
 /* An account chip reads as chosen or not (SPEC 3.4): unchosen is white with a hairline ring and muted words; chosen is the emerald
    tint with emerald words and a leading tick. */
 .st-drafting button.st-chip { height: 36px; padding: 0 14px; font-size: var(--stump-size-small); color: var(--stump-ink); }
+/* A long account handle (a Mastodon one names its instance) wraps inside its chip or heading on a phone, never past the page. */
+.st-drafting button.st-chip { max-width: 100%; height: auto; min-height: 36px; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.st-drafting .st-card-head { overflow-wrap: anywhere; min-width: 0; }
 .st-drafting button.st-chip[aria-pressed="false"] { background: var(--stump-white); box-shadow: inset 0 0 0 1px var(--stump-hairline); color: var(--stump-muted); }
 .st-drafting button.st-chip[aria-pressed="true"] { background: var(--stump-emerald-tint); color: var(--stump-emerald-text); font-weight: 600; padding-left: 10px; }
 .st-drafting button.st-chip[aria-pressed="true"] svg { width: 16px; height: 16px; flex: none; }

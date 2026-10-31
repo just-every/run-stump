@@ -65,9 +65,10 @@ function ComposePage() {
       runAction<Check & { item_id: string }>('stump.drafts.check', { action: 'run', item_id: variant.item_id, idempotency_key: key() }).catch(() => null)))
     // With nothing open: the drafts waiting (an agent's among them) to open and review, and what a new post is for and where it goes.
     const blank = !preview && !alone
-    const [drafts, products, venues] = blank ? await Promise.all([openDrafts(), runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' }),
-      runAction<{ items: VenueChoice[] }>('stump.venues.manage', { action: 'list' })]) : [[], { items: [] }, { items: [] }]
-    return { who, accounts: targets.items, claims: claims.items, preview, alone, checks: checks.filter((check): check is Check & { item_id: string } => !!check), drafts, products: products.items, venues: venues.items }
+    const [drafts, products, venues, ai] = blank ? await Promise.all([openDrafts(), runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' }),
+      runAction<{ items: VenueChoice[] }>('stump.venues.manage', { action: 'list' }), runAction<{ source: string }>('stump.setup.ai', { action: 'get' })]) : [[], { items: [] }, { items: [] }, null]
+    return { who, accounts: targets.items, claims: claims.items, preview, alone, checks: checks.filter((check): check is Check & { item_id: string } => !!check), drafts, products: products.items, venues: venues.items,
+      noProvider: ai?.source === 'none' }
   })
   useEffect(() => { void refresh() }, [masterId, itemId, refresh])
   // The variant and the claim selected for fixing: from the address on arrival (its first claim to fix), then from each "Fix claim".
@@ -80,6 +81,8 @@ function ComposePage() {
   // What the new post is for, and the venue each account's variant is aimed at.
   const [product, setProduct] = useState('')
   const [aimed, setAimed] = useState<Record<string, string>>({})
+  // A draft that names no account yet (an agent's, say) goes out from the account the person picks here.
+  const [postFrom, setPostFrom] = useState('')
   // When it goes out: a wall-clock time in the zone the person schedules in (zones.ts), next hour by default.
   const [zone, setZone] = useState(deviceZone)
   const [when, setWhen] = useState(() => nextHour(deviceZone()))
@@ -95,6 +98,7 @@ function ComposePage() {
   const [note, setNote] = useState<{ text: string; error: boolean } | null>(null)
   const preview = data?.preview ?? null
   const alone = data?.alone ?? null
+  const aloneAccount = alone ? alone.account_id ?? (postFrom || null) : null
   useEffect(() => { if (preview) setText(preview.master.text) }, [preview?.master.id, preview?.master.revision])
   useEffect(() => { if (preview?.master.sources[0]) setSource(preview.master.sources[0].url) }, [preview?.master.id])
 
@@ -147,8 +151,8 @@ function ComposePage() {
     try {
       const at = new Date(instantIn(when, zone)).toISOString()
       if (action === 'schedule_master' && preview) await runAction('stump.items.schedule', { action: 'schedule_master', master_id: preview.master.id, at, idempotency_key: key() })
-      else if (action === 'schedule_master' && alone) await runAction('stump.items.schedule', { action: 'schedule', item_id: alone.item_id, account_id: alone.account_id, at, time_zone: zone, idempotency_key: key() })
-      else await Promise.all(variants.filter(variant => !blocking(variant.flags).length).map(variant => runAction('stump.calendar.plan', { action: 'queue', item_id: variant.item_id, account_id: variant.account_id, idempotency_key: key() })))
+      else if (action === 'schedule_master' && alone) await runAction('stump.items.schedule', { action: 'schedule', item_id: alone.item_id, account_id: aloneAccount, at, time_zone: zone, idempotency_key: key() })
+      else await Promise.all(variants.filter(variant => !blocking(variant.flags).length).map(variant => runAction('stump.calendar.plan', { action: 'queue', item_id: variant.item_id, account_id: variant.account_id ?? aloneAccount, idempotency_key: key() })))
       setNote({ text: action === 'schedule_master' ? 'Scheduled.' : 'Added to the queue.', error: false })
     } catch (cause) {
       // The publishing tools answer here once they are installed; until then the refusal shows as it is.
@@ -235,7 +239,11 @@ function ComposePage() {
       {error ? <p className="st-error">{error}</p> : null}
       {alone ? <div className="st-compose">
         <section className="st-card" aria-labelledby="variants-title">
-          <h2 className="st-card-head" id="variants-title"><Disc icon="pencil" />{alone.handle ? accountLabel({ handle: alone.handle, network: alone.network ?? '', display_name: alone.account_name }) : `${networkName(alone.network)} post`}</h2>
+          <h2 className="st-card-head" id="variants-title"><Disc icon="pencil" />{alone.handle ? accountLabel({ handle: alone.handle, network: alone.network ?? '', display_name: alone.account_name }) : alone.network ? `${networkName(alone.network)} post` : 'Draft'}</h2>
+          {!alone.account_id && !GONE[alone.state] ? accounts.length ? <div className="st-form st-compose-from">
+            <label className="st-field">Post from<select value={postFrom} onChange={event => setPostFrom(event.target.value)}>
+              <option value="">Choose an account</option>{accounts.filter(account => !alone.network || account.network === alone.network).map(account => <option key={account.id} value={account.id}>{accountLabel(account)}</option>)}</select></label>
+          </div> : <p className="st-meta"><Link to="/app/settings/accounts">Connect an account</Link> to post it.</p> : null}
           <div className="st-variants">{variantCards}</div>
         </section>
         {checks}
@@ -257,6 +265,10 @@ function ComposePage() {
               </label>
               {source ? <Tip label="Remove source"><button className="st-icon" type="button" aria-label="Remove source" onClick={() => setSource('')}>×</button></Tip> : null}
             </div>}
+          {/* Drafting from a source needs the company's own AI provider: with none set, say where it is set before anyone presses. */}
+          {!preview && data?.noProvider && source.trim() && !text.trim() ? <p className="st-meta st-compose-noai">{['owner', 'admin'].includes(data.who.person.role)
+            ? <>No AI provider yet. <Link to="/app/settings/connections">Set one in Settings › Connections</Link> to draft from a source.</>
+            : <>No AI provider yet. An owner or admin sets one in Settings › Connections to draft from a source.</>}</p> : null}
           <h3 className="st-sub"><Disc icon="people" />Accounts</h3>
           {data && !accounts.length ? <p className="st-meta"><Link to="/app/settings/accounts">Connect an account</Link> to post to it.</p> : null}
           <div className="st-chips">
@@ -273,7 +285,7 @@ function ComposePage() {
                   {venue.name}{venue.routes.includes('publish') ? '' : ' (no direct posts)'}</option>)}</select></label> : null })}
           </div> : null}
           {!preview ? <div className="st-actions st-open">
-            <button className="st-button primary" type="button" disabled={busy || !picked.length || (!text.trim() && !source.trim())} onClick={() => void start()}>
+            <button className="st-button primary" type="button" disabled={busy || !picked.length || (!text.trim() && !source.trim()) || (!text.trim() && !!data?.noProvider)} onClick={() => void start()}>
               {!text.trim() && source.trim() ? 'Draft from source' : 'Open variants'}
             </button>
           </div> : null}
@@ -290,10 +302,10 @@ function ComposePage() {
         <h2 className="st-card-head" id="variants-title"><Disc icon="grid" />Variants</h2>
         <div className="st-variants">{variantCards}</div>
       </section> : null}
-      {open && !(alone && !alone.account_id) && !variants.length ? <div className="st-bar">
+      {open && !(alone && !aloneAccount) && !variants.length ? <div className="st-bar">
         <Link className="st-quiet-link" to="/app/ledger">See the ledger</Link>
       </div> : null}
-      {open && !(alone && !alone.account_id) && variants.length ? <div className="st-bar">
+      {open && !(alone && !aloneAccount) && variants.length ? <div className="st-bar">
         {gone.length ? <span className="st-pill">{goneWords(gone)}</span> : null}
         {held.length === variants.length
           ? <span className="st-pill held st-bar-held">{variants.length === 1
@@ -333,16 +345,16 @@ function VariantCard({ variant, claims, select, onSelected, onSave }: { variant:
     })
     return () => cancelAnimationFrame(frame)
   }, [select?.at])
-  return <article className={flags.length ? 'st-variant flagged' : 'st-variant'} aria-label={`${networkName(variant.network)} variant`}>
+  return <article className={flags.length ? 'st-variant flagged' : 'st-variant'} aria-label={variant.network ? `${networkName(variant.network)} variant` : 'Post'}>
     <button className="st-variant-head" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
-      <strong>{networkName(variant.network)}</strong>
+      <strong>{variant.network ? networkName(variant.network) : 'Post'}</strong>
       {variant.differs_from_master ? <span className="st-pill">Edited</span> : null}
       {GONE[variant.state] ? <span className="st-pill">{GONE[variant.state]}</span> : null}
       {variant.count ? <span className={over ? 'st-chars over' : 'st-chars'}>{variant.count.count.toLocaleString()} / {variant.count.limit.toLocaleString()}</span> : null}
       <span className="st-chevron" aria-hidden="true"><Icon name="chevronRight" /></span>
     </button>
     <div className={open ? 'st-variant-body open' : 'st-variant-body'}>
-      <label className="st-sr" htmlFor={`variant-${variant.item_id}`}>{networkName(variant.network)} text</label>
+      <label className="st-sr" htmlFor={`variant-${variant.item_id}`}>{variant.network ? `${networkName(variant.network)} text` : 'Post text'}</label>
       <div className="st-variant-field">
         <Marked text={text} network={variant.network} limit={over ? variant.count!.limit : null} claims={text === variant.text ? claims : []} />
         <textarea ref={field} id={`variant-${variant.item_id}`} value={text} rows={6} spellCheck readOnly={!!GONE[variant.state]} onChange={event => setText(event.target.value)} onBlur={() => onSave(text)} />

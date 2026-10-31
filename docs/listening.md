@@ -16,7 +16,7 @@ When a source fails, the watch shows the error and its time, and keeps what it f
 
 ## Ranking with reasons
 
-Findings rank by fit to your products, each with its reasons: the terms it matched, freshness, and whether the thread asks a question you can answer. A term in a thread's title (or in the post itself, for Bluesky and Mastodon) counts in full; a term found only deep in a long thread about something else counts little, and so does a question asked there. Each finding shows the terms it matched ("matches invoicing") and, when you open it, every reason. A finding's own text never changes its rank.
+Findings rank by fit to your products, each with its reasons: the terms it matched, freshness, and whether the thread asks a question you can answer. A term in a thread's title (or in the post itself, for Bluesky and Mastodon) counts in full; a term found only deep in a long thread about something else counts little, and so does a question asked there. Each thread is listed once, at its best finding's rank, with how many more findings it holds ("2 more in this thread"). Each finding shows the terms it matched ("matches invoicing") and, when you open it, every reason. A finding's own text never changes its rank.
 
 ## Answering
 

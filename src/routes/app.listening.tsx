@@ -120,6 +120,17 @@ function Findings({ watch, data, error, focus, act, may, context, onFocus, onEdi
     await onChange()
   }
   const failing = watch.last_error
+  // Each thread is listed once, at its best finding's rank, saying how many more findings it holds; a finding opened by its
+  // own link (an alert's) is always listed.
+  const threads: Array<{ finding: FindingView; more: number }> = []
+  const listed = new Map<string, { finding: FindingView; more: number }>()
+  for (const finding of data?.items ?? []) {
+    const thread = finding.thread_url ?? finding.url, first = listed.get(thread)
+    if (first && finding.id !== focus) { first.more += 1; continue }
+    const row = { finding, more: 0 }
+    if (!first) listed.set(thread, row)
+    threads.push(row)
+  }
   return <>
     <div className="st-card-head">
       <h2>Top findings</h2>
@@ -133,11 +144,14 @@ function Findings({ watch, data, error, focus, act, may, context, onFocus, onEdi
     {data && !data.items.length ? <p className="st-listen-none">No findings yet. Matches from the last 30 days and anything new will show here.</p> : null}
     {!data && !error ? <p className="st-listen-none">Loading findings.</p> : null}
     <ol className="st-findings">
-      {data?.items.map((finding, index) => <Finding key={finding.id} finding={finding} rank={index + 1} watch={watch} focal={focus ? finding.id === focus : index === 0} act={act} may={may} context={context}
+      {threads.map(({ finding, more }, index) => <Finding key={finding.id} finding={finding} rank={index + 1} more={more} watch={watch} focal={focus ? finding.id === focus : index === 0} act={act} may={may} context={context}
         onFocus={() => onFocus(finding.id)} onChange={onChange} />)}
     </ol>
   </>
 }
+
+/** "2 more in this thread", for the findings a listed thread holds beyond the one shown. */
+const threadMore = (more: number) => more ? `${more} more in this thread` : null
 
 /** A title cut at a word, never inside one. */
 function wordClip(text: string, max = 110): string {
@@ -151,7 +165,7 @@ function wordClip(text: string, max = 110): string {
 /** The site a finding is on, as a person names it: news.ycombinator.com. */
 const siteOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, '') } catch { return 'its site' } }
 
-function Finding({ finding, rank, watch, focal, act, may, context, onFocus, onChange }: { finding: FindingView; rank: number; watch: WatchView; focal: boolean; act: boolean; may: boolean; context: Context; onFocus(): void; onChange(): Promise<void> }) {
+function Finding({ finding, rank, more: inThread, watch, focal, act, may, context, onFocus, onChange }: { finding: FindingView; rank: number; more: number; watch: WatchView; focal: boolean; act: boolean; may: boolean; context: Context; onFocus(): void; onChange(): Promise<void> }) {
   const { run } = useRun()
   const job = context.role === 'viewer' ? null : jobOf(finding)
   const [working, setWorking] = useState(focal && act && !!job)
@@ -164,7 +178,8 @@ function Finding({ finding, rank, watch, focal, act, may, context, onFocus, onCh
     <span className="st-numeral" aria-hidden="true">{rank}</span>
     <div className="st-finding-body">
       <h3>{focal ? title : <button type="button" className="st-finding-title" onClick={onFocus}>{title}</button>}</h3>
-      <div className="st-meta">{focal ? <Parts parts={[source, ago(finding.published_at), finding.author, finding.points !== null && finding.source === 'hn' ? `${finding.points}\u00a0points` : null]} /> : `${source} · ${ago(finding.published_at)}`}</div>
+      <div className="st-meta">{focal ? <Parts parts={[source, ago(finding.published_at), finding.author, finding.points !== null && finding.source === 'hn' ? `${finding.points}\u00a0points` : null, threadMore(inThread)]} />
+        : [source, ago(finding.published_at), threadMore(inThread)].filter(Boolean).join(' · ')}</div>
       {shown.length ? <ul className="st-chips" aria-label="Why it ranks here">
         {shown.map(chip => <li className="st-chip" key={chip.label} title={chip.title}>{chip.label}</li>)}
         {more > 0 ? <li className="st-meta st-chip-more" title={chips.slice(1).map(chip => chip.label).join(', ')}>+{more}</li> : null}

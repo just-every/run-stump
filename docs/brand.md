@@ -26,7 +26,7 @@ A post passes when every claim in it is matched and nothing stops it. A sentence
 
 ## Backing a claim from a draft
 
-In Compose, **Back claim** beside a flagged sentence opens **Settings › Brand** with that sentence as a new claim, for the draft's product. Add its proof and review date, and Stump records the claim, matches the sentence to it and takes you back to the draft with its checks run again. **Fix claim** selects the flagged words in the variant, so typing replaces them.
+In Compose, **Back claim** beside a flagged sentence opens **Settings › Brand** with that sentence as a new claim, for the draft's product. Add its proof and review date, and Stump records the claim, matches the sentence to it and takes you back to the draft with its checks run again. **Fix claim** selects the flagged words in the variant, so typing replaces them: the banned or unproven sentence, or the number that differs from its proof ("$12" in "$12 a month").
 
 The check runs the same way for people and for agents.
 
