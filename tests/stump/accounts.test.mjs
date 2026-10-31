@@ -228,6 +228,7 @@ test('removing a person disconnects their own X account at X and returns their p
   const leaver = (await app.action('owner', 'stump.team.manage', { action: 'invite', email, display_name: 'Synthetic Leaver', role: 'editor', connection: 'employee' })).body.result
   assert.equal(await app.signIn('leaver', email), 303)
   x.user = { ...USER, id: '1500000000000000002', username: 'synthetic_leaver', name: 'Synthetic Leaver' }
+  const issuedBefore = new Set(x.issued)
   const started = await app.action('leaver', 'stump.accounts.connect', { action: 'start', network: 'x', owner: 'me' })
   const back = await app.request('leaver', `/app/connected/x?${new URLSearchParams({ state: new URL(started.body.result.consent_url).searchParams.get('state'), code: 'synthetic-code' })}`)
   x.user = USER
@@ -241,11 +242,12 @@ test('removing a person disconnects their own X account at X and returns their p
   x.limit = false
   assert.deepEqual([sent.body.result.item.state, sent.body.result.item.hold.kind], ['held', 'rate_limit'])
 
-  const revoked = x.revoked.size, posts = x.posts.size
+  const posts = x.posts.size
   const removed = (await app.action('owner', 'stump.team.manage', { action: 'remove', person_id: leaver.id })).body.result
   assert.ok(removed.unscheduled_items.includes(item.id))
   assert.deepEqual(removed.disconnected_accounts.map(entry => [entry.account_id, entry.revoked]), [[account.id, 'revoked']])
-  assert.equal(x.revoked.size, revoked + 1)
+  const theirs = [...x.issued].filter(token => !issuedBefore.has(token))
+  assert.ok(theirs.length && theirs.every(token => x.revoked.has(token)), 'every token X issued for their account is revoked')
   const after = (await app.action('owner', 'stump.drafts.revise', { action: 'get', item_id: item.id })).body.result
   assert.deepEqual([after.state, after.hold], ['draft', null])
   const listed = (await app.action('owner', 'stump.accounts.connect', { action: 'list', include_unconnected: true })).body.result.items.find(entry => entry.id === account.id)

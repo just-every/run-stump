@@ -4672,7 +4672,7 @@
       "executable": false
     },
     "tests/stump/accounts.test.mjs": {
-      "sha256": "37a77bf1b2ecc1e859a5b46a70963b0dda94b5ee17c7e35f4aca8b26d3456eca",
+      "sha256": "b968df59d555875904bbf4fe653d97ba037795b1772214608f27f03d97213030",
       "executable": false
     },
     "tests/stump/data.test.mjs": {
