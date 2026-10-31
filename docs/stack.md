@@ -8,7 +8,7 @@ To connect Orbit, open **Signal sources** in Orbit and, under **Configure a sour
 
 ## Vane
 
-Each published post adds a dated note in Vane, linked to its ledger entry, so changes in traffic line up with what went out. With [tracked links](/docs/links), Vane's attribution shows the signups each post brought, by the post's `utm_content`.
+Connect Vane and each post's signups show there. Every link to your own sites carries its post's `utm_content` ([tracked links](/docs/links)), so Vane's attribution counts the signups each post brought, and each published post adds a dated note in Vane with its link, so changes in traffic line up with what went out.
 
 Vane is Run Edit Run's own analytics. To run it beside Stump on your computer: `rer dev just-every/run-vane`, then in Vane add your site and, in its settings, create the **Annotation webhook** key (shown once). Enter Vane's address, the site id and that key in Stump under **Settings › Connections › Vane**. Without Vane, the tagged links still reach whatever analytics your site uses.
 

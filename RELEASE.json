@@ -1,0 +1,496 @@
+{
+  "version": "0.1.0",
+  "date": "2026-10-31",
+  "contractChanges": {
+    "STUMP-VENUE-001": {
+      "change": "added",
+      "status": "done",
+      "summary": "A venue is any place the company could show up: a subreddit, forum, Slack or Discord community, newsletter, podcast, directory, publication, journalist, launch platform, event, or one of the company's own channels."
+    },
+    "STUMP-VENUE-002": {
+      "change": "added",
+      "status": "done",
+      "summary": "Each venue records its rules as fields, each with its source URL and read date: whether software may post from the company's own account or only a real member may; whether AI-written text is allowed, allowed with disclosure, or banned; the self-promotion rule (allowed, limited to a thread, a day or a ratio, or banned); whether links are allowed; the disclosure line the venue asks for; and its gates."
+    },
+    "STUMP-VENUE-003": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Each venue holds a fit for each product, a priority, and a shared limit: how often the company as a whole may post there across its products and people, such as one post per weekly thread."
+    },
+    "STUMP-VENUE-004": {
+      "change": "added",
+      "status": "done",
+      "summary": "Stump imports a company's existing venue list."
+    },
+    "STUMP-VENUE-006": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Stump records who on the team is a member of each venue: their handle there, when they joined, and, where the venue shows it publicly, their karma or account age."
+    },
+    "STUMP-HANDOFF-001": {
+      "change": "added",
+      "status": "done",
+      "summary": "Where a venue's route is a hand-off, Stump prepares it for one named member: the exact thread or channel, the venue's rules, why it fits, the facts and claims with their proof, the disclosure, and a draft in that person's voice, or talking points only where the venue bans AI-written text or D-8 applies."
+    },
+    "STUMP-HANDOFF-002": {
+      "change": "added",
+      "status": "partial",
+      "summary": "The named person records the posted link by pasting it or by replying to the hand-off notice with it."
+    },
+    "STUMP-HANDOFF-003": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Every hand-off has a due date, an owner and a lapse action its creator chose: expire it, reassign it to another member of the venue, or move it to the venue's next open place."
+    },
+    "STUMP-LEDGER-001": {
+      "change": "added",
+      "status": "partial",
+      "summary": "The ledger is the company's record of everything that went out in its name or about its products from its people: posts, threads, replies, articles, pitches, launch posts, directory listings and hand-off posts."
+    },
+    "STUMP-LEDGER-002": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Anyone with ledger access searches every entry by text and filters by venue, network, person, product, campaign, route, state and date."
+    },
+    "STUMP-LEDGER-003": {
+      "change": "added",
+      "status": "missing",
+      "summary": "Stump reads each published post's results from its network on a schedule (likes, reposts, replies, quotes, saves, link clicks, and impressions where the network gives them) and keeps them over time on the ledger entry."
+    },
+    "STUMP-WATCH-001": {
+      "change": "added",
+      "status": "done",
+      "summary": "A watch searches Hacker News through its public Algolia search API for stories and comments that match its terms, with points, comment count, author and time."
+    },
+    "STUMP-WATCH-002": {
+      "change": "added",
+      "status": "done",
+      "summary": "A watch follows any RSS or Atom feed (blogs, newsletters, podcasts, GitHub releases, Lobsters, DEV tags and Google Alerts feeds), either every item or items that match its terms."
+    },
+    "STUMP-WATCH-003": {
+      "change": "added",
+      "status": "partial",
+      "summary": "A watch searches Bluesky through its public post search and Mastodon through the search and hashtag timelines of the instances the company chooses."
+    },
+    "STUMP-WATCH-004": {
+      "change": "added",
+      "status": "partial",
+      "summary": "A watch holds its terms (all of, any of, none of, exact phrase), its sources and products, and its alerts: an immediate alert for findings above a relevance the person sets, and a daily or weekly digest at a local time, delivered in the app, by email, in Slack, by push and by signed webhook."
+    },
+    "STUMP-WATCH-013": {
+      "change": "added",
+      "status": "done",
+      "summary": "Each watch narrows each of its sources: only chosen feeds, forums, instances, channels, tags or story types."
+    },
+    "STUMP-WATCH-005": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Findings are ranked by fit to the company's products and venues, each with its reasons: matched terms, the venue's fit, the author's standing, freshness and whether the thread asks a question the company can answer."
+    },
+    "STUMP-WATCH-011": {
+      "change": "added",
+      "status": "missing",
+      "summary": "A watch searches recent X posts through the company's X app at X's metered read price from the price table."
+    },
+    "STUMP-PUBLISH-001": {
+      "change": "added",
+      "status": "done",
+      "summary": "Each connected network account belongs either to one signed-in person, who connects it through the network's own consent screen, or to the company, connected by an admin and named as the company's."
+    },
+    "STUMP-CONNECT-001": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Stump keeps its network tokens in an OAuth connection store that it asks Base to add as a shared module, recorded as a ct NEW proposal for Base, and cites that Base duty once it exists."
+    },
+    "STUMP-PUBLISH-002": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Stump publishes posts and threads to a connected Bluesky account through its own PDS: text within Bluesky's grapheme limit from the network table (`docs/networks.md`), mentions and links resolved as facets, up to four images with alt text or one video, a link card, quote posts, and threads as reply chains."
+    },
+    "STUMP-PUBLISH-003": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Stump publishes to a connected Mastodon account on any instance."
+    },
+    "STUMP-PUBLISH-004": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Stump publishes to a connected X account through the company's own X developer app on pay-per-use pricing: posts within the account's weighted limit, media with alt text, video, polls, quote posts, and threads as reply chains."
+    },
+    "STUMP-PUBLISH-005": {
+      "change": "added",
+      "status": "done",
+      "summary": "A person posts to their own LinkedIn profile through the company's LinkedIn app with the self-serve Share on LinkedIn product (`w_member_social`): text within LinkedIn's limit, a link, and images with alt text, within LinkedIn's daily per-member request limit from the network table (`docs/networks.md`)."
+    },
+    "STUMP-PUBLISH-007": {
+      "change": "added",
+      "status": "missing",
+      "summary": "Stump publishes posts and replies to a connected Threads profile through the company's Meta app: text within Threads' limit, images and video with alt text, carousels, polls, a topic tag, and reply chains, within Meta's per-profile post and reply limits from the network table (`docs/networks.md`)."
+    },
+    "STUMP-PUBLISH-008": {
+      "change": "added",
+      "status": "missing",
+      "summary": "An admin connects the company's LinkedIn page through LinkedIn's Community Management API, which LinkedIn vets in a Development tier and then a Standard tier on an app of its own."
+    },
+    "STUMP-PUBLISH-021": {
+      "change": "added",
+      "status": "missing",
+      "summary": "On a member profile and on the company page, Stump publishes the LinkedIn formats B2B posting relies on: document posts (a PDF shown as a swipeable carousel, with its title), polls with their options and duration, native video with captions, @mentions of company pages and people resolved to their LinkedIn URNs, and a first comment the author writes with the post, published on their own post once the post reads back."
+    },
+    "STUMP-PUBLISH-006": {
+      "change": "added",
+      "status": "partial",
+      "summary": "An item is scheduled for an account at a time in that account's time zone, or into its next open queue slot."
+    },
+    "STUMP-CONNECT-002": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Each company runs Stump with its own developer apps and keys, so nothing depends on Run Edit Run's accounts."
+    },
+    "STUMP-BRAND-001": {
+      "change": "added",
+      "status": "done",
+      "summary": "The company records each product it markets: name and other names, a one-line description, audience, positioning, URLs, the competitors it is compared with, the words it uses and avoids, and its tone."
+    },
+    "STUMP-BRAND-002": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Each person may have a voice guide built from writing they choose: their own past posts (pasted, or imported under STUMP-IMPORT-007), with notes on what they say and never say."
+    },
+    "STUMP-BRAND-003": {
+      "change": "added",
+      "status": "partial",
+      "summary": "The company keeps the claims it may make, each with its proof (a URL, document, number or date), an owner and a review date; the claims it must not make, each with the reason; and comparative claims against named competitors, each with a dated source."
+    },
+    "STUMP-BRAND-004": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Before an item can be marked ready, Stump extracts its factual product claims and matches each to a current claim."
+    },
+    "STUMP-DRAFT-010": {
+      "change": "added",
+      "status": "done",
+      "summary": "A person writes one master item and Stump opens a variant for each account they pick, edited side by side: each variant starts from the master, can be changed on its own, and shows its network's preview, with every preview on screen at once."
+    },
+    "STUMP-DRAFT-001": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Stump drafts posts, threads, replies, articles, pitches, launch copy and newsletter sections."
+    },
+    "STUMP-DRAFT-002": {
+      "change": "added",
+      "status": "partial",
+      "summary": "From a source (a changelog entry, docs page, blog post or any URL) Stump drafts a set of items for the accounts and venues the person picks."
+    },
+    "STUMP-DRAFT-003": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Every save of an item makes a revision."
+    },
+    "STUMP-DRAFT-004": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Each item previews as its network and venue will show it: the link card from the page's own tags, where the network cuts the text behind \"see more\", how a thread splits, and how images crop."
+    },
+    "STUMP-DRAFT-006": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Drafting uses the company's own AI provider and model through `ai.provider.v1`."
+    },
+    "STUMP-PLAN-001": {
+      "change": "added",
+      "status": "missing",
+      "summary": "One calendar shows every scheduled, handed-off and posted item across accounts, people, venues and products, by month, week or list."
+    },
+    "STUMP-PLAN-002": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Each account has queue slots in its own time zone. \"Add to queue\" places an item in the next open slot."
+    },
+    "STUMP-INBOX-001": {
+      "change": "added",
+      "status": "partial",
+      "summary": "One inbox holds replies, mentions, quotes and direct messages on the company's and its people's connected accounts: Bluesky and Mastodon notifications, Bluesky chats, Mastodon direct posts, X mentions and direct messages (read at X's metered price), Threads replies and comments on the LinkedIn page."
+    },
+    "STUMP-INBOX-002": {
+      "change": "added",
+      "status": "partial",
+      "summary": "From the inbox a person answers someone who engaged with the company's account first, in public or in a direct conversation that person started."
+    },
+    "STUMP-IMPORT-001": {
+      "change": "added",
+      "status": "done",
+      "summary": "Stump imports from Buffer through its API with the company's key or from its CSV exports: channels, queued and draft posts, sent posts with their results, and posting schedules."
+    },
+    "STUMP-IMPORT-002": {
+      "change": "added",
+      "status": "missing",
+      "summary": "Stump imports from Typefully through its API with the company's key: drafts, scheduled and published posts and threads, and the accounts they belong to, with the same dry run, apply, undo and paused-queue rules as STUMP-IMPORT-001."
+    },
+    "STUMP-IMPORT-006": {
+      "change": "added",
+      "status": "missing",
+      "summary": "Stump imports keyword setups and mention history from Brand24, Syften, Octolens and F5Bot exports: watches with their terms, and mentions as findings with their links and dates."
+    },
+    "STUMP-TRUTH-001": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Stump speaks only as real people and as the company."
+    },
+    "STUMP-TRUTH-002": {
+      "change": "added",
+      "status": "done",
+      "summary": "Each person records their connection to the company (founder, employee, contractor, investor, advisor, friend or family) and their disclosure lines."
+    },
+    "STUMP-TRUTH-003": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Stump offers no feature, to people or to agents, for the acts D-4 names."
+    },
+    "STUMP-TRUTH-004": {
+      "change": "added",
+      "status": "partial",
+      "summary": "Before an item can be marked ready, scheduled or handed off, Stump compares it with the ledger and the queue."
+    }
+  },
+  "extensionPointChanges": [],
+  "migrations": [
+    {
+      "id": "core/0001_owner.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0002_outbox.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0003_portability.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0004_first_run.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0005_identity_providers.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0006_provider_control.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0007_dependencies.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0008_owner_claim.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0009_idp_owner.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0010_provider_pins.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0011_dependency_setup.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0012_dependency_approval.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0013_erasure.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0014_owner_signin.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0015_command_receipts.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0016_sealing.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0017_business_settings.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0018_business_people.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0019_agent_door.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0020_stump_team.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0021_stump_brand.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0022_stump_venues.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0023_stump_accounts.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0024_stump_items.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0025_stump_handoffs_ledger.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0026_stump_watches.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0027_stump_pause.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0028_stump_refusals.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0100_import_kit.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0101_import_erasure_append_only.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0102_import_preparation_steps.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0103_import_stream_sources.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0104_import_custody_replace.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0105_import_erasure_progress.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0106_import_door.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0107_import_door_archive.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0110_stump_venue_register.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0111_stump_venue_guest_intake.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0150_stump_handoffs_queue.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0200_stump_drafting.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0300_stump_publishing.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0301_stump_accounts_handles_label.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0310_stump_accounts_reconnect_annotation.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0400_stump_watches_polling.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0401_stump_watches_blocks_dismissals.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0500_stump_ledger_links_stack.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0501_stump_ledger_version_kinds.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0550_stump_inbox.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0551_stump_inbox_author_profile.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0600_stump_data.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0610_stump_erasure_tombstones.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0611_stump_erasure_key.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0700_stump_offer_engagement_handoff_thread.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0710_stump_agent_policy_answers.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0720_stump_ai_provider.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0735_stump_product_match_case.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    }
+  ],
+  "breaking": false,
+  "agentUpdateInstructions": "First release. rer install and rer setup (or rer dev) apply every migration in migrations/core in order on a new installation, and rer deploy applies them to the owner's D1 database. When changing the source, keep applied migration files and their order, the ledger's append-only versions, sealed network tokens that no door answers back, the company's agent policy and the door rules D-1 to D-8 in CONTRACT.md. After a contract edit, run node src/base/contract-docs.mjs write, then check, then pnpm run source:lock.",
+  "publicReleaseNotes": "Stump 0.1.0 is the first release of an earned-channels marketing desk for a small software company: find where your customers gather, show up in your own voice, and see what it brings in. Keep a register of the communities, newsletters, podcasts, directories and journalists worth showing up in, each rule with the page it came from and the date it was read. Turn a changelog into posts in a real person's voice through your own AI provider, checked against your claims and their proof, your disclosure rules and what you already posted. Publish to Mastodon, Bluesky, X and LinkedIn from your own accounts, or hand a members-only venue's post to the named member who posts it by hand and records the link. Listen on Hacker News, feeds, Bluesky and Mastodon, answer the people who engaged first on X, and see every post on a ledger with tagged links. Orbit and Vane connect, Buffer history imports, Pause stops every scheduled post at once, and agents work through one MCP door under your company's policy. A new installation applies its migrations in order; there is nothing earlier to upgrade from. Product screenshot: .github/assets/release/stump-today-1440.webp",
+  "sourceRepository": "https://github.com/just-every/run-stump",
+  "screenshots": [
+    {
+      "path": ".github/assets/release/stump-today-1440.webp",
+      "alt": "Stump's Today screen: a hand-off due tonight, drafts held for a banned claim and a number that differs from its proof, a Hacker News question worth answering, and the week's posted and handed-off counts",
+      "caption": "Today shows what is due, what is held and why, and the threads worth answering.",
+      "width": 1600,
+      "height": 1000
+    }
+  ]
+}

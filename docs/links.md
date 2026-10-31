@@ -15,4 +15,4 @@ You set your own domains and naming rules once.
 
 ## Signups by post
 
-Count them where your analytics reads UTM tags: `utm_content` names the post, `utm_campaign` its campaign and `utm_source` where it went. Each [ledger](/docs/ledger) entry and its CSV row carry the same `utm_content`, so a row of signups joins to the post that brought them. With [Vane](/docs/stack) connected, Vane's attribution shows signups by post, and each post is marked on its day there, linked to its [ledger](/docs/ledger) entry. Showing those signups inside Stump, beside each post, is not built yet.
+Count them where your analytics reads UTM tags: `utm_content` names the post, `utm_campaign` its campaign and `utm_source` where it went. Each [ledger](/docs/ledger) entry and its CSV row carry the same `utm_content`, so a row of signups joins to the post that brought them. Connect [Vane](/docs/stack) and each post's signups show there: Vane's attribution counts them by the post's `utm_content`, and each post is marked on its day with its link.

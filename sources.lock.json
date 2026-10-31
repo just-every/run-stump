@@ -367,6 +367,10 @@
     }
   ],
   "files": {
+    ".github/assets/release/stump-today-1440.webp": {
+      "sha256": "735057a598e1021f01574fed786724e274dbeeee51870ba70583e21142e029a3",
+      "executable": false
+    },
     ".github/workflows/run-demo.yml": {
       "sha256": "41365ec7c002e9451166313b085f9e64ed2e3ea002c27f3d5ead845bc9c302b2",
       "executable": false
@@ -392,7 +396,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "ef7a6c3351191429acde1ae8f6bb4e7a111e5fde8d1e0ba05fd97c47398bc1be",
+      "sha256": "8a57d67a41f4df3c65bc7e8b44d79973a6a1521340e525ac11085c14bbe9abb0",
       "executable": false
     },
     "agent-surface.json": {
@@ -408,7 +412,7 @@
       "executable": false
     },
     "CHANGELOG.md": {
-      "sha256": "eb173d7d4acd1966951ed308b7992ac6097f67aa707d4cd6ff0415183141b608",
+      "sha256": "15296dfbe364dfec28b3952b32ee6147a9a99ac8ebcc740510dd18257a38bafd",
       "executable": false
     },
     "CLAUDE.md": {
@@ -420,7 +424,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "f7b19a665f25927fc858ae0be118cc7469b772dc992308c946bcf8bf4775d077",
+      "sha256": "4e1213127239fe82ca1027f25cf023b4a69e21c439663e7d67a5f0244fa9c122",
       "executable": false
     },
     "deploy-demo.json": {
@@ -452,7 +456,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "bfe2259ea33668adc1fef5196c11efc20f36c2887ed9624b0cfe61727c4b5776",
+      "sha256": "961ef65af8165db5b3534d991cd75fd287514a3e91c3d7dff62eb8d94abf28d0",
       "executable": false
     },
     "docs/compose.md": {
@@ -468,7 +472,7 @@
       "executable": false
     },
     "docs/deploy.md": {
-      "sha256": "6ed503e3370ad49a811e0a24eb865e7f17652fc056c7356a8c5a57b6a2c5740d",
+      "sha256": "41833b503dabf7b50adf959e6362f3b64c6486dc0a1ab187e1a0970d8d036f92",
       "executable": false
     },
     "docs/disclosure.md": {
@@ -496,7 +500,7 @@
       "executable": false
     },
     "docs/links.md": {
-      "sha256": "1a8a74b14d63585a9e7873107add7ff92586773f2726110527c84f394f8c6e10",
+      "sha256": "8af4ba2cbbc90551cf35beb03ee2d047a884043ed03c2dbaa6f235f08e03b017",
       "executable": false
     },
     "docs/listening.md": {
@@ -504,7 +508,7 @@
       "executable": false
     },
     "docs/measures.md": {
-      "sha256": "4f28d489c54a9788e44c7d628a96294dd8a51da541978aae5143c626d0aa898e",
+      "sha256": "37f011caa5f1594463d0ef45abe012e188d1fc4b5890d0f5259f3dc18604d038",
       "executable": false
     },
     "docs/networks.md": {
@@ -528,7 +532,7 @@
       "executable": false
     },
     "docs/stack.md": {
-      "sha256": "d2791d900487e76178f05b1d7d03173fa990898874808418a84c043601498996",
+      "sha256": "140ca5eacecf27f13d493be60daa84bd6401e0bba4c41a5ed8b3b939a7c2de0d",
       "executable": false
     },
     "docs/switch-from-buffer.md": {
@@ -928,7 +932,11 @@
       "executable": false
     },
     "README.md": {
-      "sha256": "92956b43eebaba2d8e8fb2fa760da3c135a95a6a0a55dba2b8201fc511c23bad",
+      "sha256": "b03a13233885497d76b92c29cb6f0e45e40da5db997725e39cbd0477d91edded",
+      "executable": false
+    },
+    "RELEASE.json": {
+      "sha256": "41d3be7b39c47c8bb4b091f2755bc591816641722da50f995135344dadae2347",
       "executable": false
     },
     "rer-setup.json": {
@@ -1012,7 +1020,7 @@
       "executable": false
     },
     "seed.json": {
-      "sha256": "19e5658a5ea507d25ead1535ab5517385befa0b5778822aafe978cbf351047f3",
+      "sha256": "c82caa1d1d251fcd52f4a5cc1a6651f44edee1be37a6e34159ab0e370e68365f",
       "executable": false
     },
     "src/auth.server.ts": {

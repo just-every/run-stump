@@ -2,17 +2,19 @@
   "id": "stump",
   "name": "Stump",
   "version": "0.1.0",
-  "maturity": "technical-foundation-not-product",
+  "maturity": "local-installer-and-owner-deploy-implemented-hosted-unverified",
   "category": "marketing",
   "spine": {
-    "id": "foundation",
-    "record": "No domain record selected"
+    "id": "earned-channels",
+    "record": "an item for a venue, published from an account or handed to a member, and its ledger entry read back from the network"
   },
-  "description": "Earned-channels marketing desk: find where your customers gather, show up in your own voice, and see what it brings in. New seed: the product target is entirely missing.",
+  "description": "Earned-channels marketing desk: find where your customers gather, show up in your own voice, and see what it brings in.",
   "capabilities": [],
   "nonGoals": [
-    "Finished product functionality",
-    "Speculative domain data"
+    "Personas, composite identities or account pools: Stump speaks only as real people and the company",
+    "Software-started likes, reposts, comments or votes, keyword-triggered replies, reviews written for others, or bought engagement",
+    "Scraping or automating a network's signed-in site",
+    "Hosted operation on a fresh account remains unverified"
   ],
   "externals": [
     {
@@ -81,6 +83,6 @@
   "replaces": [
     "Hootsuite",
     "Buffer",
-    "Typefully"
+    "Brand24"
   ]
 }

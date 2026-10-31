@@ -1,6 +1,6 @@
 # Measured rates
 
-Each statistical check in `CONTRACT.md` has a labelled fixture with a pass/fail bar, and each release publishes the rate it measured here. Nothing is built yet, so nothing has been measured.
+Each statistical check in `CONTRACT.md` has a labelled fixture with a pass/fail bar, and each release publishes the rate it measured here. No rate has been measured for 0.1.0, which does not include the labelled fixtures behind these checks; each row says what its fixture measures and the bar it must clear.
 
 | Check | Clause | Fixture | Bar | Measured | Run |
 | --- | --- | --- | --- | --- | --- |
