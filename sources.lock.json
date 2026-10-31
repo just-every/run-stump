@@ -775,6 +775,10 @@
       "sha256": "3984e734d135c232e71ce00ff399621b4c4157a5ff5126e44577ec3a04627e54",
       "executable": false
     },
+    "migrations/core/0735_stump_product_match_case.sql": {
+      "sha256": "874f42315d6787519b26a6b1304af9f83f9f537d8d31a6f94ef378c82c59ff76",
+      "executable": false
+    },
     "ONBOARDING.md": {
       "sha256": "50fec796269349e4ddc68851495e7a991b0ccd42bfccd015c7318a6df6ffeb60",
       "executable": false
@@ -3601,6 +3605,10 @@
     },
     "src/stump/data/ui/BufferImport.tsx": {
       "sha256": "4025b9088e8cc4fa9f2570c633de6574b576869907a2218e91e1c16c4c333c24",
+      "executable": false
+    },
+    "src/stump/docs.ts": {
+      "sha256": "84a8680b058b9ba1d729a5594477580d25d0d30b560ab34e1674ad660f232adb",
       "executable": false
     },
     "src/stump/drafting/ai.ts": {
