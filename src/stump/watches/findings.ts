@@ -60,6 +60,8 @@ export async function rankedFindings(db: D1Database, watch: WatchRow, now: numbe
       // A passing mention: its terms are only deep in a thread about something else.
       passing: ranked?.passing ?? false,
       excerpts: excerptsOf(row.text ?? '', terms),
+      // A link post with no text of its own (an HN story that is only a title): the page it links to, to judge it by.
+      linked_url: (row.text ?? '').trim() ? null : finding?.links.find(link => link !== row.url) ?? null,
       routes: where.routes, venue: where.venue,
       backfill: row.backfill === 1,
       mentions: finding ? mentionsOf(finding, products) : [],

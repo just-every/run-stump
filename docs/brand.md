@@ -30,11 +30,14 @@ In a post about a product, these are claims to back, whether or not the sentence
 
 - a number: a percent, a multiple, a price, or a count of minutes, hours, steps, clicks, users and the like ("cuts triage time by 30%", "takes 5 minutes");
 - a comparison, a superlative, a guarantee or a compliance statement ("faster than Deputy", "the fastest", "zero downtime", "SOC 2");
-- what the product does: "adds a weekly summary", "It also syncs with Stripe now", "Now you can edit each reminder", and what a person does with it, "the manager approves in one tap".
+- what the product does: "adds a weekly summary", "It also syncs with Stripe now", "Now you can edit each reminder", "recurring meetings now carry last week's open tasks forward", and what a person does with it, "the manager approves in one tap";
+- whatever follows a lead-in that announces it as new ("New in 2.4:", "New:", "Just shipped:"): it is a feature of the product, however it is worded.
+
+A sentence that names something its claim does not, such as an integration or a platform, says more than the claim: against "Sends tasks to Linear and Jira", "it now sends tasks to Asana as well as Linear and Jira" is flagged until a claim backs Asana too. Your own products and people never count as something more.
 
 ### Numbers against their proof
 
-A sentence that says what a claim says, counting the same things in other numbers, is that claim with a number that differs from its proof. Against the claim "Builds a month rota for 20 staff in 10 minutes", whose proof says "10 minutes median, 20 staff", the sentence "A month rota for 20 staff now takes 5 minutes" is flagged as differing from the proof of that claim, with the proof's number: 10 minutes. The same sentence with 10 minutes matches the claim. A percent or multiple is weighed against the claim's percent or multiple ("50% faster" against a proven 30%), and a price against its price; one the claim and its proof state none of ("50% cheaper" against "Cheaper than HubSpot") is flagged as not in the proof.
+A sentence that says what a claim says, counting the same things in other numbers, is that claim with a number that differs from its proof. Against the claim "Builds a month rota for 20 staff in 10 minutes", whose proof says "10 minutes median, 20 staff", the sentence "A month rota for 20 staff now takes 5 minutes" is flagged as differing from the proof of that claim, with the proof's number: 10 minutes. The same sentence with 10 minutes matches the claim. Each number is weighed on its own: against "Turns a 30-minute meeting into a task list in 2 minutes", "turns a 30-minute meeting into a task list in 1 minute" is flagged with 2 minutes, though its 30 minutes is the claim's. A percent or multiple is weighed against the claim's percent or multiple ("50% faster" against a proven 30%), and a price against its price; one the claim and its proof state none of ("50% cheaper" against "Cheaper than HubSpot") is flagged as not in the proof.
 
 ### What you still review
 

@@ -7,6 +7,8 @@ import type { Venue } from './types.ts'
 const PRIORITIES = ['top', 'high', 'medium', 'low']
 const detailText = (value: unknown) => Array.isArray(value) ? value.join(', ') : String(value ?? '')
 const key = () => crypto.randomUUID()
+/** What a detail holds, where its kind needs it written one way: a Slack workspace by its address, a Discord server by its id. */
+const DETAIL_HINTS: Record<string, string> = { 'slack.workspace': 'name.slack.com', 'discord.server': 'Server id' }
 
 function details(kind: KindId, form: FormData) {
   const out: Record<string, unknown> = {}
@@ -49,7 +51,7 @@ export function VenueForm({ venue, onDone, onCancel, onImport }: { venue?: Venue
       <label className="st-field">Platform<input name="platform" maxLength={80} defaultValue={venue?.platform ?? ''} placeholder="Reddit, Discourse, Substack…" /></label>
       {Object.entries(fields.details).map(([name, type]) => <label className="st-field" key={`${kind}.${name}`}>{DETAIL_LABELS[name] ?? name}{(fields.required as readonly string[]).includes(name) ? '' : ' (optional)'}
         <input name={`detail.${name}`} type={type === 'date' ? 'date' : type === 'url' ? 'url' : type === 'integer' || type === 'number' ? 'number' : 'text'} min={type === 'integer' || type === 'number' ? 0 : undefined}
-          step={type === 'number' ? 'any' : undefined} required={(fields.required as readonly string[]).includes(name)} placeholder={type === 'list' ? 'Separate with commas' : type === 'url' ? 'https://' : undefined}
+          step={type === 'number' ? 'any' : undefined} required={(fields.required as readonly string[]).includes(name)} placeholder={DETAIL_HINTS[`${kind}.${name}`] ?? (type === 'list' ? 'Separate with commas' : type === 'url' ? 'https://' : undefined)}
           defaultValue={detailText(venue?.kind === kind ? venue.details[name] : null)} />
       </label>)}
       <label className="st-field">Who reads it<input name="audience" maxLength={2000} defaultValue={venue?.audience ?? ''} /></label>

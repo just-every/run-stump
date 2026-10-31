@@ -33,6 +33,10 @@ A venue's shared limit is how often the whole company may post there, across eve
 
 Discord message links look like `https://discord.com/channels/<server id>/<channel id>/<message id>`. To record a hand-off's link at a Discord venue, Stump needs the server: record the venue by a `https://discord.com/channels/<server id>` address, or keep its invite link (`discord.gg/…`) as the address and set **Server** to the server id (the first number in any message link from it). A message link from another server is refused, naming the venue.
 
+## Slack communities
+
+Slack message links look like `https://<workspace>.slack.com/archives/<channel id>/p<message id>`. To record a hand-off's link at a Slack venue, Stump needs the workspace: record the venue by its workspace address (`https://<workspace>.slack.com`), or keep its public join or welcome page as the address and set **Workspace** to the workspace's address (`<workspace>.slack.com`, the part before `/archives/` in any message link from it). A message link from another workspace is refused, naming the venue, and a Slack venue recorded by a page that names no workspace says to set **Workspace**.
+
 ## Routes
 
 From the rules, Stump works out how a post may reach the venue:

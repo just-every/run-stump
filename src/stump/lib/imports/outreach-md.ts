@@ -144,7 +144,7 @@ export function parseOutreachMarkdown(input: string, limits: Partial<ImportLimit
   if (fence) warnings.push({ code: 'unterminated_fence', message: 'A fenced block was still open at the end of the file; its text was dropped.' });
   flush();
 
-  if (!sawStructure) throw new ImportInputError('not_venue_list', 'No venues were found. Put them under a "## Venue directory" heading, each as "### <venue_id> — <name>" followed by "- url: https://…" and "- status: ready" lines (other keys are optional). Excluded venues go under "## Not recommended" with "- reason:". Entries with drafts go under a heading named for the product. docs/import-venues.md has a full example.');
+  if (!sawStructure) throw new ImportInputError('not_venue_list', 'No venues were found. Put them under a "## Venue directory" heading, each as "### <venue_id> — <name>" followed by "- url: https://…" and "- status: ready" lines (other keys are optional). Excluded venues go under "## Not recommended" with "- reason:". Entries with drafts go under a heading named for the product. A spreadsheet is read as a CSV with the same column names instead (Format: Spreadsheet (CSV)). docs/import-venues.md has a full example of each.');
 
   const result = assembleVenueList({ source: 'outreach-md', listDate: header.date, venues, excluded, entries, rejected, warnings });
   compareHeaderCounts(header, result, result.warnings);

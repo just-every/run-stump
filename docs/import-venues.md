@@ -93,10 +93,12 @@ mastodon-freelancers,Freelancers on Mastodon,https://mastodon.social/tags/freela
 
 ## How an import runs
 
-1. Upload the file. The dry run reports how many venues, entries and exclusions it found, and every row it refused with the reason. Nothing is written. A file Stump cannot read at all says what it expected instead.
+1. Choose the file. **Format** follows its extension: a `.csv` file reads as **Spreadsheet (CSV)** and a `.md` file as **Venue list (Markdown)**; for a file named anything else, choose the Format yourself. **Review import** runs the dry run: it reports how many venues, entries and exclusions it found, and every row it refused with the reason. Nothing is written. A file Stump cannot read at all names the format it was read as and says what that format expects.
 2. Apply it. Each venue is created once, with its rules, gates, limit and products. Excluded venues arrive excluded with their reason and alternative.
 
 Every rule from the list is sourced when the row names one rules page and the day it was read. A venue imported without a `posting` rule has no **Publish** route: Stump does not guess whether software may post there, so it offers hand-offs only, and its page says "No posting rule is recorded". Add the column, or set the rule on the venue's page under **Rules**, to open publishing.
+
+The list has no column for a Slack workspace or a Discord server. Before recording a hand-off's link at a Slack or Discord venue, give it the address its message links use: list it by its workspace address (`https://<workspace>.slack.com`) or its `https://discord.com/channels/<server id>` address, or set **Workspace** or **Server** on the venue after the import (see [Venues](/docs/venues)).
 
 Running the same file again changes nothing. Undo removes what the import created and lists the edits made since, which it keeps.
 

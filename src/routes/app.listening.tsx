@@ -185,7 +185,9 @@ function Finding({ finding, rank, more: inThread, watch, focal, act, may, contex
         {more > 0 ? <li className="st-meta st-chip-more" title={chips.slice(1).map(chip => chip.label).join(', ')}>+{more} more {more === 1 ? 'reason' : 'reasons'}</li> : null}
       </ul> : null}
       {/* Opened, a finding shows what it says where it matched, so it can be judged here before leaving for the thread. */}
-      {focal && finding.excerpts.length ? <div className="st-finding-quote" aria-label="Where it matched">{finding.excerpts.map((passage, index) => <p key={index}>{passage}</p>)}</div> : null}
+      {focal && finding.excerpts.length ? <div className="st-finding-quote" aria-label="Where it matched">{finding.excerpts.map((passage, index) => <p key={index}>{passage}</p>)}</div>
+        // A link post has no text to quote: its title is all it says, so it names the page it links to.
+        : focal && finding.linked_url ? <div className="st-finding-quote" aria-label="Where it matched"><p>Only its title matched. It is a link to <a href={finding.linked_url} target="_blank" rel="noopener noreferrer">{siteOf(finding.linked_url)}</a>, with no text of its own.</p></div> : null}
       {focal ? <div className="st-finding-actions">
         {job && !working ? <button type="button" className="st-button primary" onClick={() => setWorking(true)}>{JOB_WORDS[job]} <Icon name="arrowRight" /></button> : null}
         {/* A hand-off goes to a member of a venue: with no venue recorded for this thread's site, the way there is to add it. */}

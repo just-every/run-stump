@@ -2,10 +2,13 @@ import { useState, type FormEvent } from 'react'
 import { FilePick, SelectField } from '../../ui/kit.tsx'
 import { applyPlan, ImportError, importStatus, planFile, undoPlan, type Change, type ImportSourceId, type Kept, type Plan } from './importer.ts'
 
-const SOURCES: Array<{ id: ImportSourceId; label: string; accept: string }> = [
-  { id: 'outreach-md', label: 'Venue list (Markdown)', accept: '.md,.markdown,text/markdown,text/plain' },
-  { id: 'venues-csv', label: 'Spreadsheet (CSV)', accept: '.csv,text/csv' },
+const SOURCES: Array<{ id: ImportSourceId; label: string; extensions: RegExp }> = [
+  { id: 'outreach-md', label: 'Venue list (Markdown)', extensions: /\.(?:md|markdown)$/i },
+  { id: 'venues-csv', label: 'Spreadsheet (CSV)', extensions: /\.csv$/i },
 ]
+/** Either format can be chosen; the file's extension picks the Format to match. */
+const ACCEPT = '.md,.markdown,.csv,text/markdown,text/plain,text/csv'
+const formatOf = (name: string | null) => SOURCES.find(item => name && item.extensions.test(name))?.id ?? null
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 const WORDS: Record<string, string> = {
   source_raw_reader_failed: 'This file is not a venue list Stump can read. Use the Markdown venue list or a CSV with the same column names.',
@@ -45,7 +48,8 @@ function ChangeRow({ change }: { change: Change }) {
 }
 
 // The reader's own words say what it expected (a heading, a column); otherwise the code in plain words.
-const explain = (error: unknown) => error instanceof ImportError ? (OWN_WORDS.has(error.code) ? WORDS[error.code] : null) ?? (typeof error.details.reason === 'string' ? error.details.reason : null) ?? WORDS[error.code] ?? `The import was refused: ${error.code.replace(/_/g, ' ')}.` : 'Something went wrong. Try again.'
+const said = (error: ImportError) => (OWN_WORDS.has(error.code) ? WORDS[error.code] : null) ?? (typeof error.details.reason === 'string' ? error.details.reason : null) ?? WORDS[error.code] ?? `The import was refused: ${error.code.replace(/_/g, ' ')}.`
+const explain = (error: unknown) => error instanceof ImportError ? typeof error.details.format === 'string' ? `Read as ${error.details.format}: ${said(error)}` : said(error) : 'Something went wrong. Try again.'
 /** The earlier imports a refusal names as still holding rows of this file. */
 const holdersOf = (error: unknown) => error instanceof ImportError && error.code === 'earlier_import_holds_records' && Array.isArray(error.details.planIds) ? error.details.planIds.filter((id): id is string => typeof id === 'string') : []
 
@@ -86,7 +90,13 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
     event.preventDefault()
     const file = (new FormData(event.currentTarget).get('file') as File | null)
     if (!file || !file.size) { setError('Choose a file first.'); return }
-    await run(async () => { setPlan(await planFile(source, file)); setApplied(false); setKept(null) })
+    // A refusal names the format it was read as, so a file read the wrong way says which Format to choose.
+    const label = SOURCES.find(item => item.id === source)!.label
+    await run(async () => {
+      try { setPlan(await planFile(source, file)) }
+      catch (cause) { throw cause instanceof ImportError && cause.code === 'source_raw_reader_failed' ? new ImportError(cause.code, { ...cause.details, format: label }) : cause }
+      setApplied(false); setKept(null)
+    })
   }
   // Refused rows are listed on their own; a changed row shows each field before and after, and a conflict is one edited here since the last import.
   const changes = plan?.changes ?? [], conflicts = changes.filter(change => change.conflict), replaced = changes.filter(change => !change.conflict)
@@ -102,7 +112,7 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
     {!plan ? <form onSubmit={review}>
       <div className="st-form">
         <SelectField label="Format" value={source} onChange={event => setSource(event.target.value as ImportSourceId)}>{SOURCES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</SelectField>
-        <FilePick name="file" label="Choose the file" accept={SOURCES.find(item => item.id === source)!.accept} />
+        <FilePick name="file" label="Choose the file" accept={ACCEPT} onChosen={name => { const found = formatOf(name); if (found) setSource(found) }} />
       </div>
       <p className="st-note">Stump reads the file and shows what it would add. Nothing changes until you apply it.</p>
       {error ? <p className="st-error" role="alert">{error}</p> : null}
