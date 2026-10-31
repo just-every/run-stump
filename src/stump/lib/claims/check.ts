@@ -328,6 +328,12 @@ function claimSentences(text: string, ownHosts: readonly string[]): Span[] {
   return out
 }
 
+/** The hosts of the products' own links: bare links to them are links whatever their top-level domain. */
+const ownHostsOf = (products: readonly ProductProfile[] = []) => [...new Set(products.flatMap((p) => (p.urls ?? []).map(hostOfUrl)).filter(Boolean))]
+
+/** The text's sentences exactly as the claim check reads them, with offsets into the text. */
+export const sentencesAsRead = (text: string, products: readonly ProductProfile[] = []): Span[] => claimSentences(text, ownHostsOf(products))
+
 /**
  * Whether a word at `at` starts a sentence: nothing but space, closing quotes or brackets after a sentence's end (or a
  * colon) stands before it. Looks back a bounded way, so a long draft costs no more per word.
@@ -391,7 +397,7 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
   const mentions = extractMentions(input.text, mentionInput)
   const productNames = (input.products ?? []).flatMap((p) => [p.name, ...(p.other_names ?? [])])
   const competitorNames = (input.products ?? []).flatMap((p) => (p.competitors ?? []).flatMap((c) => (typeof c === 'string' ? [c] : [c.name, ...(c.aliases ?? [])])))
-  const ownHosts = [...new Set((input.products ?? []).flatMap((p) => (p.urls ?? []).map(hostOfUrl)).filter(Boolean))]
+  const ownHosts = ownHostsOf(input.products)
   const ctx = { product_names: [...productNames, ...(input.company_names ?? [])], competitor_names: competitorNames, own_hosts: ownHosts }
   // Names that never make a clause say more than a claim: the company's own products and people.
   const known = new Set(

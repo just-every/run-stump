@@ -19,6 +19,8 @@ An owner or admin invites a person by email with their name, role and connection
 
 The owner gives their own connection in first-run setup. An owner or admin sets or changes a teammate's connection from the ⋯ menu on their row in **Settings › Team**; the owner's own is changed only by the owner, and an admin never changes another admin's.
 
+Names on the team follow the same rule: an owner or admin, signed in, records a person's name at the invitation and changes it afterwards (`stump.team.manage` `update` with `display_name`). Stump reads teammates' names as the team's own words when it checks a post's claims, so nobody renames themselves and no agent renames anyone.
+
 Until they sign in, an invited person holds nothing: a hand-off, a draft in their voice or a voice guide for them is refused with "<name> has not accepted their invitation yet".
 
 ### On your own computer

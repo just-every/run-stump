@@ -9,6 +9,7 @@ import { listeningStyles } from '../stump/watches/styles.ts'
 import type { BlockedAuthor, FindingList, FindingView, PollView, WatchList, WatchView } from '../stump/watches/ui-types.ts'
 import { JOB_WORDS, chipsFor, jobOf, pollWords } from '../stump/watches/finding-view.ts'
 import { docsUrl } from '../stump/docs.ts'
+import { instantIn, workingZone, zoneAbbr } from '../stump/ui/zones.ts'
 
 export const Route = createFileRoute('/app/listening')({
   // `act` opens the focal finding's job at once (Today's "Draft a reply" lands here).
@@ -252,13 +253,15 @@ function HandOffForm({ finding, watch, context, onClose }: { finding: FindingVie
   const members = useLoaded(() => runAction<{ items: Array<{ person_id: string; display_name: string | null; eligible: boolean }> }>('stump.venues.members', { action: 'list', venue_id: venue.id }))
   const product = context.products.find(item => watch.product_ids.includes(item.id)) ?? context.products[0] ?? null
   const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+  const [zone] = useState(workingZone)
   const { busy, message, run } = useRun()
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
-    const due = new Date(`${String(form.get('due'))}T17:00:00`)
+    // Due at 5 PM on the day in the zone this person schedules in, kept with the hand-off so everyone reads the same time.
+    const due = new Date(instantIn(`${String(form.get('due'))}T17:00`, zone))
     const made = await run(() => runAction<{ id: string }>('stump.handoffs.prepare', { action: 'prepare', venue_id: venue.id, person_id: String(form.get('person')), product_id: product!.id,
-      thread_url: finding.url, due_at: due.toISOString(), lapse: 'expire', idempotency_key: key() }))
+      thread_url: finding.url, due_at: due.toISOString(), time_zone: zone, lapse: 'expire', idempotency_key: key() }))
     if (made) await navigate({ to: '/app/handoffs/$handoffId', params: { handoffId: made.id } })
   }
   if (!product) return <div className="st-finding-work"><p className="st-meta">Add your product first. <a href="/app/settings/brand">Brand</a></p></div>
@@ -268,7 +271,7 @@ function HandOffForm({ finding, watch, context, onClose }: { finding: FindingVie
     <div className="st-form">
       <SelectField label={<>Who posts in {venue.name}</>} name="person" required defaultValue={people.find(person => person.eligible)?.person_id ?? people[0]?.person_id}>
         {people.map(person => <option key={person.person_id} value={person.person_id}>{person.display_name ?? 'Teammate'}{person.eligible ? '' : ' (not yet eligible)'}</option>)}</SelectField>
-      <label className="st-field">Due<input name="due" type="date" required defaultValue={tomorrow} min={new Date().toISOString().slice(0, 10)} /></label>
+      <label className="st-field">Due (5 PM {zoneAbbr(zone, Date.now())})<input name="due" type="date" required defaultValue={tomorrow} min={new Date().toISOString().slice(0, 10)} /></label>
     </div>
     <Outcome message={message} />
     <div className="st-actions">

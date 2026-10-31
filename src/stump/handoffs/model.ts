@@ -28,6 +28,8 @@ export interface HandoffRow {
   own_words_required: number; attestation_required: number; join_steps: string; next_open_at: number | null; hold: string | null; thread_url: string | null
   url: string | null; ledger_id: string | null; campaign: string | null; agent: string | null; revision: number; created_by: string; created_at: number; updated_at: number
   route: 'handoff_draft' | 'handoff_brief' | null; recommends: number; confirmation: 'network' | 'person' | null; posted_at: number | null; attested_at: number | null
+  /** The zone its due time was set in and is shown in; null on a hand-off prepared before zones were kept. */
+  time_zone: string | null
 }
 
 /** Whoever moves a hand-off: a person (and their agent), or the scheduled tick with neither. */
@@ -78,7 +80,7 @@ export function handoffRecord(row: HandoffRow, venue: VenueRow, extra: { person_
   return {
     id: row.id, venue_id: row.venue_id, venue: { id: venue.id, name: venue.name, url: venue.url, kind: venue.kind, platform: venue.platform, how_to_post: howTo, shared_limit: limitOf(venue) },
     person_id: row.person_id, person_name: extra.person_name, product_id: row.product_id, product_name: extra.product_name, item_id: row.item_id, state: row.state, route: row.route,
-    due_at: iso(row.due_at), lapse: row.lapse, rules: rulesOf(venue), why: venue.why, thread_url: row.thread_url,
+    due_at: iso(row.due_at), time_zone: row.time_zone, lapse: row.lapse, rules: rulesOf(venue), why: venue.why, thread_url: row.thread_url,
     facts: json<Fact[]>(row.facts, []), disclosure_line: row.disclosure_line, draft_text: extra.draft_text, link: extra.link ?? null, talking_points: json<string[]>(row.talking_points, []),
     own_words: row.own_words, own_words_required: extra.draft_text === null, attestation_required: row.attestation_required === 1, recommends: row.recommends === 1,
     join_steps: json<string[]>(row.join_steps, []), next_open_at: iso(row.next_open_at), hold: json<Hold | null>(row.hold, null), flags: extra.flags,

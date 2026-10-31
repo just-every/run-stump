@@ -478,6 +478,10 @@
     {
       "id": "core/0735_stump_product_match_case.sql",
       "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
+    },
+    {
+      "id": "core/0740_stump_handoffs_time_zone.sql",
+      "buyerSteps": "A new installation applies it in order through rer setup locally and rer deploy on its own D1 database. There is nothing earlier to upgrade from."
     }
   ],
   "breaking": false,

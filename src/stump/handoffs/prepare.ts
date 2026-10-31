@@ -17,11 +17,14 @@ import { disclosureFor, factsFor, nextOpening, outsideVoice, talkingPoints } fro
 import { duplicateHold, limitHold, ruleHold, ruleHoldJson, type RuleHold } from './holds.ts'
 import { notOnVenueReason, onVenue, parseLink } from './link.ts'
 import { history } from './model.ts'
+import { validZone } from '../publish/time.ts'
 
 export const TOOL = 'stump.handoffs.prepare'
 
 export interface Plan {
   venue: VenueRow; person: StumpPerson; product: Brand['products'][number]; brand: Brand; due: number
+  /** The zone the due time was set in and is shown in to everyone: the caller's `time_zone`, else UTC, as scheduling does. */
+  zone: string
   route: 'handoff_draft' | 'handoff_brief'; d8: boolean; writes: boolean
   /** Text the call asked for or gave that the brief does not use, and the rule why (D-3, D-8). */
   unused: { field: 'generate' | 'text'; rule: 'D-3' | 'D-8'; source: string; because: string } | null
@@ -57,6 +60,8 @@ export async function plan(ctx: ActionContext, args: Args): Promise<Plan> {
   }
   const due = Date.parse(String(args.due_at))
   if (!Number.isFinite(due) || due <= ctx.now()) refuse('invalid_arguments', { field: 'due_at', reason: 'Give a time in the future.' })
+  const zone = args.time_zone === undefined ? 'UTC' : String(args.time_zone)
+  if (!validZone(zone)) refuse('invalid_arguments', { field: 'time_zone', reason: 'Give a time zone such as America/Los_Angeles.' })
   if (typeof args.thread_url === 'string' && !onVenue(venue, parseLink(args.thread_url))) refuse('link_not_on_venue', { field: 'thread_url', venue_id: venue.id, venue: venue.name, url: args.thread_url, reason: notOnVenueReason(venue, parseLink(args.thread_url)) })
 
   // D-8: an outside voice recommending the product, or one Stump would write about it for, gets talking points and facts only.
@@ -70,7 +75,7 @@ export async function plan(ctx: ActionContext, args: Args): Promise<Plan> {
     ? d8 ? { field: asked, rule: 'D-8', source: 'STUMP-HANDOFF-001', because: `${person.display_name} is not a founder or employee: they post their own words from talking points and facts.` }
       : { field: asked, rule: 'D-3', source: rulesOf(venue).ai_text?.source_url ?? 'STUMP-VENUE-002', because: `${venue.name}: ${draftReason?.because ?? 'AI-written text is not allowed.'} The member writes their own words from talking points and facts.` }
     : null
-  return { venue, person, product, brand, due, route, d8, writes: !!asked && route === 'handoff_draft', unused }
+  return { venue, person, product, brand, due, zone, route, d8, writes: !!asked && route === 'handoff_draft', unused }
 }
 
 /**
@@ -105,7 +110,7 @@ export async function classes(args: Args, ctx: ActionContext) {
 /** Writes the hand-off: the draft item through the drafting module where the route takes one, then the brief. */
 export async function prepare(ctx: ActionContext, args: Args, planned: Plan): Promise<string> {
   const { eligibility, full } = await admit(ctx, planned)
-  const { venue, person, product, brand, due, route, d8, unused } = planned
+  const { venue, person, product, brand, due, zone, route, d8, unused } = planned
   const disclosure = disclosureFor(venue, person, brand, product.name)
   let itemId: string | null = null, draft: string | null = null, used: string[] = [], flags: Array<{ code: string; blocking?: unknown; matches?: unknown }> = []
   if (planned.writes) {
@@ -134,12 +139,12 @@ export async function prepare(ctx: ActionContext, args: Args, planned: Plan): Pr
   const holdJson = hold ? ruleHoldJson(hold, now) : null
   await ctx.db.batch([
     ctx.db.prepare(`INSERT INTO stump_handoffs(id,item_id,venue_id,person_id,product_id,state,due_at,lapse,rules,facts,disclosure_line,draft_text,talking_points,own_words_required,
-      attestation_required,join_steps,next_open_at,hold,thread_url,campaign,agent,created_by,created_at,updated_at,route,recommends) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      attestation_required,join_steps,next_open_at,hold,thread_url,campaign,agent,created_by,created_at,updated_at,route,recommends,time_zone) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(id, itemId, venue.id, person.id, product.id, state, due, String(args.lapse), venue.rules, JSON.stringify(facts), disclosure, draft,
         JSON.stringify(draft === null ? talkingPoints(venue, product, facts, disclosure) : []), draft === null ? 1 : 0, d8 ? 1 : 0, JSON.stringify(eligibility.join_steps),
         opening, holdJson, (args.thread_url as string | undefined) ?? null, (args.campaign as string | undefined) ?? null,
-        ctx.agent ? JSON.stringify({ id: ctx.agent.id, name: ctx.agent.name }) : null, ctx.person.id, now, now, route, args.recommends === true ? 1 : 0),
-    history(actor, id, 'prepared', null, state, { route, lapse: args.lapse, due_at: new Date(due).toISOString(), item_id: itemId,
+        ctx.agent ? JSON.stringify({ id: ctx.agent.id, name: ctx.agent.name }) : null, ctx.person.id, now, now, route, args.recommends === true ? 1 : 0, zone),
+    history(actor, id, 'prepared', null, state, { route, lapse: args.lapse, due_at: new Date(due).toISOString(), time_zone: zone, item_id: itemId,
       ...(hold ? { rule: hold.rule, reason: hold.reason, ...(hold.next_open_at !== undefined ? { next_open_at: hold.next_open_at } : {}), ...(hold.matches ? { matches: hold.matches } : {}) } : {}),
       ...(eligibility.join_first ? { join_first: true } : {}), ...(d8 ? { d8: true } : {}),
       ...(unused ? { text_not_used: { field: unused.field, rule: unused.rule, source: unused.source, reason: unused.because } } : {}) }),

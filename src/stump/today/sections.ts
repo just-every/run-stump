@@ -39,17 +39,18 @@ export function dueToday(queue: Handoff[], personId: string, day: Day) {
   const due = active.filter(handoff => at(handoff.due_at) < day.end)
     .sort((a, b) => Number(b.person_id === personId) - Number(a.person_id === personId) || at(a.due_at) - at(b.due_at))
   const rows: DueRow[] = due.map(handoff => {
-    const when = handoff.due_at!, mine = handoff.person_id === personId
+    // Its time in the zone it was set in; a day of its own when that zone's day is not this person's.
+    const when = handoff.due_at!, mine = handoff.person_id === personId, zone = handoff.time_zone ?? day.zone
     const name = mine ? 'You' : firstName(handoff.person_name)
     return {
       id: handoff.id, title: rowTitle(handoff), mine,
-      due: at(when) < day.start ? `Was due ${dayTimeOf(when, day.zone)}` : `Due ${timeIn(when, day.zone)}`,
+      due: at(when) < day.start ? `Was due ${dayTimeOf(when, zone)}` : zone === day.zone ? `Due ${timeIn(when, zone)}` : `Due ${dayTimeOf(when, zone)}`,
       who: handoff.state === 'join_first' ? `${name} ${mine ? 'join' : 'joins'} first, then ${mine ? 'post' : 'posts'} by hand` : `${name} ${mine ? 'post' : 'posts'} by hand`,
     }
   })
   const next = active.filter(handoff => at(handoff.due_at) >= day.end)
     .sort((a, b) => Number(b.person_id === personId) - Number(a.person_id === personId) || at(a.due_at) - at(b.due_at))[0]
-  return { rows, next: next ? { id: next.id, title: rowTitle(next), when: dateOf(next.due_at!, day.zone) } : null }
+  return { rows, next: next ? { id: next.id, title: rowTitle(next), when: dateOf(next.due_at!, next.time_zone ?? day.zone) } : null }
 }
 
 /** A held row: its name, then one meta line (H16). `thread` links the words in the meta that name a venue's promotion thread; the address itself is never printed. */

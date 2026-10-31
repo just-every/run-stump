@@ -6,7 +6,7 @@ import { Chip, Disc, Outcome, pageName, proofText, useLoaded } from '../../ui/ki
 import { extractUrls } from '../../lib/text/index.ts'
 import { Icon, type IconName } from '../../ui/icons.tsx'
 import { handoffStyles } from './styles.ts'
-import { briefTitle, dayOf, dueLine, LAPSE_AT, limitLine, ruleLines, say, STATE, type Handoff } from './words.ts'
+import { briefTitle, dayOf, dueLine, LAPSE_AT, limitLine, ruleLines, say, STATE, zoneOf, type Handoff } from './words.ts'
 
 const key = () => crypto.randomUUID()
 
@@ -55,7 +55,7 @@ export function BriefPage({ handoffId }: { handoffId: string }) {
           <h1 id="brief-title">{briefTitle(handoff)}</h1>
           <p className="st-ho-sub">
             {/* The company's own limit for the venue, shared by everyone who posts there, belongs with when it is due. */}
-            <span>{[handoff.state === 'posted' ? `Posted ${dayOf(handoff.posted_at)}` : dueLine(handoff.due_at), handoff.person_name, limitLine(handoff.venue.shared_limit)].filter(Boolean).join(' · ')}</span>
+            <span>{[handoff.state === 'posted' ? `Posted ${dayOf(handoff.posted_at)}` : dueLine(handoff.due_at, zoneOf(handoff)), handoff.person_name, limitLine(handoff.venue.shared_limit)].filter(Boolean).join(' · ')}</span>
             {/* Posted says itself once, in the line before it: the notice under it carries the link, with no second "Posted". */}
             {handoff.state !== 'open' && handoff.state !== 'posted' ? <Chip tone={STATE[handoff.state]!.tone} tick={STATE[handoff.state]!.tick}>{STATE[handoff.state]!.label}</Chip> : null}
           </p>
@@ -102,7 +102,7 @@ function Notice({ handoff, mine, onChanged }: { handoff: Handoff; mine: boolean;
   if (handoff.state === 'held' && handoff.hold) return <div className="st-ho-notice held" role="note">
     <h2>Held</h2>
     <p>{handoff.hold.kind === 'rule' ? handoff.hold.reason : `${handoff.hold.by_name ?? 'Someone'}${handoff.hold.agent ? ` (${handoff.hold.agent.name})` : ''}: ${handoff.hold.reason}`}</p>
-    {handoff.hold.review_at ? <p>{LAPSE_AT[handoff.lapse ?? 'expire']} {dueLine(handoff.hold.review_at).replace(/^Due /, '')}.</p> : null}
+    {handoff.hold.review_at ? <p>{LAPSE_AT[handoff.lapse ?? 'expire']} {dueLine(handoff.hold.review_at, zoneOf(handoff)).replace(/^Due /, '')}.</p> : null}
     {handoff.hold.next_open_at ? <p>{handoff.venue.name} next has room {dayOf(handoff.hold.next_open_at)}.</p> : null}
     {handoff.hold.kind === 'person' ? <div className="st-actions">
       <button className="st-button" type="button" disabled={busy} onClick={() => void act(() => runAction('stump.handoffs.manage', { action: 'release', handoff_id: handoff.id, idempotency_key: key(), expected_revision: handoff.revision }), 'Back in the queue.').then(done => { if (done) onChanged() })}>Release</button>

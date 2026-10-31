@@ -38,7 +38,7 @@ export const handoffTools: StumpTool[] = [{
     prepare: strict({
       roles: CONTRIBUTORS,
       properties: {
-        venue_id: id, person_id: id, product_id: id, thread_url: url, due_at: when, lapse: { enum: [...LAPSES] },
+        venue_id: id, person_id: id, product_id: id, thread_url: url, due_at: when, time_zone: { type: 'string', minLength: 1, maxLength: 64 }, lapse: { enum: [...LAPSES] },
         text: { type: 'string', minLength: 1, maxLength: 25_000 }, generate: { type: 'boolean' }, recommends: { type: 'boolean' }, campaign: { type: 'string', minLength: 1, maxLength: 120 },
       },
       required: ['venue_id', 'person_id', 'product_id', 'due_at', 'lapse'],
