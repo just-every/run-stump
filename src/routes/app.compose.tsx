@@ -278,7 +278,7 @@ function ComposePage() {
     <ul className="st-check-list">
       {matched.size ? <li className="st-check-matched"><Disc icon="check" /><span>{claimsMatched}</span></li> : null}
       {(data?.claims ?? []).filter(claim => matched.has(claim.id)).map(claim => <li key={claim.id} className="st-check-detail"><span>{claim.text}{proofLabel(claim.proof) ? ` · ${proofLabel(claim.proof)}` : ''}</span></li>)}
-      {[...flagRows.values()].map(({ flag, item }) => <li key={`${flag.code}-${String(flag.text ?? flag.network)}`} className="danger"><Disc icon="alert" tone="danger" /><span>
+      {[...flagRows.entries()].map(([id, { flag, item }]) => <li key={id} className="danger"><Disc icon="alert" tone="danger" /><span>
         {flagLine(flag, spanOf(flag, claimsOf()))}
         {flag.code === 'near_duplicate' ? <Repeats posts={postsOf(flag, data?.repeats ?? new Map())} /> : null}
         {flag.code === 'disclosure_missing' && typeof flag.line === 'string' ? <span className="st-fix">

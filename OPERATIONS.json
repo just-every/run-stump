@@ -102,7 +102,7 @@
         "scripts/installer/local.mjs",
         "scripts/stump/archive-policy.mjs"
       ],
-      "effects": "Writes every Stump record (people, venues with rules and members, products, claims, voice guides, items with revisions, hand-offs, the ledger with versions, watches, findings, accounts and settings) to one new versioned archive with no token or key: connected accounts wait for their owners to reconnect and scheduled items are paused, as a restore leaves them. It runs while the app is stopped, since rer holds the checkout while rer dev runs. Policy in scripts/stump/archive-policy.mjs; see SEED-COMMAND-CONTRACT.md for the archive contract."
+      "effects": "Writes every Stump record (people, venues with rules and members, products, claims, voice guides, items with revisions, hand-offs, the ledger with versions, watches, findings, accounts and settings) to one new versioned archive with no network token, app secret or agent credential; it carries the installation's erasure key, so a restored installation keeps every erasure in force. Connected accounts wait for their owners to reconnect and scheduled items are paused, as a restore leaves them. It runs while the app is stopped, since rer holds the checkout while rer dev runs. Policy in scripts/stump/archive-policy.mjs; see SEED-COMMAND-CONTRACT.md for the archive contract."
     },
     "import": {
       "argv": [

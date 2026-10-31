@@ -476,7 +476,7 @@
       "executable": false
     },
     "docs/disclosure.md": {
-      "sha256": "9facd83529f7fc25028c4c12e1ad63332525e697755a38d8b71b3c08dc432e1d",
+      "sha256": "16f071211e53a34f491548aee762a030d3cf75cadcb211d4da1e8e9f1a18bf29",
       "executable": false
     },
     "docs/handoffs.md": {
@@ -792,7 +792,7 @@
       "executable": false
     },
     "OPERATIONS.json": {
-      "sha256": "2d9d3df12a1ac6477a47c775de63089ff270887835cec061a3dfc254ca1c6409",
+      "sha256": "7188d8afbabb3012bc4ce712ca50e5ca2edbc02867583f09ac9253156a3e359e",
       "executable": false
     },
     "OPERATIONS.md": {
@@ -960,7 +960,7 @@
       "executable": false
     },
     "scripts/installer/local.mjs": {
-      "sha256": "0d371620856b2280db2b2d93ed9f6308e3fb02887d62afa35567e97368653ccc",
+      "sha256": "2855f3428bde6eeba59d984a5b8420dcb9863cd7c3207e42cb56143cb87cd2a4",
       "executable": false
     },
     "scripts/installer/seed.mjs": {
@@ -3372,7 +3372,7 @@
       "executable": false
     },
     "src/routes/app.compose.tsx": {
-      "sha256": "193995fc85161bda6dbc9a5fa5114d4992af0fe816afb83b4ae857c3d0e81791",
+      "sha256": "219bb2a76fded28d83f4abbf86b2834aefad56153e4e7bdbc5ded16e9b8c1a9f",
       "executable": false
     },
     "src/routes/app.connected.$network.tsx": {
@@ -3916,7 +3916,7 @@
       "executable": false
     },
     "src/stump/lib/claims/disclosure.ts": {
-      "sha256": "a1130a7f8f38e661b8eb83979643a2069f6d5cb68caa757481dc0de30c0fff9e",
+      "sha256": "ba78e4a01f16449e4d12814b0b529cb948eb866b028d3920afb59555a88b5f41",
       "executable": false
     },
     "src/stump/lib/claims/extract.ts": {
@@ -4496,7 +4496,7 @@
       "executable": false
     },
     "src/stump/tools/team.ts": {
-      "sha256": "c48b6d89672420334a3845ee27ccc2d64ae4e7301046c95b9bfa150792e90fe6",
+      "sha256": "370e585ce9895e46f65b69b2b6b3bb2df7e6a64f6716373199e99cf16b91f3fd",
       "executable": false
     },
     "src/stump/tools/venues.ts": {
