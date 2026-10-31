@@ -166,9 +166,12 @@ export function goingOut(items: ItemRecord[], accounts: Map<string, Account>, da
     })
 }
 
-/** The finding most worth a look across every watch, as the plate shows one. */
+/**
+ * The finding most worth a look across every watch, as the plate shows one. A passing mention (a watch term deep in a
+ * thread about something else) is never worth answering, however few findings there are: it stays in Listening.
+ */
 export function worthAnswering(lists: FindingView[][], limit = 1): FindingView[] {
-  return lists.flat().sort((a, b) => b.relevance - a.relevance || at(b.published_at) - at(a.published_at)).slice(0, limit)
+  return lists.flat().filter(finding => !finding.passing).sort((a, b) => b.relevance - a.relevance || at(b.published_at) - at(a.published_at)).slice(0, limit)
 }
 
 export function ago(iso: string | null, now: number): string {

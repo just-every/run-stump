@@ -1,5 +1,7 @@
 Write a post once and Stump opens a variant for each account you pick, side by side. Each variant counts its text the way its network does and is checked against its network's limits and its venue's rules.
 
+Variants open only for connected accounts, so connect one first in **Settings › Accounts** ([Accounts](/docs/accounts)). Until one is connected, **Accounts** in a new post says so with a link there, and **Open variants** stays off.
+
 ## One post, every network
 
 1. Write the master post.

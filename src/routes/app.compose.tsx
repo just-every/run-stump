@@ -323,7 +323,8 @@ function ComposePage() {
             ? <>No AI provider yet. <Link to="/app/settings/connections">Set one in Settings › Connections</Link> to draft from a source.</>
             : <>No AI provider yet. An owner or admin sets one in Settings › Connections to draft from a source.</>}</p> : null}
           <h3 className="st-sub"><Disc icon="people" />Accounts</h3>
-          {data && !accounts.length ? <p className="st-meta"><Link to="/app/settings/accounts">Connect an account</Link> to post to it.</p> : null}
+          {/* Variants open per connected account, so with none the way to connect one is named where it is (docs/compose.md). */}
+          {data && !accounts.length ? <p className="st-meta">No account yet. <Link to="/app/settings/accounts">Connect one in Settings › Accounts</Link> to open variants and post.</p> : null}
           <div className="st-chips">
             {accounts.filter(account => !preview || chosen.includes(account.id)).map(account =>
               <button key={account.id} className="st-chip" type="button" aria-pressed={chosen.includes(account.id)} disabled={!!preview}

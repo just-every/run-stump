@@ -1,18 +1,19 @@
-import { compileTerms, matchTerms, type Finding, type HandleRef, type RankContext } from '../lib/discovery/index.ts'
+import { compileTerms, matchTerms, type Finding, type HandleRef, type RankContext, type TermInput } from '../lib/discovery/index.ts'
 import type { WatchRow } from './store.ts'
 
-export interface ProductInfo { id: string; name: string; names: string[]; competitors: string[] }
+/** A product as listening reads it; `match_case` when its names count only written as recorded ("Rota", never "a month rota"). */
+export interface ProductInfo { id: string; name: string; names: string[]; competitors: string[]; match_case: boolean }
 export interface Mention { kind: 'product' | 'competitor'; product_id: string; product: string; matched: string }
 
-interface ProductRow { id: string; name: string; names: string; competitors: string }
+interface ProductRow { id: string; name: string; names: string; competitors: string; match_case: number | null }
 
 export async function loadProducts(db: D1Database): Promise<ProductInfo[]> {
-  const rows = (await db.prepare('SELECT id,name,names,competitors FROM stump_products ORDER BY name,id').all<ProductRow>()).results
-  return rows.map(row => ({ id: row.id, name: row.name, names: strings(row.names), competitors: strings(row.competitors) }))
+  const rows = (await db.prepare('SELECT id,name,names,competitors,match_case FROM stump_products ORDER BY name,id').all<ProductRow>()).results
+  return rows.map(row => ({ id: row.id, name: row.name, names: strings(row.names), competitors: strings(row.competitors), match_case: Number(row.match_case ?? 0) === 1 }))
 }
 
 const strings = (json: string): string[] => { try { const value: unknown = JSON.parse(json); return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim() !== '') : [] } catch { return [] } }
-const namesOf = (product: ProductInfo) => [product.name, ...product.names]
+const namesOf = (product: ProductInfo): TermInput[] => [product.name, ...product.names].map(name => product.match_case ? { text: name, match_case: true as const } : name)
 
 /**
  * Handles recorded for the company's own people and connected accounts (STUMP-WATCH-013.3): a post by

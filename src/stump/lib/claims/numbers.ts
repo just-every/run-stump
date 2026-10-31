@@ -203,12 +203,17 @@ export function extractNumbers(text: string): FoundNumber[] {
   return out.sort((a, b) => a.start - b.start).map((n) => ({ ...n, start: at(n.start), end: at(n.end) }))
 }
 
-/** Remove number spans from a text (used before tokenising for word matching). */
+/**
+ * Remove number spans from a text (used before tokenising for word matching). A count keeps the
+ * word it counts: "a month rota for 20 staff in 10 minutes" reads as "a month rota for staff in
+ * minutes", so a sentence that counts the same things in other numbers is still the claim's, and
+ * its numbers are then compared with the claim's and its proof's.
+ */
 export function stripNumbers(text: string, numbers: readonly FoundNumber[]): string {
   let out = ''
   let cursor = 0
   for (const n of numbers) {
-    out += `${text.slice(cursor, n.start)} `
+    out += `${text.slice(cursor, n.start)} ${n.kind === 'count' && n.unit ? `${n.unit} ` : ''}`
     cursor = n.end
   }
   return out + text.slice(cursor)

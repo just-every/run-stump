@@ -5,19 +5,33 @@
  * "orbital" and "Ünïcode" matches "ünïcode". CJK and Thai terms match inside runs of text because
  * those scripts do not separate words with spaces.
  *
+ * A single-word `none` term also keeps out the word's other forms, since it names a topic to leave
+ * out: "hiring" keeps out "hire", "hires", "hired" and "hirer" too. `all` and `any` terms match as
+ * written. A term given as `{ text, match_case: true }` (a product name that is also an everyday
+ * word, such as "Rota") matches only with the capitals it is written with.
+ *
  * Sources that search remotely (HN's Algolia index, Bluesky) are fuzzy, so every candidate is
  * re-checked here before it becomes a finding.
  */
 
+/** A term that matches only with its own capitals: "Rota" and never "a month rota". */
+export interface CasedTerm {
+  text: string
+  match_case: true
+}
+export type TermInput = string | CasedTerm
+
 export interface TermLogic {
-  all?: string[]
-  any?: string[]
-  none?: string[]
+  all?: TermInput[]
+  any?: TermInput[]
+  none?: TermInput[]
 }
 
 interface CompiledTerm {
   text: string
   re: RegExp
+  /** Matched against the text with its capitals kept. */
+  cased: boolean
 }
 
 export interface CompiledTerms {
@@ -57,7 +71,12 @@ const WORD = '\\p{L}\\p{N}\\p{M}_'
 const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}]/u
 
 export function normalizeForMatch(s: string): string {
-  return s.normalize('NFKC').toLowerCase().replace(/[‘’ʼ]/g, "'").replace(/[“”]/g, '"')
+  return normalizeCased(s).toLowerCase()
+}
+
+/** The text as normalizeForMatch reads it, with its capitals kept. */
+function normalizeCased(s: string): string {
+  return s.normalize('NFKC').replace(/[‘’ʼ]/g, "'").replace(/[“”]/g, '"')
 }
 
 function cleanTerm(raw: string): string {
@@ -68,30 +87,73 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
 }
 
-function compileOne(text: string): CompiledTerm {
-  const norm = normalizeForMatch(text)
+/** A lower-case word of Latin letters, the only kind whose other forms are spelled by rule here. */
+const PLAIN_WORD = /^[a-z]{3,}$/
+
+/**
+ * A word and its regular other forms: "hire" -> hire, hires, hired, hiring, hirer, hirers; "hiring" and
+ * "hired" -> the same. A stem cut from "-ing" or "-ed" is never a form on its own, so "evening" keeps out
+ * "evenings" and never "even". A plural of five letters or more stands for its singular ("bills" -> "bill").
+ */
+export function wordForms(word: string): string[] {
+  const forms = new Set<string>([word])
+  const consonant = (c: string | undefined) => c !== undefined && !'aeiou'.includes(c)
+  /** Forms built on a stem: a suffix always follows it, and an "e" the stem dropped comes back. */
+  const onStem = (stem: string) => {
+    for (const end of ['e', 'es', 'ed', 'ing', 'er', 'ers']) forms.add(stem + end)
+    const last = stem[stem.length - 1]
+    // "stopp" (from "stopping") is "stop" with its last letter doubled.
+    if (stem.length >= 4 && last === stem[stem.length - 2] && consonant(last)) onBase(stem.slice(0, -1))
+  }
+  /** Forms of a word as it stands. */
+  const onBase = (base: string) => {
+    forms.add(base)
+    if (base.endsWith('e')) for (const end of ['s', 'd', 'r', 'rs']) forms.add(base + end)
+    else for (const end of ['s', 'es', 'ed', 'er', 'ers']) forms.add(base + end)
+    const stem = base.endsWith('e') ? base.slice(0, -1) : base
+    forms.add(`${stem}ing`)
+    if (base.endsWith('y') && consonant(base[base.length - 2])) for (const end of ['ies', 'ied', 'ier', 'iers']) forms.add(base.slice(0, -1) + end)
+  }
+  if (word.length > 5 && word.endsWith('ing')) onStem(word.slice(0, -3))
+  else if (word.length > 4 && word.endsWith('ied')) onBase(`${word.slice(0, -3)}y`)
+  else if (word.length > 4 && word.endsWith('ed')) onStem(word.slice(0, -2))
+  else if (word.length > 4 && word.endsWith('ies')) onBase(`${word.slice(0, -3)}y`)
+  else if (word.length >= 5 && word.endsWith('s') && !word.endsWith('ss')) onBase(word.slice(0, -1))
+  else onBase(word)
+  // The word's own plural: "evenings" for "evening".
+  if (!word.endsWith('s')) forms.add(`${word}s`)
+  return [...forms]
+}
+
+function compileOne(text: string, options: { cased?: boolean; forms?: boolean } = {}): CompiledTerm {
+  const cased = options.cased === true
+  const norm = cased ? normalizeCased(text) : normalizeForMatch(text)
   const chars = [...norm]
   const first = chars[0]
   const last = chars[chars.length - 1]
   const startsWord = new RegExp(`[${WORD}]`, 'u').test(first) && !UNSPACED.test(first)
   const endsWord = new RegExp(`[${WORD}]`, 'u').test(last) && !UNSPACED.test(last)
-  const body = norm.split(' ').map(escapeRegExp).join('\\s+')
+  const body = options.forms && !cased && PLAIN_WORD.test(norm)
+    ? `(?:${wordForms(norm).sort((a, b) => b.length - a.length).join('|')})`
+    : norm.split(' ').map(escapeRegExp).join('\\s+')
   const re = new RegExp(`${startsWord ? `(?<![${WORD}])` : ''}${body}${endsWord ? `(?![${WORD}])` : ''}`, 'u')
-  return { text, re }
+  return { text, re, cased }
 }
 
-function compileList(list: string[] | undefined, label: string): CompiledTerm[] {
+function compileList(list: TermInput[] | undefined, label: string, forms = false): CompiledTerm[] {
   const seen = new Set<string>()
   const out: CompiledTerm[] = []
   for (const raw of list ?? []) {
-    if (typeof raw !== 'string') throw new TermError(`A ${label} term is not text`)
-    const t = cleanTerm(raw)
+    const cased = typeof raw === 'object' && raw !== null && raw.match_case === true
+    const value = typeof raw === 'string' ? raw : cased ? raw.text : undefined
+    if (typeof value !== 'string') throw new TermError(`A ${label} term is not text`)
+    const t = cleanTerm(value)
     if (!t) continue
     if (t.length > MAX_TERM_LENGTH) throw new TermError(`A ${label} term is longer than ${MAX_TERM_LENGTH} characters`)
-    const key = normalizeForMatch(t)
+    const key = `${cased ? 'cased:' : ''}${cased ? normalizeCased(t) : normalizeForMatch(t)}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push(compileOne(t))
+    out.push(compileOne(t, { cased, forms }))
   }
   return out
 }
@@ -99,7 +161,7 @@ function compileList(list: string[] | undefined, label: string): CompiledTerm[] 
 export function compileTerms(logic: TermLogic | CompiledTerms): CompiledTerms {
   if ('compiled' in logic && logic.compiled === true) return logic
   const l = logic as TermLogic
-  const compiled: CompiledTerms = { compiled: true, all: compileList(l.all, 'all-of'), any: compileList(l.any, 'any-of'), none: compileList(l.none, 'none-of') }
+  const compiled: CompiledTerms = { compiled: true, all: compileList(l.all, 'all-of'), any: compileList(l.any, 'any-of'), none: compileList(l.none, 'none-of', true) }
   if (compiled.all.length + compiled.any.length + compiled.none.length > MAX_TERMS) {
     throw new TermError(`A watch holds at most ${MAX_TERMS} terms`)
   }
@@ -115,10 +177,15 @@ const SEP = '\n⁣\n'
 /** Test one finding's text areas against the term logic. */
 export function matchTerms(terms: CompiledTerms, hay: Haystack): TermMatch {
   const areas = (['title', 'text', 'links', 'transcript'] as Area[]).filter((a) => hay[a])
+  const cased: Partial<Record<Area, string>> = {}
   const normalized: Partial<Record<Area, string>> = {}
-  for (const a of areas) normalized[a] = normalizeForMatch(hay[a] as string)
+  for (const a of areas) {
+    cased[a] = normalizeCased(hay[a] as string)
+    normalized[a] = (cased[a] as string).toLowerCase()
+  }
   const whole = areas.map((a) => normalized[a]).join(SEP)
-  const found = (t: CompiledTerm) => t.re.test(whole)
+  const wholeCased = areas.map((a) => cased[a]).join(SEP)
+  const found = (t: CompiledTerm) => t.re.test(t.cased ? wholeCased : whole)
 
   const allFound = terms.all.filter(found)
   const missing = terms.all.filter((t) => !allFound.includes(t))
@@ -126,7 +193,7 @@ export function matchTerms(terms: CompiledTerms, hay: Haystack): TermMatch {
   const noneFound = terms.none.filter(found)
   const unconstrained = !hasPositiveTerms(terms)
   const matched = [...allFound, ...anyFound]
-  const matched_in = areas.filter((a) => matched.some((t) => t.re.test(normalized[a] as string)))
+  const matched_in = areas.filter((a) => matched.some((t) => t.re.test((t.cased ? cased[a] : normalized[a]) as string)))
 
   const matches = missing.length === 0 && (terms.any.length === 0 || anyFound.length > 0) && noneFound.length === 0
   return {
@@ -145,12 +212,13 @@ export function matchTerms(terms: CompiledTerms, hay: Haystack): TermMatch {
  * transcript itself is not stored.
  */
 export function matchExcerpts(terms: CompiledTerms, text: string, max = 4, radius = 90): string[] {
-  const norm = normalizeForMatch(text)
+  const kept = normalizeCased(text)
+  const norm = kept.toLowerCase()
   // NFKC can change lengths; slice the original only when offsets still line up.
   const shown = norm.length === text.length ? text : norm
   const spans: Array<[number, number]> = []
   for (const t of [...terms.all, ...terms.any]) {
-    const hit = t.re.exec(norm)
+    const hit = t.re.exec(t.cased ? kept : norm)
     if (!hit) continue
     let start = Math.max(0, hit.index - radius)
     let end = Math.min(shown.length, hit.index + hit[0].length + radius)

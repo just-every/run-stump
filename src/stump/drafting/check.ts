@@ -142,7 +142,10 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   // One flag per place in the text: two products avoiding the same word flag it once.
   const avoided = new Set<string>()
   const unmatched = new Map(claimCheck.claims.filter(finding => finding.status === 'unmatched').map(finding => [`${finding.start}:${finding.end}`, finding.because ?? []]))
-  for (const flag of claimCheck.flags) {
+  // A flag about a recorded claim names it, so a number that differs from its proof reads against the claim it is about.
+  const claimText = new Map(brand.claims.map(claim => [claim.id, claim.text]))
+  for (const raw of claimCheck.flags) {
+    const flag = raw.claim_id && claimText.has(raw.claim_id) ? { ...raw, claim_text: claimText.get(raw.claim_id) } : raw
     if (flag.code === 'avoid_word') {
       if (avoided.has(`${flag.start}:${flag.end}`)) continue
       avoided.add(`${flag.start}:${flag.end}`)

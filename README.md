@@ -21,13 +21,12 @@ What works today:
 ## Run locally
 
 ```sh
-curl -fsSL https://runeditrun.com/install.sh | sh
-rer dev just-every/run-stump
+curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-stump
 ```
 
-If the installer prints a PATH command, run it before the second line. Already have Node 22 or later? `npx -y @runeditrun/rer dev just-every/run-stump` does both steps. Later, run `cd run-stump && rer dev`.
+The one line installs `rer`, clones Stump into `./run-stump` and starts it ([docs/install.md](docs/install.md)). Already have Node 22 or later? `npx -y @runeditrun/rer dev just-every/run-stump` does the same. Later, run `cd run-stump && rer dev`.
 
-`rer dev just-every/run-stump` starts `main`. To try a branch, a release candidate or a tag, check it out in that folder first, then start it the same way:
+It starts `main`. To try a branch, a release candidate or a tag, check it out in that folder first, then start it the same way:
 
 ```sh
 cd run-stump

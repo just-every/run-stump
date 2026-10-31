@@ -6,8 +6,8 @@
 export type { CommonOptions, DeliveryResult, FetchFn, Finding, HandleRef, SourceErrorKind, SourceKind, SourceWarning, TranscriptMatch } from './types.ts'
 export { SourceError, describeError, type ErrorDescription } from './errors.ts'
 
-export { compileTerms, matchTerms, hasPositiveTerms, remoteQueries, normalizeForMatch, TermError } from './terms.ts'
-export type { Area, CompiledTerms, Haystack, TermLogic, TermMatch } from './terms.ts'
+export { compileTerms, matchTerms, matchExcerpts, hasPositiveTerms, remoteQueries, normalizeForMatch, wordForms, TermError } from './terms.ts'
+export type { Area, CasedTerm, CompiledTerms, Haystack, TermInput, TermLogic, TermMatch } from './terms.ts'
 
 export { canonicalUrl, unwrapRedirect, isRedditUrl, isRedditHost, parseHttpUrl, hostOf } from './url.ts'
 export { htmlToText, stripControls, truncateGraphemes, excerptTitle } from './text.ts'

@@ -8,7 +8,7 @@ export interface Variant { item_id: string; network: string | null; account_id: 
 export interface MasterPreview { master: Master; items: Variant[]; total: number }
 export interface ClaimFinding { status: 'matched' | 'unmatched' | 'banned' | 'stale' | 'number_mismatch'; claim_id?: string; text: string; expected?: string[]; found?: string[]; reason?: string; review_on?: string }
 export interface Check { passed: boolean; claims: ClaimFinding[]; flags: Flag[]; disclosure: { required: boolean; status: string }; duplicates: Array<{ id: string; kind: string }> }
-export interface Product { id: string; name: string; other_names: string[]; description: string | null; audience: string | null; urls: string[]; tone: string; competitors: string[]; words_avoid: string[]; words_use: string[] }
+export interface Product { id: string; name: string; other_names: string[]; description: string | null; audience: string | null; urls: string[]; tone: string; competitors: string[]; words_avoid: string[]; words_use: string[]; match_case: boolean }
 export interface ClaimView { id: string; product_id: string | null; kind: 'allowed' | 'banned' | 'comparative'; text: string; proof: unknown; owner_id: string; review_on: string | null; reason: string | null; competitor: string | null; source_url: string | null; source_date: string | null; stale: boolean }
 export interface VoiceView { id: string; person_id: string; name: string; do: string[]; dont: string[]; state: string; sample_count: number }
 
@@ -90,7 +90,13 @@ export function claimRange(text: string, flag: Flag, claims: ClaimFinding[] = []
 /** One line for a flag, in the person's words; `span` names the claim itself where the check found it. */
 export function flagLine(flag: Flag, span?: string | null): string {
   switch (flag.code) {
-    case 'claim_number_mismatch': return `${quote(span ?? String(flag.text ?? ''))} differs from proof${flag.expected?.length ? ` (${flag.expected.join(', ')})` : ''}`
+    case 'claim_number_mismatch': {
+      // The claim it is about and what its proof says: "'5 minutes' differs from the proof of 'Builds a month rota…': 10 minutes".
+      const proof = flag.expected?.length ? flag.expected.join(', ') : ''
+      const claim = typeof flag.claim_text === 'string' && flag.claim_text ? ` of ${quote(flag.claim_text)}` : ''
+      // With nothing expected, the claim and its proof state no number at all ("50% cheaper" against "cheaper than HubSpot").
+      return proof ? `${quote(span ?? String(flag.text ?? ''))} differs from the proof${claim}: ${proof}` : `${quote(span ?? String(flag.text ?? ''))} is not in the proof${claim}`
+    }
     case 'claim_banned': return `${quote(String(flag.text ?? ''))} is a banned claim${flag.reason ? `: ${flag.reason}` : ''}`
     case 'claim_unmatched': return `${quote(String(flag.text ?? ''))} has no proof on record`
     case 'claim_stale': return `${quote(String(flag.text ?? ''))} uses a claim past its review date`

@@ -586,6 +586,9 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-brand-products .st-profile .st-inline textarea.st-profile-empty { padding: 10px 12px; line-height: 22px; }
 .st-brand-products .st-profile .st-inline :is(input, textarea)::placeholder { color: var(--stump-muted); opacity: 1; }
 .st-brand-products .st-profile-tone > .st-inline :is(input, textarea).st-profile-empty { min-width: 24ch; }
+/* A product whose name is an everyday word counts only with its capitals: one quiet checkbox under its fields. */
+.st-brand-products .st-match-case { display: flex; align-items: center; gap: var(--stump-space); min-height: 44px; color: var(--stump-muted); font-size: var(--stump-size-small); }
+.st-brand-products .st-match-case input { width: 18px; height: 18px; margin: 0; accent-color: var(--stump-emerald); flex: none; }
 /* The held note in the bar keeps one line; the short forms take over at 480 and under. */
 .st-drafting .st-bar-held { white-space: nowrap; }
 .st-drafting .st-held-short, .st-drafting .st-when-tiny { display: none; }

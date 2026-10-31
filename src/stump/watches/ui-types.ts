@@ -17,6 +17,10 @@ export interface WatchView {
 export interface FindingView {
   id: string; watch_id: string; source: string; kind: string | null; url: string; title: string; text: string; author: string; points: number | null
   published_at: string | null; relevance: number; reasons: string[]; answerable: boolean
+  /** Its terms are only deep in a thread about something else: a passing mention, not a thread worth answering. */
+  passing: boolean
+  /** Short passages of its text around the terms it matched (or its opening, when only the title matched). */
+  excerpts: string[]
   reason_details: Array<{ factor: string; label: string; points: number; max: number }>
   routes: Array<'publish' | 'handoff_draft' | 'handoff_brief' | 'dismiss'>; venue: { id: string; name: string } | null
   transcript_match: { terms: string[]; excerpts: string[] } | null

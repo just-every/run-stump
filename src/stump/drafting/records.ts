@@ -13,17 +13,20 @@ const text = (value: unknown) => typeof value === 'string' ? value : null
 
 export interface ProductRecord {
   id: string; name: string; other_names: string[]; description: string | null; audience: string | null
-  urls: string[]; competitors: string[]; words_use: string[]; words_avoid: string[]; tone: string; revision: number; updated_at: string | null
+  urls: string[]; competitors: string[]; words_use: string[]; words_avoid: string[]; tone: string
+  /** Its names count only written as recorded ("Rota", not "rota"). */
+  match_case: boolean; revision: number; updated_at: string | null
 }
 export const productRecord = (row: Row): ProductRecord => ({
   id: String(row.id), name: String(row.name), other_names: parse(row.names, []), description: text(row.description), audience: text(row.audience),
   urls: parse(row.urls, []), competitors: parse(row.competitors, []), words_use: parse(row.use_words, []),
   words_avoid: parse(row.avoid_words, []), tone: (() => { const tone = parse<unknown>(row.tone, ''); return typeof tone === 'string' ? tone : '' })(),
-  revision: Number(row.revision), updated_at: iso(row.updated_at),
+  match_case: Number(row.match_case ?? 0) === 1, revision: Number(row.revision), updated_at: iso(row.updated_at),
 })
 /** A product as the claim check reads it: names, URLs, competitors and avoided words. */
 export const productProfile = (product: ProductRecord): ProductProfile => ({
   id: product.id, name: product.name, other_names: product.other_names, urls: product.urls, competitors: product.competitors, avoid: product.words_avoid,
+  ...(product.match_case ? { case_sensitive: true } : {}),
 })
 
 export interface ClaimRecord {
