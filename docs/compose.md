@@ -23,7 +23,7 @@ A long post splits into a thread at sentence boundaries. The full table of limit
 
 ## Drafts waiting
 
-With nothing open, Compose lists the drafts not yet scheduled, newest first, each with who wrote it ("Release agent for Dana Reyes"), the networks it goes to and its state. A draft an agent wrote for you lands here; open it to read, edit, check and schedule it. An item on a venue's page opens the same way, or its brief when it belongs to a hand-off.
+With nothing open, Compose lists the drafts not yet scheduled, newest first, each with who wrote it ("Release agent for Dana Reyes"), the networks it goes to and its state. A draft an agent wrote for you lands here; open it to read, edit, check and schedule it. A draft that names no account yet asks which account it goes out from, then schedules or queues like any other. An item on a venue's page opens the same way, or its brief when it belongs to a hand-off.
 
 ## Drafts from a source
 
