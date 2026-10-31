@@ -134,7 +134,8 @@ export const draftTools: StumpTool[] = [{
       async run(args, ctx) {
         const filters: string[] = [], values: unknown[] = []
         for (const field of ['venue_id', 'product_id', 'master_id', 'state'] as const) if (typeof args[field] === 'string') { filters.push(`${field}=?`); values.push(args[field]) }
-        if (typeof args.q === 'string') { const like = `%${args.q.replace(/[\\%_]/g, c => `\\${c}`)}%`; filters.push("(text LIKE ? ESCAPE '\\' OR parts LIKE ? ESCAPE '\\' OR subject LIKE ? ESCAPE '\\')"); values.push(like, like, like) }
+        // instr, not LIKE: D1 refuses a LIKE pattern over 50 bytes, and a search may be up to 200 characters.
+        if (typeof args.q === 'string') { const has = (column: string) => `instr(lower(COALESCE(${column},'')),lower(?))>0`; filters.push(`(${has('text')} OR ${has('parts')} OR ${has('subject')})`); values.push(args.q, args.q, args.q) }
         if (ctx.person.role === 'poster') { filters.push('person_id=?'); values.push(ctx.person.id) }
         const where = filters.length ? ` WHERE ${filters.join(' AND ')}` : ''
         const [rows, total] = await ctx.db.batch([ctx.db.prepare(`SELECT * FROM stump_items${where} ORDER BY updated_at DESC,id LIMIT 200`).bind(...values), ctx.db.prepare(`SELECT COUNT(*) AS n FROM stump_items${where}`).bind(...values)])

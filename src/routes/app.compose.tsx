@@ -364,7 +364,8 @@ function ComposePage() {
 
 function VariantCard({ variant, claims, select, onSelected, onSave }: { variant: Variant; claims: Array<[number, number]>; select: { range: [number, number] | null; at: number } | null; onSelected(): void; onSave: (text: string) => void }) {
   const flags = blocking(variant.flags)
-  const [open, setOpen] = useState(flags.length > 0)
+  // A flagged variant opens on what to fix; one that has gone out opens on the text it sends.
+  const [open, setOpen] = useState(flags.length > 0 || !!GONE[variant.state])
   const [text, setText] = useState(variant.text)
   const field = useRef<HTMLTextAreaElement>(null)
   const over = variant.count ? variant.count.count > variant.count.limit : false

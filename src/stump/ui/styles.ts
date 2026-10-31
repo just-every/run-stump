@@ -588,7 +588,7 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
   .st-drafting .st-checks.open .st-check-list { margin-top: 12px; }
   .st-drafting .st-variant-head .st-chevron { display: inline-flex; }
   .st-drafting .st-variants { grid-template-columns: 1fr; }
-  .st-drafting .st-variant-head { cursor: pointer; min-height: 44px; padding: 0; }
+  .st-drafting .st-variant-head { cursor: pointer; min-height: 44px; padding: 0; flex-wrap: wrap; row-gap: 4px; }
   .st-drafting .st-variant-body:not(.open) { display: none; }
   .st-drafting .st-bar { position: sticky; bottom: 0; z-index: 2; background: var(--stump-white); padding: 12px 0; gap: var(--stump-space); flex-wrap: nowrap; }
   .st-drafting .st-bar .st-button.ink { padding: 0 16px; flex: none; }
