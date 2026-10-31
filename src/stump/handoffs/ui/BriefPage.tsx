@@ -168,7 +168,9 @@ function Work({ handoff, mine, viewer, editor, onChanged }: { handoff: Handoff; 
     {handoff.draft_text !== null ? <>
       <h2 className="st-panel-title" id="draft-title"><Disc icon="pencil" />Draft</h2>
       <p className="st-ho-voice">{draftedBy(handoff, viewer)}</p>
-      <textarea className="st-ho-draft" aria-labelledby="draft-title" value={draft} readOnly={!working} onChange={event => setDraft(event.target.value)} onBlur={() => void save()} />
+      {/* Only the person who posts it (or an editor) works on the draft; once posted, skipped or expired it reads as the text it is. */}
+      {working ? <textarea className="st-ho-draft" aria-labelledby="draft-title" value={draft} onChange={event => setDraft(event.target.value)} onBlur={() => void save()} />
+        : <div className="st-ho-words"><p>{handoff.draft_text}</p></div>}
     </> : <>
       <h2 className="st-panel-title" id="draft-title"><Disc icon="pencil" />Talking points</h2>
       <p className="st-ho-voice">{handoff.attestation_required ? 'Say it in your own words; Stump writes no text for you here.' : `${handoff.venue.name} takes no AI-written text.`}</p>
