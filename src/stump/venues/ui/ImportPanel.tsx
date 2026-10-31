@@ -50,17 +50,22 @@ const explain = (error: unknown) => error instanceof ImportError ? (OWN_WORDS.ha
 const holdersOf = (error: unknown) => error instanceof ImportError && error.code === 'earlier_import_holds_records' && Array.isArray(error.details.planIds) ? error.details.planIds.filter((id): id is string => typeof id === 'string') : []
 
 /**
- * Undoes the list's imports from the newest down until the named earlier ones are undone: an import with
- * a newer one over it is undone only after that one.
+ * Undoes the named earlier imports. One with a newer import of the list over it is undone only after
+ * that one, so the newest is undone first until the named one can be.
  */
 async function undoThrough(source: ImportSourceId, plans: string[]): Promise<Kept[]> {
-  const kept: Kept[] = [], left = new Set(plans), undone = new Set<string>()
-  while (left.size) {
+  const kept: Kept[] = [], left = [...plans], undone = new Set<string>()
+  while (left.length) {
+    try {
+      kept.push(...(await undoPlan(source, left[0]!)).kept)
+      undone.add(left.shift()!)
+      continue
+    } catch (cause) { if (!(cause instanceof ImportError) || cause.code !== 'import_superseded') throw cause }
     const head = (await importStatus(source)).head?.planId
-    // No applied import left, or one that is still the newest after its Undo: the door says why on the next try.
     if (!head || undone.has(head)) throw new ImportError('import_superseded')
     kept.push(...(await undoPlan(source, head)).kept)
-    undone.add(head); left.delete(head)
+    undone.add(head)
+    if (left.includes(head)) left.splice(left.indexOf(head), 1)
   }
   return kept
 }

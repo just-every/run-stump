@@ -3571,6 +3571,10 @@
       "sha256": "636024bff9be3f5e0b7e2ea4e7419c90543e0ea53d6cfece1fa2a901a7422d8f",
       "executable": false
     },
+    "src/stump/data/erased-uploads.ts": {
+      "sha256": "d9cfac222bd8b2c9633d20b2443236d4db31c6d611aa0296e01499b7702f3945",
+      "executable": false
+    },
     "src/stump/data/import-custody.ts": {
       "sha256": "cc8db2cc10fc1f982953d30958b9ad0c54991d71a5952851871816e7eb2e50d5",
       "executable": false
@@ -4548,7 +4552,7 @@
       "executable": false
     },
     "src/stump/venues/ui/ImportPanel.tsx": {
-      "sha256": "f18d741e91cdd966313a21baa9ac2024a18e4ae9583ac9e7fb77e3cde29d2260",
+      "sha256": "25c741e6d907298079b8c1cb026de106eb3518becdb1281a4d06798afecb58f7",
       "executable": false
     },
     "src/stump/venues/ui/labels.ts": {
