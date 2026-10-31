@@ -20,9 +20,10 @@ const proof = { anyOf: [{ type: 'string', minLength: 1, maxLength: 2048 }, { typ
 // A product's profile, exactly the interface's fields (V1 stump.brand.manage).
 // A description or audience can be cleared with null.
 const clearable = { type: ['string', 'null'], minLength: 1, maxLength: 1000 }
+// match_case: the product's names count only written as recorded ("Rota", never "a month rota"), for a name that is also an everyday word.
 const productFields = { name: short, other_names: words(20, 120), description: clearable, audience: clearable, urls: words(10, 2048), competitors: words(20, 120),
-  words_use: words(50, 60), words_avoid: words(50, 60), tone: { type: 'string', minLength: 1, maxLength: 280 } }
-const PROFILE_KEYS = ['name', 'other_names', 'description', 'audience', 'urls', 'competitors', 'words_use', 'words_avoid', 'tone'] as const
+  words_use: words(50, 60), words_avoid: words(50, 60), tone: { type: 'string', minLength: 1, maxLength: 280 }, match_case: { type: 'boolean' } }
+const PROFILE_KEYS = ['name', 'other_names', 'description', 'audience', 'urls', 'competitors', 'words_use', 'words_avoid', 'tone', 'match_case'] as const
 /** A word list as stored: trimmed, without blanks or repeats. */
 const wordList = (value: unknown) => [...new Set(((value as string[] | undefined) ?? []).map(word => word.trim()).filter(Boolean))]
 
@@ -97,10 +98,10 @@ export const brandTools: StumpTool[] = [{
       summary: args => ({ target: { name: `Add product ${String(args.name)}` } }),
       async run(args, ctx) {
         const productId = crypto.randomUUID(), now = ctx.now()
-        await ctx.db.prepare(`INSERT INTO stump_products(id,name,names,description,audience,urls,competitors,use_words,avoid_words,tone,created_by,created_at,updated_at)
-          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(productId, String(args.name).trim(), JSON.stringify(args.other_names ?? []), args.description ?? null, args.audience ?? null,
+        await ctx.db.prepare(`INSERT INTO stump_products(id,name,names,description,audience,urls,competitors,use_words,avoid_words,tone,match_case,created_by,created_at,updated_at)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(productId, String(args.name).trim(), JSON.stringify(args.other_names ?? []), args.description ?? null, args.audience ?? null,
             JSON.stringify(args.urls ?? []), JSON.stringify(args.competitors ?? []), JSON.stringify(wordList(args.words_use)), JSON.stringify(wordList(args.words_avoid)),
-            JSON.stringify(args.tone ?? ''), ctx.person.id, now, now).run()
+            JSON.stringify(args.tone ?? ''), args.match_case === true ? 1 : 0, ctx.person.id, now, now).run()
         ctx.emit('product.created', `stump://products/${productId}`)
         return product(ctx, productId)
       },
@@ -115,9 +116,9 @@ export const brandTools: StumpTool[] = [{
         // A changed profile changes the next draft; drafts already written keep their text (STUMP-BRAND-001.4).
         const given = Object.fromEntries(PROFILE_KEYS.filter(key => args[key] !== undefined).map(key => [key, key.startsWith('words_') ? wordList(args[key]) : args[key]]))
         const next = { ...current, ...given } as typeof current
-        await ctx.db.prepare(`UPDATE stump_products SET name=?,names=?,description=?,audience=?,urls=?,competitors=?,use_words=?,avoid_words=?,tone=?,revision=revision+1,updated_at=? WHERE id=?`)
+        await ctx.db.prepare(`UPDATE stump_products SET name=?,names=?,description=?,audience=?,urls=?,competitors=?,use_words=?,avoid_words=?,tone=?,match_case=?,revision=revision+1,updated_at=? WHERE id=?`)
           .bind(String(next.name).trim(), JSON.stringify(next.other_names), next.description, next.audience, JSON.stringify(next.urls), JSON.stringify(next.competitors),
-            JSON.stringify(next.words_use), JSON.stringify(next.words_avoid), JSON.stringify(next.tone), ctx.now(), current.id).run()
+            JSON.stringify(next.words_use), JSON.stringify(next.words_avoid), JSON.stringify(next.tone), next.match_case ? 1 : 0, ctx.now(), current.id).run()
         return product(ctx, current.id)
       },
     },

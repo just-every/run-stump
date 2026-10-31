@@ -6,6 +6,7 @@ import { screenStyles } from '../stump/ledger/screen-styles.ts'
 import type { ConnectionView, OfferView, PreviewView, RulesView } from '../stump/stack/view.ts'
 import { me, runAction } from '../stump/ui/api.ts'
 import { Outcome, PanelTitle, Saved, handleWord, networkWord, useLoaded, useRun, useSaved, when } from '../stump/ui/kit.tsx'
+import { docsUrl } from '../stump/docs.ts'
 
 export const Route = createFileRoute('/app/settings/connections')({ component: ConnectionsPage })
 
@@ -61,7 +62,7 @@ function Seed({ seed, connection, admin, offers, line, onChange }: { seed: 'orbi
   return <section className="st-panel" aria-labelledby={`conn-${seed}`}>
     <PanelTitle icon={seed === 'orbit' ? 'people' : 'chart'} id={`conn-${seed}`}>{NAMES[seed]}</PanelTitle>
     {/* Where the address, ID and secret come from is in the docs, one link from the line that says what the connection does. */}
-    <p className="st-meta st-conn-line">{line} <a href="https://run-stump.com/docs/stack" target="_blank" rel="noreferrer noopener">Where to find these</a></p>
+    <p className="st-meta st-conn-line">{line} <a href={docsUrl('stack')} target="_blank" rel="noreferrer noopener">Where to find these</a></p>
     {connection && connected && !editing ? <div className="st-row">
       <div className="st-row-main">
         <div className="st-name">{connection.origin}</div>

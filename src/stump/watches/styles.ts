@@ -32,6 +32,8 @@ export const listeningStyles = `
 .st-listen .st-chips { display: flex; flex-wrap: wrap; gap: var(--stump-space); margin: 0; padding: 0; list-style: none; }
 .st-listen .st-finding .st-chip { background: var(--stump-white); color: var(--stump-ink); }
 .st-listen .st-finding:not(.focal) .st-chip { background: var(--stump-sunk); color: var(--stump-muted); }
+.st-listen .st-finding-quote { display: grid; gap: var(--stump-space); background: var(--stump-white); border-radius: var(--stump-radius-row); padding: calc(var(--stump-space) * 1.5) calc(var(--stump-space) * 2); color: var(--stump-ink); font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.st-listen .st-finding-quote p { margin: 0; }
 .st-listen .st-finding-actions { display: flex; align-items: center; gap: calc(var(--stump-space) * 2.5); flex-wrap: wrap; margin-top: var(--stump-space); }
 .st-listen .st-open-link { color: var(--stump-muted); font-size: 15px; font-weight: 500; text-decoration: none; padding: 6px 0; }
 .st-listen .st-open-link:hover { color: var(--stump-ink); text-decoration: underline; text-underline-offset: 3px; }

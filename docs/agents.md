@@ -24,6 +24,28 @@ Mcp-Name: stump.venues.manage
 - A request without the header, or with headers that disagree with its body, answers `-32020 HeaderMismatch`; an older version such as `2025-06-18` answers `-32022 UnsupportedProtocolVersion`. Both carry `data.supported` and `data.hint` saying what to send. A client that speaks only `2025-06-18` or older cannot connect; update it.
 - Every call takes an `idempotency_key`, and a tool with several actions takes `action`.
 
+### By hand, with curl
+
+Two requests show the door working without changing any client's settings. Put the token in a variable for this terminal only (`read -rs TOKEN`, then paste it), and use your own address for a deployed Stump. First `initialize`:
+
+```sh
+curl -s http://127.0.0.1:8787/mcp \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -H 'MCP-Protocol-Version: 2026-07-28' -H 'Mcp-Method: initialize' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2026-07-28","capabilities":{},"clientInfo":{"name":"curl","version":"1"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}'
+```
+
+It answers with the protocol version, `"serverInfo":{"name":"Stump"}` and the door's instructions. Then a tool, here listing the team:
+
+```sh
+curl -s http://127.0.0.1:8787/mcp \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -H 'MCP-Protocol-Version: 2026-07-28' -H 'Mcp-Method: tools/call' -H 'Mcp-Name: stump.team.manage' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"stump.team.manage","arguments":{"action":"list","idempotency_key":"by-hand-1"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}'
+```
+
+The answer's `structuredContent` holds the team, and `_meta` the policy's decision for the call. No session carries over between the two: each request stands alone with its headers. `tools/list`, sent the same way with `Mcp-Method: tools/list` and no `Mcp-Name`, lists every tool you may call.
+
 ### Claude Code
 
 ```sh

@@ -10,6 +10,7 @@ import { stumpTools } from '../tools/index.ts'
 import { authenticateCredential, SPECIALIST } from './credentials.ts'
 import { baseInvite } from '../people/invite.ts'
 import { seal, unseal } from '../accounts/seal.ts'
+import { docsUrl } from '../docs.ts'
 
 export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency'] as const
 export const toolScopes = () => [...new Set(stumpTools.map(tool => tool.scope))].sort()
@@ -73,7 +74,7 @@ export function stumpAgentDoor(original: StumpEnv) {
   })
 }
 
-const PROTOCOL_HINT = 'Send the MCP-Protocol-Version header: 2026-07-28, or 2025-11-25 (an initialize that names 2025-11-25 in params.protocolVersion needs no header). With 2026-07-28 also send Mcp-Method (the JSON-RPC method), Mcp-Name (the tool name, for tools/call) and params._meta["io.modelcontextprotocol/protocolVersion"]. See /docs/agents.'
+const PROTOCOL_HINT = `Send the MCP-Protocol-Version header: 2026-07-28, or 2025-11-25 (an initialize that names 2025-11-25 in params.protocolVersion needs no header). With 2026-07-28 also send Mcp-Method (the JSON-RPC method), Mcp-Name (the tool name, for tools/call) and params._meta["io.modelcontextprotocol/protocolVersion"]. See ${docsUrl('agents')}.`
 
 /**
  * The door refuses a request whose protocol headers are missing or disagree

@@ -1,4 +1,6 @@
-Connect the network accounts Stump publishes to. Each account belongs to one person or to the company, and there is no pool of shared accounts.
+Connect the network accounts Stump publishes to, in **Settings › Accounts**. Each account belongs to one person or to the company, and there is no pool of shared accounts.
+
+Connect at least one before you write a post: [Compose](/docs/compose) opens a variant for each connected account you pick, and with none connected it has nothing to open variants for. A Mastodon account needs no app of your own, so it is the quickest first one.
 
 ## Who owns an account
 

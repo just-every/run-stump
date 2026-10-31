@@ -1,4 +1,4 @@
-import { isListedAuthor, scoreFinding, spreadThreads, type Finding, type SourceKind } from '../lib/discovery/index.ts'
+import { compileTerms, isListedAuthor, matchExcerpts, scoreFinding, spreadThreads, truncateGraphemes, type CompiledTerms, type Finding, type SourceKind } from '../lib/discovery/index.ts'
 import { blockedAuthors, blockRefs } from './blocks.ts'
 import { loadProducts, mentionsOf, rankContext } from './context.ts'
 import { loadVenues, routesFor } from './routes.ts'
@@ -10,6 +10,20 @@ interface Row {
 }
 
 const CANDIDATES = 500
+
+/**
+ * What a finding says where it matched: a short passage around each watch term its text holds, so a person can judge
+ * it without leaving for the thread; when only its title matched, the opening of its text.
+ */
+export function excerptsOf(text: string, terms: CompiledTerms): string[] {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  if (!clean) return []
+  const around = matchExcerpts(terms, clean, 2, 110)
+  if (around.length) return around
+  // Cut at a word: "…" replaces the word the cut fell in.
+  const opening = truncateGraphemes(clean, 220)
+  return [opening === clean ? clean : opening.replace(/\s+\S*…$/u, '…')]
+}
 
 /**
  * A watch's findings, ranked now: from the finding as its source gave it, the watch's current terms, the
@@ -24,7 +38,7 @@ export async function rankedFindings(db: D1Database, watch: WatchRow, now: numbe
   const authors = (await db.prepare("SELECT source,author,json_extract(raw,'$.source_ref') AS source_ref,json_extract(raw,'$.author_id') AS author_id FROM stump_findings WHERE watch_id=? AND state<>'dismissed'").bind(watch.id)
     .all<{ source: SourceKind; author: string | null; source_ref: string | null; author_id: string | null }>()).results
   const total = blocked.length ? authors.filter(row => !isListedAuthor({ source: row.source, author: row.author ?? '', source_ref: row.source_ref ?? '', ...(row.author_id ? { author_id: row.author_id } : {}) } as Finding, blocked)).length : authors.length
-  const products = await loadProducts(db), venues = await loadVenues(db), context = rankContext(watch, products, now)
+  const products = await loadProducts(db), venues = await loadVenues(db), context = rankContext(watch, products, now), terms = compileTerms(watch.terms)
   const read = rows.map(row => {
     const finding = row.raw ? JSON.parse(row.raw) as Finding : null
     return { row, finding, ranked: finding ? scoreFinding(finding, context) : null }
@@ -43,6 +57,9 @@ export async function rankedFindings(db: D1Database, watch: WatchRow, now: numbe
       reasons: details.filter(reason => reason.points > 0).map(reason => reason.label),
       reason_details: details.map(reason => ({ factor: reason.factor, label: reason.label, points: reason.points, max: reason.max })),
       answerable: ranked?.answerable_question ?? false,
+      // A passing mention: its terms are only deep in a thread about something else.
+      passing: ranked?.passing ?? false,
+      excerpts: excerptsOf(row.text ?? '', terms),
       routes: where.routes, venue: where.venue,
       backfill: row.backfill === 1,
       mentions: finding ? mentionsOf(finding, products) : [],

@@ -150,6 +150,9 @@ function ProductProfile({ product, save }: { product: Product; save: (args: Reco
     {shown.map(field => <ProfileField key={field.label} label={field.label} product={product.name} value={field.value} hint={field.hint} focus={revealed[0] === field.label} allowEmpty onSave={field.save} />)}
     {missing.length ? <button className="st-add-words" type="button" onClick={() => setRevealed(missing.map(field => field.label))}>
       {described ? `Add ${joined(missing.map(field => field.ask))}` : 'Add description, audience and links'}</button> : null}
+    {/* A name that is also an everyday word ("Rota") counts only with its capitals, in drafts and in what listening finds. */}
+    <label className="st-match-case"><input type="checkbox" defaultChecked={product.match_case} onChange={event => void save({ match_case: event.target.checked })} />
+      Count {product.name} only when written {product.name}, not {product.name.toLowerCase() === product.name ? product.name.toUpperCase() : product.name.toLowerCase()}</label>
   </div>
 }
 

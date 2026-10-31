@@ -25,6 +25,7 @@ export function watchEdge({ webhookSecret }) {
     hit(7, { title: 'Thinking about orbit crm tools', author: 'twin', at: minutes(50), tags: ['story'], url: 'https://example.test/twin', story_text: '<p>orbit crm</p>' }),
     hit(8, { title: 'Is orbit crm good for agencies?', author: 'agency', at: days(20), tags: ['story'], url: 'https://example.test/agency' }),
     hit(9, { title: 'Old orbit crm thread', author: 'oldtimer', at: days(45), tags: ['story'], url: 'https://example.test/old' }),
+    hit(10, { title: 'Orbit CRM for tracking orbitals', author: 'plural', at: minutes(110), tags: ['story'], url: 'https://example.test/orbitals' }),
   ]
   const hackerNews = url => {
     const words = (url.searchParams.get('query') ?? '').replace(/"/g, '').toLowerCase().split(/\s+/).filter(Boolean)

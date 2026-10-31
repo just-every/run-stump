@@ -22,7 +22,7 @@
  */
 import { marksAdjustment, type MarksModel } from './marks.ts'
 import { asksForHelp, isAboutTheRanking, neutralise, questionSentences } from './rank-text.ts'
-import { compileTerms, matchTerms, type CompiledTerms, type TermLogic } from './terms.ts'
+import { compileTerms, matchTerms, type CompiledTerms, type TermInput, type TermLogic } from './terms.ts'
 import type { Finding, SourceKind } from './types.ts'
 
 export type Factor = 'matched_terms' | 'question' | 'venue_fit' | 'author_standing' | 'freshness' | 'marks' | 'repeat_thread'
@@ -44,13 +44,18 @@ export interface Ranked {
   answerable_question: boolean
   /** True when the finding contained sentences addressed to the ranking system; they were ignored. */
   instruction_like: boolean
+  /**
+   * True when its terms and product names appear only deep in a titled thread's text: a passing mention in a thread
+   * about something else (a comment under an unrelated story), not a thread worth answering.
+   */
+  passing: boolean
 }
 
 export interface RankContext {
   /** The watch's terms. */
   terms: TermLogic | CompiledTerms
-  /** The company's product names and other names: a match counts extra. */
-  product_terms?: string[]
+  /** The company's product names and other names: a match counts extra. A name that is also an everyday word may match only with its capitals. */
+  product_terms?: TermInput[]
   /** Phrases for what the company can answer about (its categories), beyond the watch terms. */
   topic_terms?: string[]
   /** Fit of the venue this finding belongs to, 0 to 100, or null when none is recorded. */
@@ -194,6 +199,7 @@ export function scoreFinding(f: Finding, ctx: RankContext): Ranked {
     reasons,
     answerable_question: answerable,
     instruction_like,
+    passing: share < 1,
   }
 }
 

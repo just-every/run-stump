@@ -117,14 +117,33 @@ function afterSubject(opening: string, names: readonly string[]): string {
 }
 
 /**
+ * In a clause about the product, someone who uses it and what they now do with it: "the manager
+ * approves in one tap", "each client gets a reminder". One noun after the determiner, then a
+ * present-tense verb.
+ */
+const NOUN_SUBJECT = /^(?:the|a|an|your|each|every|any)\s+[a-z]{2,}\s+/
+/** Verbs of opinion after such a subject say how someone feels, not what the product does ("the team loves it"). */
+const OPINION = new Set(['loves', 'likes', 'says', 'thinks', 'wants', 'needs', 'hopes', 'knows', 'agrees', 'deserves', 'thanks', 'enjoys', 'misses', 'hates', 'prefers', 'wishes'])
+
+/**
  * Does a clause about the product say what it does with a verb of its own: "It also spots idle
- * time", "Tickwise Timer bills by the minute", or "asks before counting it" after "and"?
+ * time", "Tickwise Timer bills by the minute", "asks before counting it" after "and", or what a
+ * person does with it, "the manager approves in one tap"?
  */
 function statesAction(opening: string, names: readonly string[]): boolean {
-  const m = VERB_AFTER_SUBJECT.exec(afterSubject(opening, names))
-  if (!m) return false
-  const verb = m[1] as string
-  return !NOT_AN_ACTION.has(verb) && !PLURAL_VERB.has(m[2] ?? '')
+  const clause = afterSubject(opening, names)
+  const acts = (text: string, afterNoun: boolean) => {
+    const m = VERB_AFTER_SUBJECT.exec(text)
+    if (!m) return false
+    const verb = m[1] as string
+    const next = m[2] ?? ''
+    if (NOT_AN_ACTION.has(verb) || PLURAL_VERB.has(next)) return false
+    // After a noun, a word in the past tense is the verb, so the word before it was a plural noun ("the early users loved it").
+    return !afterNoun || (!OPINION.has(verb) && !/^[a-z]+ed\b/.test(next))
+  }
+  if (acts(clause, false)) return true
+  const subject = NOUN_SUBJECT.exec(clause)
+  return subject !== null && acts(clause.slice(subject[0].length), true)
 }
 
 /**
