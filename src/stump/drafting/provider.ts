@@ -8,6 +8,7 @@ import { aiConfig, type AiConfig } from '../../modules/ai/index.mjs'
 import { refuse } from '../actions/refusals.ts'
 import { seal, unseal } from '../accounts/seal.ts'
 import type { StumpEnv } from '../env.ts'
+import { assertNamedService, NotPublicError } from '../net/fetch.ts'
 
 const PURPOSE = 'ai-provider:company'
 
@@ -59,9 +60,13 @@ export async function describeProvider(env: StumpEnv, db: D1Database) {
 }
 
 /** Checks the address and model before anything is saved; the key is checked by the provider on the first draft. */
-export function checkProvider(args: { base_url?: unknown; model?: unknown; api_key?: unknown }) {
+export async function checkProvider(env: StumpEnv, args: { base_url?: unknown; model?: unknown; api_key?: unknown }) {
   const base = typeof args.base_url === 'string' ? args.base_url.trim().replace(/\/+$/, '') : ''
   if (!validBaseUrl(base)) refuse('invalid_arguments', { field: 'base_url', reason: 'Give the provider\'s https address, such as https://api.openai.com/v1, with no key or query in it.' })
+  try { await assertNamedService(env, new URL(base)) } catch (error) {
+    if (error instanceof NotPublicError) refuse('invalid_arguments', { field: 'base_url', reason: `${hostOf(base)} is not on the public web. Give the provider's public https address.` })
+    throw error
+  }
   const model = typeof args.model === 'string' ? args.model.trim() : ''
   if (!model || /\s/.test(model)) refuse('invalid_arguments', { field: 'model', reason: 'Give the model\'s exact id, such as gpt-4.1-mini.' })
   const key = typeof args.api_key === 'string' ? args.api_key.trim() : null

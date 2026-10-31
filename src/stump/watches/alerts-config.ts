@@ -1,5 +1,6 @@
 import { refuse } from '../actions/refusals.ts'
 import type { StumpEnv } from '../env.ts'
+import { assertNamedService, NotPublicError } from '../net/fetch.ts'
 import { assertSlackWebhookUrl, assertWebhookUrl, SourceError } from '../lib/discovery/index.ts'
 import { DEFAULT_IMMEDIATE_MIN_RELEVANCE, type AlertsInput } from './model.ts'
 import { seal } from './seal.ts'
@@ -40,6 +41,12 @@ export async function sealAlerts(env: StumpEnv, watchId: string, input: unknown,
       if (url === undefined && !existing?.webhook) refuse('invalid_arguments', { field: 'alerts.webhook.url', reason: 'A webhook needs its address.' })
       if (secret === undefined && !existing?.webhook) refuse('invalid_arguments', { field: 'alerts.webhook.secret', reason: 'A signed webhook needs its secret.' })
       const parsed = url === undefined ? null : checked('alerts.webhook.url', () => assertWebhookUrl(url))
+      if (parsed) {
+        try { await assertNamedService(env, parsed) } catch (error) {
+          if (error instanceof NotPublicError) refuse('invalid_arguments', { field: 'alerts.webhook.url', reason: `${parsed.host} is not on the public web.` })
+          throw error
+        }
+      }
       next.webhook = {
         url: parsed ? await seal(env, `${watchId}:webhook.url`, parsed.href) : existing!.webhook!.url,
         secret: secret === undefined ? existing!.webhook!.secret : await seal(env, `${watchId}:webhook.secret`, secret),

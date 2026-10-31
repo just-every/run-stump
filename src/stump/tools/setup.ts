@@ -77,7 +77,7 @@ export const setupTools: StumpTool[] = [{
       summary: args => ({ target: { name: `Draft with ${String(args.model)} at ${hostOf(args.base_url)}` } }),
       target: () => ({ kind: 'ai_provider', id: 'company' }),
       async run(args, ctx) {
-        await saveProvider(ctx.env, ctx.db, checkProvider(args), ctx.person.id, ctx.now())
+        await saveProvider(ctx.env, ctx.db, await checkProvider(ctx.env, args), ctx.person.id, ctx.now())
         ctx.emit('setup.ai_provider', 'stump://setup/ai', { host: hostOf(args.base_url) })
         return describeProvider(ctx.env, ctx.db)
       },

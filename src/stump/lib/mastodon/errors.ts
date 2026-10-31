@@ -203,6 +203,8 @@ export function classifyThrown(err: unknown, write: boolean): NetworkError {
   const name = err instanceof Error ? err.name : 'Error';
   const timedOut = name === 'TimeoutError' || name === 'AbortError';
   const message = err instanceof Error && err.message ? err.message : String(err);
+  // The injected fetch refused the address before sending anything, so nothing can have happened.
+  if (name === 'NotPublicError') return { kind: 'validation', code: 'not_public', message, outcomeUnknown: false };
   return write
     ? { kind: 'unknown_outcome', code: timedOut ? 'timeout' : 'network', message, outcomeUnknown: true }
     : { kind: 'network_error', code: timedOut ? 'timeout' : 'network', message, outcomeUnknown: false };

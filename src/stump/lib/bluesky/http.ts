@@ -40,9 +40,14 @@ export async function sendRaw(deps: HttpDeps, req: RawRequest): Promise<RawOutco
   const aborted = new Promise<never>((_, reject) => controller.signal.addEventListener('abort', () => reject(controller.signal.reason), { once: true }));
   aborted.catch(() => {});
   try {
-    const init: RequestInit = { method: req.method, headers: req.headers ?? {}, signal: controller.signal, redirect: 'follow' };
+    // Every atproto service answers at its own address, so a redirect is never followed: it is answered as a refusal.
+    const init: RequestInit = { method: req.method, headers: req.headers ?? {}, signal: controller.signal, redirect: 'manual' };
     if (req.body !== undefined) init.body = req.body as BodyInit;
     const res = await Promise.race([deps.fetch(req.url, init), aborted]);
+    if (res.status >= 300 && res.status < 400) {
+      await res.body?.cancel().catch(() => {});
+      return { thrown: { kind: 'invalid_response', code: 'redirected', status: res.status, message: 'The server answered with a redirect to another address. Stump sends Bluesky requests only to the address the account\'s record names.', outcomeUnknown: false } };
+    }
     const text = await Promise.race([res.text(), aborted]);
     let json: unknown = undefined;
     if (text.length > 0) {

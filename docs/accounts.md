@@ -24,6 +24,10 @@ The setup screen shows each app's callback URLs, scopes and state, and keeps you
 
 Each X post shows its charge from your price table before it goes out, and the charge is recorded on its ledger entry. An agent publishes to an X account only when the account carries X's Automated label with its operator named in the bio. Prices and limits are in [Networks](/docs/networks).
 
+## Bluesky
+
+Name the account by its handle or its DID. Stump reads who the account is from its public record, the PLC directory or, for a `did:web`, the account's own domain, and connects through the server that record names. Every address on the way, the record's domain, the server and its sign-in server, must be on the public web, and Stump checks each one before it sends it anything; an account whose record names a server off the public web is refused, and so is any answer that redirects to another address. A copy of Stump running on your own computer (`rer dev`) also accepts a test server on that computer when you name it as the server, such as `http://127.0.0.1:2583`.
+
 ## Mastodon
 
 Name the instance by its https address on the public web, such as mastodon.social. Stump checks the address before it sends the instance anything, and talks only to that address: an instance that answers with a redirect to another address is refused, so name the address the instance itself answers on. A copy of Stump running on your own computer (`rer dev`) also accepts an instance on that computer, such as `http://127.0.0.1:3000`, so you can try publishing against a test server; a deployed Stump accepts only public instances.

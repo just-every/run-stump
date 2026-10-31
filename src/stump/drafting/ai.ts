@@ -168,7 +168,8 @@ export async function draftWithAi(ctx: { env: StumpEnv; db: D1Database }, reques
   let said: string | null = null
   // The client keeps only a fixed code for a refused request; the provider's own message is read here, with the key scrubbed from it.
   const send: typeof fetch = async (input, init) => {
-    const response = await stumpFetch(env)(input, init)
+    // The provider's own address is the one an admin or the installation named; any other it points to must be public.
+    const response = await stumpFetch(env, undefined, { named: [config.direct?.baseUrl ?? config.models?.baseUrl] })(input, init)
     if (!response.ok) said = await providerMessage(response.clone(), apiKey)
     return response
   }
