@@ -5,7 +5,9 @@ const WORDS = ['calendar', 'booking', 'weekly', 'reminder', 'invoice', 'clinic',
 const sentence = (length = 14) => Array.from({ length }, () => WORDS[randomInt(WORDS.length)]).join(' ')
 
 // Fresh state for each conformance phase: a new address to invite, so every
-// round's invitation is its own (Base modules/agent-door/ADOPTING.md, fixtures);
+// round's invitation is its own (Base modules/agent-door/ADOPTING.md, fixtures),
+// and another for the invitation sent with injected text, since an agent never
+// renames someone already invited;
 // alert destinations and the company's X app keys derived at run time, so no
 // secret-shaped value is a literal; posts unlike any earlier round's, so no
 // round's post reads as a near-duplicate of the last, a master text over X's
@@ -16,6 +18,7 @@ export default async function prepare() {
   const id = randomUUID()
   return { values: {
     invitee: `synthetic-stump-${id}@example.com`,
+    invitee_injected: `synthetic-stump-${id}-injected@example.com`,
     venue_url: `https://synthetic-stump-${id}.example/forum`,
     venue_handle: `synthetic-${id.slice(0, 8)}`,
     slack_webhook: `https://hooks.slack.com/services/T${randomBytes(4).toString('hex')}/B${randomBytes(4).toString('hex')}/${randomBytes(12).toString('hex')}`,

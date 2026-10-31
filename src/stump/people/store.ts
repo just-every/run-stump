@@ -29,7 +29,7 @@ const SIGNED_IN_AT = '(SELECT MIN(s.created_at) FROM oa_sessions s WHERE s.opera
  * session, so every read sees the acceptance from that sign-in on, through
  * every door, with the person's join time set to the sign-in.
  */
-async function acceptSignedIn(db: D1Database, id?: string): Promise<void> {
+export async function acceptSignedIn(db: D1Database, id?: string): Promise<void> {
   const only = id === undefined ? '' : ' AND p.id=?', args = id === undefined ? [] : [id]
   const due = await db.prepare(`SELECT 1 FROM stump_people p WHERE ${SIGNED_IN}${only} LIMIT 1`).bind(...args).first()
   if (!due) return

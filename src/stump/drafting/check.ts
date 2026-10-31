@@ -4,7 +4,7 @@
 // result, and stores its outcome in the item's flags as {code, blocking, ...facts}.
 import { bannedAct, checkClaims, checkDisclosure, claimsUsed, extractMentions, screenDraftForVenue, sentencesAsRead, statesConnection, type ClaimFinding, type MentionSet, type PersonProfile } from '../lib/claims/index.ts'
 import { countText, nearDuplicates, type Network, type TextCount } from '../lib/text/index.ts'
-import type { StumpPerson } from '../people/store.ts'
+import { acceptSignedIn, type StumpPerson } from '../people/store.ts'
 import { readVenue, rulesOf, type VenueRow } from '../venues/model.ts'
 import { holdFor, type VenueHold } from '../venues/rules.ts'
 import { otherServer } from '../venues/server.ts'
@@ -25,13 +25,17 @@ export const SEE_MORE_CUT: Partial<Record<string, number>> = { linkedin: 140 }
 /** `people` is the team by display name: a teammate named in a post never makes it say more than a claim. */
 export interface Brand { products: ProductRecord[]; claims: ClaimRecord[]; company_names: string[]; people: PersonProfile[]; window_days: number }
 
-/** The company's brand memory as it is now: products, claims, its own names, its team and the duplicate window. */
+/**
+ * The company's brand memory as it is now: products, claims, its own names, its team and the duplicate window. The team is
+ * the people who have joined: an invited person holds nothing until they sign in (D-1), their name included.
+ */
 export async function loadBrand(db: D1Database): Promise<Brand> {
+  await acceptSignedIn(db)
   const [products, claims, settings, people] = await db.batch([
     db.prepare('SELECT * FROM stump_products ORDER BY name,id'),
     db.prepare('SELECT * FROM stump_claims ORDER BY created_at,id'),
     db.prepare('SELECT company_names,duplicate_window_days FROM stump_drafting_settings WHERE id=1'),
-    db.prepare("SELECT id,display_name FROM stump_people WHERE status<>'removed' ORDER BY id"),
+    db.prepare("SELECT id,display_name FROM stump_people WHERE status='active' ORDER BY id"),
   ])
   const row = (settings!.results as Row[])[0]
   return {
