@@ -16,7 +16,7 @@ A product claim is done when every clause behind it is done, missing when every 
 | 8 | Real people only, and every post says who is speaking. | `STUMP-TRUTH-001` partial; `STUMP-TRUTH-002` done | partial |
 | 9 | Launch on Product Hunt and Show HN the way they ask. | `STUMP-LAUNCH-002` missing; `STUMP-LAUNCH-003` missing | missing |
 | 10 | Pitch journalists and podcasts from the same record. | `STUMP-PITCH-001` partial; `STUMP-PITCH-002` missing | partial |
-| 11 | People who engage land in your CRM. | `STUMP-STACK-002` partial; `STUMP-STACK-007` missing; `STUMP-STACK-010` missing; `STUMP-LOOP-002` missing | partial |
+| 11 | People who engage land in your CRM. | `STUMP-STACK-002` partial; `STUMP-STACK-007` missing; `STUMP-STACK-010` missing; `STUMP-LOOP-002` partial | partial |
 | 12 | Your agents do the work under your company's own rules. | `STUMP-SURFACE-001` partial; `STUMP-SURFACE-009` done; `STUMP-LOOP-004` missing | partial |
 | 13 | Bring your Buffer, Typefully, Hootsuite or Postiz history with you. | `STUMP-IMPORT-001` done; `STUMP-IMPORT-002` missing; `STUMP-IMPORT-003` missing; `STUMP-IMPORT-004` missing | partial |
 | 14 | Take your whole record with you, any time. | `STUMP-DATA-001` done | done |

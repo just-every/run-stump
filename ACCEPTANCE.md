@@ -8,10 +8,10 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 18 | 42 | 84 | 144 |
-| Agent surface | 6 | 18 | 4 | 28 |
+| Core | 18 | 46 | 80 | 144 |
+| Agent surface | 5 | 19 | 4 | 28 |
 | Later | 0 | 0 | 8 | 8 |
-| Full target | 24 | 60 | 96 | 180 |
+| Full target | 23 | 65 | 92 | 180 |
 
 Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c8f` (31 October 2026). Field proof register: 28 rows; 0 passed, 0 failed, 28 not run.
 
@@ -424,7 +424,7 @@ Core · published · **partial** · From new · Rules D-4, D-5 · Register R-1
 8. Once the label and bio are recorded, the agent's publish goes to the company's policy like any call.
 
 **Evidence.** `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `agent-surface.json` journey steps label-x, x-schedule; held-out acceptance A11
-**Gap.** Video (part of point 6) is not built.
+**Gap.** Video (part of point 6) is not built. The composer does not show the charge before a person's post goes out (part of point 2).
 
 #### STUMP-PUBLISH-005 — LinkedIn member posts
 
@@ -1120,7 +1120,7 @@ Core · target · **missing** · From new
 
 #### STUMP-PLAN-003 — Campaigns
 
-Core · target · **missing** · From new
+Core · target · **partial** · From new
 
 **Requirement.** A campaign groups items, hand-offs, pitches and launches under one name with dates, a goal, a product and a UTM campaign name. Its page shows what is planned, posted and pending, and its results.
 
@@ -1130,8 +1130,8 @@ Core · target · **missing** · From new
 3. Its results sum the results of its items.
 4. Archiving a campaign keeps its items and results readable.
 
-**Evidence.** None.
-**Gap.** Not built: a campaign is a name on items and links, with no campaign record.
+**Evidence.** `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"; held-out acceptance A15
+**Gap.** There is no campaign record or page: a campaign's items, hand-offs and pitches with their states (point 1), its summed results (point 3) and archiving (point 4) are not built.
 
 #### STUMP-PLAN-004 — Rotation across products
 
@@ -1149,7 +1149,7 @@ Core · target · **missing** · From new · Rules D-3
 
 #### STUMP-PLAN-005 — Pacing as data
 
-Core · target · **missing** · From new · Register R-28
+Core · target · **partial** · From new · Register R-28
 
 **Requirement.** Each account has a posting budget per day and a minimum interval, and each network's rate limits are kept as data in the network table (`docs/networks.md`). Stump checks pacing just before it publishes; an item over budget moves to the next allowed time with the reason.
 
@@ -1159,8 +1159,8 @@ Core · target · **missing** · From new · Register R-28
 3. A network limit reached mid-day holds the remaining items with their next times.
 4. Changing a budget takes effect at the next publish.
 
-**Evidence.** None.
-**Gap.** Not built: no posting budgets or intervals.
+**Evidence.** `tests/stump/accounts.test.mjs` "removing a person disconnects their own X account at X and returns their posts waiting on a rate limit to draft"; held-out acceptance A11, A12
+**Gap.** Per-account daily budgets and minimum intervals (points 1, 2 and 4) are not built.
 
 #### STUMP-PLAN-006 — Bulk scheduling from CSV
 
@@ -2032,7 +2032,7 @@ Core · target · **missing** · From new · Cites BASE-MAIL-001
 
 #### STUMP-STACK-006 — API, webhooks, Zapier and Make
 
-Core · target · **missing** · From new · Cites BASE-SECRET-001, BASE-OPS-003 · Register R-26
+Core · target · **partial** · From new · Cites BASE-SECRET-001, BASE-OPS-003 · Register R-26
 
 **Requirement.** A versioned API covers venues, items, hand-offs, the ledger, findings and campaigns, with named keys and scopes. Signed outgoing webhooks report item, hand-off, finding and inbox events, with replay, so tools such as Crank can act on them. Stump's Zapier and Make apps offer the same events as triggers and the API's main writes as actions, each authenticated with a Stump API key and limited to its scopes.
 
@@ -2044,8 +2044,8 @@ Core · target · **missing** · From new · Cites BASE-SECRET-001, BASE-OPS-003
 5. A Zapier trigger on a published item fires once per item, with the same payload as the webhook.
 6. A Make trigger on a new finding fires once per finding, and a Make action creates an idea within its key's scope.
 
-**Evidence.** None.
-**Gap.** Not built: no API keys, outgoing webhooks, Zapier or Make.
+**Evidence.** `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute"; held-out acceptance A14
+**Gap.** API keys and scopes, item, hand-off and inbox events, and Zapier and Make (points 1 to 3, 5 and 6) are not built; signed webhooks with replay cover findings only (STUMP-WATCH-004).
 
 #### STUMP-STACK-007 — HubSpot and Google Analytics for companies that keep them
 
@@ -2319,7 +2319,7 @@ Core · push-further · **missing** · From new · Cites BASE-AGENT-002, BASE-AG
 
 #### STUMP-LOOP-002 — From an engager to an Orbit contact
 
-Core · push-further · **missing** · From new · Cites BASE-AGENT-002, BASE-AGENT-003, BASE-AGENT-006, BASE-AGENT-007 · Rules D-7
+Core · push-further · **partial** · From new · Cites BASE-AGENT-002, BASE-AGENT-003, BASE-AGENT-006, BASE-AGENT-007 · Rules D-7
 
 **Requirement.** The agent reads the inbox and findings for people who engaged with substance, and joins a person's interactions across networks only where that person links their own accounts publicly; it never guesses an identity from a display name. It sends Orbit, or the CRM the company keeps (STUMP-STACK-007, STUMP-STACK-010), one contact proposal per person with their signals and public links, and the CRM's identity rules decide any merge. Stump records which posts produced which Orbit contacts, so results can count them.
 
@@ -2329,8 +2329,8 @@ Core · push-further · **missing** · From new · Cites BASE-AGENT-002, BASE-AG
 3. No email address is sent unless the person shows it publicly on their profile.
 4. The post that started each contact lists the Orbit contacts it produced.
 
-**Evidence.** None.
-**Gap.** Not built: engagers reach Orbit from X one account at a time, with no cross-network contact proposal.
+**Evidence.** `tests/stump/inbox.test.mjs` "people who engaged first with substance become offers to Orbit, signed, with only a publicly shown email and one identity each; a failed send stays offered"; held-out acceptance A16
+**Gap.** Joining one person's accounts across networks into one proposal (points 1 and 2) and listing the contacts each post produced (point 4) are not built.
 
 #### STUMP-LOOP-003 — From a signup to the weekly brief
 
@@ -2622,7 +2622,7 @@ Agent surface · target · **partial**
 
 #### BASE-AGENT-012 — Writes are idempotent and conflict-safe
 
-Agent surface · target · **done**
+Agent surface · target · **partial**
 
 **Requirement.** Every mutating tool requires an idempotency key and takes an optional expected revision. The same key with the same arguments returns the first outcome for at least 24 hours; the same key with different arguments returns `idempotency_conflict`; a stale revision returns `revision_conflict` with the current revision. Long work returns a job handle and a status tool, with no dependence on the Tasks extension.
 
@@ -2633,8 +2633,8 @@ Agent surface · target · **done**
 4. A stale revision returns a conflict naming the current revision.
 5. A job handle used by another person's token reads as not found.
 
-**Evidence.** `agent-surface.json` (Base agent-door conformance journey, run in Verify); `tests/stump/team.test.mjs` "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked"; held-out acceptance A06, A22
-**Gap.** None.
+**Evidence.** `agent-surface.json` (Base agent-door conformance journey, run in Verify); `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"; held-out acceptance A11, A22
+**Gap.** A retry after a dropped stream (point 2) is not proven, and Stump has no job handles (point 5).
 
 #### BASE-AGENT-013 — Manifest, docs and the conformance journey
 

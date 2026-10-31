@@ -2667,8 +2667,8 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 13 | 29 | 8 | 50 |
-| Target and push further | 11 | 31 | 88 | 130 |
-| All | 24 | 60 | 96 | 180 |
+| Target and push further | 10 | 36 | 84 | 130 |
+| All | 23 | 65 | 92 | 180 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -2694,7 +2694,7 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | `STUMP-CONNECT-001` | Connection ownership and disconnect | published | partial | `tests/stump/accounts.test.mjs` "X refusing the account's token marks it expired, holds its posts with the reconnect step, and only its owner's reconnect brings it back"; `tests/stump/accounts.test.mjs` "removing a person disconnects their own X account at X and returns their posts waiting on a rate limit to draft"; held-out acceptance A09, A10 | A company account outliving the admin who connected it (point 2) is built and not proven. |
 | `STUMP-PUBLISH-002` | Bluesky posts and threads | published | partial | `src/stump/publish/bluesky.ts`; held-out acceptance A10 | Video (point 7) is not built. Rate-limit holds (point 6) are built and not proven. |
 | `STUMP-PUBLISH-003` | Mastodon posts and threads | published | partial | `src/stump/publish/mastodon.ts`; held-out acceptance A09 | The bot-flag rule for agents (point 7) is built and not proven. |
-| `STUMP-PUBLISH-004` | X posts and threads | published | partial | `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `agent-surface.json` journey steps label-x, x-schedule; held-out acceptance A11 | Video (part of point 6) is not built. |
+| `STUMP-PUBLISH-004` | X posts and threads | published | partial | `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `agent-surface.json` journey steps label-x, x-schedule; held-out acceptance A11 | Video (part of point 6) is not built. The composer does not show the charge before a person's post goes out (part of point 2). |
 | `STUMP-PUBLISH-005` | LinkedIn member posts | published | done | `src/stump/publish/linkedin.ts`; held-out acceptance A12, A18 | |
 | `STUMP-PUBLISH-007` | Threads posts | published | missing | | Not built: no Threads connection. |
 | `STUMP-PUBLISH-008` | LinkedIn company page | published | missing | | Not built: no LinkedIn company page connection. |
@@ -2737,9 +2737,9 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | `STUMP-DRAFT-007` | Alternates and talking points | target | missing | | Not built: an item holds one draft, with no alternates. |
 | `STUMP-DRAFT-008` | Articles with canonical links | target | missing | | Not built: no articles. |
 | `STUMP-DRAFT-009` | Other languages, locales and non-US disclosure rules | target | missing | | Not built: US English only. |
-| `STUMP-PLAN-003` | Campaigns | target | missing | | Not built: a campaign is a name on items and links, with no campaign record. |
+| `STUMP-PLAN-003` | Campaigns | target | partial | `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"; held-out acceptance A15 | There is no campaign record or page: a campaign's items, hand-offs and pitches with their states (point 1), its summed results (point 3) and archiving (point 4) are not built. |
 | `STUMP-PLAN-004` | Rotation across products | target | missing | | Not built: no product rotation. |
-| `STUMP-PLAN-005` | Pacing as data | target | missing | | Not built: no posting budgets or intervals. |
+| `STUMP-PLAN-005` | Pacing as data | target | partial | `tests/stump/accounts.test.mjs` "removing a person disconnects their own X account at X and returns their posts waiting on a rate limit to draft"; held-out acceptance A11, A12 | Per-account daily budgets and minimum intervals (points 1, 2 and 4) are not built. |
 | `STUMP-PLAN-006` | Bulk scheduling from CSV | target | missing | | Not built: no bulk scheduling from CSV. |
 | `STUMP-PLAN-007` | Pause publishing | target | done | `tests/stump/accounts.test.mjs` "an agent posts to the company X account within the owner's dollar limit: Pause holds it, it goes out once, reads back from X and lands on the ledger with its charge"; `agent-surface.json` journey steps pause, resume; held-out acceptance A21 | |
 | `STUMP-PUBLISH-009` | Images, video and alt text per network | target | partial | `src/stump/lib/bluesky/post.ts`; held-out acceptance A12 | Converting images between formats (point 2) and video (point 3) are not built. A fifth Bluesky image (point 1) is refused, built and not proven; alt text read back (point 4) is proven on LinkedIn only. |
@@ -2796,7 +2796,7 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | `STUMP-STACK-009` | Newsletter drafts to beehiiv, Kit and Ghost | target | missing | | Not built: no beehiiv, Kit or Ghost drafts. |
 | `STUMP-STACK-004` | Annotations to Vane | target | partial | `tests/stump/ledger-stack.test.mjs` "link tags go on the company's own links only, and engagers and annotations reach Orbit and Vane signed, sealed and recorded"; held-out acceptance A16 | Launch annotations (point 2) and marking a deleted post's annotation (point 3) are not built. |
 | `STUMP-STACK-005` | Notices by email, Slack and push | target | missing | | Not built: no notices by email, Slack or push. |
-| `STUMP-STACK-006` | API, webhooks, Zapier and Make | target | missing | | Not built: no API keys, outgoing webhooks, Zapier or Make. |
+| `STUMP-STACK-006` | API, webhooks, Zapier and Make | target | partial | `tests/stump/watches.test.mjs` "watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute"; held-out acceptance A14 | API keys and scopes, item, hand-off and inbox events, and Zapier and Make (points 1 to 3, 5 and 6) are not built; signed webhooks with replay cover findings only (STUMP-WATCH-004). |
 | `STUMP-STACK-007` | HubSpot and Google Analytics for companies that keep them | target | missing | | Not built: no HubSpot or Google Analytics connection. |
 | `STUMP-TEAM-001` | Roles | target | done | `tests/stump/team.test.mjs` "people join only by invitation, with the invited role, through the person door"; `tests/stump/team.test.mjs` "the owner cannot be removed or demoted until ownership is transferred, and the transfer is recorded"; `tests/stump/team.test.mjs` "a contributor drafts but cannot schedule or publish, and a poster sees only their own accounts and drafts"; `tests/stump/team.test.mjs` "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked"; held-out acceptance A01, A07 | |
 | `STUMP-TEAM-002` | Company-defined sign-off | target | missing | | Not built: no company sign-off paths. |
@@ -2832,7 +2832,7 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | `STUMP-SURFACE-013` | Embedded agents use the same registry | target | missing | | Not built: Stump has no embedded agents. |
 | `STUMP-SURFACE-014` | A stranger specialist's seeded week | target | missing | | Not built: the seeded week needs Penny releases, Vane signups and the weekly brief. |
 | `STUMP-LOOP-001` | From a release to posts in one pass | push-further | missing | | Not built: no release plans from Penny or GitHub. |
-| `STUMP-LOOP-002` | From an engager to an Orbit contact | push-further | missing | | Not built: engagers reach Orbit from X one account at a time, with no cross-network contact proposal. |
+| `STUMP-LOOP-002` | From an engager to an Orbit contact | push-further | partial | `tests/stump/inbox.test.mjs` "people who engaged first with substance become offers to Orbit, signed, with only a publicly shown email and one identity each; a failed send stays offered"; held-out acceptance A16 | Joining one person's accounts across networks into one proposal (points 1 and 2) and listing the contacts each post produced (point 4) are not built. |
 | `STUMP-LOOP-003` | From a signup to the weekly brief | push-further | missing | | Not built: no weekly brief. |
 | `STUMP-LOOP-004` | One policy, Pause and audit across seeds | push-further | missing | | Not built: no Business policy, Pause or trace across seeds. |
 | `STUMP-LOOP-005` | Venue scout | push-further | missing | | Not built: no venue scout. |
@@ -2850,5 +2850,5 @@ Judged from the code and tests at commit `5d290ecf38dfc016c9da73c93ca7597173870c
 | `BASE-AGENT-009` | Every agent action is audited with its class and decision | target | partial | `agent-surface.json` (Base agent-door conformance journey, run in Verify); held-out acceptance A22 | The Agents page's counts on a fixture week and its accessibility at 1440 and 390 (points 3 and 7) are not proven. |
 | `BASE-AGENT-010` | Agents can follow changes | target | partial | `agent-surface.json` (Base agent-door conformance journey, run in Verify) | Stump's own records raise no events, so following them (points 1, 4 and 5) is not proven. |
 | `BASE-AGENT-011` | Limits are policy, and Pause stops everything | target | partial | `agent-surface.json` (Base agent-door conformance journey, run in Verify); held-out acceptance A21 | A usage view of spend per agent (point 5) is not built, and spend caps (points 3 and 4) are not proven. |
-| `BASE-AGENT-012` | Writes are idempotent and conflict-safe | target | done | `agent-surface.json` (Base agent-door conformance journey, run in Verify); `tests/stump/team.test.mjs` "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked"; held-out acceptance A06, A22 | |
+| `BASE-AGENT-012` | Writes are idempotent and conflict-safe | target | partial | `agent-surface.json` (Base agent-door conformance journey, run in Verify); `tests/stump/drafting.test.mjs` "the claim check, disclosure and near-duplicate hold stop a draft the same way for a person and their agent"; held-out acceptance A11, A22 | A retry after a dropped stream (point 2) is not proven, and Stump has no job handles (point 5). |
 | `BASE-AGENT-013` | Manifest, docs and the conformance journey | target | partial | `agent-surface.json` (Base agent-door conformance journey, run in Verify) | The docs do not name the test behind each computed class (point 2). |

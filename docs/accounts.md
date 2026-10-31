@@ -24,7 +24,7 @@ The setup screen shows each app's callback URLs, scopes and state, and keeps you
 
 ## X
 
-Each X post shows its charge from your price table before it goes out, and the charge is recorded on its ledger entry. An agent publishes to an X account only when the account carries X's Automated label with its operator named in the bio. Prices and limits are in [Networks](/docs/networks).
+Each X post's charge from your price table is kept on its ledger entry, and an agent's X post shows its charge on the approval before it goes out. An agent publishes to an X account only when the account carries X's Automated label with its operator named in the bio. Prices and limits are in [Networks](/docs/networks).
 
 ## Bluesky
 

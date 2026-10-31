@@ -396,7 +396,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "8a57d67a41f4df3c65bc7e8b44d79973a6a1521340e525ac11085c14bbe9abb0",
+      "sha256": "71289b39d212fb2345f585996d3acf664b709f5c3767a3fe8ebef401341dfabc",
       "executable": false
     },
     "agent-surface.json": {
@@ -412,7 +412,7 @@
       "executable": false
     },
     "CHANGELOG.md": {
-      "sha256": "15296dfbe364dfec28b3952b32ee6147a9a99ac8ebcc740510dd18257a38bafd",
+      "sha256": "4745be1e924ac71b0121a06f1409ef80b9a937df7e8cfabbc0405fb4c5a9d14c",
       "executable": false
     },
     "CLAUDE.md": {
@@ -424,7 +424,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "4e1213127239fe82ca1027f25cf023b4a69e21c439663e7d67a5f0244fa9c122",
+      "sha256": "24ab38a6599ddad3a8164c013a3c0c3b5b8aa277b4348751fa8e4f56416e37c2",
       "executable": false
     },
     "deploy-demo.json": {
@@ -440,7 +440,7 @@
       "executable": false
     },
     "docs/accounts.md": {
-      "sha256": "36b8b5b40f94eef0000eaf11d0c08bb3a7943045f5861a8c385644daf94f2a0c",
+      "sha256": "0572a804e82081fd225cb4b163101c2684200c47756287c45214815556365a11",
       "executable": false
     },
     "docs/agents.md": {
@@ -456,7 +456,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "961ef65af8165db5b3534d991cd75fd287514a3e91c3d7dff62eb8d94abf28d0",
+      "sha256": "a090e71fe7447aa63c6376f0f5d35106abafdf159130ee826c577ac39fba88de",
       "executable": false
     },
     "docs/compose.md": {
