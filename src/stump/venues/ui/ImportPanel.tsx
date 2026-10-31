@@ -106,11 +106,11 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
       </div>
       <p className="st-note">Stump reads the file and shows what it would add. Nothing changes until you apply it.</p>
       {error ? <p className="st-error" role="alert">{error}</p> : null}
-      {holders.length ? <div className="st-actions"><button className="st-button pill outline" type="button" disabled={busy}
-        onClick={() => void run(async () => { const undone = await undoThrough(source, holders); onChanged(); setNotice(`Earlier imports undone${undone.length ? `; ${plural(undone.length, 'record')} edited or in use since stayed` : ''}. Upload the file again.`) })}>Undo earlier imports</button></div> : null}
       {notice ? <p className="st-note" role="status">{notice}</p> : null}
       <div className="st-actions">
         <button className="st-button primary pill" type="submit" disabled={busy}>{busy ? 'Reading…' : 'Review import'}</button>
+        {holders.length ? <button className="st-button pill outline" type="button" disabled={busy}
+          onClick={() => void run(async () => { const undone = await undoThrough(source, holders); onChanged(); setNotice(`Earlier imports undone${undone.length ? `; ${plural(undone.length, 'record')} edited or in use since stayed` : ''}. Upload the file again.`) })}>Undo earlier imports</button> : null}
         <button className="st-button pill" type="button" onClick={onClose}>Cancel</button>
       </div>
     </form> : <div>

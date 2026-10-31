@@ -4552,7 +4552,7 @@
       "executable": false
     },
     "src/stump/venues/ui/ImportPanel.tsx": {
-      "sha256": "25c741e6d907298079b8c1cb026de106eb3518becdb1281a4d06798afecb58f7",
+      "sha256": "3da4c645ded683db2c6729d12d612cc4c89ecaa6bfedd19fc591beba333b4f20",
       "executable": false
     },
     "src/stump/venues/ui/labels.ts": {
