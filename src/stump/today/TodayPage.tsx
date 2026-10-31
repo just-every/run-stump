@@ -5,12 +5,13 @@ import type { ItemRecord } from '../drafting/records.ts'
 import type { Account } from '../drafting/view.ts'
 import type { Handoff } from '../handoffs/ui/words.ts'
 import { CONTRIBUTORS, EDITORS, READERS, type Role } from '../people/roles.ts'
+import { actionName, approvals, principal, toolTitles } from '../agent-door/ui/policy.ts'
 import { me, runAction } from '../ui/api.ts'
 import { Icon } from '../ui/icons.tsx'
 import { Chip, Empty, PanelTitle, Parts, useLoaded } from '../ui/kit.tsx'
 import { JOB_WORDS, chipsFor, jobOf } from '../watches/finding-view.ts'
 import type { FindingList, WatchList } from '../watches/ui-types.ts'
-import { dayOf, dueToday, findingChips, goingOut, heldRows, worthAnswering, type Day, type Dest } from './sections.ts'
+import { approvalRows, dayOf, dueToday, findingChips, goingOut, heldRows, worthAnswering, type Day, type Dest, type WaitingApproval } from './sections.ts'
 
 // Today (SPEC §4.2): what needs this person today, each row opening the screen
 // that owns it. Every figure comes from the person door's existing reads.
@@ -20,7 +21,7 @@ const page = <T,>(tool: string, args: Record<string, unknown>) => runAction<{ it
 async function loadWork() {
   const who = await me()
   const reader = READERS.includes(who.person.role as Role)
-  const [queue, held, drafts, scheduled, paused, accounts, venues, products] = await Promise.all([
+  const [queue, held, drafts, scheduled, paused, accounts, venues, products, asks, titles] = await Promise.all([
     page<Handoff>('stump.handoffs.manage', { action: 'queue' }),
     page<ItemRecord>('stump.drafts.revise', { action: 'list', state: 'held' }),
     page<ItemRecord>('stump.drafts.revise', { action: 'list', state: 'draft' }),
@@ -29,8 +30,13 @@ async function loadWork() {
     page<Account>('stump.accounts.connect', { action: 'list' }),
     reader ? page<{ id: string; name: string }>('stump.venues.manage', { action: 'list' }) : null,
     page<{ id: string; name: string }>('stump.brand.manage', { action: 'product_list' }),
+    // Agent calls that wait for a decision hold work as much as a flagged draft does (Base's approvals door, as Settings · Agents reads it).
+    approvals().then(answer => answer.approvals.filter(item => item.state === 'pending')),
+    toolTitles(),
   ])
+  const waiting: WaitingApproval[] = asks.map(item => ({ id: item.id, title: actionName(item.tool, titles), agent: principal(item.prepared_by.agent), for: principal(item.prepared_by.for), expires_at: item.expires_at }))
   return {
+    waiting,
     who, queue: queue.items, items: [...held.items, ...drafts.items, ...scheduled.items, ...paused.items],
     accounts: new Map(accounts.items.map(account => [account.id, account])),
     venues: new Map((venues?.items ?? []).map(venue => [venue.id, venue.name])),
@@ -67,6 +73,8 @@ function Go({ to, className, children }: { to: Dest; className?: string; childre
     case 'handoff': return <Link className={className} to="/app/handoffs/$handoffId" params={{ handoffId: to.id }}>{children}</Link>
     case 'compose': return <Link className={className} to="/app/compose" search={{ ...(to.master ? { master: to.master } : {}), ...(to.item ? { item: to.item } : {}), ...(to.fix ? { fix: to.fix } : {}) }}>{children}</Link>
     case 'listening': return <Link className={className} to="/app/listening" search={{ watch: to.watch, finding: to.finding, ...(to.act ? { act: true as const } : {}) }}>{children}</Link>
+    // Base keeps its approval pages at /agents/approvals/<id>, outside the app's router.
+    case 'approval': return <a className={className} href={`/agents/approvals/${encodeURIComponent(to.id)}`}>{children}</a>
   }
 }
 
@@ -122,7 +130,7 @@ export function TodayPage() {
 
   const personId = work.data?.who.person.id ?? ''
   const due = work.data && day ? dueToday(work.data.queue, personId, day) : null
-  const held = work.data ? heldRows(work.data.items, work.data.queue, personId, work.data.venues, work.data.accounts, work.data.products) : null
+  const held = work.data ? [...approvalRows(work.data.waiting), ...heldRows(work.data.items, work.data.queue, personId, work.data.venues, work.data.accounts, work.data.products)] : null
   const out = work.data && day ? goingOut(work.data.items, work.data.accounts, day) : null
   // A poster reads only their own work; Listening's findings are for the rest of the team.
   const reader = !work.data || READERS.includes(work.data.who.person.role as Role)

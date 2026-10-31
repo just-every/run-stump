@@ -13,6 +13,7 @@ export type Dest =
   | { kind: 'handoff'; id: string }
   | { kind: 'compose'; master?: string; item?: string; fix?: string }
   | { kind: 'listening'; watch: string; finding: string; act?: boolean }
+  | { kind: 'approval'; id: string }
 
 export interface Day { start: number; end: number; week: number }
 
@@ -136,6 +137,17 @@ export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string
       networks: [], thread: null, action: { label: 'Open brief', to: { kind: 'handoff', id: handoff.id } }, mine: handoff.person_id === personId, at: at(handoff.updated_at) })
   }
   return [...rows.values()].map(({ networks: _networks, ...row }) => row).sort((a, b) => Number(b.mine) - Number(a.mine) || b.at - a.at)
+}
+
+/** An agent's call that waits for a person's approval, as Settings · Agents lists it. */
+export interface WaitingApproval { id: string; title: string; agent: string; for: string; expires_at: string }
+
+/** Agent calls waiting for approval, as held rows that open Base's approval page, soonest to expire first. */
+export function approvalRows(asks: WaitingApproval[]): HeldRow[] {
+  return [...asks].sort((a, b) => at(a.expires_at) - at(b.expires_at)).map(ask => ({
+    key: `approval:${ask.id}`, name: ask.title, meta: `${ask.agent} for ${ask.for} · waits for approval`,
+    thread: null, action: { label: 'Open', to: { kind: 'approval', id: ask.id } }, mine: true, at: at(ask.expires_at),
+  }))
 }
 
 export interface OutRow { id: string; time: string; network: string; who: string; text: string; paused: boolean; to: Dest }

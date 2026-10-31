@@ -8,6 +8,7 @@ import { wordDiff } from '../drafting/diff.ts'
 import { checkRow, heldBecause, holdOf, itemView, mayWrite, prepareSave, readItem, readRevision, saveItem, storeCheck } from '../drafting/items.ts'
 import { claimRecord, itemRecord, itemText, libClaim, masterRecord, parse, today, type Row } from '../drafting/records.ts'
 import { createItem, createMaster, draftFromSource, draftingClasses, screen } from '../drafting/write.ts'
+import { sentText } from '../publish/outgoing.ts'
 import { venueOrRefuse } from '../venues/model.ts'
 import { routesFor } from '../venues/rules.ts'
 
@@ -347,11 +348,12 @@ export const draftTools: StumpTool[] = [{
       target: args => ({ kind: 'master', id: String(args.master_id) }),
       async run(args, ctx) {
         const { record, rows } = await visibleMaster(ctx, args.master_id)
-        const items = rows.map(row => {
+        const items = await Promise.all(rows.map(async row => {
           const item = itemRecord(row), text = itemText(row)
           return { item_id: item.id, network: item.network, account_id: item.account_id, venue_id: item.venue_id, product_id: item.product_id, handle: row.handle ?? null, account_name: row.account_name ?? null, text,
+            sent_text: await sentText(ctx.db, { id: item.id, state: String(item.state), network: item.network as string | null, campaign: item.campaign as string | null, text }),
             count: counted(item.network) ? countText({ network: item.network }, text) : null, flags: item.flags, state: item.state, revision: item.revision, differs_from_master: item.differs_from_master }
-        })
+        }))
         return plain({ master: record, items, total: items.length })
       },
     },
@@ -363,7 +365,8 @@ export const draftTools: StumpTool[] = [{
         const item = itemRecord(await readItem(ctx, args.item_id))
         const stored = item.parts as unknown, texts = Array.isArray(stored) && stored.length ? stored as string[] : [String(item.text ?? '')]
         const items = texts.map((text, index) => ({ network: item.network, part: texts.length > 1 ? index + 1 : null, text, count: counted(item.network) ? countText({ network: item.network }, text) : null }))
-        return plain({ item_id: item.id, items, total: items.length })
+        const sent_text = await sentText(ctx.db, { id: item.id, state: String(item.state), network: item.network as string | null, campaign: item.campaign as string | null, text: itemText(item) })
+        return plain({ item_id: item.id, items, total: items.length, sent_text })
       },
     },
     targets: {

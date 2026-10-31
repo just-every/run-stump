@@ -10,7 +10,16 @@ import { NotPublicError, publicFetch, stumpFetch } from '../net/fetch.ts'
 import { providerConfig, providerMessage } from './provider.ts'
 import type { ProductRecord, VoiceRecord } from './records.ts'
 
-export { aiHost } from './provider.ts'
+/**
+ * The provider's host for a call that drafts through it. With no provider set the call is
+ * refused at once, as the draft itself would be, so no approval waits on a draft that cannot
+ * be written.
+ */
+export async function draftingHost(env: StumpEnv, db: D1Database): Promise<string> {
+  const { source, host } = await providerConfig(env, db)
+  if (source === 'none') refuse('ai_failed', { provider_code: 'ai_disabled', host, reason: failure('ai_disabled', host, null) })
+  return host
+}
 
 /** A provider failure in plain words: what went wrong, and the provider's own message where it gave one (STUMP-DRAFT-006.2). */
 function failure(code: string, host: string, said: string | null): string {

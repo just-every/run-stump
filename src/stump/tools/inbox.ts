@@ -2,7 +2,7 @@ import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
 import { xPrices } from '../accounts/apps.ts'
 import { readAccount } from '../accounts/store.ts'
-import { aiHost } from '../drafting/ai.ts'
+import { draftingHost } from '../drafting/ai.ts'
 import { checkReply, countInbox, listInbox, NO_DM, planReply, pollCeiling, pollInbox, replyClasses, runReply } from '../inbox/index.ts'
 import { EDITORS, READERS } from '../people/roles.ts'
 
@@ -66,7 +66,7 @@ export const inboxTools: StumpTool[] = [{
     reply: {
       roles: EDITORS,
       properties: { inbox_item_id: id, account_id: id, text, generate: { type: 'boolean' } }, required: ['inbox_item_id', 'account_id'],
-      async classify(args, ctx) { return replyClasses(await planReply(ctx, args), await aiHost(ctx.env, ctx.db)) },
+      async classify(args, ctx) { const plan = await planReply(ctx, args); return replyClasses(plan, plan.generate ? await draftingHost(ctx.env, ctx.db) : null) },
       async summary(args, ctx) {
         const plan = await planReply(ctx, args)
         return { target: { id: plan.inbox.id, name: `Reply to @${plan.inbox.author_handle ?? 'someone'} on ${plan.account.network}` }, recipients: [plan.inbox.url],

@@ -6,7 +6,7 @@ import type { ActionContext, Args } from '../actions/types.ts'
 import { bannedAct, screenDraftRequest } from '../lib/claims/index.ts'
 import { NETWORK_LIMITS, splitThread } from '../lib/text/index.ts'
 import { notActiveReason, readPerson, type StumpPerson } from '../people/store.ts'
-import { aiHost, draftWithAi, readSource, type Drafted, type Source } from './ai.ts'
+import { draftWithAi, draftingHost, readSource, type Drafted, type Source } from './ai.ts'
 import { counted, loadBrand, namesCompany, readAccount, type Account } from './check.ts'
 import { insertItems, mayWrite, type NewItem } from './items.ts'
 import { contactRecord, libClaim, parse, today, voiceRecord, type Row, type VoiceRecord } from './records.ts'
@@ -18,7 +18,7 @@ type Format = typeof FORMATS[number]
 /** The class of a drafting call: standard by hand, external when it sends text to the AI provider (STUMP-SURFACE-002, -003.3). */
 export async function draftingClasses(ctx: Pick<ActionContext, 'env' | 'db'>, aiCalls: number, items: number) {
   return aiCalls > 0
-    ? [{ class: 'external' as const, facts: { measure: aiCalls, counterparty: 'known' as const, provider: await aiHost(ctx.env, ctx.db) } }]
+    ? [{ class: 'external' as const, facts: { measure: aiCalls, counterparty: 'known' as const, provider: await draftingHost(ctx.env, ctx.db) } }]
     : [{ class: 'standard' as const, facts: { measure: items } }]
 }
 

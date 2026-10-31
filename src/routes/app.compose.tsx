@@ -25,12 +25,12 @@ export const Route = createFileRoute('/app/compose')({
 /** One draft with no master post, read as a variant so it edits and checks the same way. */
 async function draftAlone(itemId: string, accounts: Account[]): Promise<Variant> {
   const [item, shown] = await Promise.all([runAction<ItemRecord>('stump.drafts.revise', { action: 'get', item_id: itemId }),
-    runAction<{ items: Array<{ count: Count | null }> }>('stump.drafts.preview', { action: 'item', item_id: itemId })])
+    runAction<{ items: Array<{ count: Count | null }>; sent_text: string | null }>('stump.drafts.preview', { action: 'item', item_id: itemId })])
   const account = accounts.find(entry => entry.id === item.account_id)
   const parts = item.parts as string[] | null
   return { item_id: item.id, network: item.network as string | null, account_id: item.account_id as string | null, venue_id: item.venue_id as string | null, product_id: item.product_id as string | null,
     handle: account?.handle ?? null, account_name: account?.display_name ?? null,
-    text: parts?.length ? parts.join('\n\n') : String(item.text ?? ''), count: shown.items[0]?.count ?? null, flags: item.flags as Flag[], state: String(item.state), revision: item.revision, differs_from_master: false }
+    text: parts?.length ? parts.join('\n\n') : String(item.text ?? ''), sent_text: shown.sent_text, count: shown.items[0]?.count ?? null, flags: item.flags as Flag[], state: String(item.state), revision: item.revision, differs_from_master: false }
 }
 
 const key = () => crypto.randomUUID()
@@ -369,7 +369,8 @@ function VariantCard({ variant, claims, select, onSelected, onSave }: { variant:
   const flags = blocking(variant.flags)
   // A flagged variant opens on what to fix; one that has gone out opens on the text it sends.
   const [open, setOpen] = useState(flags.length > 0 || !!GONE[variant.state])
-  const [text, setText] = useState(variant.text)
+  // Once it has left, the card shows the exact text the account sends: its links tagged, or as the network read it back.
+  const [text, setText] = useState(variant.sent_text ?? variant.text)
   const field = useRef<HTMLTextAreaElement>(null)
   const over = variant.count ? variant.count.count > variant.count.limit : false
   // "Fix claim": open the card, put the cursor in its text and select the claim, so typing replaces it.

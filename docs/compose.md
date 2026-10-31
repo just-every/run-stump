@@ -6,7 +6,7 @@ Write a post once and Stump opens a variant for each account you pick, side by s
 2. Pick the accounts: Bluesky, X, LinkedIn and Mastodon accounts the company or you own.
 3. Choose the product it is for (with one product, that one), and, where you keep venues on that network, the venue each account's variant goes to, such as your Mastodon instance. The venue's rules then apply to the variant, and the ledger files the post under that venue and product. A venue whose rules let only members post is shown but cannot be picked. Once the variants are open, the product and each variant's venue stay above them, so you can change either before scheduling: the variant's checks run again for its new venue and product.
 4. Edit any variant on its own. Changing the master updates the variants nobody has edited, and marks the edited ones.
-5. Schedule them all with one press, each at its account's time, or add them to each account's queue. The page then shows the text each account sends, as it goes out.
+5. Schedule them all with one press, each at its account's time, or add them to each account's queue. The page then shows the exact text each account sends, its links with their [tags](/docs/links), and once posted, the text the network read back.
 
 A variant that fails a check holds alone, naming the check, and the rest go ahead.
 

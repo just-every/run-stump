@@ -24,7 +24,7 @@ export function AiProviderPanel({ admin }: { admin: boolean }) {
   }
   return <section className="st-panel" aria-labelledby="conn-ai">
     <PanelTitle icon="pencil" id="conn-ai">AI provider</PanelTitle>
-    <p className="st-meta st-conn-line">Drafts from a source, a prompt or a reply go to your own provider and model with your key. Any OpenAI-compatible address works: OpenAI, OpenRouter, a Cloudflare AI Gateway or your own.</p>
+    <p className="st-meta st-conn-line">Drafts from a source, a prompt or a reply go to your own provider and model with your key. Any OpenAI-compatible address works: OpenAI, OpenRouter, a Cloudflare AI Gateway or your own. <a href="https://run-stump.com/docs/ai-provider" target="_blank" rel="noreferrer noopener">How to set one up</a></p>
     {data && !editing ? data.source === 'none'
       ? <p className="st-meta">No provider is set, so Stump cannot draft for you yet. {admin ? '' : 'An owner or admin sets one here.'}</p>
       : <div className="st-row">

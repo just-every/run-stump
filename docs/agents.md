@@ -94,7 +94,9 @@ The company's policy decides which classes of action an agent runs at once and w
 
 Reading never needs an approval: listing the team, the connected accounts and the network apps, reading the AI provider and reading the ledger are standard work, so a policy that blocks access or security changes still lets an agent find the person ids, account ids and records it needs.
 
-The owner can also edit the whole policy document for reviewers, approvers and narrower rules. Owners, admins and editors see the answers, this week's agent calls by class and how the policy handled them, and recent agent activity. Everyone sees their own agents and what waits for them.
+The owner can also edit the whole policy document for reviewers, approvers and narrower rules. Owners, admins and editors see the answers, this week's agent calls by class and how the policy handled them, and recent agent activity. Everyone sees their own agents and what waits for them. An agent call that waits for approval also shows on **Today**, under **Held**, and opens its approval page.
+
+An agent call that drafts through the AI provider while none is set is refused at once, with the reason, rather than waiting for an approval it could never use.
 
 ## Attribution
 
