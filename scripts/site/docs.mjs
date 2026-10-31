@@ -58,13 +58,15 @@ function render(markdown) {
         const language = (lang ?? '').trim().split(/\s+/)[0].toLowerCase();
         if (!language) problems.push('has a code block without a language');
         const name = languages[language] ?? language.toUpperCase();
-        const body = keepSlugs(escapeHtml(code.replace(/\n$/, '')));
+        const body = code.replace(/\n$/, '').split('\n').map(codeWords).join('\n');
         // A shell card sets each command on its own line with a hanging indent, so a wrapped tail sits under its command;
         // the line breaks stay in the text, so Copy copies the block exactly.
         const shell = name === 'Shell';
         const lines = shell ? body.split('\n').map((line, index, all) => `<span class="docs-line">${line}${index < all.length - 1 ? '\n' : ''}</span>`).join('') : body;
         return `<div class="docs-code${shell ? ' docs-code--shell' : ''}" data-copy-scope><div class="docs-code-head"><span>${escapeHtml(name || 'Code')}</span><button type="button" class="docs-copy" data-copy aria-label="Copy code" hidden></button></div><pre><code>${lines}</code></pre></div>\n`;
       },
+      // Inline code stays on one line when it is short ("rer dev --as person@example.com"); a longer one breaks only at its spaces.
+      codespan({ text: code }) { return code.length <= KEEP ? `<code class="docs-nowrap">${escapeHtml(code)}</code>` : `<code>${codeWords(code)}</code>`; },
       html({ text: raw }) { return escapeHtml(raw); },
       link({ href, title, tokens }) {
         links.push(href);
@@ -79,8 +81,16 @@ function render(markdown) {
   return { html, toc, ids, links, problems };
 }
 
-/** A repository slug in a command ("just-every/run-stump") never breaks at its hyphen: the line breaks at the space before it. */
-const keepSlugs = html => html.replace(/(^|[ \t])([A-Za-z0-9][\w.-]*\/[\w.-]*[A-Za-z0-9])(?=[ \t]|$)/gm, '$1<span class="docs-keep">$2</span>');
+/** The longest word a code line keeps whole: it fits a 390 px code card. */
+const KEEP = 32;
+/**
+ * One line of code, escaped, that breaks only at its spaces: each word up to KEEP characters stays whole ("--as", "just-every/run-stump",
+ * never split at a hyphen); a longer one (an address) breaks only after a single slash, "?", "&" or "=", each piece whole up to KEEP
+ * ("https://runeditrun.com/" then "install.sh"). The break points add no text, so Copy still copies the line exactly.
+ */
+const keep = piece => piece.length <= KEEP ? `<span class="docs-keep">${escapeHtml(piece)}</span>` : escapeHtml(piece);
+const codeWords = line => line.split(/(\s+)/).map(part => !part || /^\s+$/.test(part) ? part
+  : part.length <= KEEP ? keep(part) : part.split(/(?<=[?&=]|(?<!\/)\/(?!\/))/).map(keep).join('<wbr>')).join('');
 
 /** The id the docs article gives its h1 (src/site/docs/Docs.tsx); search links a page's opening text to it. */
 export const TITLE_ID = 'docs-title';
