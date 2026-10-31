@@ -101,10 +101,11 @@ export const teamTools: StumpTool[] = [{
         if (args.disclosure_lines !== undefined) await refuseClaimingLines(ctx.db, args.disclosure_lines as string[], 'disclosure_lines', ctx.now())
         const member = await ctx.db.prepare("SELECT id FROM stump_people WHERE email=? AND status='active'").bind(address).first<{ id: string }>()
         if (member) refuse('already_member', { person_id: member.id })
-        // Inviting someone again through an agent keeps what a signed-in person recorded on the invitation: the name they join
-        // with, their connection and their disclosure lines, as an agent's update of the person does.
+        // Inviting someone the team already knew through an agent keeps what a signed-in person recorded for them, whether the
+        // invitation is pending, cancelled or the person was removed: the name they join with, their connection and their
+        // disclosure lines, as an agent's update of the person does. The team keeps one record per email address.
         if (ctx.agent) {
-          const pending = await ctx.db.prepare("SELECT display_name,connection,disclosure_lines FROM stump_people WHERE email=? AND status='invited'").bind(address)
+          const pending = await ctx.db.prepare("SELECT display_name,connection,disclosure_lines FROM stump_people WHERE email=? AND status IN ('invited','removed')").bind(address)
             .first<{ display_name: string; connection: string | null; disclosure_lines: string | null }>()
           if (pending && pending.display_name !== String(args.display_name)) refuse('person_only', { field: 'display_name', reason: 'Names on the team are recorded by a signed-in owner or admin.' })
           if (pending && (pending.connection ?? null) !== ((args.connection as string | undefined) ?? null)) refuse('person_only', { field: 'connection', reason: 'Another person\'s connection and disclosure lines are recorded by a signed-in person.' })

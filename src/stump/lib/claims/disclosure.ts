@@ -7,18 +7,23 @@
 //   - in the text's own words (kind "own_words"), only where the words state the
 //     connection outright. Each form below is read as a whole statement, with the
 //     company or a product as its object (or "it", "this", "the product" where noted):
-//       "I work at/on/for Acme", "I'm with Acme", "I made/wrote/launched/built/founded Orbit"
+//       "I work at/on/for Acme", "I made/wrote/launched/built/founded Orbit", "I'm building Orbit"
 //         (also "it" or "this": "we launched it today", never "I made it to level 5");
+//       "I'm with Acme" or "I'm at Acme" as a statement of its own ("I'm with Acme.",
+//         "I'm with Acme, so"), never "I'm with Acme on this one";
 //       "we shipped/launched/built/founded/released Orbit", "we're building Orbit";
 //       a role stated as one's own: "I'm a founder of Orbit", "as an engineer at Acme",
-//         "Sam, founder of Orbit", or "I'm the founder" in a sentence naming the company
-//         or a product (never "I met the developers at Orbit");
+//         a sign-off that ends the text ("Sam, founder of Orbit"), or "I'm the founder" in a
+//         sentence naming the company or a product (never "I met the developers at Orbit"
+//         or "Thanks to Ana, founder of Orbit, for the demo");
 //       a paid tie stated as such: "I'm paid by Acme", "I'm employed by Acme",
 //         "Acme pays me to <do something>", "Acme pays me a retainer", "Acme employs me",
-//         "Acme hired me", "Acme sponsors this / sponsored this post / sponsors my newsletter",
+//         "Acme hired me", "Acme sponsors this / sponsored this post / sponsors my newsletter"
+//         (never "Acme sponsors this year's conference"),
 //         "this post is sponsored by Acme", "paid partnership with Acme";
-//       "Disclosure:", "Disclosure -" or "Full disclosure" followed by a connection
-//         ("Disclosure: the founder is my friend");
+//       "Disclosure:", "Disclosure -" or "Full disclosure" followed by a stated connection
+//         ("Disclosure: the founder is my friend", "Disclosure: they pay me"), with no negation
+//         anywhere after the marker in its sentence; "Disclaimer: views are my own" states none;
 //       "I'm affiliated with", "our product", "my own company";
 //       plain "we" and "our" when the same sentence names the company or a product.
 //   Anything else does not count, so the item holds and the person adds their line:
@@ -77,12 +82,23 @@ const ALWAYS: RegExp[] = [
   /\bour (?:product|company|startup|team|customers|users|app|platform)\b/giu,
 ]
 
-const I_ACTS = `i (?:(?:now|also|currently|still|just) )?(?:made|created|wrote|designed|launched|started|shipped|built|founded|co-?founded|maintain|develop|developed|co-?created|help(?:ed)? (?:build|make|run)|am building|${APOS}m building|work(?:ed)? (?:at|for|on)|am (?:with|at)|${APOS}m (?:with|at))`
+const I_ACTS = `(?:i (?:(?:now|also|currently|still|just) )?(?:made|created|wrote|designed|launched|started|shipped|built|founded|co-?founded|maintain|develop|developed|co-?created|help(?:ed)? (?:build|make|run)|work(?:ed)? (?:at|for|on))|i(?:${APOS}m| am) (?:(?:now|also|currently|still) )?building)`
+/** "I'm with Acme." stands as a statement of its own; "I'm with Acme on this one" agrees with Acme and states no connection. */
+const I_AM_WITH = `\\bi(?:${APOS}m| am) (?:(?:now|also|currently|still) )?(?:with|at)\\s+`
+const STATEMENT_END = '(?=\\s*(?:[.!;)\\u2014]|,\\s*(?:and|so|but|which)\\b|$|\\s+and\\b))'
 const WE_ACTS = `we(?: (?:just|recently|finally))? (?:shipped|made|launched|released|created|wrote|developed|designed|announced|open-?sourced|started|built|founded|co-?founded|maintain|develop|are building|${APOS}re building|${APOS}ve (?:shipped|built|launched|released|made))`
 const ROLE = '(?:co-?)?founders?|ceo|cto|coo|cpo|maintainers?|creators?|authors?|makers?|developers?|engineers?|designers?|employees?|(?:product )?managers?|member of the team'
 const DEFINITE_ROLE = '(?:co-?)?founders?|ceo|cto|coo|cpo|maintainers?|creators?'
-/** A role is the writer's own: "I'm a founder of", "as an engineer at", or a sign-off "Sam, founder of". */
-const ROLE_LEAD = `(?:(?:\\bi${APOS}m|\\bi am|\\bi was|\\bi${APOS}ve been|\\bi have been|\\bwe${APOS}re|\\bwe are|\\bwe were|\\bas)\\s+(?:(?:also|now|still|currently|proudly)\\s+)?(?:(?:a|an|the|one of the|one of)\\s+)?|[,\\u2013\\u2014]\\s*)(?:(?:lead|senior|staff|principal|head|chief|founding)\\s+)?`
+const ROLE_RANK = '(?:(?:lead|senior|staff|principal|head|chief|founding)\\s+)?'
+/** A role is the writer's own: "I'm a founder of", "as an engineer at". */
+const ROLE_LEAD = `(?:\\bi${APOS}m|\\bi am|\\bi was|\\bi${APOS}ve been|\\bi have been|\\bwe${APOS}re|\\bwe are|\\bwe were|\\bas)\\s+(?:(?:also|now|still|currently|proudly)\\s+)?(?:(?:a|an|the|one of the|one of)\\s+)?${ROLE_RANK}`
+/**
+ * A sign-off, "Sam, founder of Orbit" or "— Sam Lee, CTO at Acme": a capitalised name opening a line or following a sentence's
+ * end, then a role. It counts only where it ends the text; a role after a comma elsewhere ("Thanks to Ana, founder of Orbit,
+ * for the demo") may be someone else's.
+ */
+const SIGN_OFF_LEAD = `(?<![^.!?\\n])\\s*(?:[-\\u2013\\u2014]\\s*)?(?<name>\\p{L}[\\p{L}'.-]*(?:\\s+\\p{L}[\\p{L}'.-]*){0,3})\\s*(?:,|\\s[-\\u2013\\u2014])\\s*${ROLE_RANK}`
+const TEXT_END = '(?=\\s*[.!]?\\s*$)'
 // "made it" is an idiom ("we made it!"), so after "made" only "this" or "the product" is an object.
 const PRONOUN_OBJECT = '(?:(?<!\\bmade\\s+)it|this|the (?:product|app|tool|company|startup|project))'
 /** "I'm paid by", "we're sponsored by": the writer says who pays them. */
@@ -94,25 +110,43 @@ const NOW = '(?:(?:now|also|currently|still)\\s+)?'
 const PAYS_TO = `${NOW}(?:pays|paid|is paying|has paid|has been paying)\\s+(?:me|us)\\s+to\\s+(?!(?:the|a|an|my|our|your|this|that|its|their|his|her)\\b)\\p{L}`
 const PAYS_FEE = `${NOW}(?:pays|paid)\\s+(?:me|us)\\s+(?:an?\\s+)?(?:(?:monthly|weekly|yearly|annual|fixed|flat|small)\\s+)?(?:retainer|salary|stipend|commission|fee)\\b`
 const EMPLOYS = `${NOW}(?:employs|employed|hired|has hired|commissioned|has commissioned|contracts|contracted|has contracted)\\s+(?:me|us)\\b`
-const SPONSORS = `${NOW}(?:sponsors|sponsored|is sponsoring|has sponsored)\\s+(?:this|my|our)\\b`
+/** "this" is the post itself only as the whole object or before a word naming the post: "sponsors this year's conference" is not. */
+const SPONSORED_OBJECT = '(?:this\\s+(?:post|video|thread|episode|newsletter|issue|article|review|stream|piece|podcast)\\b|this(?=\\s*(?:[.,;:!?)\\u2013\\u2014]|$))|my\\b|our\\b)'
+const SPONSORS = `${NOW}(?:sponsors|sponsored|is sponsoring|has sponsored)\\s+${SPONSORED_OBJECT}`
 
-/** After "Disclosure:" or "Full disclosure", the words that name a connection. */
+const FREE_THING = '(?:a |an )?free (?:copy|access|account|licen[cs]e|subscription|plan|seat)'
+/**
+ * After "Disclosure:" or "Full disclosure", the words that state a connection. A word that can describe the writer alone
+ * ("views are my own", "my clients", "I paid for it", "I'm a developer", "building with Acme", "a great gift") is listed only
+ * in a form that says who is tied to whom.
+ */
 const CONNECTION = new RegExp(`\\b(?:${[
-  'work(?:s|ed|ing)?', 'employ(?:s|ed|ee|ees|er|ers|ment)', 'staff', 'colleagues?', 'co-?workers?', 'team ?mates?', 'team members?',
-  '(?:on|of|join(?:ed)?) the(?: \\p{L}+)? team', '(?:co-?)?found(?:er|ers|ed|ing)', 'built', 'build(?:s|ing)?', 'makers?', 'creat(?:ed|or|ors)',
-  'maintain(?:s|ed|er|ers)?', 'own(?:s|ed|er|ers)?', 'ours', 'invest(?:s|ed|or|ors|ment|ments)?', 'shareholders?', 'equity', 'stake',
+  'work(?:s|ed|ing)? (?:at|for|on|with|there|here)', 'employ(?:s|ed|ee|ees|er|ers|ment)', 'staff', 'colleagues?', 'co-?workers?', 'team ?mates?', 'team members?',
+  '(?:on|of|join(?:ed)?) the(?: \\p{L}+)? team', '(?:co-?)?found(?:er|ers|ed|ing)', 'makers?', 'creat(?:ed|or|ors)',
+  '(?:built|build(?:s|ing)?)(?! (?:with|on|using|upon|my|our|a|an|some)\\b)',
+  'maintain(?:s|ed|er|ers)?', '(?:is|are|was|were) (?:partly |all )?ours', '(?:co|part)-?owners?', '(?:the|their|its) owners?', '(?:i|we) (?:co-|part-)?own (?:shares|stock|equity|a stake|part|a piece|some of|the company|the business|the startup)',
+  'invest(?:s|ed|or|ors|ment|ments)?', 'shareholders?', 'equity', 'stake',
   'advis(?:e|es|ed|or|ors|er|ers|ing|ory)', 'board members?', 'on the board', 'contract(?:s|ed|or|ors)?', 'consult(?:s|ed|ant|ants|ing)?',
-  'freelanc(?:e|er|ers|ing)', 'clients?', 'paid', 'pay(?:s|ing)? (?:me|us)', 'sponsor(?:s|ed|ing|ship)?', 'partner(?:s|ed|ship)?',
-  'affiliat(?:e|es|ed|ion)', 'commission(?:s|ed)?', 'compensat(?:e|es|ed|ion)', 'gift(?:s|ed)?', 'free (?:copy|access|account|licen[cs]e|subscription|plan|seat)',
+  'freelanc(?:e|er|ers|ing)', 'clients? of (?:mine|ours)', '(?:is|are|was|were) (?:a |my |our |one of my |one of our )?clients?',
+  'paid (?:by|me|us)', `(?:i|we)(?:${APOS}m|${APOS}re|${APOS}ve been| am| are| was| were| get| got| have been) paid`, 'pay(?:s|ing)? (?:me|us)',
+  'sponsor(?:s|ed|ing|ship)?', 'partner(?:s|ed|ship)?', 'affiliat(?:e|es|ed|ion)', 'commission(?:s|ed)?', 'compensat(?:e|es|ed|ion)',
+  'gift(?:s|ed)? (?:to )?(?:me|us)', '(?:was|were|been|got|get) gifted', '(?:a|my|our) gift from', '(?:as|was|were) a gift',
+  `(?:got|get|gets|received|receive|was given|were given|have been given) ${FREE_THING}`, `(?:gave|give|gives|sent|send|sends) (?:me|us) ${FREE_THING}`,
   'friends?', 'family', 'relatives?', 'brother', 'sister', 'spouse', 'wife', 'husband', 'son', 'daughter', 'father', 'mother', 'parents?', 'cousin',
-  'ceo', 'cto', 'coo', 'cpo', 'engineers?', 'developers?', 'designers?',
+  '(?:ceo|cto|coo|cpo|engineers?|developers?|designers?) (?:at|of|for|on|with|there|here)', '(?:the|their|its) (?:ceo|cto|coo|cpo)',
+  '(?:their|its|one of (?:the|their|its)) (?:lead |senior |head |chief |founding )?(?:engineers?|developers?|designers?)',
 ].join('|')})\\b`, 'giu')
-const MARKER = /\b(?:full\s+disclosure\b\s*[:,\-\u2013\u2014]?|(?:disclosure|disclaimer)\s*[:\-\u2013\u2014])/giu
+const MARKER = /\b(?:full\s+disclosure\b\s*[:,\-\u2013\u2014]?|disclosure\s*[:\-\u2013\u2014])/giu
+
+const NEGATION = /^(?:not|never|no|nor|neither|non|none|nothing|nobody)$/iu
+function negates(word: string): boolean {
+  return NEGATION.test(word.replace(/[^\p{L}]/gu, '')) || /n['\u2019]t$/iu.test(word.replace(/[^\p{L}'\u2019]/gu, ''))
+}
 
 /** A statement under a negation ("I'm not paid by", "isn't sponsored by", "not our product"): one of the three words before it negates it. */
 function negated(text: string, start: number): boolean {
   const clause = text.slice(Math.max(0, start - 80), start).split(/[.!?;:\n\u2013\u2014]/u).pop() ?? ''
-  return clause.trim().split(/\s+/u).slice(-3).some(word => /^(?:not|never|no|nor|neither|non|nothing|nobody)$/iu.test(word.replace(/[^\p{L}]/gu, '')) || /n['\u2019]t$/iu.test(word))
+  return clause.trim().split(/\s+/u).slice(-3).some(negates)
 }
 
 function termAlternation(terms: readonly string[]): string | undefined {
@@ -134,6 +168,8 @@ function objectPatterns(term: string | undefined): RegExp[] {
     new RegExp(`\\b${WE_ACTS}\\s+${object}`, 'giu'),
     new RegExp(`${ROLE_LEAD}(?:${ROLE})\\s+(?:of|at|behind|on|for)\\s+${object}`, 'giu'),
   ]
+  // "I'm with Acme." names the company or a product, never "it" ("I'm with it").
+  if (term) out.push(new RegExp(`${I_AM_WITH}(?:the\\s+)?${term}${end}${STATEMENT_END}`, 'giu'))
   // A paid tie names who pays: the company or a product, never "it" ("it pays me back").
   if (term) {
     const payer = `(?<![\\p{L}\\p{N}_])(?:the\\s+)?${term}\\s+`
@@ -144,7 +180,18 @@ function objectPatterns(term: string | undefined): RegExp[] {
   return out
 }
 
-/** "Disclosure:", "Disclosure -" or "Full disclosure", then a connection in the same sentence, up to its last connection word. */
+/** A sign-off ending the text, when the name before its role is capitalised as a name is. */
+function signOffMatches(text: string, term: string | undefined): RegExpMatchArray[] {
+  const object = term ? `(?:(?:the\\s+)?${term}(?![\\p{L}\\p{N}_])|${PRONOUN_OBJECT})` : PRONOUN_OBJECT
+  const re = new RegExp(`${SIGN_OFF_LEAD}(?:${ROLE})\\s+(?:of|at|behind|on|for)\\s+${object}${TEXT_END}`, 'giu')
+  return [...text.matchAll(re)].filter(m => (m.groups?.name ?? '').split(/\s+/u).every(word => /^\p{Lu}/u.test(word)))
+}
+
+/**
+ * "Disclosure:", "Disclosure -" or "Full disclosure", then a stated connection in the same sentence, up to its last connection
+ * word. A negation anywhere after the marker ("Disclosure: I am not one of their clients", "no affiliation; my friends love it")
+ * leaves the marker stating nothing.
+ */
 function markerMatches(text: string): Array<{ start: number; end: number }> {
   const out: Array<{ start: number; end: number }> = []
   const spans = sentenceSpans(text)
@@ -152,7 +199,8 @@ function markerMatches(text: string): Array<{ start: number; end: number }> {
     const start = m.index ?? 0, from = start + m[0].length
     const until = spans.find(span => span.start <= start && start < span.end)?.end ?? text.length
     const rest = text.slice(from, until)
-    const found = [...rest.matchAll(CONNECTION)].filter(c => !negated(rest, c.index ?? 0))
+    if (rest.split(/\s+/u).some(negates)) continue
+    const found = [...rest.matchAll(CONNECTION)]
     const last = found[found.length - 1]
     if (last) out.push({ start, end: from + (last.index ?? 0) + last[0].length })
   }
@@ -205,6 +253,10 @@ export function detectDisclosure(text: string, options: DetectDisclosureOptions 
     }
   }
   for (const re of [...ALWAYS, ...objectPatterns(termAlt)]) pushAll(re, text, 0)
+  for (const m of signOffMatches(text, termAlt)) {
+    const lead = /^[\s\-\u2013\u2014]*/u.exec(m[0])?.[0].length ?? 0, start = (m.index ?? 0) + lead
+    matches.push({ kind: 'own_words', text: m[0].slice(lead), start, end: (m.index ?? 0) + m[0].length })
+  }
   for (const { start, end } of markerMatches(text)) if (!negated(text, start)) matches.push({ kind: 'own_words', text: text.slice(start, end), start, end })
 
   if (termAlt) {

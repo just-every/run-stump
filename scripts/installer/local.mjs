@@ -22,7 +22,8 @@ export const adapter = lifecycle;
 export const { install } = lifecycle;
 export const commandAdapter = createCommandAdapter(lifecycle, {
  dev: developmentTarget, preview: previewTarget, verify: ['pnpm', ['run', 'verify:app']], deploy: ownerDeploy('deploy.json', lifecycle),
- // rer export and rer import: every Stump record and no token or key (scripts/stump/archive-policy.mjs).
+ // rer export and rer import: every Stump record, with no network token, app secret or agent credential; it carries the
+ // installation's erasure key, so a restored installation keeps every erasure in force (scripts/stump/archive-policy.mjs).
  portability: localPortability({ database: 'foundation', policyModule: 'scripts/stump/archive-policy.mjs', transient: ['local runtime caches and logs'] }),
  setup: { manifestFile: 'rer-setup.json' }, browserModule: 'scripts/installer/ui/seed.mjs',
  // The run site (rer build --site, rer deploy --site, RER_SITE): pages from
