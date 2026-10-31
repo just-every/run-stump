@@ -2,7 +2,7 @@
 // Hand-off), with its history. States: open join_first held posted skipped expired.
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext } from '../actions/types.ts'
-import { rulesOf, type VenueRow } from '../venues/model.ts'
+import { limitOf, rulesOf, type VenueRow } from '../venues/model.ts'
 
 export const STATES = ['open', 'join_first', 'held', 'posted', 'skipped', 'expired'] as const
 export type HandoffState = typeof STATES[number]
@@ -76,7 +76,7 @@ interface HistoryRow { action: string; from_state: string | null; to_state: stri
 export function handoffRecord(row: HandoffRow, venue: VenueRow, extra: { person_name: string | null; product_name: string | null; history: HistoryRow[]; flags: unknown[]; draft_text: string | null; drafted?: Drafted | null; link?: string | null }) {
   const howTo = json<Record<string, unknown>>(venue.how_to_post, {})
   return {
-    id: row.id, venue_id: row.venue_id, venue: { id: venue.id, name: venue.name, url: venue.url, kind: venue.kind, platform: venue.platform, how_to_post: howTo },
+    id: row.id, venue_id: row.venue_id, venue: { id: venue.id, name: venue.name, url: venue.url, kind: venue.kind, platform: venue.platform, how_to_post: howTo, shared_limit: limitOf(venue) },
     person_id: row.person_id, person_name: extra.person_name, product_id: row.product_id, product_name: extra.product_name, item_id: row.item_id, state: row.state, route: row.route,
     due_at: iso(row.due_at), lapse: row.lapse, rules: rulesOf(venue), why: venue.why, thread_url: row.thread_url,
     facts: json<Fact[]>(row.facts, []), disclosure_line: row.disclosure_line, draft_text: extra.draft_text, link: extra.link ?? null, talking_points: json<string[]>(row.talking_points, []),

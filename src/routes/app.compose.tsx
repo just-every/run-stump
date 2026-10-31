@@ -5,7 +5,7 @@ import { ActionError, explain, me, runAction } from '../stump/ui/api.ts'
 import { Disc } from '../stump/drafting/disc.tsx'
 import { Outcome, Tip, useLoaded, useRun } from '../stump/ui/kit.tsx'
 import { Icon } from '../stump/ui/icons.tsx'
-import { countText, extractUrls, type Network } from '../stump/lib/text/index.ts'
+import { countText, extractUrls, NETWORK_LIMITS, type Network } from '../stump/lib/text/index.ts'
 import { accountLabel, claimRange, flagLine, networkName, proofLabel, spanAt, spanOf, type Account, type Check, type ClaimFinding, type ClaimView, type Count, type Flag, type MasterPreview, type Variant } from '../stump/drafting/view.ts'
 import type { ItemRecord } from '../stump/drafting/records.ts'
 import { openDrafts, venuesFor, type VenueChoice } from '../stump/drafting/drafts-list.ts'
@@ -125,8 +125,13 @@ function ComposePage() {
     })
     return () => { live = false }
   }, [chosen.join(',')])
-  // The master is never posted itself: it counts quietly against the largest chosen network's limit; each variant card and Checks carry the over-limit signal.
-  const largest = Math.max(...variants.map(variant => variant.count?.limit ?? -Infinity), ...accounts.filter(account => chosen.includes(account.id)).map(account => ({ x: 280, bluesky: 300, mastodon: 500, linkedin: 3000 } as Record<string, number>)[account.network] ?? -Infinity))
+  // The master is never posted itself: it counts quietly against the largest chosen network's limit, the way that network counts
+  // (a link is 23 on Mastodon and X), so it reads the same as that network's variant; each variant card and Checks carry the over-limit signal.
+  const largest = [...variants.flatMap(variant => variant.count ? [{ network: variant.count.network, limit: variant.count.limit }] : []),
+    ...accounts.filter(account => chosen.includes(account.id)).map(account => ({ network: account.network, limit: NETWORK_LIMITS[account.network as Network] }))]
+    .filter(target => target.network in NETWORK_LIMITS && Number.isInteger(target.limit) && target.limit > 0)
+    .reduce<{ network: string; limit: number } | null>((best, target) => !best || target.limit > best.limit ? target : best, null)
+  const masterCount = largest ? countText({ network: largest.network as Network, limit: largest.limit }, text).count : graphemes(text)
 
   const products = data?.products ?? []
   const productId = product || (products.length === 1 ? products[0]!.id : '')
@@ -303,7 +308,7 @@ function ComposePage() {
             <textarea id="master-text" className="st-textarea large" value={text} rows={4} placeholder="Write the post once. Each account gets its own variant."
               onChange={event => setText(event.target.value)} onBlur={() => void saveMaster()} />
             <div className="st-chars">
-              {graphemes(text).toLocaleString()}{Number.isFinite(largest) ? ` / ${largest.toLocaleString()}` : ''}
+              {masterCount.toLocaleString()}{largest ? ` / ${largest.limit.toLocaleString()}` : ''}
             </div>
           </div>
           {preview ? source ? <div className="st-source-chip"><Disc icon="pencil" /><span><span className="st-meta">From a source</span><br />{source.replace(/^https?:\/\//, '')}</span></div> : null

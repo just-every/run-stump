@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { runAction } from '../../ui/api.ts'
-import { Disc, Outcome, pageName, useRun } from '../../ui/kit.tsx'
+import { Disc, Outcome, sourceName, useRun } from '../../ui/kit.tsx'
 import { readOn } from './labels.ts'
 import type { Rule, RuleKey, Venue } from './types.ts'
 
@@ -57,7 +57,7 @@ export function RulesCard({ venue, editor, onSaved }: { venue: Venue; editor: bo
               : <span>{ruleWords(name, rule)}</span>}
           </span>
           <span className="st-rule-source">{rule ? rule.sourced
-            ? <><a href={rule.source_url!} target="_blank" rel="noreferrer noopener">{pageName(rule.source_url!)} ↗</a> · read {readOn(rule.read_at)}</>
+            ? <><a href={rule.source_url!} target="_blank" rel="noreferrer noopener">{sourceName(rule.source_url!)} ↗</a> · read {readOn(rule.read_at)}</>
             : <span className="st-chip held">unsourced</span> : null}</span>
         </div>
         {editing === name ? <RuleEditor venue={venue} name={name} rule={rule} onSaved={onSaved} onClose={() => setEditing(null)} /> : null}
