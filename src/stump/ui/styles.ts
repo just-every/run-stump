@@ -481,6 +481,8 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting button.st-chip[aria-pressed="true"] svg { width: 16px; height: 16px; flex: none; }
 .st-drafting .st-chip:disabled { cursor: default; }
 .st-drafting .st-open { margin-top: calc(var(--stump-space) * 3); }
+/* What the new post is for (Product, and a venue per account): a group of its own under the account chips, on From a source's edge. */
+.st-drafting .st-compose-aim { margin-top: calc(var(--stump-space) * 3); max-width: 520px; }
 .st-drafting .st-compose { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: calc(var(--stump-space) * 3); align-items: start; }
 .st-drafting .st-compose > * { min-width: 0; }
 .st-drafting .st-compose { margin-bottom: calc(var(--stump-space) * 3); }

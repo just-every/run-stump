@@ -3700,7 +3700,7 @@
       "executable": false
     },
     "src/stump/handoffs/ui/BriefPage.tsx": {
-      "sha256": "6a2c94903f4f7d222bb9b461ae585c033d1a868ed470422df83f6e03faa0f899",
+      "sha256": "7614a1e24e319a3fc3ff635e8fe56171aef328b0def9586e2d2602165400c147",
       "executable": false
     },
     "src/stump/handoffs/ui/HandoffStart.tsx": {
@@ -4496,7 +4496,7 @@
       "executable": false
     },
     "src/stump/ui/styles.ts": {
-      "sha256": "27e4ff86cfbed68decfe082913920869dd5500e36a956e82628d0b0b5f252a53",
+      "sha256": "9f22152ccdea972b176f09171689e83ed93849fcea2a1a62aa1ca9d53672b135",
       "executable": false
     },
     "src/stump/ui/types.ts": {
