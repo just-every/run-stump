@@ -13,9 +13,11 @@
 // together they match a claim whose wording spans them. The result for each clause is one of:
 //   matched          a current claim covers it
 //   banned           a claim the company must not make
-//   number_mismatch  it matches a claim but states another number than the claim's or
-//                    its proof's (a percent, multiplier or price in any form: "2x" or
-//                    "in half" against a proven 30% is a mismatch), or a percent,
+//   number_mismatch  it matches a claim but states a number that is not the claim's or
+//                    its proof's, even beside one that is ("a 30-minute visit in 1 minute"
+//                    against "a 30-minute visit in 2 minutes"; a percent, multiplier or
+//                    price in any form: "2x" or "in half" against a proven 30% is a
+//                    mismatch), or a percent,
 //                    multiplier or price where the claim and its proof state none
 //                    ("50% cheaper" against "cheaper than HubSpot"; expected is empty).
 //                    A proof's numbers come from its number, its text, or a plain-string
@@ -177,11 +179,13 @@ const backs = (e: Expected, f: FoundNumber) => equal(f, e) || (e.unitless === tr
 type Conflict = { expected: FoundNumber[]; found: FoundNumber[] }
 
 /**
- * Numbers the draft states for a claim when none of them is the claim's or its proof's.
- * Ratios (percent and multiplier) are compared across kinds, "2x" against a proven 30% is
- * a mismatch, and a unitless proof number backs a percent or multiplier of the same value.
- * Money is compared with money, and counts within one unit. A ratio or a price the claim
- * and its proof state none of is unbacked: a mismatch with nothing expected.
+ * The numbers the draft states for a claim that are not the claim's or its proof's: each
+ * one must be backed, so "a 30-minute visit in 1 minute" against "a 30-minute visit in 2
+ * minutes" is a mismatch though its 30 minutes are the claim's. Ratios (percent and
+ * multiplier) are compared across kinds, "2x" against a proven 30% is a mismatch, and a
+ * unitless proof number backs a percent or multiplier of the same value. Money is compared
+ * with money, and counts within one unit. A ratio or a price the claim and its proof state
+ * none of is unbacked: a mismatch with nothing expected.
  */
 function numberConflict(claimNumbers: readonly FoundNumber[], proofNumbers: readonly Expected[], clauseNumbers: readonly FoundNumber[]): Conflict | undefined {
   const expectedAll: Expected[] = [...claimNumbers, ...proofNumbers]
@@ -195,9 +199,11 @@ function numberConflict(claimNumbers: readonly FoundNumber[], proofNumbers: read
     const found = clauseNumbers.filter(stated)
     if (found.length === 0) continue
     const expected = expectedAll.filter(expects)
-    if (found.some((f) => expected.some((e) => backs(e, f)))) continue
-    conflicts.expected.push(...expected)
-    conflicts.found.push(...found)
+    const unbacked = found.filter((f) => !expected.some((e) => backs(e, f)))
+    if (unbacked.length === 0) continue
+    // What the proof says beyond what the clause already states, so the line names the number to use.
+    conflicts.expected.push(...expected.filter((e) => !found.some((f) => backs(e, f))))
+    conflicts.found.push(...unbacked)
   }
 
   const units = new Set(clauseNumbers.filter((n) => n.kind === 'count' && n.unit !== '').map((n) => n.unit))
@@ -205,9 +211,10 @@ function numberConflict(claimNumbers: readonly FoundNumber[], proofNumbers: read
     const found = clauseNumbers.filter((n) => n.kind === 'count' && n.unit === unit)
     const expected = expectedAll.filter((e) => found.some((f) => sameUnit(f, e)))
     if (expected.length === 0) continue
-    if (!found.some((f) => expected.some((e) => equal(f, e)))) {
-      conflicts.expected.push(...expected)
-      conflicts.found.push(...found)
+    const unbacked = found.filter((f) => !expected.some((e) => equal(f, e)))
+    if (unbacked.length > 0) {
+      conflicts.expected.push(...expected.filter((e) => !found.some((f) => equal(f, e))))
+      conflicts.found.push(...unbacked)
     }
   }
   return conflicts.found.length > 0 ? conflicts : undefined

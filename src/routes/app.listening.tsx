@@ -8,6 +8,7 @@ import { flagLine, type Flag } from '../stump/drafting/view.ts'
 import { listeningStyles } from '../stump/watches/styles.ts'
 import type { BlockedAuthor, FindingList, FindingView, PollView, WatchList, WatchView } from '../stump/watches/ui-types.ts'
 import { JOB_WORDS, chipsFor, jobOf, pollWords } from '../stump/watches/finding-view.ts'
+import { docsUrl } from '../stump/docs.ts'
 
 export const Route = createFileRoute('/app/listening')({
   // `act` opens the focal finding's job at once (Today's "Draft a reply" lands here).
@@ -21,6 +22,8 @@ export const Route = createFileRoute('/app/listening')({
 const key = () => crypto.randomUUID()
 const KINDS: Record<string, string> = { hn: 'Hacker News', rss: 'RSS', bluesky: 'Bluesky', mastodon: 'Mastodon' }
 const NEW_WATCH = '+new'
+/** A product as the watch form reads it: a name recorded without match_case is the company's own word, never an everyday one. */
+interface Product { id: string; name: string; other_names?: string[]; match_case?: boolean }
 const kindsOf = (watch: WatchView) => [...new Set(watch.sources.map(source => KINDS[source.kind]))].join(', ') || 'No sources yet'
 
 /** A refusal in its own words where the door gave them, else the app's plain words. */
@@ -46,12 +49,13 @@ function Listening() {
   const watches = useLoaded(async () => {
     const who = await me()
     const [list, products, targets] = await Promise.all([runAction<WatchList>('stump.watches.manage', { action: 'list' }),
-      runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' }).catch(() => ({ items: [] })),
+      runAction<{ items: Product[] }>('stump.brand.manage', { action: 'product_list' }).catch(() => ({ items: [] })),
       who.actions.includes('stump.drafts.preview') ? runAction<{ items: Account[] }>('stump.drafts.preview', { action: 'targets' }).catch(() => ({ items: [] as Account[] })) : Promise.resolve({ items: [] as Account[] })])
     return { me: who, list, products: products.items, accounts: targets.items }
   })
   const [editing, setEditing] = useState<'new' | 'edit' | null>(null)
   const items = watches.data?.list.items ?? []
+  const ownNames = (watches.data?.products ?? []).filter(product => !product.match_case).flatMap(product => [product.name, ...(product.other_names ?? [])])
   const selected = items.find(watch => watch.id === search.watch) ?? items[0] ?? null
   const findings = useLoaded(async () => selected ? runAction<FindingList>('stump.findings.work', { action: 'list', watch_id: selected.id }) : null)
   const selectedId = selected?.id
@@ -73,7 +77,7 @@ function Listening() {
       <p className="st-lead">Watches and findings</p>
       {watches.error ? <p className="st-error">{watches.error}</p> : null}
       {none ? mayEdit && !setAside
-        ? <div className="st-card st-listen-first"><Editor role={role} onDone={async id => { await reload(); choose(id) }} onCancel={() => setSetAside(true)} /></div>
+        ? <div className="st-card st-listen-first"><Editor role={role} ownNames={ownNames} onDone={async id => { await reload(); choose(id) }} onCancel={() => setSetAside(true)} /></div>
         : <Empty title="No watches yet" actions={mayEdit ? <button className="st-button primary" type="button" onClick={() => setSetAside(false)}>+ New watch</button> : undefined}>
           A watch follows Hacker News, feeds, Bluesky and Mastodon for threads you could answer.</Empty> : null}
       {watches.data && !none ? <div className="st-listen-grid">
@@ -95,8 +99,8 @@ function Listening() {
           {mayEdit ? <button className={items.length ? 'st-button primary st-new-watch' : 'st-button primary'} type="button" onClick={() => setEditing('new')}>+ New watch</button> : null}
         </div>
         <div className="st-card" aria-label={editing ? 'Watch' : 'Top findings'}>
-          {editing === 'new' ? <Editor role={role} onDone={async id => { setEditing(null); await reload(); choose(id) }} onCancel={() => setEditing(null)} /> : null}
-          {editing === 'edit' && selected ? <Editor role={role} watch={selected} blocked={watches.data?.list.blocked_authors ?? []} onDone={async () => { setEditing(null); await reload() }} onCancel={() => setEditing(null)} /> : null}
+          {editing === 'new' ? <Editor role={role} ownNames={ownNames} onDone={async id => { setEditing(null); await reload(); choose(id) }} onCancel={() => setEditing(null)} /> : null}
+          {editing === 'edit' && selected ? <Editor role={role} ownNames={ownNames} watch={selected} blocked={watches.data?.list.blocked_authors ?? []} onDone={async () => { setEditing(null); await reload() }} onCancel={() => setEditing(null)} /> : null}
           {!editing ? <Findings watch={selected} data={findings.data?.watch.id === selected?.id ? findings.data : null} error={findings.error} focus={search.finding} act={search.act === true} may={mayEdit}
             context={{ me: watches.data?.me.person.id ?? '', role, products: watches.data?.products ?? [], accounts: watches.data?.accounts ?? [] }}
             onFocus={id => void navigate({ search: { ...(selected ? { watch: selected.id } : {}), finding: id } })}
@@ -291,8 +295,22 @@ function draftOf(watch?: WatchView): Draft {
   }
 }
 
-function Editor({ watch, role, blocked = [], onDone, onCancel }: { watch?: WatchView; role: string; blocked?: BlockedAuthor[]; onDone(id: string): Promise<void>; onCancel(): void }) {
+/**
+ * The one-word terms that find a thread on their own: Include any of with nothing under Must include all of, or a lone one-word
+ * Must include term. Such a word matches every thread that uses it in any sense ("Otter" finds a story about otters), so the form
+ * says so while the watch is written. The company's own product names, recorded without match_case, are its own words and pass.
+ */
+function looseWords(draft: Draft, ownNames: string[]): string[] {
+  const all = list(draft.all), any = list(draft.any), single = (term: string) => !/\s/.test(term)
+  const loose = all.length === 0 ? any.filter(single) : all.length === 1 && any.length === 0 && single(all[0]!) ? all : []
+  const own = new Set(ownNames.map(name => name.toLowerCase()))
+  return [...new Set(loose.filter(term => !own.has(term.toLowerCase())))]
+}
+const quoted = (terms: string[]) => { const words = terms.map(term => `\u201c${term}\u201d`); return words.length > 1 ? `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}` : words[0] ?? '' }
+
+function Editor({ watch, role, ownNames = [], blocked = [], onDone, onCancel }: { watch?: WatchView; role: string; ownNames?: string[]; blocked?: BlockedAuthor[]; onDone(id: string): Promise<void>; onCancel(): void }) {
   const [draft, setDraft] = useState(() => draftOf(watch))
+  const loose = looseWords(draft, ownNames)
   const { busy, message, run } = useRun()
   const admin = role === 'owner' || role === 'admin'
   // Alerts are optional (H15): folded until opened, and open when this watch already sends them.
@@ -334,6 +352,7 @@ function Editor({ watch, role, blocked = [], onDone, onCancel }: { watch?: Watch
       <label className="st-field">Include any of<input value={draft.any} onChange={event => set('any', event.target.value)} autoComplete="off" /></label>
       <label className="st-field">Never include<input value={draft.none} onChange={event => set('none', event.target.value)} placeholder="hiring" autoComplete="off" /></label>
       <span className="st-note">Separate terms with commas. A term with spaces is an exact phrase.</span>
+      {loose.length ? <p className="st-note" role="status">{quoted(loose)} {loose.length === 1 ? 'matches' : 'match'} every thread that uses {loose.length === 1 ? 'the word' : 'those words'}, whatever it is about. Add a word under Must include all of, or use a phrase, to keep to your topic. <a href={docsUrl('listening', 'a-product-named-with-an-everyday-word')} target="_blank" rel="noreferrer noopener">Words with other meanings</a></p> : null}
     </fieldset>
     <fieldset>
       <legend>Where to look</legend>

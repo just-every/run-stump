@@ -23,15 +23,15 @@ export const routeLabel = (route: string) => ROUTE_LABELS[route] ?? route
 
 /** Venues a company pitches, never posts in: a person there decides what runs. */
 const PITCHED = ['podcast', 'newsletter', 'journalist', 'publication']
-/** A venue the company pitches: its kind, or an editorial status, puts what runs in an editor's or host's hands; a candidate has no route yet. */
-export const pitched = (venue: Pick<Venue, 'kind' | 'status'>) => venue.status !== 'candidate' && (PITCHED.includes(venue.kind) || venue.status === 'editorial')
+/** A venue the company pitches: its kind, or an editorial status, puts what runs in an editor's or host's hands, a candidate's as much as a ready one's. */
+export const pitched = (venue: Pick<Venue, 'kind' | 'status'>) => PITCHED.includes(venue.kind) || venue.status === 'editorial'
 
 /**
- * The one route a list shows (display only; the routes field keeps the interface's words): none yet for a candidate, a pitch
- * for a venue you pitch, else the widest route open there, the same routes the venue's own page lists.
+ * The one route a list shows (display only; the routes field keeps the interface's words): the first route the venue's own
+ * page lists, whatever its status, so a candidate reads the route its rules allow: a pitch for a venue you pitch, else the
+ * widest route open there, or none.
  */
 export function primaryRoute(venue: Pick<Venue, 'kind' | 'status' | 'routes'>): string | null {
-  if (venue.status === 'candidate') return null
   if (pitched(venue)) return 'Pitch'
   const route = ['publish', 'handoff_draft', 'handoff_brief'].find(item => venue.routes.includes(item))
   return route ? routeLabel(route) : null

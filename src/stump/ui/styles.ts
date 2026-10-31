@@ -240,9 +240,8 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-handle { display: block; font-size: var(--stump-size-section); font-weight: 600; }
 .st-spaced { margin-top: calc(var(--stump-space) * 1.5); }
 .st-field.st-check { flex-direction: row; align-items: center; gap: var(--stump-space); color: var(--stump-text); }
-.st-field.st-check input { min-height: 0; }
-/* Settings · Import: the confirmation is a checkbox beside its words, at every width. */
-.st-buffer .st-field.st-check input { width: auto; flex: none; }
+/* A checkbox sits at the start of its row with its words right after it, never stretched by .st-field input's full width. */
+.st-field.st-check input { min-height: 0; width: auto; flex: none; }
 .st-days { display: flex; flex-wrap: wrap; gap: 4px; }
 .st-days label { display: inline-flex; align-items: center; gap: 4px; font-size: var(--stump-size-small); color: var(--stump-text); min-height: 32px; padding: 0 8px; background: var(--stump-sunk); border-radius: 8px; }
 .st-note, .st-error { margin: 4px 0 0; }
@@ -695,6 +694,9 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-setup-done { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 12px; color: var(--stump-body); font-size: 15px; line-height: 22px; }
 .st-setup-fields .st-setup-done { margin: 0; overflow-wrap: anywhere; }
 .st-setup-done .st-tick { margin-top: 2px; }
+/* The owner's connection: its label and its "✓ Saved" share one line, so the mark adds no height. */
+.st-setup-connection-label { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; min-height: 22px; }
+.st-setup-connection-label .st-setup-done { font-weight: 400; }
 .st-setup-note { margin: 0; color: var(--stump-muted); font-size: 15px; }
 /* Open Today is centred; "Saved" sits quietly on its line to its right, and an error reads under it, so neither moves the button. */
 .st-setup-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; column-gap: 16px; padding-top: 16px; }
