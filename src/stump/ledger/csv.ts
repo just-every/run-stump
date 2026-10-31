@@ -1,7 +1,7 @@
 import { toEntry, type LedgerRow } from './entry.ts'
 
 const COLUMNS = ['id', 'url', 'network', 'network_id', 'venue_id', 'account_id', 'person_id', 'agent_id', 'agent_name', 'by', 'text', 'disclosure_line', 'claims',
-  'product_id', 'campaign', 'route', 'state', 'confirmation', 'revision', 'posted_at', 'charge_usd', 'approved_by', 'hold', 'removal', 'legal_hold', 'versions'] as const
+  'product_id', 'campaign', 'utm_content', 'route', 'state', 'confirmation', 'revision', 'posted_at', 'charge_usd', 'approved_by', 'hold', 'removal', 'legal_hold', 'versions'] as const
 
 /**
  * One CSV field. Numbers stay numbers. Text a spreadsheet would read as a

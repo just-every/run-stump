@@ -550,8 +550,6 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-master .st-textarea.large { padding-bottom: 36px; display: block; }
 .st-drafting .st-master .st-chars { position: absolute; right: 14px; bottom: 10px; }
 /* A post that has gone out: its words as they went, on the sunk tone, with nothing to edit. */
-.st-drafting .st-master-sent { margin: 0; font-size: 20px; line-height: 1.45; color: var(--stump-ink); background: var(--stump-sunk); border-radius: var(--stump-radius-field); padding: 12px 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
-@media (max-width: 760px) { .st-drafting .st-master-sent { font-size: 18px; } }
 .st-drafting .st-check-list li.st-check-detail { padding-left: 34px; color: var(--stump-muted); }
 .st-drafting .st-kv > :last-child { border-left: 1px solid var(--stump-hairline); padding-left: calc(var(--stump-space) * 3); min-height: 28px; }
 .st-drafting .st-profile { display: grid; gap: 2px; }
@@ -590,7 +588,7 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
   .st-drafting .st-checks.open .st-check-list { margin-top: 12px; }
   .st-drafting .st-variant-head .st-chevron { display: inline-flex; }
   .st-drafting .st-variants { grid-template-columns: 1fr; }
-  .st-drafting .st-variant-head { cursor: pointer; min-height: 44px; padding: 0; }
+  .st-drafting .st-variant-head { cursor: pointer; min-height: 44px; padding: 0; flex-wrap: wrap; row-gap: 4px; }
   .st-drafting .st-variant-body:not(.open) { display: none; }
   .st-drafting .st-bar { position: sticky; bottom: 0; z-index: 2; background: var(--stump-white); padding: 12px 0; gap: var(--stump-space); flex-wrap: nowrap; }
   .st-drafting .st-bar .st-button.ink { padding: 0 16px; flex: none; }

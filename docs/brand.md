@@ -20,7 +20,7 @@ Before a post can be marked ready, Stump finds its factual product claims and ma
 - a number that differs from its proof is flagged with the proof's number;
 - an attached image without alt text stops the post until its alt text is set.
 
-A sentence can make several claims, so the check reads it clause by clause: "New in 2.4: when a client is 7 days late, Hourglass sends a reminder" is one claim about the reminder, and a lead-in such as "New in 2.4" claims nothing. What a product does ("adds a weekly summary", "you get your hours by client") counts as a claim to back, as a number, a comparison or a guarantee does.
+A sentence can make several claims, so the check reads it clause by clause: "New in 2.4: when a client is 7 days late, Hourglass sends a reminder" is one claim about the reminder, and a lead-in such as "New in 2.4" claims nothing. What a product does ("adds a weekly summary", "you get your hours by client") counts as a claim to back, as a number, a comparison or a guarantee does, whether or not the sentence names the product: in a post about Hourglass, "It also syncs with Stripe now" and "Now you can edit each reminder" are Hourglass's claims. A link after a sentence is not part of its claim.
 
 A post passes when every claim in it is matched and nothing stops it. A sentence that only says what the product does, with no number, comparison or guarantee in it, does not stop the post from being marked ready, but it stays flagged, and the post has not passed, until someone backs it or removes it.
 

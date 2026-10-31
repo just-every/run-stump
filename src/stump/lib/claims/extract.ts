@@ -64,23 +64,19 @@ function wordCount(folded: string): number {
   return (folded.replace(/(?:https?:\/\/|www\.)\S+/g, ' ').replace(/[@#][\p{L}\p{N}_.]+/gu, ' ').match(/[\p{L}\p{N}]+/gu) ?? []).length
 }
 
-/** Does the sentence open with a pronoun that refers back to the previous sentence's subject? */
-export function startsWithPronoun(sentence: string): boolean {
-  return /^(?:it|its|this|that|they|these|those)\b/.test(foldText(sentence).trimStart())
-}
-
 /**
- * Read one sentence; `undefined` when it is not a claim. `pronounProduct` is the product the
- * previous sentence named, when this one opens with "It ..." or "This ...". `found` is the
- * sentence's numbers when the caller has already read them (offsets within `span.text`).
+ * Read one sentence; `undefined` when it is not a claim. `subject` is the product the sentence
+ * is about when it names none itself ("It also syncs with Stripe now", "Now you can edit each
+ * reminder"): the product named before it in the draft, or the draft's own product. `found` is
+ * the sentence's numbers when the caller has already read them (offsets within `span.text`).
  */
-export function readSentence(span: Span, ctx: ExtractContext, pronounProduct?: string, found?: readonly FoundNumber[]): ClaimCandidate | undefined {
+export function readSentence(span: Span, ctx: ExtractContext, subject?: string, found?: readonly FoundNumber[]): ClaimCandidate | undefined {
   const folded = foldText(span.text)
   if (isQuestion(span.text, ctx.own_hosts)) return undefined
   if (wordCount(folded) < 3) return undefined
 
   const numbers = found ? [...found] : extractNumbers(span.text)
-  const product = mentionsAny(folded, ctx.product_names) ?? pronounProduct
+  const product = mentionsAny(folded, ctx.product_names) ?? subject
   const competitor = mentionsAny(folded, ctx.competitor_names)
   const firstPerson = FIRST_PERSON_PLURAL.test(folded)
   const anchored = product !== undefined || competitor !== undefined || firstPerson

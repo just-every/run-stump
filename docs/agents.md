@@ -54,7 +54,7 @@ Each action's required arguments are in parentheses; the rest are optional. An a
 | `stump.calendar.plan` | `set_slots` (account_id, time_zone, slots), `slots` (account_id), `queue` (item_id, account_id), `release_import` (item_ids, confirm_source_cleared) |
 | `stump.data.erase` | `erase` (subject) |
 | `stump.drafts.write` | `create` (format), `from_source` (source_url, targets), `master` (account_ids) |
-| `stump.drafts.revise` | `get` (item_id), `list`, `save` (item_id), `diff` (item_id, from, to), `restore` (item_id, revision), `mark_ready` (item_id), `save_master` (master_id, text) |
+| `stump.drafts.revise` | `get` (item_id), `list`, `save` (item_id), `aim` (item_id, venue_id, product_id), `diff` (item_id, from, to), `restore` (item_id, revision), `mark_ready` (item_id), `save_master` (master_id, text) |
 | `stump.drafts.check` | `run` (item_id), `count` (text, networks), `back` (item_id, claim_id), `set_duplicate_window` (days) |
 | `stump.drafts.preview` | `master` (master_id), `item` (item_id), `targets` |
 | `stump.findings.work` | `list` (watch_id), `dismiss` (finding_id) |
@@ -92,7 +92,7 @@ An argument the action does not take is refused with `invalid_arguments` naming 
 
 The company's policy decides which classes of action an agent runs at once and which wait for a person to approve. In **Settings, Agents**, the owner answers each kind of action: Allow, Allow then review, Ask first or Block. Each answer saves as it is given, and agents wait until every kind has one. When a policy holds an agent's post, Stump saves the exact revision, account, venue and time, and publishes only that revision once it is approved.
 
-Reading never needs an approval: listing the team, reading the AI provider and reading the ledger are standard work, so a policy that blocks access or security changes still lets an agent find the person ids and records it needs.
+Reading never needs an approval: listing the team, the connected accounts and the network apps, reading the AI provider and reading the ledger are standard work, so a policy that blocks access or security changes still lets an agent find the person ids, account ids and records it needs.
 
 The owner can also edit the whole policy document for reviewers, approvers and narrower rules. Owners, admins and editors see the answers, this week's agent calls by class and how the policy handled them, and recent agent activity. Everyone sees their own agents and what waits for them.
 

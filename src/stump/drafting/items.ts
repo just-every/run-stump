@@ -106,14 +106,23 @@ export async function insertItems(ctx: ActionContext, items: NewItem[], before: 
   return checks
 }
 
+/** What a save writes: the text, and, when the item is aimed again, its venue, product and the routes the venue allows. */
+export interface SaveNext {
+  text: string | null; parts: string[] | null; differs_from_master?: 0 | 1
+  aim?: { venue_id: string | null; product_id: string | null; routes: string[] }
+}
+
 /**
  * Statements that save new text as the next revision of a row, guarded by the
  * revision read, with the check stored and the state it moves to recorded.
  */
-export async function prepareSave(ctx: ActionContext, brand: Brand, row: Row, next: { text: string | null; parts: string[] | null; differs_from_master?: 0 | 1 }, reason: string) {
+export async function prepareSave(ctx: ActionContext, brand: Brand, row: Row, next: SaveNext, reason: string) {
   const current = row.state as ItemState
   if (NOT_EDITABLE.includes(current)) refuse('not_editable', { item_id: row.id, state: current })
-  const draft: Draft = draftOf(row, next)
+  // A new venue or product is checked as the item will stand: the venue's rules and the product's claims apply to it.
+  const aimed = next.aim ? { ...row, venue_id: next.aim.venue_id, product_id: next.aim.product_id } : row
+  const routes = next.aim ? JSON.stringify(next.aim.routes) : row.routes ?? '[]'
+  const draft: Draft = draftOf(aimed, next)
   const person = await readPerson(ctx.db, draft.person_id), now = ctx.now()
   const check = await checkDraft(ctx.db, brand, draft, person, now)
   // An imported post keeps waiting for the person's release through a rewrite; its flags name what the release will meet.
@@ -124,10 +133,10 @@ export async function prepareSave(ctx: ActionContext, brand: Brand, row: Row, ne
   const text = next.parts?.length ? null : next.text, parts = next.parts?.length ? JSON.stringify(next.parts) : null
   const unscheduled = state !== current && ['scheduled', 'paused'].includes(current)
   const statements = [
-    ctx.db.prepare(`UPDATE stump_items SET text=?,parts=?,flags=?,claims_used=?,state=?,revision=?,hold=?,differs_from_master=?,
+    ctx.db.prepare(`UPDATE stump_items SET text=?,parts=?,flags=?,claims_used=?,state=?,revision=?,hold=?,differs_from_master=?,venue_id=?,product_id=?,routes=?,
       scheduled_at=CASE WHEN ? THEN NULL ELSE scheduled_at END,approved_by=NULL,updated_at=? WHERE id=? AND revision=?`)
       .bind(text, parts, JSON.stringify(check.flags), JSON.stringify(check.claims_used), state, revision, importing ? row.hold : holdOf(check, draft.person_id),
-        next.differs_from_master ?? Number(row.differs_from_master ?? 0), unscheduled ? 1 : 0, now, row.id, row.revision),
+        next.differs_from_master ?? Number(row.differs_from_master ?? 0), draft.venue_id, draft.product_id, routes, unscheduled ? 1 : 0, now, row.id, row.revision),
     ctx.db.prepare('INSERT INTO stump_item_revisions(item_id,revision,text,parts,saved_by,agent_id,at) SELECT ?,?,?,?,?,?,? WHERE changes()=1')
       .bind(row.id, revision, text, parts, ctx.person.id, ctx.agent?.id ?? null, now),
     ...(state !== current ? [ctx.db.prepare(`INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at)
@@ -138,7 +147,7 @@ export async function prepareSave(ctx: ActionContext, brand: Brand, row: Row, ne
 }
 
 /** Saves one item and answers its record, or revision_conflict when it changed since it was read. */
-export async function saveItem(ctx: ActionContext, row: Row, next: { text: string | null; parts: string[] | null; differs_from_master?: 0 | 1 }, reason: string) {
+export async function saveItem(ctx: ActionContext, row: Row, next: SaveNext, reason: string) {
   const brand = await loadBrand(ctx.db)
   const saved = await prepareSave(ctx, brand, row, next, reason)
   const [update] = await ctx.db.batch(saved.statements)

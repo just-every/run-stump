@@ -15,12 +15,13 @@ const hostOf = (value: unknown) => { try { return new URL(String(value)).host } 
 export const setupTools: StumpTool[] = [{
   name: 'stump.setup.apps', title: 'Set up network apps',
   description: 'List each network\'s app with its steps, callback URLs, scopes and state; record the company\'s own X and LinkedIn app keys; keep the X price table.',
-  scope: 'stump:setup', classes: ['security', 'gated'], clauses: ['STUMP-CONNECT-002', 'STUMP-SURFACE-004'],
+  scope: 'stump:setup', classes: ['security', 'gated', 'standard'], clauses: ['STUMP-CONNECT-002', 'STUMP-SURFACE-004'],
   actions: {
     list: {
       // Network apps are Admin work (STUMP-TEAM-001); everyone else reads each network's readiness from stump.accounts.connect list.
+      // Reading them changes nothing, so it is standard work, with the keys masked.
       roles: ADMINS, read: true,
-      classify: () => [security('network_apps', 0)],
+      classify: () => [{ class: 'standard' as const, facts: { measure: 0 } }],
       async run(_args, ctx) { const items = await describeApps(ctx.db, ctx.env); return { items, total: items.length } },
     },
     set: {
@@ -70,7 +71,7 @@ export const setupTools: StumpTool[] = [{
     },
     set: {
       roles: ADMINS,
-      properties: { base_url: { type: 'string', minLength: 1, maxLength: 2048 }, model: { type: 'string', minLength: 1, maxLength: 200 }, api_key: { type: 'string', minLength: 1, maxLength: 4096 } },
+      properties: { base_url: { type: 'string', minLength: 1, maxLength: 2048 }, model: { type: 'string', minLength: 1, maxLength: 200 }, api_key: { type: 'string', minLength: 1, maxLength: 4096, writeOnly: true } },
       required: ['base_url', 'model'],
       classify: args => [{ class: 'security' as const, facts: { measure: 1, setting: 'ai_provider', provider: hostOf(args.base_url) } }],
       summary: args => ({ target: { name: `Draft with ${String(args.model)} at ${hostOf(args.base_url)}` } }),

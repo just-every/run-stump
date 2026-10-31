@@ -7,7 +7,7 @@ import { Empty, MoreMenu, Outcome, Parts, accountWord, useLoaded, useRun } from 
 import { flagLine, type Flag } from '../stump/drafting/view.ts'
 import { listeningStyles } from '../stump/watches/styles.ts'
 import type { BlockedAuthor, FindingList, FindingView, PollView, WatchList, WatchView } from '../stump/watches/ui-types.ts'
-import { JOB_WORDS, chipsFor, jobOf } from '../stump/watches/finding-view.ts'
+import { JOB_WORDS, chipsFor, jobOf, pollWords } from '../stump/watches/finding-view.ts'
 
 export const Route = createFileRoute('/app/listening')({
   // `act` opens the focal finding's job at once (Today's "Draft a reply" lands here).
@@ -116,7 +116,7 @@ function Findings({ watch, data, error, focus, act, may, context, onFocus, onEdi
   if (!watch) return <><h2>Top findings</h2><p className="st-listen-none">Create a watch to see the threads worth answering.</p></>
   async function checkNow() {
     await run(() => runAction<PollView>('stump.watches.manage', { action: 'poll', watch_id: watch!.id, idempotency_key: key() }),
-      result => result.added ? `${result.added} new ${result.added === 1 ? 'finding' : 'findings'}.` : 'Nothing new.')
+      result => pollWords(result, watch!))
     await onChange()
   }
   const failing = watch.last_error
@@ -182,7 +182,7 @@ function Finding({ finding, rank, more: inThread, watch, focal, act, may, contex
         : [source, ago(finding.published_at), threadMore(inThread)].filter(Boolean).join(' · ')}</div>
       {shown.length ? <ul className="st-chips" aria-label="Why it ranks here">
         {shown.map(chip => <li className="st-chip" key={chip.label} title={chip.title}>{chip.label}</li>)}
-        {more > 0 ? <li className="st-meta st-chip-more" title={chips.slice(1).map(chip => chip.label).join(', ')}>+{more}</li> : null}
+        {more > 0 ? <li className="st-meta st-chip-more" title={chips.slice(1).map(chip => chip.label).join(', ')}>+{more} more {more === 1 ? 'reason' : 'reasons'}</li> : null}
       </ul> : null}
       {focal ? <div className="st-finding-actions">
         {job && !working ? <button type="button" className="st-button primary" onClick={() => setWorking(true)}>{JOB_WORDS[job]} <Icon name="arrowRight" /></button> : null}

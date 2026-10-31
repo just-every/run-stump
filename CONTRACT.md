@@ -2245,7 +2245,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company's policy decides every ca
 | `stump.sources.terms` | Record source terms and clear copies deleted at source | STUMP-WATCH-010 | standard or destructive | planned |
 | `stump.community.members` | Keep member profiles, timelines and segments | STUMP-WATCH-019 | standard · sensitive | planned |
 | `stump.answers.track` | Keep buyer prompts and run them through AI assistants | STUMP-WATCH-020 | standard (+ money · external) | planned |
-| `stump.accounts.connect` | Connect, refresh or disconnect an account | STUMP-PUBLISH-001, STUMP-PUBLISH-013, STUMP-CONNECT-001 | security · gated (+ accounts) | planned |
+| `stump.accounts.connect` | Connect, refresh or disconnect an account | STUMP-PUBLISH-001, STUMP-PUBLISH-013, STUMP-CONNECT-001 | security · gated (+ accounts; listing accounts: standard) | planned |
 | `stump.items.schedule` | Schedule or publish an item or a master item's variants to connected accounts and channels | STUMP-DRAFT-010, STUMP-PUBLISH-002, STUMP-PUBLISH-003, STUMP-PUBLISH-004, STUMP-PUBLISH-005, STUMP-PUBLISH-021, STUMP-PUBLISH-006, STUMP-PUBLISH-007, STUMP-PUBLISH-008, STUMP-PUBLISH-011, STUMP-PUBLISH-014, STUMP-PUBLISH-023, STUMP-PUBLISH-016, STUMP-PUBLISH-015, STUMP-PUBLISH-018, STUMP-PUBLISH-019, STUMP-PUBLISH-020 | external (+ money · gated) | planned |
 | `stump.items.followups` | Attach auto-plugs, reposts and evergreen re-queues to the author's own posts | STUMP-PUBLISH-022 | standard or external (+ money) | planned |
 | `stump.items.media` | Attach and convert media with alt text | STUMP-PUBLISH-002, STUMP-PUBLISH-003, STUMP-PUBLISH-004, STUMP-PUBLISH-005, STUMP-PUBLISH-009, STUMP-BRAND-005 | standard | planned |
@@ -2286,7 +2286,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company's policy decides every ca
 | `stump.team.manage` | Invite people, change roles and remove people | STUMP-TEAM-001 | access (reading the team: standard) | planned |
 | `stump.team.signoff` | Define, change or turn off sign-off paths | STUMP-TEAM-002 | access | planned |
 | `stump.accounts.delegate` | Grant or revoke account delegation and per-account grants | STUMP-TEAM-003 | access | planned |
-| `stump.setup.apps` | Record network apps, keys and approvals | STUMP-CONNECT-002 | security (+ gated) | planned |
+| `stump.setup.apps` | Record network apps, keys and approvals | STUMP-CONNECT-002 | security (+ gated; reading the apps: standard) | planned |
 | `stump.setup.ai` | Choose the AI provider, model and key | STUMP-DRAFT-006 | security (reading the setting: standard) | planned |
 | `stump.data.export` | Export the archive or restore it into an empty installation | STUMP-DATA-001 | standard (+ sensitive) | planned |
 | `stump.data.erase` | Erase a person | STUMP-DATA-002 | destructive · sensitive (+ external) | planned |

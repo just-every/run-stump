@@ -23,11 +23,15 @@
 //                    multiplier of that value.
 //   stale            it matches a claim past its review date
 //   unmatched        it reads as a factual claim (extract.ts) but no claim covers it
+// A sentence that names no product is about the product named before it in the draft, or
+// the draft's own product: "It also syncs with Stripe now" and "Now you can edit each
+// reminder" state what the product does, whether or not they name it. A link after a
+// sentence's end is a piece of its own, never part of the claim before it.
 // Priority when several apply: banned, number_mismatch, stale, matched. A person and an
 // agent submitting the same draft get the same result: the check reads only the text,
 // the claims, the profiles and today's date.
 
-import { readSentence, startsWithPronoun, strongPhrases } from './extract'
+import { readSentence, strongPhrases } from './extract'
 import type { ClaimCandidate } from './extract'
 import { extractMentions, hostOfUrl } from './mentions'
 import type { MentionSet } from './mentions'
@@ -290,6 +294,31 @@ function clauseSpans(span: Span, numbers: readonly FoundNumber[]): Span[] {
   return pieces.map((p) => ({ text: span.text.slice(p.start, p.end), start: span.start + p.start, end: span.start + p.end }))
 }
 
+/** Ends a sentence before a link: ". ", "! " or "? ", with a closing quote or bracket. */
+const SENTENCE_END = /[.!?\u2026]["'\u201d\u2019)\]]*\s+$/u
+
+/**
+ * The draft's sentences as the claim check reads them. A link that follows a sentence's end
+ * ("... with Stripe now. https://...") starts a piece of its own: it is not part of the claim
+ * before it, though the sentence splitter keeps text that starts in lower case with the
+ * sentence before.
+ */
+function claimSentences(text: string, ownHosts: readonly string[]): Span[] {
+  const out: Span[] = []
+  for (const span of sentenceSpans(text, ownHosts)) {
+    let from = 0
+    for (const link of extractUrls(span.text, { extraBareHosts: ownHosts })) {
+      const before = span.text.slice(from, link.start)
+      if (link.start <= from || !SENTENCE_END.test(before)) continue
+      const head = before.trimEnd()
+      out.push({ text: head, start: span.start + from, end: span.start + from + head.length })
+      from = link.start
+    }
+    out.push({ text: span.text.slice(from), start: span.start + from, end: span.end })
+  }
+  return out
+}
+
 /** At most this many clauses after a clause are joined with it to match one claim. */
 const JOIN_WINDOW = 6
 
@@ -344,7 +373,8 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
     const own = productIn(span)
     const carried = own ? undefined : subject
     const spanNumbers = numbersIn(span)
-    const candidate = readSentence(span, ctx, carried?.name, spanNumbers)
+    // A clause that names the product only by its link is about the product too.
+    const candidate = readSentence(span, ctx, (own ?? carried)?.name, spanNumbers)
     const numbers = candidate?.numbers ?? spanNumbers
     // How much of the claim the clause says counts every word it writes, a link's included.
     const tokens = new Set(contentTokens(stripNumbers(span.text, numbers)))
@@ -389,17 +419,18 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
   const scoreOf = (u: Unit) => Math.max(u.banned?.score ?? 0, u.best?.score ?? 0)
 
   const findings: ClaimFinding[] = []
-  let previousProduct: ProductProfile | undefined
-  for (const sentence of sentenceSpans(input.text, ownHosts)) {
-    // "It supports SSO." after a sentence about Orbit is about Orbit.
-    const pronounProduct = previousProduct && startsWithPronoun(sentence.text) ? previousProduct : undefined
-    previousProduct = productIn(sentence) ?? pronounProduct
+  // What the draft is about before it names anything: its product, or the company's only product.
+  let previousProduct: ProductProfile | undefined = input.product_id ? profileById.get(input.product_id) : input.products?.length === 1 ? input.products[0] : undefined
+  for (const sentence of claimSentences(input.text, ownHosts)) {
+    // "It supports SSO." after a sentence about Orbit is about Orbit, as is "Now you can export by client."
+    const carried = previousProduct
+    previousProduct = productIn(sentence) ?? carried
 
     const ownNumbers = extractNumbers(sentence.text)
     sentenceNumbers = ownNumbers.map((n) => ({ ...n, start: n.start + sentence.start, end: n.end + sentence.start }))
     const clauses = clauseSpans(sentence, ownNumbers)
     const subjects: Array<ProductProfile | undefined> = []
-    let subject = pronounProduct
+    let subject = carried
     for (const c of clauses) {
       subjects.push(subject)
       subject = productIn(c) ?? subject

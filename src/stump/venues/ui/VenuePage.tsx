@@ -5,7 +5,7 @@ import { me, runAction } from '../../ui/api.ts'
 import { Disc, Outcome, Tip, monthYear, useLoaded, useRun, when, words } from '../../ui/kit.tsx'
 import type { Team } from '../../ui/types.ts'
 import { DETAIL_LABELS } from '../kinds.ts'
-import { kindLabel, limitWords, nextOpenWords, routeLabel, statusLabel, statusTone } from './labels.ts'
+import { kindLabel, limitWords, nextOpenWords, pitched, routeLabel, statusLabel, statusTone } from './labels.ts'
 import { openingWords } from '../../today/sections.ts'
 import { STATE as HANDOFF_STATE } from '../../handoffs/ui/words.ts'
 import { HandoffStart } from '../../handoffs/ui/HandoffStart.tsx'
@@ -104,7 +104,10 @@ function RoutesCard({ venue, routes, editor, onChanged, handoff }: { venue: Venu
   const closed = routes.reasons.filter(reason => !reason.open)
   return <section className="st-card st-venue-routes" aria-labelledby="routes-title">
     <h2 className="st-panel-title" id="routes-title"><Disc icon="arrows" />Routes</h2>
-    {routes.routes.length ? <div className="st-chips">{routes.routes.map(route => <span className="st-chip ok" key={route}>{routeLabel(route)}</span>)}</div> : <p>No route is open.</p>}
+    {/* A venue the company pitches shows Pitch first, as the venue list does: its editor or host decides what runs. */}
+    {routes.routes.length || pitched(venue) ? <div className="st-chips">{pitched(venue) ? <span className="st-chip ok">Pitch</span> : null}
+      {routes.routes.map(route => <span className="st-chip ok" key={route}>{routeLabel(route)}</span>)}</div> : <p>No route is open.</p>}
+    {pitched(venue) ? <p className="st-meta">Pitch the editor or host, who decides what runs here: send it from your own mail, or have your agent draft it.</p> : null}
     {closed.length ? <ul className="st-list">{closed.map(reason => <li className="st-meta" key={reason.route} style={{ padding: '2px 0' }}>{CLOSED[reason.route] ?? routeLabel(reason.route)}: {lower(reason.because)}</li>)}</ul> : null}
     {handoff}
     <div style={{ borderTop: '1px solid var(--stump-line)', marginTop: 16, paddingTop: 16 }}>

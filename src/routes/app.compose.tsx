@@ -28,7 +28,8 @@ async function draftAlone(itemId: string, accounts: Account[]): Promise<Variant>
     runAction<{ items: Array<{ count: Count | null }> }>('stump.drafts.preview', { action: 'item', item_id: itemId })])
   const account = accounts.find(entry => entry.id === item.account_id)
   const parts = item.parts as string[] | null
-  return { item_id: item.id, network: item.network as string | null, account_id: item.account_id as string | null, handle: account?.handle ?? null, account_name: account?.display_name ?? null,
+  return { item_id: item.id, network: item.network as string | null, account_id: item.account_id as string | null, venue_id: item.venue_id as string | null, product_id: item.product_id as string | null,
+    handle: account?.handle ?? null, account_name: account?.display_name ?? null,
     text: parts?.length ? parts.join('\n\n') : String(item.text ?? ''), count: shown.items[0]?.count ?? null, flags: item.flags as Flag[], state: String(item.state), revision: item.revision, differs_from_master: false }
 }
 
@@ -64,9 +65,10 @@ function ComposePage() {
     const checks = await Promise.all((preview?.items ?? (alone ? [alone] : [])).map(variant =>
       runAction<Check & { item_id: string }>('stump.drafts.check', { action: 'run', item_id: variant.item_id, idempotency_key: key() }).catch(() => null)))
     // With nothing open: the drafts waiting (an agent's among them) to open and review, and what a new post is for and where it goes.
+    // Products and venues aim a new post, and re-aim an open one.
     const blank = !preview && !alone
-    const [drafts, products, venues, ai] = blank ? await Promise.all([openDrafts(), runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' }),
-      runAction<{ items: VenueChoice[] }>('stump.venues.manage', { action: 'list' }), runAction<{ source: string }>('stump.setup.ai', { action: 'get' })]) : [[], { items: [] }, { items: [] }, null]
+    const [drafts, products, venues, ai] = await Promise.all([blank ? openDrafts() : [], runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' }),
+      runAction<{ items: VenueChoice[] }>('stump.venues.manage', { action: 'list' }), blank ? runAction<{ source: string }>('stump.setup.ai', { action: 'get' }) : null])
     return { who, accounts: targets.items, claims: claims.items, preview, alone, checks: checks.filter((check): check is Check & { item_id: string } => !!check), drafts, products: products.items, venues: venues.items,
       noProvider: ai?.source === 'none' }
   })
@@ -144,6 +146,32 @@ function ComposePage() {
     if (GONE[variant.state] || next === variant.text || !next.trim()) return
     await run(() => runAction('stump.drafts.revise', { action: 'save', item_id: variant.item_id, text: next, expected_revision: variant.revision, idempotency_key: key() }), () => 'Saved')
     await refresh()
+  }
+  // An open draft's venue and product change as a new revision of each variant, checked again where it now goes.
+  async function aim(list: Variant[], change: { venue_id?: string; product_id?: string; clear?: Array<'venue' | 'product'> }) {
+    await run(async () => { for (const variant of list) await runAction('stump.drafts.revise', { action: 'aim', item_id: variant.item_id, ...change, expected_revision: variant.revision, idempotency_key: key() }) }, () => 'Saved')
+    await refresh()
+  }
+  /** The product and each variant's venue of an open draft, as the new-post form offers them. */
+  function aimForm(list: Variant[]) {
+    const productNow = list.find(variant => variant.product_id)?.product_id ?? ''
+    const showProduct = products.length > 1 || (products.length === 1 && !productNow)
+    const venues = data?.venues ?? []
+    const rows = list.flatMap(variant => {
+      const account = accounts.find(item => item.id === (variant.account_id ?? aloneAccount))
+      const choices = venuesFor(venues, account), current = venues.find(venue => venue.id === variant.venue_id)
+      const offered = current && !choices.includes(current) ? [current, ...choices] : choices
+      return account && offered.length ? [{ variant, account, offered }] : []
+    })
+    if (!showProduct && !rows.length) return null
+    return <div className="st-form st-compose-aim">
+      {showProduct ? <label className="st-field">Product<select value={productNow} disabled={busy} onChange={event => void aim(list, event.target.value ? { product_id: event.target.value } : { clear: ['product'] })}>
+        <option value="">No product</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
+      {rows.map(({ variant, account, offered }) => <label className="st-field" key={variant.item_id}>Venue for {accountLabel(account)}<select value={variant.venue_id ?? ''} disabled={busy}
+        onChange={event => void aim([variant], event.target.value ? { venue_id: event.target.value } : { clear: ['venue'] })}>
+        <option value="">No venue</option>{offered.map(venue => <option key={venue.id} value={venue.id} disabled={!venue.routes.includes('publish') && venue.id !== variant.venue_id}>
+          {venue.name}{venue.routes.includes('publish') ? '' : ' (no direct posts)'}</option>)}</select></label>)}
+    </div>
   }
   async function schedule(action: 'schedule_master' | 'queue') {
     if (!open) return
@@ -244,21 +272,29 @@ function ComposePage() {
             <label className="st-field">Post from<select value={postFrom} onChange={event => setPostFrom(event.target.value)}>
               <option value="">Choose an account</option>{accounts.filter(account => !alone.network || account.network === alone.network).map(account => <option key={account.id} value={account.id}>{accountLabel(account)}</option>)}</select></label>
           </div> : <p className="st-meta"><Link to="/app/settings/accounts">Connect an account</Link> to post it.</p> : null}
+          {GONE[alone.state] ? null : aimForm([alone])}
+          <div className="st-variants">{variantCards}</div>
+        </section>
+        {checks}
+      </div> : sent && preview ? <div className="st-compose">
+        {/* Everything went out: the page leads with what each account posted, not the master it started from. */}
+        <section className="st-card" aria-labelledby="variants-title">
+          <h2 className="st-card-head" id="variants-title"><Disc icon="grid" />{allVariants.every(variant => variant.state === 'posted') ? 'What went out' : 'What goes out'}{allVariants.length > 1 ? ', per account' : ''}</h2>
           <div className="st-variants">{variantCards}</div>
         </section>
         {checks}
       </div> : <div className="st-compose">
         <section className="st-card" aria-labelledby="one-post">
           <h2 className="st-card-head" id="one-post"><Disc icon="pencil" />One post</h2>
-          {sent && preview ? <p className="st-master-sent">{preview.master.text}</p> : <><label className="st-sr" htmlFor="master-text">Post text</label>
+          <label className="st-sr" htmlFor="master-text">Post text</label>
           <div className="st-master">
             <textarea id="master-text" className="st-textarea large" value={text} rows={4} placeholder="Write the post once. Each account gets its own variant."
               onChange={event => setText(event.target.value)} onBlur={() => void saveMaster()} />
             <div className="st-chars">
               {graphemes(text).toLocaleString()}{Number.isFinite(largest) ? ` / ${largest.toLocaleString()}` : ''}
             </div>
-          </div></>}
-          {preview ? source && !sent ? <div className="st-source-chip"><Disc icon="pencil" /><span><span className="st-meta">From a source</span><br />{source.replace(/^https?:\/\//, '')}</span></div> : null
+          </div>
+          {preview ? source ? <div className="st-source-chip"><Disc icon="pencil" /><span><span className="st-meta">From a source</span><br />{source.replace(/^https?:\/\//, '')}</span></div> : null
             : <div className="st-source">
               <label className="st-field">From a source
                 <input type="url" value={source} placeholder="Changelog or docs link" onChange={event => setSource(event.target.value)} />
@@ -276,6 +312,7 @@ function ComposePage() {
               <button key={account.id} className="st-chip" type="button" aria-pressed={chosen.includes(account.id)} disabled={!!preview}
                 onClick={() => setPicked(picked.includes(account.id) ? picked.filter(item => item !== account.id) : [...picked, account.id])}>{chosen.includes(account.id) ? <Icon name="check" /> : null}{accountLabel(account)}</button>)}
           </div>
+          {preview ? aimForm(variants) : null}
           {!preview && (products.length > 1 || picked.some(id => venuesFor(data?.venues ?? [], accounts.find(account => account.id === id)).length)) ? <div className="st-form st-compose-aim">
             {products.length > 1 ? <label className="st-field">Product<select value={product} onChange={event => setProduct(event.target.value)}>
               <option value="">No product</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
@@ -298,7 +335,7 @@ function ComposePage() {
           <div className="st-row-main"><Link className="st-name" to="/app/compose" search={draft.to}>{draft.name}</Link><div className="st-meta">{draft.meta}</div></div>
         </li>)}</ul>
       </section> : null}
-      {preview ? <section className="st-card" aria-labelledby="variants-title">
+      {preview && !sent ? <section className="st-card" aria-labelledby="variants-title">
         <h2 className="st-card-head" id="variants-title"><Disc icon="grid" />Variants</h2>
         <div className="st-variants">{variantCards}</div>
       </section> : null}
@@ -327,7 +364,8 @@ function ComposePage() {
 
 function VariantCard({ variant, claims, select, onSelected, onSave }: { variant: Variant; claims: Array<[number, number]>; select: { range: [number, number] | null; at: number } | null; onSelected(): void; onSave: (text: string) => void }) {
   const flags = blocking(variant.flags)
-  const [open, setOpen] = useState(flags.length > 0)
+  // A flagged variant opens on what to fix; one that has gone out opens on the text it sends.
+  const [open, setOpen] = useState(flags.length > 0 || !!GONE[variant.state])
   const [text, setText] = useState(variant.text)
   const field = useRef<HTMLTextAreaElement>(null)
   const over = variant.count ? variant.count.count > variant.count.limit : false

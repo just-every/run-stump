@@ -5,6 +5,7 @@
 // a correction. The entry itself is always the current state, so the versions answered end
 // with it: when the last stored row does not hold the entry's current state, the current
 // state is the last version.
+import { shortContent } from '../handoffs/link-content.ts'
 export interface LedgerRow { [key: string]: unknown }
 
 export interface LedgerVersion {
@@ -81,6 +82,8 @@ export interface LedgerEntry {
   claims: unknown[]
   product_id: string | null
   campaign: string | null
+  /** The utm_content Stump put on the post's own links: the item's id for a published post, the hand-off's short id for a hand-off. */
+  utm_content: string | null
   route: 'published' | 'handed_off' | 'orbit' | 'mango'
   state: 'posted' | 'failed' | 'uncertain' | 'deleted' | 'removed'
   confirmation: 'network' | 'person' | null
@@ -103,13 +106,19 @@ function importedResults(value: unknown): LedgerEntry['results'] {
   return results ? { source: results.source, values: results.values, read_at: iso(results.read_at) } : null
 }
 
+/** The utm_content the posting path tagged the entry's links with, so analytics rows keyed on it join to the entry; none for an imported post. */
+function utmContent(row: LedgerRow): string | null {
+  if (row.route === 'handed_off' && typeof row.handoff_id === 'string') return shortContent(row.handoff_id)
+  return typeof row.item_id === 'string' ? row.item_id : null
+}
+
 export function toEntry(row: LedgerRow, versions: LedgerVersion[]): LedgerEntry {
   return {
     id: row.id as string, url: row.url as string | null, network: row.network as string | null, network_id: row.network_id as string | null, venue_id: row.venue_id as string | null,
     results: importedResults(row.results),
     venue_name: (row.venue_name as string | null | undefined) ?? null, account_id: row.account_id as string | null, person_id: row.person_id as string | null,
     agent: json(row.agent) as LedgerEntry['agent'], by: row.by_label as string, text: row.text as string | null, disclosure_line: row.disclosure_line as string | null,
-    claims: json(row.claims) as unknown[], product_id: row.product_id as string | null, campaign: row.campaign as string | null, route: row.route as LedgerEntry['route'],
+    claims: json(row.claims) as unknown[], product_id: row.product_id as string | null, campaign: row.campaign as string | null, utm_content: utmContent(row), route: row.route as LedgerEntry['route'],
     state: row.state as LedgerEntry['state'], confirmation: row.confirmation as LedgerEntry['confirmation'], revision: row.revision as number | null, posted_at: iso(row.posted_at),
     charge_usd: row.charge_usd as number | null, approved_by: json(row.approved_by), hold: json(row.hold), removal: json(row.removal) as LedgerEntry['removal'],
     legal_hold: json(row.legal_hold) as LedgerEntry['legal_hold'], annotation: json(row.annotation) as LedgerEntry['annotation'], versions: withCurrent(row, versions),

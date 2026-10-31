@@ -8,6 +8,8 @@ import { wordDiff } from '../drafting/diff.ts'
 import { checkRow, heldBecause, holdOf, itemView, mayWrite, prepareSave, readItem, readRevision, saveItem, storeCheck } from '../drafting/items.ts'
 import { claimRecord, itemRecord, itemText, libClaim, masterRecord, parse, today, type Row } from '../drafting/records.ts'
 import { createItem, createMaster, draftFromSource, draftingClasses, screen } from '../drafting/write.ts'
+import { venueOrRefuse } from '../venues/model.ts'
+import { routesFor } from '../venues/rules.ts'
 
 // Drafting posts, threads, replies, pitches and master posts, with revisions,
 // the draft check and previews (STUMP-DRAFT-001 to -010, STUMP-BRAND-004,
@@ -117,7 +119,7 @@ export const draftTools: StumpTool[] = [{
   },
 }, {
   name: 'stump.drafts.revise', title: 'Revise drafts',
-  description: 'Read and list items, save a new revision, compare two revisions, restore an earlier one as a new revision, mark an item ready, and change a master post.',
+  description: 'Read and list items, save a new revision, aim a draft at another venue or product, compare two revisions, restore an earlier one as a new revision, mark an item ready, and change a master post.',
   scope: 'stump:drafts', classes: ['standard'], clauses: ['STUMP-DRAFT-003', 'STUMP-TEAM-002'],
   actions: {
     get: {
@@ -132,7 +134,8 @@ export const draftTools: StumpTool[] = [{
       async run(args, ctx) {
         const filters: string[] = [], values: unknown[] = []
         for (const field of ['venue_id', 'product_id', 'master_id', 'state'] as const) if (typeof args[field] === 'string') { filters.push(`${field}=?`); values.push(args[field]) }
-        if (typeof args.q === 'string') { const like = `%${args.q.replace(/[\\%_]/g, c => `\\${c}`)}%`; filters.push("(text LIKE ? ESCAPE '\\' OR parts LIKE ? ESCAPE '\\' OR subject LIKE ? ESCAPE '\\')"); values.push(like, like, like) }
+        // instr, not LIKE: D1 refuses a LIKE pattern over 50 bytes, and a search may be up to 200 characters.
+        if (typeof args.q === 'string') { const has = (column: string) => `instr(lower(COALESCE(${column},'')),lower(?))>0`; filters.push(`(${has('text')} OR ${has('parts')} OR ${has('subject')})`); values.push(args.q, args.q, args.q) }
         if (ctx.person.role === 'poster') { filters.push('person_id=?'); values.push(ctx.person.id) }
         const where = filters.length ? ` WHERE ${filters.join(' AND ')}` : ''
         const [rows, total] = await ctx.db.batch([ctx.db.prepare(`SELECT * FROM stump_items${where} ORDER BY updated_at DESC,id LIMIT 200`).bind(...values), ctx.db.prepare(`SELECT COUNT(*) AS n FROM stump_items${where}`).bind(...values)])
@@ -149,6 +152,31 @@ export const draftTools: StumpTool[] = [{
         const next = nextText(args)
         const owner = row.master_id ? await master(ctx, row.master_id) : null
         const saved = await saveItem(ctx, row, { ...next, ...(owner ? { differs_from_master: itemText(next) === owner.text ? 0 as const : 1 as const } : {}) }, 'edited')
+        return { ...saved.item, check: checkView(saved.check) }
+      },
+    },
+    aim: {
+      // Where an open draft goes and what it is for: its venue and product change as a new revision, checked again against the venue's rules and the product's claims.
+      roles: CONTRIBUTORS, properties: { item_id: id, venue_id: id, product_id: id, clear: { type: 'array', minItems: 1, maxItems: 2, uniqueItems: true, items: { enum: ['venue', 'product'] } } },
+      required: ['item_id'],
+      classify: () => standard(),
+      target: itemTarget, revision: itemRevision,
+      async run(args, ctx) {
+        const row = await readItem(ctx, args.item_id)
+        mayWrite(ctx, row.person_id)
+        const clear = new Set((args.clear as string[] | undefined) ?? [])
+        if (args.venue_id === undefined && args.product_id === undefined && !clear.size) refuse('invalid_arguments', { field: 'venue_id', reason: 'Name the venue or the product, or what to clear.' })
+        if (args.venue_id !== undefined && clear.has('venue')) refuse('invalid_arguments', { field: 'clear', reason: 'Name a venue or clear it, not both.' })
+        if (args.product_id !== undefined && clear.has('product')) refuse('invalid_arguments', { field: 'clear', reason: 'Name a product or clear it, not both.' })
+        const venueId = clear.has('venue') ? null : (args.venue_id as string | undefined) ?? (row.venue_id as string | null)
+        const productId = clear.has('product') ? null : (args.product_id as string | undefined) ?? (row.product_id as string | null)
+        const venue = venueId === null ? null : await venueOrRefuse(ctx.db, venueId)
+        if (args.venue_id !== undefined && venue && (venue.archived === 1 || venue.status === 'excluded')) refuse('invalid_arguments', { field: 'venue_id', reason: venue.archived === 1 ? 'The venue is archived.' : 'The venue is excluded.' })
+        if (args.product_id !== undefined && !await ctx.db.prepare('SELECT 1 FROM stump_products WHERE id=?').bind(String(args.product_id)).first()) refuse('not_found', { product_id: String(args.product_id) })
+        const saved = await saveItem(ctx, row, { text: row.text as string | null, parts: parse<string[] | null>(row.parts, null),
+          aim: { venue_id: venueId, product_id: productId, routes: venue ? routesFor(venue).routes : [] } }, 'aimed')
+        // A master post is for one product: its product follows the variants'.
+        if (row.master_id && productId !== row.product_id) await ctx.db.prepare('UPDATE stump_masters SET product_id=?,updated_at=? WHERE id=?').bind(productId, ctx.now(), row.master_id).run()
         return { ...saved.item, check: checkView(saved.check) }
       },
     },
@@ -321,7 +349,7 @@ export const draftTools: StumpTool[] = [{
         const { record, rows } = await visibleMaster(ctx, args.master_id)
         const items = rows.map(row => {
           const item = itemRecord(row), text = itemText(row)
-          return { item_id: item.id, network: item.network, account_id: item.account_id, handle: row.handle ?? null, account_name: row.account_name ?? null, text,
+          return { item_id: item.id, network: item.network, account_id: item.account_id, venue_id: item.venue_id, product_id: item.product_id, handle: row.handle ?? null, account_name: row.account_name ?? null, text,
             count: counted(item.network) ? countText({ network: item.network }, text) : null, flags: item.flags, state: item.state, revision: item.revision, differs_from_master: item.differs_from_master }
         })
         return plain({ master: record, items, total: items.length })

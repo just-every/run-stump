@@ -27,4 +27,4 @@ export interface FindingView {
 export interface BlockedAuthor { handle: string; source: WatchSourceView['kind'] | null }
 export interface WatchList { items: WatchView[]; total: number; blocked_authors: BlockedAuthor[] }
 export interface FindingList { watch: { id: string; name: string }; items: FindingView[]; total: number }
-export interface PollView { added: number; alerts_sent: number; sources: Array<{ source: string; status: string; added: number; error?: ShownError }> }
+export interface PollView { added: number; alerts_sent: number; sources: Array<{ source: string; status: string; added: number; dropped?: Partial<Record<'erased' | 'filter' | 'team' | 'blocked' | 'terms' | 'duplicate', number>>; error?: ShownError }> }
