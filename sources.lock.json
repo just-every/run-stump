@@ -392,7 +392,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "906b0cb3e19b55ea756a4036fbda051df232129a855336fe6e940bb88cae6836",
+      "sha256": "5d64c35978c8c5cf5278f49d1f4dbb8633b4ec41b53bdaabc9d0f1d2935552d4",
       "executable": false
     },
     "agent-surface.json": {
@@ -420,7 +420,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "99363f28ea3bb7123be3f3f3b92b52a8e4a200b109c390bac6098325740f2ac9",
+      "sha256": "8a45aaa4382ce43f645b78b0e541b13cec78593d41393119be855aa17b628c95",
       "executable": false
     },
     "deploy-demo.json": {
@@ -436,7 +436,7 @@
       "executable": false
     },
     "docs/accounts.md": {
-      "sha256": "ee815fb3e53f5f494314a9835b580e149756314aadbeaef3f36d0ce54935ab92",
+      "sha256": "f60adebcb9f19e35c7cbf9193f2fe866a10a631299dcf348725e2daa60394d10",
       "executable": false
     },
     "docs/agents.md": {
@@ -492,7 +492,7 @@
       "executable": false
     },
     "docs/ledger.md": {
-      "sha256": "34e800a072b6bf79aa50b8fd41da959171a18b6828e4a7987c73ed9d97a897fa",
+      "sha256": "9eaba1567d92b004b64ae82d5db619dcb4f1da771d435bbb361110fee52180bb",
       "executable": false
     },
     "docs/links.md": {
@@ -3512,7 +3512,7 @@
       "executable": false
     },
     "src/stump/accounts/connect.ts": {
-      "sha256": "b218e173f22abefc5cfe5769d4048ccb700a5738ec0a3853fd2433c65de12844",
+      "sha256": "967024a91593568c2ea8c204f8922591c7cf70326783bae74bb2f1d8c1406566",
       "executable": false
     },
     "src/stump/accounts/handle.ts": {
@@ -3576,7 +3576,7 @@
       "executable": false
     },
     "src/stump/data/import-custody.ts": {
-      "sha256": "cc8db2cc10fc1f982953d30958b9ad0c54991d71a5952851871816e7eb2e50d5",
+      "sha256": "df21e29de6852d0c4f98d658ff6c9dac1e3dec3144756c8e83f8b8149d310f00",
       "executable": false
     },
     "src/stump/data/recheck.ts": {
@@ -3784,7 +3784,7 @@
       "executable": false
     },
     "src/stump/ledger/correct.ts": {
-      "sha256": "80db6b15d8fc08e42362adf9194f1978f6b7d8454feb65e980a20867a020b037",
+      "sha256": "f3ca9a2f5fec0e66a962b82aa16205a171e8d1bbb8f09fb4e79dd1d0aada7112",
       "executable": false
     },
     "src/stump/ledger/csv.ts": {
@@ -4272,7 +4272,7 @@
       "executable": false
     },
     "src/stump/net/fetch.ts": {
-      "sha256": "6689e023fa4eb70faa68ac19074abd06df91728e324164c0d1bfaea7b671150c",
+      "sha256": "b52e04a7eb134f3ca5379dce0dd3ac7d3648e5f91b6dc5a337331887b77d27a9",
       "executable": false
     },
     "src/stump/people/invite.ts": {
@@ -4444,7 +4444,7 @@
       "executable": false
     },
     "src/stump/tools/ledger.ts": {
-      "sha256": "87149f64c5fe702aa26c87de4d5adf5b14d30c5c0360ac08df5803cb62f82439",
+      "sha256": "ca193aa6c73c18f1ac9bf12292a2cf260568530276b68081be1eb202da71fc3f",
       "executable": false
     },
     "src/stump/tools/links.ts": {

@@ -68,7 +68,7 @@ export const ledgerTools: StumpTool[] = [{
   },
 }, {
   name: 'stump.ledger.correct', title: 'Correct the ledger',
-  description: 'Add a corrected version of a ledger entry (the earlier versions stay readable), mark a post removed with the reason (a post on a company account is deleted at its network, unless the entry is under legal hold), or put a legal hold on an entry.',
+  description: 'Add a corrected version of a ledger entry (the earlier versions stay readable), mark a post removed with the reason (a post a company account published is deleted at its network, unless an entry for that post is under legal hold; an entry whose network id was corrected is marked removed without a delete), or put a legal hold on an entry.',
   scope: 'stump:ledger', classes: ['standard', 'destructive', 'external'], clauses: ['STUMP-LEDGER-001'],
   actions: {
     correct: {

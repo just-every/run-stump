@@ -4,7 +4,7 @@ import { buildAuthorizeUrl, createMastodonClient, createPkce, exchangeCode, norm
 import { buildXAuthorizeUrl, createPkcePair, exchangeXCode, getXMe, revokeXToken } from '../lib/x/index.ts'
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext } from '../actions/types.ts'
-import { stumpFetch } from '../net/fetch.ts'
+import { assertPublic, NotPublicError, stumpFetch } from '../net/fetch.ts'
 import { IMPORT_HOLD_SQL, moveItem, type ItemState } from '../items/state.ts'
 import { appKeys, callbackUrl, NETWORK_NAMES, type Network } from './apps.ts'
 import { blueskyOAuthClient } from './clients.ts'
@@ -91,6 +91,25 @@ async function mastodonApp(ctx: ActionContext, origin: string, redirectUri: stri
   return registered.value
 }
 
+/**
+ * The Mastodon instance a person names, as its origin: an https instance on the public web, by the same address
+ * rules as every read a person chooses (net/address.ts), checked before Stump sends it anything. Only a local
+ * runtime may name an instance on this machine.
+ */
+async function mastodonInstance(ctx: ActionContext, value: string): Promise<string> {
+  const instance = normalizeInstance(value)
+  if (!instance.ok) refuse('invalid_arguments', { field: 'instance', reason: instance.message })
+  const url = new URL(instance.origin)
+  if (ctx.env.AUTH_LOCAL === 'true' && loopback(url.hostname)) return instance.origin
+  try {
+    await assertPublic(ctx.env, url)
+  } catch (error) {
+    if (error instanceof NotPublicError) refuse('invalid_arguments', { field: 'instance', reason: `${url.host} is not a Mastodon instance on the public web.` })
+    networkError('mastodon', { code: 'dns', message: error instanceof Error ? error.message : String(error) })
+  }
+  return instance.origin
+}
+
 export interface StartInput { network: Network; owner: 'me' | 'company'; instance?: string; service?: string; handle?: string; account?: AccountRow }
 
 /**
@@ -112,11 +131,10 @@ export async function startConnection(ctx: ActionContext, input: StartInput) {
   const state = randomToken(32), id = crypto.randomUUID(), fetch = stumpFetch(ctx.env)
   let pending: Pending, consentUrl: string | null = null
   if (network === 'mastodon') {
-    const instance = normalizeInstance(input.instance ?? input.account?.instance ?? '')
-    if (!instance.ok) refuse('invalid_arguments', { field: 'instance', reason: instance.message })
-    const redirectUri = callbackUrl(ctx.env, 'mastodon'), app = await mastodonApp(ctx, instance.origin, redirectUri), pkce = await createPkce()
-    pending = { network, origin: instance.origin, redirect_uri: redirectUri, verifier: pkce.verifier }
-    consentUrl = buildAuthorizeUrl(instance.origin, { clientId: app.clientId, redirectUri, state, codeChallenge: pkce.challenge })
+    const origin = await mastodonInstance(ctx, input.instance ?? input.account?.instance ?? '')
+    const redirectUri = callbackUrl(ctx.env, 'mastodon'), app = await mastodonApp(ctx, origin, redirectUri), pkce = await createPkce()
+    pending = { network, origin, redirect_uri: redirectUri, verifier: pkce.verifier }
+    consentUrl = buildAuthorizeUrl(origin, { clientId: app.clientId, redirectUri, state, codeChallenge: pkce.challenge })
   } else if (network === 'bluesky') {
     // A reconnect names the account by its own DID; its stored server is only a hint, since an account may move to another server.
     const identifier = (input.account?.network_user_id ?? input.handle ?? input.account?.handle ?? '').trim().replace(/^@/, '')

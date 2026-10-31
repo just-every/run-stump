@@ -40,20 +40,32 @@ export async function correct(args: Args, ctx: ActionContext) {
   return (await one(ctx, id)).entry
 }
 
-/** The company account and its publisher when removing the entry deletes its post at the network; null when it only records a removal. */
+/**
+ * The company account and its publisher when removing the entry deletes its post at the network; null when it
+ * only records a removal. Only a post the publisher recorded is deleted: an entry whose network id a correction
+ * set says which post it refers to, not which post the account wrote, so removing it records the removal only.
+ */
 export async function networkDelete(ctx: Pick<ActionContext, 'db'>, row: Record<string, unknown>) {
   if (row.route !== 'published' || typeof row.account_id !== 'string' || typeof row.network_id !== 'string') return null
   const account = await readAccount(ctx.db, row.account_id)
   if (account?.owner_kind !== 'company') return null
   const publisher = publishers[account.network]
-  return publisher ? { account, publisher, network_id: row.network_id } : null
+  if (!publisher) return null
+  const corrected = await ctx.db.prepare("SELECT 1 FROM stump_ledger_versions WHERE entry_id=? AND kind='correction' AND json_extract(fields,'$.network_id') IS NOT NULL LIMIT 1")
+    .bind(String(row.id)).first()
+  return corrected ? null : { account, publisher, network_id: row.network_id }
 }
 
-/** A legal hold keeps the post at its network: the company's own delete is refused while the hold stands, as an erasure keeps it. */
-export function heldAtNetwork(row: Record<string, unknown>) {
-  if (!row.legal_hold) return
-  const hold = JSON.parse(String(row.legal_hold)) as { reason?: string }
-  refuse('conflict', { entry_id: String(row.id), reason: 'The entry is under legal hold, so its post stays at the network.', legal_hold: hold.reason ?? null })
+/**
+ * A legal hold keeps the post at its network: the company's own delete is refused while a hold stands on any
+ * entry of that account recorded for the same post, as an erasure keeps it.
+ */
+export async function heldAtNetwork(ctx: Pick<ActionContext, 'db'>, row: Record<string, unknown>, target: { account: { id: string }; network_id: string }) {
+  const held = await ctx.db.prepare('SELECT id,legal_hold FROM stump_ledger WHERE account_id=? AND network_id=? AND legal_hold IS NOT NULL ORDER BY id=? DESC LIMIT 1')
+    .bind(target.account.id, target.network_id, String(row.id)).first<{ id: string; legal_hold: string }>()
+  if (!held) return
+  const hold = JSON.parse(held.legal_hold) as { reason?: string }
+  refuse('conflict', { entry_id: String(row.id), ...held.id === row.id ? {} : { held_entry_id: held.id }, reason: 'The post is under legal hold, so it stays at the network.', legal_hold: hold.reason ?? null })
 }
 
 /**
@@ -62,8 +74,9 @@ export function heldAtNetwork(row: Record<string, unknown>) {
  */
 export async function removalClasses(args: Args, ctx: ActionContext) {
   const { row } = await one(ctx, String(args.entry_id))
-  if (!REMOVABLE.includes(String(row.state)) || !await networkDelete(ctx, row)) return [{ class: 'standard' as const, facts: { measure: 1 } }]
-  heldAtNetwork(row)
+  const target = REMOVABLE.includes(String(row.state)) ? await networkDelete(ctx, row) : null
+  if (!target) return [{ class: 'standard' as const, facts: { measure: 1 } }]
+  await heldAtNetwork(ctx, row, target)
   return [{ class: 'destructive' as const, facts: { measure: 1 } }, { class: 'external' as const, facts: { measure: 1, counterparty: 'public' } }]
 }
 
@@ -74,7 +87,7 @@ export async function removalClasses(args: Args, ctx: ActionContext) {
 async function deleteAtNetwork(ctx: ActionContext, row: Record<string, unknown>): Promise<(RemoveOutcome & { at: string }) | null> {
   const target = await networkDelete(ctx, row)
   if (!target) return null
-  heldAtNetwork(row)
+  await heldAtNetwork(ctx, row, target)
   const { account, publisher, network_id } = target
   const answer = await publisher.remove({ network: account.network, account_id: account.id, network_id }, { db: ctx.db, env: ctx.env, account, prices: await xPrices(ctx.db), now: ctx.now })
   if (answer.outcome === 'failed') refuse('network_refused', { entry_id: String(row.id), network: account.network, outcome: 'failed', message: answer.error ?? 'The network did not delete the post.' })
