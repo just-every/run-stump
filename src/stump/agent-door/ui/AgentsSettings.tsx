@@ -8,7 +8,7 @@ import { Icon } from '../../ui/icons.tsx'
 import { Outcome, PanelTitle, Saved, useLoaded, useRun, useSaved, when } from '../../ui/kit.tsx'
 import {
   ANSWERS, actionName, agentOverview, agentState, answerOf, approvals, classHelp, className, clearAnswers, decisionName, markReview, narrower, outcomeWords,
-  policyClasses, principal, readAnswers, reviews, saveAnswer, savePolicy, setPaused, withAnswer, type Disposition, type PolicyDocument,
+  policyClasses, principal, readAnswers, reviews, saveAnswer, savePolicy, setPaused, toolTitles, withAnswer, type Disposition, type PolicyDocument,
 } from './policy.ts'
 
 export function AgentsSettings() {
@@ -16,13 +16,14 @@ export function AgentsSettings() {
     const who = await me()
     // Base's state, policy and audit doors answer only the people who answer for agents; everyone else sees their own agents and approvals.
     const role = who.person.role, owner = role === 'owner', auditor = owner || role === 'admin' || role === 'editor'
-    const [creds, state, overview, answers, waiting, toReview] = await Promise.all([
+    const [creds, state, overview, answers, waiting, toReview, titles] = await Promise.all([
       credentials(), auditor ? agentState() : Promise.resolve(null), auditor ? agentOverview() : Promise.resolve(null),
       owner ? readAnswers().then(answer => answer.answers) : Promise.resolve({} as Record<string, Disposition>),
       approvals().then(answer => answer.approvals.filter(item => item.state === 'pending')),
       reviews().then(answer => answer.reviews.filter(item => item.state === 'open' || item.state === 'flagged')),
+      toolTitles(),
     ])
-    return { owner, creds, state, overview, answers, waiting, toReview, activity: overview?.recent ?? null }
+    return { owner, creds, state, overview, answers, waiting, toReview, titles, activity: overview?.recent ?? null }
   })
   return <HydrationUnit>
     <section className="st-page st-agents" aria-labelledby="agents-title">
@@ -31,12 +32,12 @@ export function AgentsSettings() {
       <Connect items={data?.creds.items ?? null} refresh={refresh} />
       {data?.state ? <Policy owner={data.owner} state={data.state} document={data.overview?.document ?? null} stored={data.answers} refresh={refresh} /> : null}
       {data?.state ? <PausePanel owner={data.owner} paused={data.state.paused} complete={data.state.policy.complete} refresh={refresh} /> : null}
-      {data && (data.waiting.length || data.toReview.length) ? <Waiting approvals={data.waiting} reviews={data.toReview} refresh={refresh} /> : null}
+      {data && (data.waiting.length || data.toReview.length) ? <Waiting approvals={data.waiting} reviews={data.toReview} titles={data.titles} refresh={refresh} /> : null}
       {data?.activity ? <section className="st-panel" aria-labelledby="activity-title">
         <PanelTitle icon="clock" id="activity-title">Recent activity</PanelTitle>
         {data.activity.length ? <ul className="st-list">{data.activity.map(row => <li className="st-row" key={row.id}>
           <div className="st-row-main">
-            <div className="st-name">{row.approval ? <a href={`/agents/approvals/${encodeURIComponent(row.approval.id)}`}>{actionName(row.tool)}</a> : actionName(row.tool)}</div>
+            <div className="st-name">{row.approval ? <a href={`/agents/approvals/${encodeURIComponent(row.approval.id)}`}>{actionName(row.tool, data.titles)}</a> : actionName(row.tool, data.titles)}</div>
             <div className="st-meta">{row.agent.name} for {row.sponsor.name} · {outcomeWords(row)} · {when(row.at)}</div>
           </div>
         </li>)}</ul> : <p className="st-meta">No agent activity yet.</p>}
@@ -57,11 +58,16 @@ export function AgentsSettings() {
 function Connect({ items, refresh }: { items: Array<{ client_id: string; name: string; created_at: string; revoked_at: string | null }> | null; refresh(): Promise<void> }) {
   const { busy, message, run } = useRun()
   const [issued, setIssued] = useState<{ name: string; token: string } | null>(null)
+  const [copied, setCopied] = useState<{ text: string; error: boolean } | null>(null)
+  async function copy(token: string) {
+    try { await navigator.clipboard.writeText(token); setCopied({ text: 'Copied', error: false }) }
+    catch { setCopied({ text: 'This browser did not allow copying. Select the token and copy it.', error: true }) }
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget, name = String(new FormData(form).get('name') ?? '')
     const result = await run(() => issueCredential(name))
-    if (result) { setIssued({ name, token: result.token }); form.reset(); await refresh() }
+    if (result) { setIssued({ name, token: result.token }); setCopied(null); form.reset(); await refresh() }
   }
   const live = items?.filter(item => !item.revoked_at) ?? []
   return <>
@@ -76,7 +82,11 @@ function Connect({ items, refresh }: { items: Array<{ client_id: string; name: s
       {issued ? <div className="st-panel side">
         <p className="st-name">Give this token to {issued.name}.</p>
         <p className="st-meta">It is shown once. It works as a Bearer token for <code>POST /mcp</code>.</p>
-        <div className="st-secret">{issued.token}</div>
+        <div className="st-agents-token">
+          <div className="st-secret">{issued.token}</div>
+          <button className="st-button small" type="button" onClick={() => void copy(issued.token)}>Copy</button>
+        </div>
+        <Outcome message={copied} />
       </div> : null}
     </form>
     <section className="st-panel" aria-labelledby="connected-title">
@@ -202,18 +212,18 @@ function PausePanel({ owner, paused, complete, refresh }: { owner: boolean; paus
   </section>
 }
 
-function Waiting({ approvals: asks, reviews: marks, refresh }: { approvals: Awaited<ReturnType<typeof approvals>>['approvals']; reviews: Awaited<ReturnType<typeof reviews>>['reviews']; refresh(): Promise<void> }) {
+function Waiting({ approvals: asks, reviews: marks, titles, refresh }: { approvals: Awaited<ReturnType<typeof approvals>>['approvals']; reviews: Awaited<ReturnType<typeof reviews>>['reviews']; titles: Record<string, string>; refresh(): Promise<void> }) {
   const { busy, message, run } = useRun()
   return <section className="st-panel" aria-labelledby="agents-waiting-title">
     <PanelTitle icon="check" id="agents-waiting-title">Waiting for you</PanelTitle>
     <ul className="st-list">
       {asks.map(item => <li className="st-row" key={item.id}>
-        <div className="st-row-main"><div className="st-name">{actionName(item.tool)}</div>
+        <div className="st-row-main"><div className="st-name">{actionName(item.tool, titles)}</div>
           <div className="st-meta">{principal(item.prepared_by.agent)} for {principal(item.prepared_by.for)} · expires {when(item.expires_at)}</div></div>
         <a className="st-button small" href={`/agents/approvals/${encodeURIComponent(item.id)}`}>Open</a>
       </li>)}
       {marks.map(item => <li className="st-row" key={item.id}>
-        <div className="st-row-main"><div className="st-name">{actionName(item.tool)}{item.state === 'flagged' ? ' · Flagged' : ''}</div>
+        <div className="st-row-main"><div className="st-name">{actionName(item.tool, titles)}{item.state === 'flagged' ? ' · Flagged' : ''}</div>
           <div className="st-meta">{principal(item.prepared_by.agent)} for {principal(item.prepared_by.for)} · done, to review</div></div>
         <div className="st-actions">
           <button className="st-button small primary" type="button" disabled={busy} onClick={() => void run(() => markReview(item.id, 'reviewed'), () => 'Marked reviewed.').then(refresh)}>Mark reviewed</button>

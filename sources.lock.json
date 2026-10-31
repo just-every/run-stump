@@ -3356,7 +3356,7 @@
       "executable": false
     },
     "src/routes/app.compose.tsx": {
-      "sha256": "01be024d49a7eb2222cea69a4c69e60092100061dd1784967613f7543f969afe",
+      "sha256": "6e0b7b211475041dd3fe774c3ee71300d1e189f40aad530a28ea9e65724c1d05",
       "executable": false
     },
     "src/routes/app.connected.$network.tsx": {
@@ -3400,7 +3400,7 @@
       "executable": false
     },
     "src/routes/app.settings.brand.tsx": {
-      "sha256": "0b6a975e483a77b8a4e61bcde882fcc44b4d2f7f0f0c75a33fd76596dd05ab18",
+      "sha256": "5023540cbd83bb894b0971ae54cfb77e460d8a4056b9d421de3d99991922245e",
       "executable": false
     },
     "src/routes/app.settings.connections.tsx": {
@@ -3556,11 +3556,11 @@
       "executable": false
     },
     "src/stump/agent-door/ui/AgentsSettings.tsx": {
-      "sha256": "786e31cfbb81de23101d5931a0fd2f76ef802a47a35064a7d0ea9400cc068108",
+      "sha256": "1e953b7930d400b47ba7a23660d6ba7ff13e3692bdfde9319db7323afe0b77b7",
       "executable": false
     },
     "src/stump/agent-door/ui/policy.ts": {
-      "sha256": "cd248cfa2fc467da07722fff2c82a31095df98dd418a9361cd98381f4b285629",
+      "sha256": "da0564f0d8b7a94a0cfecaa07679dba16e4467bf0812d01c1f0257492864d7e7",
       "executable": false
     },
     "src/stump/data/anonymise.ts": {
@@ -3624,7 +3624,7 @@
       "executable": false
     },
     "src/stump/drafting/drafts-list.ts": {
-      "sha256": "0adc3c5a67256bbc2a110b0350c214efff9bc7a2694ce69ca9737aea0a8f7529",
+      "sha256": "da276ab524c2215c0fe5e1782f29625f5f5007e20cb5a7c63addae77686900d4",
       "executable": false
     },
     "src/stump/drafting/items.ts": {
@@ -3736,7 +3736,7 @@
       "executable": false
     },
     "src/stump/http/routes.ts": {
-      "sha256": "384b076d92b427b3a0b5f6990fb05a6a23f94bbf43a8b8b4978f06d3a0c0f053",
+      "sha256": "4b3e6742fdf6dc1bc73dda693a0f42a88acefeb33a028530199b47181607c37a",
       "executable": false
     },
     "src/stump/imports/buffer-ledger.ts": {
@@ -4496,7 +4496,7 @@
       "executable": false
     },
     "src/stump/ui/styles.ts": {
-      "sha256": "7f4efca0360dc6f2c703256fc756319b706f5883eba6202a980435152ea144a5",
+      "sha256": "1ceb73e8d38f42f2519e7e9e99e3046b46076cafe1e2e66ec02a3dabad085bed",
       "executable": false
     },
     "src/stump/ui/types.ts": {
