@@ -169,6 +169,19 @@ function ComposePage() {
     await run(() => runAction('stump.drafts.revise', { action: 'save', item_id: variant.item_id, text: next, expected_revision: variant.revision, idempotency_key: key() }), () => 'Saved')
     await refresh()
   }
+  // A missing disclosure is one click: the offered line goes first in every variant it is missing from, through the master
+  // when every variant still follows it, so it sits above any "see more" cut.
+  async function addLine(line: string) {
+    const flagged = variants.filter(variant => variant.flags.some(flag => flag.code === 'disclosure_missing' && flag.line === line))
+    if (!flagged.length) return
+    const withLine = (body: string) => `${line} ${body}`.trim()
+    if (preview && flagged.length === variants.length && flagged.every(variant => !variant.differs_from_master)) {
+      await run(() => runAction('stump.drafts.revise', { action: 'save_master', master_id: preview.master.id, text: withLine(preview.master.text), expected_revision: preview.master.revision, idempotency_key: key() }), () => 'Disclosure added')
+    } else {
+      await run(async () => { for (const variant of flagged) await runAction('stump.drafts.revise', { action: 'save', item_id: variant.item_id, text: withLine(variant.text), expected_revision: variant.revision, idempotency_key: key() }) }, () => 'Disclosure added')
+    }
+    await refresh()
+  }
   // An open draft's venue and product change as a new revision of each variant, checked again where it now goes.
   async function aim(list: Variant[], change: { venue_id?: string; product_id?: string; clear?: Array<'venue' | 'product'> }) {
     await run(async () => { for (const variant of list) await runAction('stump.drafts.revise', { action: 'aim', item_id: variant.item_id, ...change, expected_revision: variant.revision, idempotency_key: key() }) }, () => 'Saved')
@@ -229,7 +242,8 @@ function ComposePage() {
   const flagRows = new Map<string, { flag: Flag; item: string }>()
   // One row per thing to fix: a limit per variant, a sentence, an image or a venue rule once however many variants share it.
   for (const variant of variants) for (const flag of blocking(variant.flags)) {
-    const id = flag.code === 'over_limit' ? `over:${variant.item_id}` : `${flag.code}:${String(flag.text ?? flag.media_id ?? flag.rule ?? '')}`
+    const id = flag.code === 'over_limit' ? `over:${variant.item_id}` : flag.code === 'disclosure_missing' ? `${flag.code}:${String(flag.line ?? '')}`
+      : `${flag.code}:${String(flag.text ?? flag.media_id ?? flag.rule ?? '')}`
     if (!flagRows.has(id)) flagRows.set(id, { flag, item: variant.item_id })
   }
   // Sentences to back that do not stop the post: what the product does, with no number or comparison in it.
@@ -267,6 +281,10 @@ function ComposePage() {
       {[...flagRows.values()].map(({ flag, item }) => <li key={`${flag.code}-${String(flag.text ?? flag.network)}`} className="danger"><Disc icon="alert" tone="danger" /><span>
         {flagLine(flag, spanOf(flag, claimsOf()))}
         {flag.code === 'near_duplicate' ? <Repeats posts={postsOf(flag, data?.repeats ?? new Map())} /> : null}
+        {flag.code === 'disclosure_missing' && typeof flag.line === 'string' ? <span className="st-fix">
+          <span className="st-meta">{`\u201c${flag.line}\u201d`}</span>
+          <button className="st-pill" type="button" disabled={busy} onClick={() => void addLine(flag.line as string)}>Add line</button>
+        </span> : null}
         {flag.code.startsWith('claim_') ? <span className="st-fix">
           <button className="st-pill" type="button" onClick={() => setFixing({ item, at: Date.now(), flag })}>Fix claim</button>
           {/* A banned claim has no proof to update: the words come out of the post. */}

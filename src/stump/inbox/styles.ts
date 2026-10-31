@@ -34,6 +34,9 @@ export const inboxStyles = `
 .st-inbox .st-inbox-checks li { display: flex; gap: 8px; align-items: baseline; }
 .st-inbox .st-inbox-checks li.bad { color: var(--stump-danger); }
 .st-inbox .st-inbox-checks li.ok { color: var(--stump-emerald-text); }
+.st-inbox .st-inbox-checks li.bad { flex-wrap: wrap; align-items: center; }
+.st-inbox .st-inbox-add-line { border: 0; font: inherit; font-size: var(--stump-size-small); line-height: 20px; border-radius: var(--stump-pill); padding: 3px 10px; background: var(--stump-emerald-tint); color: var(--stump-emerald-text); cursor: pointer; white-space: nowrap; }
+.st-inbox .st-inbox-add-line:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
 .st-inbox .st-inbox-count { justify-self: end; }
 .st-inbox .st-inbox-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .st-inbox .st-inbox-actions .st-button { min-height: 48px; padding: 0 32px; }

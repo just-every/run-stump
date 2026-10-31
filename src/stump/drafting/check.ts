@@ -2,6 +2,7 @@
 // STUMP-TRUTH-002, -003.5, -004). It reads only the item's text and the records
 // it names, so a person and an agent submitting the same item get the same
 // result, and stores its outcome in the item's flags as {code, blocking, ...facts}.
+import { offeredDisclosureLine } from '../people/disclosure-lines.ts'
 import { bannedAct, checkClaims, checkDisclosure, claimsUsed, extractMentions, screenDraftForVenue, sentencesAsRead, statesConnection, type ClaimFinding, type MentionSet, type PersonProfile } from '../lib/claims/index.ts'
 import { countText, nearDuplicates, type Network, type TextCount } from '../lib/text/index.ts'
 import { acceptSignedIn, type StumpPerson } from '../people/store.ts'
@@ -282,7 +283,13 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   const cut = network ? SEE_MORE_CUT[network] : undefined
   const disclosure = checkDisclosure({ text, mentions, connection: person?.connection ?? null, company_account: account?.owner_kind === 'company',
     lines, terms: brandTerms(brand), ...(cut ? { cut } : {}) })
-  if (disclosure.status === 'missing') flags.push({ code: 'disclosure_missing', blocking: true, rule: 'D-2', because: disclosure.because, connection: person?.connection ?? null, ...(venueDisclosureLine(venue) ? { venue_line: venueDisclosureLine(venue) } : {}) })
+  // A missing disclosure offers the line to add (`line`): the venue's, else the person's own, else the plain line for their connection.
+  if (disclosure.status === 'missing') {
+    // It names the company, else the item's product, else the product the text names (a reply has no product of its own).
+    const company = brand.company_names[0] ?? brand.products.find(product => product.id === draft.product_id)?.name ?? mentions.products[0]?.name ?? brand.products[0]?.name ?? ''
+    flags.push({ code: 'disclosure_missing', blocking: true, rule: 'D-2', because: disclosure.because, connection: person?.connection ?? null,
+      ...(venueDisclosureLine(venue) ? { venue_line: venueDisclosureLine(venue) } : {}), line: offeredDisclosureLine(venueDisclosureLine(venue), person, company) })
+  }
   if (disclosure.status === 'below_cut') flags.push({ code: 'disclosure_below_cut', blocking: true, rule: 'D-2', cut, network })
 
   // An image without alt text (STUMP-PUBLISH-002.5).
