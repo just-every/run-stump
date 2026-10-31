@@ -396,7 +396,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "4be0d1a3ac9e76ce05c5c71f76886beedbbf520744d87d9bf8e6ac3b83641e33",
+      "sha256": "4182fcc3117fad45440670239cb0b9177d82e2d2afad06004418806f5dc91639",
       "executable": false
     },
     "agent-surface.json": {
@@ -424,7 +424,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "342b7643e090242ee44e3a8fa76d0a98887322d3a6b14d98b3cc84ddc639eea1",
+      "sha256": "7135b365ea4680696921a7eadf2aa58d95fd57560bc001bfb9114fe128d6f5bb",
       "executable": false
     },
     "deploy-demo.json": {
@@ -476,7 +476,7 @@
       "executable": false
     },
     "docs/disclosure.md": {
-      "sha256": "8db8c39d443c27aae035a364e27f82818e4519e3c21e5bd8e14d7ea422875ea0",
+      "sha256": "e0f54dee14720d7d55795b8373817f9beef9b757fe9f22d26350312ad68af117",
       "executable": false
     },
     "docs/handoffs.md": {
@@ -3632,7 +3632,7 @@
       "executable": false
     },
     "src/stump/drafting/check.ts": {
-      "sha256": "5749d0b13d8d5107befe83c7479f7f933c7750bd0d6e1e9e0ff1736059a5232f",
+      "sha256": "c9bd5ed667e31f4e7e08d627a4d510fe2d075c3903c72641ffd5ebea65dab7e3",
       "executable": false
     },
     "src/stump/drafting/diff.ts": {
@@ -3912,11 +3912,11 @@
       "executable": false
     },
     "src/stump/lib/claims/check.ts": {
-      "sha256": "13d6bda906eafc2413e8e25694f7eba34419e58decaf90e4fe468a44afd73797",
+      "sha256": "67f0788afe283c7188d49eb316689041e36eebb8611b60743154dc847b43a7cc",
       "executable": false
     },
     "src/stump/lib/claims/disclosure.ts": {
-      "sha256": "13621a3593d6d48c77cfde85933df76f304f582163ed82c91c5ff61452d0edd3",
+      "sha256": "a37771ef1910590ac1de8630e6fc151624a745375907093882c73e884bba5b46",
       "executable": false
     },
     "src/stump/lib/claims/extract.ts": {
@@ -3924,7 +3924,7 @@
       "executable": false
     },
     "src/stump/lib/claims/index.ts": {
-      "sha256": "f9aa1a23f7e1dda12f8d73a70b749e069d927c892deb24f195d8209145c170aa",
+      "sha256": "8b54f1a1b07e1b65ca7e2515c6828170f6af86815f4e71248e524db7aa258d6e",
       "executable": false
     },
     "src/stump/lib/claims/mentions.ts": {

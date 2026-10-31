@@ -1,6 +1,6 @@
 export { BANNED_ACTS, bannedAct, findVoteRequests, matchActionRequest, matchAutomation, refusalFor, screenDraftForVenue, screenDraftRequest, screenPlanStep } from './banned'
 export type { ActRefusal, ActRequest, AutomationAction, AutomationSpec, AutomationTrigger, BannedAct, BannedActId, TextFinding } from './banned'
-export { checkClaims, claimsUsed, isCurrentRecord } from './check'
+export { checkClaims, claimsUsed, isCurrentRecord, sentencesAsRead } from './check'
 export type { CheckClaimsInput, CheckClaimsResult, ClaimFlag, ClaimFlagCode } from './check'
 export { checkDisclosure, detectDisclosure, statesConnection } from './disclosure'
 export type { DetectDisclosureOptions, DisclosureCheck, DisclosureCheckInput, DisclosureKind, DisclosureMatch, DisclosureResult, DisclosureStatus } from './disclosure'

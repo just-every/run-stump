@@ -3,7 +3,7 @@
 // it names, so a person and an agent submitting the same item get the same
 // result, and stores its outcome in the item's flags as {code, blocking, ...facts}.
 import { offeredDisclosureLine, plainDisclosureLine } from '../people/disclosure-lines.ts'
-import { bannedAct, checkClaims, checkDisclosure, claimsUsed, detectDisclosure, extractMentions, screenDraftForVenue, statesConnection, type ClaimFinding, type MentionSet, type PersonProfile } from '../lib/claims/index.ts'
+import { bannedAct, checkClaims, checkDisclosure, claimsUsed, detectDisclosure, extractMentions, screenDraftForVenue, sentencesAsRead, statesConnection, type ClaimFinding, type MentionSet, type PersonProfile } from '../lib/claims/index.ts'
 import { countText, nearDuplicates, type Network, type TextCount } from '../lib/text/index.ts'
 import { acceptSignedIn, type StumpPerson } from '../people/store.ts'
 import { readVenue, rulesOf, type VenueRow } from '../venues/model.ts'
@@ -83,8 +83,9 @@ type ClaimInput = Omit<Parameters<typeof checkClaims>[0], 'text'>
 /**
  * How the claim check reads a disclosure line on its own, with what it found (claim statuses and flag codes):
  * - `clean`: it finds nothing;
- * - `connection`: it says how the writer is connected and little else ("Brightwell pays me to help with marketing."), and
- *   all it finds is the product doing something or a claim the company backs;
+ * - `connection`: it says how the writer is connected, with at most what the tie is for ("Brightwell pays me to help with
+ *   marketing.", "Brightwell sponsors my newsletter."; statesConnection), and all it finds is the product doing something or a
+ *   claim the company backs;
  * - `claim`: it says what the product does, and is not a statement of connection;
  * - `blocking`: what no line may carry: a banned, stale or number-mismatched claim, a number, comparison, superlative,
  *   guarantee or compliance statement no claim backs, or a word the brand avoids. The same findings stop a draft.
@@ -105,13 +106,18 @@ const namesOf = (input: ClaimInput) => [...(input.company_names ?? []), ...(inpu
 /**
  * Where the text's disclosure sentences stand, as [start, end) spans: the lines that read on their own, with no product or with
  * each product as their subject, are clean or a statement of connection (lineVerdict), and the fixed statements of connection,
- * each only where it stands as whole sentences of the text (detectDisclosure).
+ * each only where it stands as whole sentences of the text (detectDisclosure) and the claim check's own sentences also start
+ * where it starts and end where it ends. Where the claim check reads one sentence across a disclosure sentence's edge (". " before
+ * a lower-case word, or "…"), the rest of that sentence may be about the product named before it, so it is checked as written.
  */
 function lineSpans(text: string, lines: ReadonlyArray<string | null | undefined>, input: ClaimInput): Array<[number, number]> {
   const readings = [input, ...(input.products ?? []).map(product => ({ ...input, product_id: product.id }))]
   const clean = [...new Set(lines.map(line => line?.trim()).filter((line): line is string => !!line))]
     .filter(line => readings.every(reading => ['clean', 'connection'].includes(lineVerdict(line, reading).verdict)))
-  return detectDisclosure(text, { lines: clean, names: namesOf(input) }).matches.map(match => [match.start, match.end])
+  const read = sentencesAsRead(text, input.products)
+  const starts = new Set(read.map(sentence => sentence.start)), ends = new Set(read.map(sentence => sentence.end))
+  return detectDisclosure(text, { lines: clean, names: namesOf(input) }).matches
+    .filter(match => starts.has(match.start) && ends.has(match.end)).map(match => [match.start, match.end])
 }
 
 /**

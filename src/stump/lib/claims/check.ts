@@ -331,6 +331,9 @@ function claimSentences(text: string, ownHosts: readonly string[]): Span[] {
 /** The hosts of the products' own links: bare links to them are links whatever their top-level domain. */
 const ownHostsOf = (products: readonly ProductProfile[] = []) => [...new Set(products.flatMap((p) => (p.urls ?? []).map(hostOfUrl)).filter(Boolean))]
 
+/** The text's sentences exactly as the claim check reads them, with offsets into the text. */
+export const sentencesAsRead = (text: string, products: readonly ProductProfile[] = []): Span[] => claimSentences(text, ownHostsOf(products))
+
 /**
  * Whether a word at `at` starts a sentence: nothing but space, closing quotes or brackets after a sentence's end (or a
  * colon) stands before it. Looks back a bounded way, so a long draft costs no more per word.
