@@ -29,11 +29,17 @@ export function briefTitle(handoff: Handoff): string {
 }
 
 /**
- * When a hand-off is due or was done, in the days of the zone this person schedules in (zones.ts), never the computer's own:
+ * The zone a hand-off's times read in: the one its due time was set in, so its creator, its poster and everyone else read the
+ * same day and time; a hand-off prepared before zones were kept reads in the zone this person schedules in (zones.ts).
+ */
+export const zoneOf = (handoff: Pick<Handoff, 'time_zone'>) => handoff.time_zone ?? workingZone()
+
+/**
+ * When a hand-off is due or was done, in the days of its own zone (zoneOf), never the computer's own:
  * "Due today · 4:00 PM PT", "Due tomorrow", "Due Thu" up to six days out, else "Due Nov 12"; a posted one "Posted today" or
  * "Posted Oct 27"; a skipped or expired one its date.
  */
-export function shortWhen(handoff: Handoff, now = Date.now(), zone = workingZone()): string {
+export function shortWhen(handoff: Handoff, now = Date.now(), zone = zoneOf(handoff)): string {
   const iso = handoff.state === 'posted' ? handoff.posted_at : handoff.state === 'skipped' || handoff.state === 'expired' ? handoff.updated_at : handoff.due_at
   if (!iso) return ''
   const days = daysBetween(Date.parse(iso), now, zone)
@@ -45,8 +51,8 @@ export function shortWhen(handoff: Handoff, now = Date.now(), zone = workingZone
   if (days >= 2 && days <= 6) return `Due ${dateIn(iso, zone, { weekday: 'short' })}`
   return days < 0 ? `Was due ${dated}` : `Due ${dated}`
 }
-/** "Due Thu, Nov 5 · 4:00 PM PT", in the zone this person schedules in. */
-export function dueLine(iso: string | null, zone = workingZone()): string {
+/** "Due Thu, Nov 5 · 4:00 PM PT", in the hand-off's own zone (zoneOf). */
+export function dueLine(iso: string | null, zone: string): string {
   if (!iso) return ''
   return `Due ${dateIn(iso, zone, { weekday: 'short', month: 'short', day: 'numeric' })} · ${timeIn(iso, zone)}`
 }

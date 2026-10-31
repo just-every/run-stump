@@ -13,7 +13,7 @@
 //       Orbit", "we launched it", "I'm building Orbit" (not "I work at Stripe and use
 //       Orbit", "I made it to level 5", "I wrote about Orbit", "I started using Orbit");
 //       a paid tie counts with the company or a product as the one paying: "Acme pays
-//       me", "Orbit sponsors my newsletter", "sponsored by Acme";
+//       me", "Orbit sponsors my newsletter", "sponsored by Acme" (not "Orbit paid us back");
 //       a role counts with its object ("founder of Orbit", "an engineer at Acme") or as
 //       "I'm the founder" in a sentence naming the company or a product (not "I'm a
 //       developer and Orbit is great");
@@ -81,8 +81,11 @@ const ROLE = '(?:co-?)?founders?|ceo|cto|coo|cpo|maintainers?|creators?|authors?
 const DEFINITE_ROLE = '(?:co-?)?founders?|ceo|cto|coo|cpo|maintainers?|creators?'
 // "made it" is an idiom ("we made it!"), so after "made" only "this" or "the product" is an object.
 const PRONOUN_OBJECT = '(?:(?<!\\bmade\\s+)it|this|the (?:product|app|tool|company|startup|project))'
-/** What a company does for someone it pays: "pays me", "sponsors my newsletter", "employs us". */
-const PAYS = '(?:(?:now|also|currently) )?(?:pays|paid|sponsors|sponsored|employs|employed|compensates|compensated|hires|hired|funds|funded|commissions|commissioned)\\s+(?:me|us|my|our)\\b'
+/**
+ * What a company does for someone it pays: "pays me", "sponsors my newsletter", "employs us". "Pays me back" and "paid us
+ * back" say the product was worth it, not that anyone is paid, so they never count.
+ */
+const PAYS = '(?:(?:now|also|currently) )?(?:pays|paid|sponsors|sponsored|employs|employed|compensates|compensated|hires|hired|funds|funded|commissions|commissioned)\\s+(?:me|us|my|our)\\b(?!\\s+back\\b)'
 const PAID_BY = '(?:paid|sponsored|employed|compensated|hired|funded|commissioned|contracted)\\s+by'
 
 function termAlternation(terms: readonly string[]): string | undefined {

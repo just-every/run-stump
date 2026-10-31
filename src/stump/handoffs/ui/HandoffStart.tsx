@@ -46,7 +46,7 @@ function HandoffForm({ venue, routes, members, team, me, onClose }: { venue: Ven
     event.preventDefault()
     const form = new FormData(event.currentTarget), text = String(form.get('text') ?? '').trim(), thread = String(form.get('thread') ?? '').trim()
     const made = await run(() => runAction<{ id: string }>('stump.handoffs.prepare', { action: 'prepare', idempotency_key: key(), venue_id: venue.id, person_id: String(form.get('person')),
-      product_id: String(form.get('product')), due_at: new Date(instantIn(`${String(form.get('due'))}T17:00`, zone)).toISOString(), lapse: String(form.get('lapse')),
+      product_id: String(form.get('product')), due_at: new Date(instantIn(`${String(form.get('due'))}T17:00`, zone)).toISOString(), time_zone: zone, lapse: String(form.get('lapse')),
       ...(thread ? { thread_url: thread } : {}), ...(draftable && text ? { text } : draftable && form.get('generate') ? { generate: true } : {}) }))
     if (made) await navigate({ to: '/app/handoffs/$handoffId', params: { handoffId: made.id } })
   }

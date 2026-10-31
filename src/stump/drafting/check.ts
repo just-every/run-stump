@@ -2,7 +2,7 @@
 // STUMP-TRUTH-002, -003.5, -004). It reads only the item's text and the records
 // it names, so a person and an agent submitting the same item get the same
 // result, and stores its outcome in the item's flags as {code, blocking, ...facts}.
-import { bannedAct, checkClaims, checkDisclosure, claimsUsed, extractMentions, screenDraftForVenue, statesConnection, type ClaimFinding, type MentionSet, type PersonProfile } from '../lib/claims/index.ts'
+import { bannedAct, checkClaims, checkDisclosure, claimsUsed, extractMentions, screenDraftForVenue, sentencesAsRead, statesConnection, type ClaimFinding, type MentionSet, type PersonProfile } from '../lib/claims/index.ts'
 import { countText, nearDuplicates, type Network, type TextCount } from '../lib/text/index.ts'
 import type { StumpPerson } from '../people/store.ts'
 import { readVenue, rulesOf, type VenueRow } from '../venues/model.ts'
@@ -95,12 +95,15 @@ export function lineVerdict(line: string, input: ClaimInput): { verdict: 'clean'
   return { verdict: statesConnection(line, terms) ? 'connection' : 'claim', found }
 }
 
-/** A match at `at` opens a sentence: it starts the text, or only space and closing quotes or brackets stand between it and . ! ? … : or a line break. */
+/**
+ * A match at `at` opens a sentence: it starts the text, or only space and closing quotes or brackets stand between it and
+ * . ! ? … or a line break. A colon opens no sentence: the claim check reads what follows it with the clause before it.
+ */
 function opensSentence(text: string, at: number) {
   let k = at - 1
   for (; k >= 0 && /\s/u.test(text[k]!); k--) if (/[\n\r\u2028\u2029]/u.test(text[k]!)) return true
   while (k >= 0 && /["'\u201d\u2019)\]]/u.test(text[k]!)) k--
-  return k < 0 || /[.!?\u2026:]/u.test(text[k]!)
+  return k < 0 || /[.!?\u2026]/u.test(text[k]!)
 }
 
 /**
@@ -116,16 +119,21 @@ function closesSentence(text: string, end: number, line: string) {
 /**
  * Where each disclosure line stands in the text as whole sentences of it, as [start, end) spans, for the lines that read on
  * their own, with no product or with each product as their subject, are clean or a statement of connection (lineVerdict).
- * A line inside a sentence is read with the rest of that sentence, which may name the product it is about.
+ * A line stands as whole sentences only where the claim check's own sentences start where it starts and end where it ends
+ * (or after its closing . ! ? …): a line inside a sentence is read with the rest of that sentence, which may name the
+ * product it is about.
  */
 function lineSpans(text: string, lines: ReadonlyArray<string | null | undefined>, input: ClaimInput): Array<[number, number]> {
   const spans: Array<[number, number]> = []
   const readings = [input, ...(input.products ?? []).map(product => ({ ...input, product_id: product.id }))]
+  const sentences = sentencesAsRead(text, input.products)
+  const starts = new Set(sentences.map(sentence => sentence.start)), ends = new Set(sentences.map(sentence => sentence.end))
+  const endsSentence = (end: number) => ends.has(end) || ends.has(end + (/^[.!?\u2026]+["'\u201d\u2019)\]]*/u.exec(text.slice(end))?.[0].length ?? 0))
   for (const line of new Set(lines.map(line => line?.trim()).filter((line): line is string => !!line))) {
     if (!readings.every(reading => ['clean', 'connection'].includes(lineVerdict(line, reading).verdict))) continue
     for (const match of text.matchAll(new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'))) {
       const end = match.index + match[0].length
-      if (opensSentence(text, match.index) && closesSentence(text, end, line)) spans.push([match.index, end])
+      if (starts.has(match.index) && endsSentence(end) && opensSentence(text, match.index) && closesSentence(text, end, line)) spans.push([match.index, end])
     }
   }
   return spans

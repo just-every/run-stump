@@ -55,8 +55,14 @@ const sameLines = (a: readonly string[], b: readonly string[]) => a.length === b
 async function updating(ctx: ActionContext, args: Args) {
   const target = await teammate(ctx, args.person_id)
   const admin = ['owner', 'admin'].includes(ctx.person.role), other = target.id !== ctx.person.id
-  // A person keeps their own name and disclosure lines; their connection to the company is recorded by an owner or admin.
+  // A person keeps their own disclosure lines; their connection to the company is recorded by an owner or admin.
   if (!admin && (other || args.connection !== undefined)) refuse('forbidden', { action: 'update', role: ctx.person.role })
+  // A teammate's name is a word the claim check reads as the team's own (drafting/check.ts loadBrand), so after the
+  // invitation a name changes only by a signed-in owner or admin, never by an agent.
+  if (args.display_name !== undefined && args.display_name !== target.display_name) {
+    if (!admin) refuse('forbidden', { action: 'update', field: 'display_name', role: ctx.person.role, reason: 'An owner or admin records names on the team.' })
+    if (ctx.agent) refuse('person_only', { field: 'display_name', reason: 'Names on the team are recorded by a signed-in owner or admin.' })
+  }
   const connection = args.connection === undefined ? target.connection : args.connection as StumpPerson['connection']
   const lines = args.disclosure_lines === undefined ? target.disclosure_lines : args.disclosure_lines as string[]
   const connectionChanged = connection !== target.connection, linesChanged = !sameLines(lines, target.disclosure_lines)

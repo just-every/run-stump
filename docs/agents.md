@@ -80,7 +80,7 @@ Each action's required arguments are in parentheses; the rest are optional. An a
 | `stump.drafts.check` | `run` (item_id), `count` (text, networks), `back` (item_id, claim_id), `set_duplicate_window` (days) |
 | `stump.drafts.preview` | `master` (master_id), `item` (item_id), `targets` |
 | `stump.findings.work` | `list` (watch_id), `dismiss` (finding_id) |
-| `stump.handoffs.prepare` | `prepare` (venue_id, person_id, product_id, due_at, lapse) |
+| `stump.handoffs.prepare` | `prepare` (venue_id, person_id, product_id, due_at, lapse, time_zone?) |
 | `stump.handoffs.check_link` | `record` (handoff_id, url) |
 | `stump.handoffs.manage` | `queue`, `get` (handoff_id), `edit` (handoff_id, draft_text), `skip` (handoff_id, reason), `hold` (handoff_id, reason, review_at), `release` (handoff_id) |
 | `stump.inbox.read` | `poll` (account_id), `list` (account_id), `check` (inbox_item_id, account_id, text) |
