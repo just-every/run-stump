@@ -21,7 +21,9 @@ import { eraseWithImportCustody, holdsImports, importedVenues, rekeyVenue } from
 import { recheckItems } from './recheck.ts'
 import { erasureRemoval } from './removal.ts'
 import { handleWords, residueStatements, type Trace } from './residue.ts'
+import { JOURNALIST_SOURCE } from './erased-uploads.ts'
 import { TOMBSTONE_SOURCES, tombstoneStatements, type ErasedFinding } from './tombstones.ts'
+import { foldName } from '../lib/imports/index.ts'
 import type { PublishContext, Publisher } from '../publish/types.ts'
 
 const sql = (text: string, ...params: unknown[]): D1Sql => ({ sql: text, params })
@@ -284,6 +286,8 @@ export async function erase(ctx: ActionContext, scope: Scope) {
       sql("DELETE FROM stump_venue_history WHERE venue_id=? AND action<>'erased'", venue),
       sql("INSERT INTO stump_venue_history(id,venue_id,action,person_id,agent_id,detail,at) VALUES(?,?,'erased',?,?,?,?)", crypto.randomUUID(), venue, ctx.person.id, ctx.agent?.id ?? null, JSON.stringify({ erasure_id: id }), now))
     }
+    // The name, as a keyed digest, keeps a later upload of a list naming them out of the import door.
+    statements.push(...await tombstoneStatements(db, id, [], [{ source: JOURNALIST_SOURCE, handle: foldName(scope.contact.name) }]))
     // What the list import wrote becomes Stump's own: an Undo leaves the anonymised venue and pitches alone.
     if (scope.venues.length) statements.push(sql(`DELETE FROM stump_venue_imports WHERE venue_id IN (${list(scope.venues)})`, ...scope.venues))
     if (scope.pitches.length) statements.push(sql(`DELETE FROM stump_item_imports WHERE item_id IN (${list(scope.pitches)})`, ...scope.pitches))

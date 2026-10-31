@@ -8,6 +8,7 @@ import type { D1Sql, D1TargetAdapter } from '../../modules/import-kit/src/d1/ind
 import type { ImportDoorRawSource } from '../../modules/import-kit/src/door/types.ts'
 import { operatorAuth, runtimeBindings } from '../../auth.server'
 import type { StumpEnv } from '../env.ts'
+import { dropUploadNamingErased } from '../data/erased-uploads.ts'
 import { readCapped } from '../http/body.ts'
 import { REJECTED_KIND } from '../lib/imports/index.ts'
 import { resolvePerson } from '../people/store.ts'
@@ -172,6 +173,8 @@ export async function importDoorResponse(request: Request, original: StumpEnv): 
       if (await errorOf(response) === 'catchup_requires_baseline') { response = await kit('plan', body); catchup = false }
     } else response = await kit('plan', body)
     if (!response.ok) {
+      // A refused venue list that names a journalist an erasure keeps out is refused for that, and goes.
+      if (entry.destination === VENUE_DESTINATION && typeof given.uploadId === 'string' && await dropUploadNamingErased(env.DB, IMPORT_DOOR_KEY, name, given.uploadId)) return refused('source_erased', 409)
       // The kit names only that the reader failed; the reader's own words say what the file should hold.
       const reason = entry.failure()
       if (reason && await errorOf(response) === 'source_raw_reader_failed') return refused('source_raw_reader_failed', response.status, { reason })

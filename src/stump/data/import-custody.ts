@@ -45,8 +45,7 @@ export async function holdsImports(db: D1Database): Promise<boolean> {
 
 export interface Journalist { name: string; venueTargets: string[] }
 
-const bytesOf = (base64: string) => Uint8Array.from(atob(base64), char => char.charCodeAt(0))
-const textOf = (base64: string) => new TextDecoder().decode(bytesOf(base64))
+const textOf = (base64: string) => new TextDecoder().decode(Uint8Array.from(atob(base64), char => char.charCodeAt(0)))
 /** A refused row's key: its id and the line it starts on in its file. */
 const rowKey = (payload: Record<string, unknown>) => `${String(payload.id)}|${String(payload.line)}`
 
@@ -76,21 +75,6 @@ async function refusedRowsNaming(context: D1ImportContext, name: string): Promis
     }
   }
   return found
-}
-
-/** Uploads of the list waiting at the door that hold the journalist's name: the erasure drops them, as Base's door drops a refused upload. */
-async function pendingUploadsNaming(db: D1Database, name: string): Promise<D1Sql[]> {
-  const full = fullNameMatcher(name), statements: D1Sql[] = []
-  const uploads = (await db.prepare(`SELECT u.id FROM ik_door_uploads u JOIN ik_door_scopes s ON s.installation_id=u.installation_id AND s.namespace=u.namespace
-    WHERE s.destination=? ORDER BY u.id`).bind(VENUE_DESTINATION).all<{ id: string }>()).results
-  for (const upload of uploads) {
-    const chunks = (await db.prepare('SELECT base64 FROM ik_door_chunks WHERE upload_id=? ORDER BY ordinal').bind(upload.id).all<{ base64: string }>()).results
-    const parts = chunks.map(chunk => bytesOf(chunk.base64)), bytes = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0))
-    parts.reduce((at, part) => { bytes.set(part, at); return at + part.length }, 0)
-    if (!full.test(new TextDecoder().decode(bytes))) continue
-    statements.push({ sql: 'DELETE FROM ik_door_chunks WHERE upload_id=?', params: [upload.id] }, { sql: 'DELETE FROM ik_door_uploads WHERE id=?', params: [upload.id] })
-  }
-  return statements
 }
 
 /**
@@ -137,5 +121,5 @@ export async function eraseWithImportCustody(ctx: ActionContext, erasureId: stri
   return retireD1ImportCustody({
     target: { kind: 'venue', id: target ?? `venue:erased:${erasureId}` },
     related: { source: holds, original: bytes => full.test(new TextDecoder().decode(bytes)) },
-  }, [...native, ...await pendingUploadsNaming(ctx.db, person.name)], context, checkpoint)
+  }, native, context, checkpoint)
 }

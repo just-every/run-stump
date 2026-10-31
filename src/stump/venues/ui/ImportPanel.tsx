@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { FilePick } from '../../ui/kit.tsx'
-import { applyPlan, ImportError, planFile, undoPlan, type Change, type ImportSourceId, type Kept, type Plan } from './importer.ts'
+import { applyPlan, ImportError, importStatus, planFile, undoPlan, type Change, type ImportSourceId, type Kept, type Plan } from './importer.ts'
 
 const SOURCES: Array<{ id: ImportSourceId; label: string; accept: string }> = [
   { id: 'outreach-md', label: 'Venue list (Markdown)', accept: '.md,.markdown,text/markdown,text/plain' },
@@ -12,7 +12,7 @@ const WORDS: Record<string, string> = {
   owner_required: 'Only the owner can import.', origin_required: 'Reload the page and try again.',
   namespace_has_pending_import: 'An earlier import of this kind is still being applied. Try again once it finishes.',
   import_superseded: 'A newer import holds these records. Undo the newer one first.',
-  earlier_import_holds_records: 'An earlier import of this list still holds some of these rows, and an erasure removed its saved copy, so this file cannot be compared with it. Undo the earlier import, then upload this file again. Anything edited or used in Stump since stays as it is.',
+  earlier_import_holds_records: 'An earlier import of this list still holds some of these rows, and an erasure removed its saved copy, so this file cannot be compared with it. Undo that import and any import of this list since, then upload this file again. Anything edited or used in Stump since stays as it is.',
 }
 /** Codes Stump explains in its own words, ahead of the door's. */
 const OWN_WORDS = new Set(['earlier_import_holds_records'])
@@ -49,17 +49,18 @@ const explain = (error: unknown) => error instanceof ImportError ? (OWN_WORDS.ha
 /** The earlier imports a refusal names as still holding rows of this file. */
 const holdersOf = (error: unknown) => error instanceof ImportError && error.code === 'earlier_import_holds_records' && Array.isArray(error.details.planIds) ? error.details.planIds.filter((id): id is string => typeof id === 'string') : []
 
-/** Undoes each named import, newest first: an import with a newer one over it answers import_superseded until that one is undone. */
-async function undoInOrder(source: ImportSourceId, plans: string[]): Promise<Kept[]> {
-  const kept: Kept[] = []
-  let left = [...plans]
-  while (left.length) {
-    const waiting: string[] = []
-    for (const id of left) {
-      try { kept.push(...(await undoPlan(source, id)).kept) } catch (cause) { if (cause instanceof ImportError && cause.code === 'import_superseded') waiting.push(id); else throw cause }
-    }
-    if (waiting.length === left.length) throw new ImportError('import_superseded')
-    left = waiting
+/**
+ * Undoes the list's imports from the newest down until the named earlier ones are undone: an import with
+ * a newer one over it is undone only after that one.
+ */
+async function undoThrough(source: ImportSourceId, plans: string[]): Promise<Kept[]> {
+  const kept: Kept[] = [], left = new Set(plans), undone = new Set<string>()
+  while (left.size) {
+    const head = (await importStatus(source)).head?.planId
+    // No applied import left, or one that is still the newest after its Undo: the door says why on the next try.
+    if (!head || undone.has(head)) throw new ImportError('import_superseded')
+    kept.push(...(await undoPlan(source, head)).kept)
+    undone.add(head); left.delete(head)
   }
   return kept
 }
@@ -101,7 +102,7 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
       <p className="st-note">Stump reads the file and shows what it would add. Nothing changes until you apply it.</p>
       {error ? <p className="st-error" role="alert">{error}</p> : null}
       {holders.length ? <div className="st-actions"><button className="st-button pill outline" type="button" disabled={busy}
-        onClick={() => void run(async () => { const undone = await undoInOrder(source, holders); onChanged(); setNotice(`Earlier import undone${undone.length ? `; ${plural(undone.length, 'record')} edited or in use since stayed` : ''}. Upload the file again.`) })}>Undo earlier import</button></div> : null}
+        onClick={() => void run(async () => { const undone = await undoThrough(source, holders); onChanged(); setNotice(`Earlier imports undone${undone.length ? `; ${plural(undone.length, 'record')} edited or in use since stayed` : ''}. Upload the file again.`) })}>Undo earlier imports</button></div> : null}
       {notice ? <p className="st-note" role="status">{notice}</p> : null}
       <div className="st-actions">
         <button className="st-button primary pill" type="submit" disabled={busy}>{busy ? 'Reading…' : 'Review import'}</button>

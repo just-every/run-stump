@@ -65,3 +65,5 @@ export async function applyPlan(source: ImportSourceId, plan: Plan): Promise<Job
 }
 
 export const undoPlan = (source: ImportSourceId, planId: string) => post<{ job: Job; kept: Kept[] }>('undo', source, { planId })
+/** The source's applied import (the newest one, the head) and any reviewed plan still waiting. */
+export const importStatus = (source: ImportSourceId) => post<{ head: { planId?: string } | null; pending: { planId?: string } | null }>('status', source, {})
