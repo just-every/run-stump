@@ -7,6 +7,7 @@ import { eligibility, memberOf, type MemberRow } from '../venues/members.ts'
 import { PERIODS, readVenue, rulesOf, venueHistory, venueOrRefuse, type VenueRow } from '../venues/model.ts'
 import { answer, manageActions, venueId } from '../venues/register.ts'
 import { mergeRules, refreshItems, routesFor, ruleChanges, RULES_SCHEMA } from '../venues/rules.ts'
+import { refuseClaimingLines } from '../drafting/check.ts'
 
 // The venue register (STUMP-VENUE-001 to -006): records, rules and routes,
 // the shared limit, and who on the team belongs where.
@@ -75,6 +76,8 @@ export const venueTools: StumpTool[] = [{
       async run(args, ctx) {
         const venue = await venueOrRefuse(ctx.db, args.venue_id)
         const before = routesFor(venue).routes, rules = mergeRules(rulesOf(venue), args.rules as Record<string, unknown>)
+        const line = rules.disclosure_line?.value
+        if ((args.rules as Record<string, unknown>).disclosure_line && typeof line === 'string') await refuseClaimingLines(ctx.db, [line], 'rules.disclosure_line.value', ctx.now())
         const changes = ruleChanges(rulesOf(venue), rules)
         const next = await saveVenue(ctx, venue, 'rules', 'rules', JSON.stringify(Object.fromEntries(Object.entries(rules).filter(([, rule]) => rule !== null))),
           { rules: Object.keys(args.rules as object), changes, routes_before: before }, changes)
