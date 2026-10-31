@@ -369,7 +369,7 @@ Core · published · **partial** · From new
 6. Each connection shows its owner, who connected it and when.
 
 **Evidence.** `tests/stump/accounts.test.mjs` "the company connects its X account through its own app, owned by the company, with no secret ever answered back"; `tests/stump/accounts.test.mjs` "X refusing the account's token marks it expired, holds its posts with the reconnect step, and only its owner's reconnect brings it back"
-**Gap.** Points 5 and 6 hold: each connection shows its owner, who connected it and when, and reconnecting restores no held item by itself. Point 4 holds in part: a token the network refuses (a 401, a revoked or expired token, a refused refresh) is detected at the next call or refresh on every network, the account reads expired with the reason and its reconnect address, and each item queued on it holds for its owner with the reconnect step; the items stay held rather than unscheduled. Reconnecting is refused for anyone but the owner (`src/stump/tools/accounts.ts`), without a repo assertion. Points 1 and 2 need person removal, which is not built.
+**Gap.** Points 5 and 6 hold: each connection shows its owner, who connected it and when, and reconnecting restores no held item by itself. Point 4 holds in part: a token the network refuses (a 401, a revoked or expired token, a refused refresh) is detected at the next call or refresh on every network, the account reads expired with the reason and its reconnect address, and each item queued on it holds for its owner with the reconnect step; the items stay held rather than unscheduled. Reconnecting is refused for anyone but the owner (`src/stump/tools/accounts.ts`), without a repo assertion. Point 1 holds: removing a person disconnects their personal accounts (revoked at the network where it allows), returns every item of theirs that could still go out to draft, including posts waiting on a rate limit, and lists them; `tests/stump/accounts.test.mjs` "removing a person disconnects their own X account at X and returns their posts waiting on a rate limit to draft". Point 2 holds in code (removal leaves company accounts as they are), without a repo assertion.
 
 #### STUMP-PUBLISH-002 — Bluesky posts and threads
 
@@ -2085,8 +2085,8 @@ Core · target · **partial** · From new · Cites BASE-ROLE-001, BASE-ACCESS-00
 3. An owner cannot be removed or demoted until ownership is transferred to another person, and the transfer is recorded.
 4. Changing a person's role changes their next request.
 
-**Evidence.** `tests/stump/team.test.mjs` "people join only by invitation, with the invited role, through the person door", "the owner cannot be removed or demoted until ownership is transferred, and the transfer is recorded", "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked"
-**Gap.** Point 1 is proven for team actions only; each later area's actions add their role rows. Point 2 needs hand-offs and accounts, which are not built.
+**Evidence.** `tests/stump/team.test.mjs` "people join only by invitation, with the invited role, through the person door", "the owner cannot be removed or demoted until ownership is transferred, and the transfer is recorded", "an agent credential acts for its person with exactly their role, follows role changes and ends when revoked", "a contributor drafts but cannot schedule or publish, and a poster sees only their own accounts and drafts"
+**Gap.** Point 1 is proven for team actions, for Base's own account routes (which follow Stump's roles; a transfer moves the installation's sign-in owner too) and for scheduling, which is editors' work; each later area's actions add their role rows. Point 2 holds for accounts, drafts, queue slots and Pauses; hand-offs keep their own poster scope.
 
 #### STUMP-TEAM-002 — Company-defined sign-off
 

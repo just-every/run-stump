@@ -392,7 +392,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "e1f6e3fe4b3b3f4385b13f882cc1f26cbc26d28e2d894f8fc2dc3eac95b17d58",
+      "sha256": "d24f2463193097578b9f508afab374665fe15ca781bad0c4ac65a7f13c8165bc",
       "executable": false
     },
     "agent-surface.json": {
@@ -420,7 +420,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "9cf2fa07d83e49907624e654a83ad9690f04a71f9e47636681aff390233d2a2d",
+      "sha256": "af41a1e8500c8b00282ff5caa83d655a7fb47bb17f9ae2658297dfe5c1b365d2",
       "executable": false
     },
     "deploy-demo.json": {
@@ -3348,7 +3348,7 @@
       "executable": false
     },
     "src/routes/app.compose.tsx": {
-      "sha256": "e9e789755d2e96068a381a8f57b532dea4613f87e85a02668f3951fe3fe9631f",
+      "sha256": "cb7dc2325d7d09f208936b3703867b46e0338f3b8d954e60e6f50b2e999f5f1f",
       "executable": false
     },
     "src/routes/app.connected.$network.tsx": {
@@ -3404,11 +3404,11 @@
       "executable": false
     },
     "src/routes/app.settings.publishing.tsx": {
-      "sha256": "99fa6fc38222ac43936ebf9fd4b35eaa8909001d590ce9b5dcaa1514fd553cd4",
+      "sha256": "674d9f21bdee840f91f7f61400996d132c6db3aa5b3c46e48e207d55e64a5843",
       "executable": false
     },
     "src/routes/app.settings.team.tsx": {
-      "sha256": "62962161b37d812da702c027a4b9df83786bcc78bb3def95b7aea70b25c5b43e",
+      "sha256": "8a0419375f835c4d2a7b0350ffbacbb973ecba7e84bd1431b54b114871d26001",
       "executable": false
     },
     "src/routes/app.setup.tsx": {
@@ -4240,7 +4240,7 @@
       "executable": false
     },
     "src/stump/people/policy.ts": {
-      "sha256": "5f463005844df1ae1595df2222a851bc3c1336cf718adbb500114a6665325000",
+      "sha256": "66e579859e01302ec93dc80bd4c9daf88b81704eba04d84ad1574655ca2efd79",
       "executable": false
     },
     "src/stump/people/roles.ts": {
@@ -4360,7 +4360,7 @@
       "executable": false
     },
     "src/stump/tools/accounts.ts": {
-      "sha256": "82c92f58afa7dcee40a76eb578407951ed2542aaaa354990cf75df92bdb7c356",
+      "sha256": "b78e6523737b9bc6139588c3fa70ad858aefc8db2e0a13b00c68f03e4c71b588",
       "executable": false
     },
     "src/stump/tools/brand.ts": {
@@ -4368,7 +4368,7 @@
       "executable": false
     },
     "src/stump/tools/calendar.ts": {
-      "sha256": "bb3ecf0b2db0ad9ece448d8bbcd5250bfcb1514d4970be5be364445c5b7266a4",
+      "sha256": "6355e332a2ca2ee045db82f0532c43cb68d0fd16c90dd97a293720f4ade49c2c",
       "executable": false
     },
     "src/stump/tools/data.ts": {
@@ -4376,7 +4376,7 @@
       "executable": false
     },
     "src/stump/tools/drafts.ts": {
-      "sha256": "8c57c93bca7cc4c7d8b194e48f9ebe7f3b81cf0cc3b0c48dbe4709bdc8630d35",
+      "sha256": "4199b10a2212576cc114d7d152bd9dd509bd3f9f1a652f3eabc863defd30600e",
       "executable": false
     },
     "src/stump/tools/findings.ts": {
@@ -4396,7 +4396,7 @@
       "executable": false
     },
     "src/stump/tools/items.ts": {
-      "sha256": "c5bb6ef804348152bc142f47df316dc7e145b586c00172105ff5c445a8526e3a",
+      "sha256": "8706e441bbcb7d3906eaf872e1f0977a50a1ab19e2de76ad0712f81e209d9b41",
       "executable": false
     },
     "src/stump/tools/ledger.ts": {
@@ -4420,7 +4420,7 @@
       "executable": false
     },
     "src/stump/tools/team.ts": {
-      "sha256": "4d3123eff933a35097a0695ccf521b816d12d5aafde90f74141c6566e5601c32",
+      "sha256": "3c24bc7bd45c0c5bbd0b19e16f03bdea943ef0eb6c8a76364462fb40d2c3ecc1",
       "executable": false
     },
     "src/stump/tools/venues.ts": {
@@ -4456,7 +4456,7 @@
       "executable": false
     },
     "src/stump/ui/types.ts": {
-      "sha256": "2bf5eaf20347766fa0b8fed4e7c7e8f9bf7ac1f90da19cbc6c480b0c820dc371",
+      "sha256": "8729e43f379026e2813c62554e82fcf6183a1e947a3c498cf75fd5c70148595e",
       "executable": false
     },
     "src/stump/ui/zones.ts": {
@@ -4636,7 +4636,7 @@
       "executable": false
     },
     "tests/stump/accounts.test.mjs": {
-      "sha256": "689eb36e444e3007f2237f55f18334c1ecf4639604e824a57d0c096041ad1ba3",
+      "sha256": "695109a2401b70a86a273913b048fb3abefb069fb9f407e11fb5196837438a47",
       "executable": false
     },
     "tests/stump/data.test.mjs": {
@@ -4668,7 +4668,7 @@
       "executable": false
     },
     "tests/stump/team.test.mjs": {
-      "sha256": "c067605f4ae4932a4fa4cf69fa1e97012c9e84615c06cbc64327ce26ca43f304",
+      "sha256": "ada0186fac4887391862dedeb82a7e7d5b981e38ae049e801823311f97151448",
       "executable": false
     },
     "tests/stump/venues.test.mjs": {

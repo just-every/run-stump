@@ -81,7 +81,8 @@ function Invite({ onDone, onCancel }: { onDone(person: TeamPerson): void; onCanc
 function removedNote(person: RemovedPerson) {
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
   const left = [person.open_handoffs.length ? `${count(person.open_handoffs.length, 'open hand-off needs', 'open hand-offs need')} someone new` : null,
-    person.unscheduled_items.length ? `${count(person.unscheduled_items.length, 'scheduled item is', 'scheduled items are')} back in draft` : null].filter(Boolean)
+    person.unscheduled_items.length ? `${count(person.unscheduled_items.length, 'scheduled item is', 'scheduled items are')} back in draft` : null,
+    person.disconnected_accounts.length ? `${count(person.disconnected_accounts.length, 'personal account is', 'personal accounts are')} disconnected` : null].filter(Boolean)
   return `${person.display_name} removed.${left.length ? ` ${left.join('; ')}.` : ''}`
 }
 
@@ -104,7 +105,11 @@ function Person({ person, manage, owner, self, onChange, label }: { person: Team
       {mode === 'role' ? <div className="st-team-edit">
         <label className="st-field">Role<select className="st-select" value={person.role} disabled={busy}
           onChange={event => void run(() => runAction<RoleChange>('stump.team.manage', { action: 'set_role', idempotency_key: key(), person_id: person.id, role: event.target.value }))
-            .then(changed => { if (changed) { setMode(null); onChange(`${changed.display_name} is now ${words(changed.role)}.`) } })}>
+            .then(changed => {
+              // A transfer moves sign-in ownership too, and both people sign in again.
+              if (changed?.sign_in_again) window.location.assign('/app/settings/team')
+              else if (changed) { setMode(null); onChange(`${changed.display_name} is now ${words(changed.role)}.`) }
+            })}>
           {choices.map(role => <option key={role} value={role}>{role === 'owner' ? 'Owner (transfer)' : label(role)}</option>)}
         </select></label>
         <button className="st-button quiet small" type="button" onClick={() => setMode(null)}>Done</button>

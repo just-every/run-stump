@@ -13,6 +13,8 @@ import { blockingFlags, commit, holdOwner, item, mayPublishTo, mover, prepare, m
 // stump.items.schedule and stump.items.media: schedule, publish, resume and
 // settle items on connected accounts, one master's variants at once, and the
 // media an item carries with its alt text (STUMP-PUBLISH-002 to -006, STUMP-DRAFT-010).
+// Scheduling and publishing are editors' work; a contributor drafts and marks
+// items ready for sign-off and cannot schedule or publish (STUMP-TEAM-001, STUMP-TEAM-002.7).
 
 const id = { type: 'string', minLength: 1, maxLength: 64 }
 const at = { type: 'string', minLength: 10, maxLength: 40 }
@@ -81,7 +83,7 @@ export const itemTools: StumpTool[] = [{
   scope: 'stump:items', classes: ['external', 'money', 'gated'], clauses: ['STUMP-PUBLISH-002', 'STUMP-PUBLISH-003', 'STUMP-PUBLISH-004', 'STUMP-PUBLISH-005', 'STUMP-PUBLISH-006', 'STUMP-DRAFT-010'],
   actions: {
     schedule: {
-      roles: CONTRIBUTORS,
+      roles: EDITORS,
       properties: { item_id: id, account_id: id, at, time_zone: { type: 'string', minLength: 1, maxLength: 64 } }, required: ['item_id', 'account_id', 'at'],
       async classify(args, ctx) { return scheduleClasses([await prepare(ctx, 'schedule', args)]) },
       async summary(args, ctx) { return summary([await prepare(ctx, 'schedule', args)], 'Schedule a post') },
@@ -89,7 +91,7 @@ export const itemTools: StumpTool[] = [{
       async run(args, ctx) { return { item: await commit(ctx, await prepare(ctx, 'schedule', args)) } },
     },
     publish: {
-      roles: CONTRIBUTORS,
+      roles: EDITORS,
       properties: { item_id: id, account_id: id }, required: ['item_id'],
       async classify(args, ctx) { return scheduleClasses([await prepare(ctx, 'publish', args, { now: true })]) },
       async summary(args, ctx) { return summary([await prepare(ctx, 'publish', args, { now: true })], 'Publish now') },
@@ -103,7 +105,7 @@ export const itemTools: StumpTool[] = [{
       },
     },
     resume: {
-      roles: CONTRIBUTORS,
+      roles: EDITORS,
       properties: { item_id: id }, required: ['item_id'],
       async classify(args, ctx) {
         const { row, plan } = await resumable(ctx, args)
@@ -126,7 +128,7 @@ export const itemTools: StumpTool[] = [{
       },
     },
     resolve: {
-      roles: CONTRIBUTORS,
+      roles: EDITORS,
       properties: { item_id: id, decision: { enum: ['posted', 'not_posted', 'retry'] }, url: { type: 'string', minLength: 8, maxLength: 2048 } }, required: ['item_id', 'decision'],
       async classify(args, ctx) {
         const row = await item(ctx, args.item_id)
@@ -158,7 +160,7 @@ export const itemTools: StumpTool[] = [{
       },
     },
     schedule_master: {
-      roles: CONTRIBUTORS,
+      roles: EDITORS,
       properties: { master_id: id, at }, required: ['master_id', 'at'],
       async classify(args, ctx) { const plan = await masterPlan(ctx, args); return scheduleClasses(plan.plans, plan.held.length) },
       async summary(args, ctx) { return summary((await masterPlan(ctx, args)).plans, 'Schedule every variant') },

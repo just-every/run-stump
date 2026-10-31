@@ -54,11 +54,73 @@ test('the owner cannot be removed or demoted until ownership is transferred, and
   }
   const promoted = await app.action('admin', 'stump.team.manage', { action: 'set_role', person_id: admin.id, role: 'owner' })
   assert.equal(promoted.body.code, 'self_escalation')
+  // Base's own account routes follow Stump's roles: accounts change only through the team, and installation settings are the owner's.
+  const baseRefusals = async (who, other) => [
+    (await app.json(who, '/auth/operator/status', { operatorId: other, status: 'inactive' })).status,
+    (await app.json(who, '/auth/operator/role', { operatorId: who === 'admin' ? admin.id : owner.id, role: 'admin' })).status,
+    (await app.json(who, `/auth/sessions?operatorId=${other}`)).status,
+    (await app.json(who, '/auth/settings/identity')).status,
+  ]
+  assert.deepEqual(await baseRefusals('admin', owner.id), [403, 403, 403, 403])
   const transferred = await app.action('owner', 'stump.team.manage', { action: 'set_role', person_id: admin.id, role: 'owner' })
-  assert.equal(transferred.body.result.role, 'owner')
+  assert.equal(transferred.body.result.role, 'owner'); assert.equal(transferred.body.result.sign_in_again, true)
+  // Sign-in ownership moves with the transfer, and both people sign in again.
+  assert.equal((await app.json('owner', '/app/api/me')).status, 401)
+  const signInAgain = async () => {
+    for (const [who, address] of [['owner', owner.email], ['admin', email]]) {
+      assert.equal((await app.json(who, '/auth/magic-link', { email: address })).status, 202)
+      assert.equal(await app.signIn(who, address), 303)
+    }
+  }
+  await signInAgain()
   assert.equal((await app.json('owner', '/app/api/me')).body.person.role, 'admin')
+  assert.equal((await app.json('admin', '/auth/settings/identity')).status, 200)
+  assert.deepEqual(await baseRefusals('owner', admin.id), [403, 403, 403, 403])
+  assert.equal((await app.json('admin', '/app/api/me')).status, 200, 'the new owner keeps every door')
   const back = await app.action('admin', 'stump.team.manage', { action: 'set_role', person_id: owner.id, role: 'owner' })
   assert.equal(back.body.result.role, 'owner')
+  await signInAgain()
+  assert.equal((await app.json('owner', '/auth/settings/identity')).status, 200)
+})
+
+test('a contributor drafts but cannot schedule or publish, and a poster sees only their own accounts and drafts', async () => {
+  const owner = await app.owner()
+  const people = {}
+  for (const [label, role, connection] of [['writer', 'contributor', 'employee'], ['poster', 'poster', 'friend']]) {
+    const email = app.email(label)
+    people[label] = (await app.action('owner', 'stump.team.manage', { action: 'invite', email, display_name: `Synthetic ${label}`, role, connection })).body.result
+    assert.equal(await app.signIn(label, email), 303)
+  }
+  // Connected accounts as the connection flows record them: the company's, and one each for the writer and the poster.
+  const account = async (handle, person) => {
+    const id = crypto.randomUUID(), now = Date.now()
+    await app.db.prepare(`INSERT INTO stump_accounts(id,network,handle,display_name,owner_kind,owner_person_id,connected_by,connected_at,state,created_at,updated_at)
+      VALUES(?,'bluesky',?,?,?,?,?,?,'connected',?,?)`).bind(id, `${handle}.bsky.social`, handle, person ? 'person' : 'company', person ?? null, person ?? owner.id, now, now, now).run()
+    return id
+  }
+  const company = await account('synthetic-company'), writer = await account('synthetic-writer', people.writer.id), poster = await account('synthetic-poster', people.poster.id)
+
+  const draft = (await app.action('writer', 'stump.drafts.write', { action: 'create', format: 'post', person_id: people.writer.id, account_id: writer, network: 'bluesky', text: 'A note from my own account.' })).body.result
+  for (const [tool, args] of [['stump.items.schedule', { action: 'publish', item_id: draft.id, account_id: writer }], ['stump.items.schedule', { action: 'schedule', item_id: draft.id, account_id: writer, at: new Date(Date.now() + 86_400_000).toISOString() }],
+    ['stump.calendar.plan', { action: 'queue', item_id: draft.id, account_id: writer }]]) {
+    const refused = await app.action('writer', tool, args)
+    assert.deepEqual([refused.status, refused.body.code], [403, 'forbidden'], args.action)
+  }
+  assert.equal((await app.action('writer', 'stump.drafts.revise', { action: 'mark_ready', item_id: draft.id })).body.result.state, 'ready')
+
+  const opened = (await app.action('owner', 'stump.drafts.write', { action: 'master', account_ids: [company, poster], text: 'Unpublished company words.' })).body.result
+  const shown = (await app.action('poster', 'stump.drafts.preview', { action: 'master', master_id: opened.master.id })).body.result
+  assert.deepEqual([shown.total, shown.items.map(item => item.account_id), shown.master.account_ids], [1, [poster], [poster]])
+  const elsewhere = (await app.action('owner', 'stump.drafts.write', { action: 'master', account_ids: [company], text: 'Only the company.' })).body.result
+  assert.equal((await app.action('poster', 'stump.drafts.preview', { action: 'master', master_id: elsewhere.master.id })).status, 404)
+  const targets = (await app.action('poster', 'stump.drafts.preview', { action: 'targets' })).body.result.items.map(item => item.id)
+  const listed = (await app.action('poster', 'stump.accounts.connect', { action: 'list' })).body.result.items.map(item => item.id)
+  assert.deepEqual([targets, listed], [[poster], [poster]])
+  for (const id of [company, writer]) assert.equal((await app.action('poster', 'stump.calendar.plan', { action: 'slots', account_id: id })).status, 404)
+  assert.equal((await app.action('owner', 'stump.calendar.pause', { action: 'pause', scope: 'account', account_id: writer })).status, 200)
+  const pauses = (await app.action('poster', 'stump.calendar.pause', { action: 'state' })).body.result
+  assert.ok(![...pauses.paused, ...pauses.history].some(entry => entry.account_id === writer))
+  assert.equal((await app.action('owner', 'stump.calendar.pause', { action: 'resume', scope: 'account', account_id: writer })).status, 200)
 })
 
 test('an agent credential acts for its person with exactly their role, follows role changes and ends when revoked', async () => {

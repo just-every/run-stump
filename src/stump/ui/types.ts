@@ -3,9 +3,9 @@ export interface TeamPerson { id: string; email: string; display_name: string; r
   /** On an invite's answer only: whether it was emailed, or the person signs in on this computer. */
   invitation?: { by: 'email' } | { by: 'this_computer'; sign_in: string } }
 /** set_role answers the person's record and when the role changed. */
-export type RoleChange = TeamPerson & { changed_at?: string }
+export type RoleChange = TeamPerson & { changed_at?: string; sign_in_again?: boolean }
 /** remove answers the removed person's record and what of theirs now needs an answer. */
-export type RemovedPerson = TeamPerson & { open_handoffs: string[]; unscheduled_items: string[] }
+export type RemovedPerson = TeamPerson & { open_handoffs: string[]; unscheduled_items: string[]; disconnected_accounts: Array<{ account_id: string; revoked: string; unscheduled: string[] }> }
 export interface Team { items: TeamPerson[]; total: number }
 export interface PauseScope { scope: 'all' | 'account'; account_id: string | null; person_id: string; at: string }
 export interface PauseState { paused: PauseScope[]; history: Array<{ action: 'pause' | 'resume'; scope: string; account_id: string | null; person_id: string; agent_id: string | null; at: string }> }

@@ -42,10 +42,24 @@ async function master(ctx: ActionContext, masterId: unknown) {
   if (!row) refuse('not_found', { master_id: String(masterId) })
   return masterRecord(row)
 }
+/** A master's variants; a poster sees only their own (STUMP-TEAM-001.2), as readItem shows them only their own items. */
 async function variants(ctx: ActionContext, masterId: string) {
+  const own = ctx.person.role === 'poster' ? ' AND i.person_id=?' : ''
   const rows = await ctx.db.prepare(`SELECT i.*,a.handle,a.display_name AS account_name FROM stump_items i LEFT JOIN stump_accounts a ON a.id=i.account_id
-    WHERE i.master_id=? ORDER BY i.created_at,i.id`).bind(masterId).all<Row>()
+    WHERE i.master_id=?${own} ORDER BY i.created_at,i.id`).bind(masterId, ...(own ? [ctx.person.id] : [])).all<Row>()
   return rows.results
+}
+/**
+ * A master post and the variants the person may see. A poster sees a master
+ * only when it speaks for them or holds a variant of theirs, with its accounts
+ * cut to those variants' accounts; any other master reads as not found.
+ */
+async function visibleMaster(ctx: ActionContext, masterId: unknown) {
+  const record = await master(ctx, masterId), rows = await variants(ctx, record.id)
+  if (ctx.person.role !== 'poster') return { record, rows }
+  if (record.person_id !== ctx.person.id && !rows.length) refuse('not_found', { master_id: record.id })
+  const accounts = new Set(rows.map(row => row.account_id as string | null))
+  return { record: { ...record, account_ids: record.account_ids.filter(id => accounts.has(id)) }, rows }
 }
 /** A held refusal's fields: the rule, its source and the venue where a venue rule holds the item, and the hold itself. */
 const heldFields = (itemId: unknown, hold: Record<string, unknown> | null) => ({
@@ -301,11 +315,11 @@ export const draftTools: StumpTool[] = [{
   actions: {
     master: {
       roles: EVERYONE, read: true, properties: { master_id: id }, required: ['master_id'],
-      async classify(args, ctx) { return standard((await variants(ctx, (await master(ctx, args.master_id)).id)).length) },
+      async classify(args, ctx) { return standard((await visibleMaster(ctx, args.master_id)).rows.length) },
       target: args => ({ kind: 'master', id: String(args.master_id) }),
       async run(args, ctx) {
-        const record = await master(ctx, args.master_id)
-        const items = (await variants(ctx, record.id)).map(row => {
+        const { record, rows } = await visibleMaster(ctx, args.master_id)
+        const items = rows.map(row => {
           const item = itemRecord(row), text = itemText(row)
           return { item_id: item.id, network: item.network, account_id: item.account_id, handle: row.handle ?? null, account_name: row.account_name ?? null, text,
             count: counted(item.network) ? countText({ network: item.network }, text) : null, flags: item.flags, state: item.state, revision: item.revision, differs_from_master: item.differs_from_master }
@@ -328,8 +342,8 @@ export const draftTools: StumpTool[] = [{
       roles: EVERYONE, read: true,
       classify: () => standard(0),
       async run(_args, ctx) {
-        // The accounts a person drafts for: the company's, and their own.
-        const own = ['owner', 'admin', 'editor'].includes(ctx.person.role) ? '' : " WHERE owner_kind='company' OR owner_person_id=?"
+        // The accounts a person drafts for: the company's, and their own. A poster sees only their own (STUMP-TEAM-001.2).
+        const own = ['owner', 'admin', 'editor'].includes(ctx.person.role) ? '' : ctx.person.role === 'poster' ? " WHERE owner_kind='person' AND owner_person_id=?" : " WHERE owner_kind='company' OR owner_person_id=?"
         const rows = await ctx.db.prepare(`SELECT id,network,handle,display_name,owner_kind,owner_person_id,state FROM stump_accounts${own} ORDER BY owner_kind='person',network,handle`)
           .bind(...(own ? [ctx.person.id] : [])).all<Row>()
         return { items: rows.results, total: rows.results.length }

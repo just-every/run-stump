@@ -30,6 +30,15 @@ async function managed(ctx: ActionContext, args: Args): Promise<AccountRow> {
   if (!mayManage(ctx, row)) refuse('not_account_owner', { account_id: row.id, owner: { kind: row.owner_kind, person_id: row.owner_person_id } })
   return row
 }
+/** An account its owner may disconnect; an owner or admin also disconnects a personal account whose person has left the team (STUMP-CONNECT-001). */
+async function disconnectable(ctx: ActionContext, args: Args): Promise<AccountRow> {
+  const row = await account(ctx, args)
+  if (mayManage(ctx, row)) return row
+  const left = row.owner_kind === 'person' && ['owner', 'admin'].includes(ctx.person.role)
+    && await ctx.db.prepare("SELECT 1 FROM stump_people WHERE id=? AND status='removed'").bind(row.owner_person_id).first()
+  if (!left) refuse('not_account_owner', { account_id: row.id, owner: { kind: row.owner_kind, person_id: row.owner_person_id } })
+  return row
+}
 /** The network a completion belongs to, read from the consent record, never from the arguments. */
 async function connectionNetwork(ctx: ActionContext, args: Args): Promise<Network> {
   const row = typeof args.state === 'string'
@@ -96,10 +105,10 @@ export const accountTools: StumpTool[] = [{
     disconnect: {
       roles: CONNECTORS,
       properties: { account_id: id }, required: ['account_id'],
-      async classify(args, ctx) { const row = await managed(ctx, args); return [security('network_connection'), accounts(row.network)] },
+      async classify(args, ctx) { const row = await disconnectable(ctx, args); return [security('network_connection'), accounts(row.network)] },
       async summary(args, ctx) { const row = await account(ctx, args); return { target: { id: row.id, name: `Disconnect ${row.network} ${shownHandle(row)}` } } },
       target: args => ({ kind: 'account', id: String(args.account_id) }),
-      async run(args, ctx) { return disconnectAccount(ctx, await managed(ctx, args)) },
+      async run(args, ctx) { return disconnectAccount(ctx, await disconnectable(ctx, args)) },
     },
     reconnect: {
       roles: CONNECTORS,

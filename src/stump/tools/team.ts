@@ -3,6 +3,10 @@ import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
 import { ADMINS, CONNECTIONS, EVERYONE, ROLES, isRole, rank, type Role } from '../people/roles.ts'
 import { listPeople, readPerson, type StumpPerson } from '../people/store.ts'
 import { answerRemovedPerson } from '../handoffs/lapse.ts'
+import { outsideVoice } from '../handoffs/brief.ts'
+import { disconnectAccount } from '../accounts/connect.ts'
+import type { AccountRow } from '../accounts/store.ts'
+import { moveItem, type ItemState } from '../items/state.ts'
 
 const email = { type: 'string', format: 'email', minLength: 3, maxLength: 254 }
 const personId = { type: 'string', minLength: 1, maxLength: 64 }
@@ -33,6 +37,36 @@ function mayChange(ctx: ActionContext, target: StumpPerson, role?: Role) {
   if (role === 'owner' && ctx.person.role !== 'owner') refuse('forbidden', { action: 'set_role', role: ctx.person.role })
   if (role === 'owner' && target.status !== 'active') refuse('conflict', { person_id: target.id, reason: 'Ownership moves only to someone who has signed in.' })
   if (ctx.person.role === 'admin' && target.role === 'admin' && target.id !== ctx.person.id) refuse('forbidden', { action: 'set_role', role: ctx.person.role })
+}
+
+const sameLines = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((line, index) => line === b[index])
+
+/**
+ * What an update changes for its person, read from their record. Moving an
+ * outside voice (a contractor, investor, advisor, friend, family, or nobody
+ * recorded) to founder or employee lets Stump write in their voice about the
+ * company (D-8), and someone else's disclosure lines decide what counts as
+ * their disclosure (D-2): both widen what is done in that person's name.
+ * Another person's connection and disclosure lines are recorded by a signed-in
+ * person, never by an agent, and follow the same protection as roles: the
+ * owner's are their own, and an admin does not change another admin's.
+ */
+async function updating(ctx: ActionContext, args: Args) {
+  const target = await teammate(ctx, args.person_id)
+  const admin = ['owner', 'admin'].includes(ctx.person.role), other = target.id !== ctx.person.id
+  // A person keeps their own name and disclosure lines; their connection to the company is recorded by an owner or admin.
+  if (!admin && (other || args.connection !== undefined)) refuse('forbidden', { action: 'update', role: ctx.person.role })
+  const connection = args.connection === undefined ? target.connection : args.connection as StumpPerson['connection']
+  const lines = args.disclosure_lines === undefined ? target.disclosure_lines : args.disclosure_lines as string[]
+  const connectionChanged = connection !== target.connection, linesChanged = !sameLines(lines, target.disclosure_lines)
+  if (other) {
+    if (target.role === 'owner') refuse('owner_protected', { person_id: target.id, reason: 'The owner records their own connection and disclosure lines.' })
+    if (ctx.person.role === 'admin' && target.role === 'admin') refuse('forbidden', { action: 'update', role: ctx.person.role })
+    if (ctx.agent && (connectionChanged || linesChanged)) refuse('person_only', { field: connectionChanged ? 'connection' : 'disclosure_lines', reason: 'Another person\'s connection and disclosure lines are recorded by a signed-in person.' })
+  }
+  const insider = outsideVoice(target) && !outsideVoice({ role: target.role, connection })
+  const widens = (connectionChanged && insider) || (other && linesChanged)
+  return { target, connection, lines, widens, connectionChanged, linesChanged }
 }
 
 export const teamTools: StumpTool[] = [{
@@ -101,11 +135,21 @@ export const teamTools: StumpTool[] = [{
         if (target.role === role) return publicPerson(target)
         if (role === 'owner') {
           // Ownership moves to another person; the previous owner stays on as an admin, and the transfer is recorded.
+          // The installation's sign-in owner moves with it, so installation settings and sign-in administration follow
+          // Stump's owner: the new owner is made the sign-in owner before anyone else stops being one. Both people sign in again.
+          const signIn = await ctx.db.prepare("SELECT 1 FROM oa_operators WHERE id=? AND status='active'").bind(target.id).first()
+          if (!signIn) refuse('conflict', { person_id: target.id, reason: 'Ownership moves only to someone who can sign in.' })
           await ctx.db.batch([
             ctx.db.prepare("UPDATE stump_people SET role='admin',revision=revision+1 WHERE id=? AND role='owner' AND status='active'").bind(ctx.person.id),
             ctx.db.prepare("UPDATE stump_people SET role='owner',revision=revision+1 WHERE id=? AND role=? AND status='active'").bind(target.id, target.role),
+            ctx.db.prepare("UPDATE oa_operators SET role='owner' WHERE id=? AND status='active'").bind(target.id),
+            ctx.db.prepare("UPDATE oa_operators SET role='member' WHERE role='owner' AND id<>?").bind(target.id),
+            ctx.db.prepare("INSERT INTO oa_auth_audit(id,actor_id,action,value,created_at) VALUES(?,?,'operators.role',?,?)")
+              .bind(crypto.randomUUID(), ctx.person.id, JSON.stringify({ operatorId: target.id, detail: 'owner', via: 'transfer_ownership' }), now),
             await history(ctx, 'transfer_ownership', target, { from: ctx.person.id, to: target.id }),
           ])
+          ctx.emit('team.role_changed', `stump://people/${target.id}`, { role })
+          return { ...publicPerson((await readPerson(ctx.db, target.id))!), changed_at: new Date(now).toISOString(), sign_in_again: true }
         } else {
           const changed = await ctx.db.prepare("UPDATE stump_people SET role=?,revision=revision+1 WHERE id=? AND role=? AND status=? AND role<>'owner'").bind(role, target.id, target.role, target.status).run()
           if (!changed.meta.changes) refuse('conflict', { person_id: target.id })
@@ -119,22 +163,25 @@ export const teamTools: StumpTool[] = [{
       roles: EVERYONE,
       properties: { person_id: personId, display_name: { type: 'string', minLength: 1, maxLength: 120 }, connection: { enum: [...CONNECTIONS] }, disclosure_lines: lines },
       required: ['person_id'],
-      classify: () => access('narrows'),
-      async summary(args, ctx) { const target = await teammate(ctx, args.person_id); return { target: { id: target.id, name: target.display_name } } },
+      async classify(args, ctx) { return access((await updating(ctx, args)).widens ? 'widens' : 'narrows') },
+      async summary(args, ctx) {
+        const change = await updating(ctx, args)
+        return { target: { id: change.target.id, name: change.target.display_name },
+          ...(change.connectionChanged ? { connection: { from: change.target.connection, to: change.connection } } : {}), ...(change.linesChanged ? { disclosure_lines_changed: true } : {}) }
+      },
       target: args => ({ kind: 'person', id: String(args.person_id) }),
-      authority: async args => ({ subject: String(args.person_id), widens: false }),
+      // Read before the role check, so a caller who would widen their own reach is told self_escalation.
+      async authority(args, ctx) {
+        const target = await readPerson(ctx.db, String(args.person_id))
+        if (!target || target.status === 'removed') return null
+        const connection = args.connection === undefined ? target.connection : args.connection as StumpPerson['connection']
+        return { subject: target.id, widens: connection !== target.connection && outsideVoice(target) && !outsideVoice({ role: target.role, connection }) }
+      },
       async run(args, ctx) {
-        const target = await teammate(ctx, args.person_id)
-        const admin = ['owner', 'admin'].includes(ctx.person.role)
-        // A person keeps their own name and disclosure lines; their connection to the company is recorded by an owner or admin.
-        if (!admin && (target.id !== ctx.person.id || args.connection !== undefined)) refuse('forbidden', { action: 'update', role: ctx.person.role })
-        const next = {
-          display_name: (args.display_name as string | undefined) ?? target.display_name,
-          connection: (args.connection as string | undefined) ?? target.connection,
-          disclosure_lines: (args.disclosure_lines as string[] | undefined) ?? target.disclosure_lines,
-        }
+        const { target, connection, lines } = await updating(ctx, args)
+        const display_name = (args.display_name as string | undefined) ?? target.display_name
         await ctx.db.batch([
-          ctx.db.prepare('UPDATE stump_people SET display_name=?,connection=?,disclosure_lines=?,revision=revision+1 WHERE id=?').bind(next.display_name, next.connection, JSON.stringify(next.disclosure_lines), target.id),
+          ctx.db.prepare('UPDATE stump_people SET display_name=?,connection=?,disclosure_lines=?,revision=revision+1 WHERE id=?').bind(display_name, connection, JSON.stringify(lines), target.id),
           await history(ctx, 'update', target, { fields: Object.keys(args).filter(key => key !== 'action' && key !== 'person_id') }),
         ])
         return publicPerson((await readPerson(ctx.db, target.id))!)
@@ -152,23 +199,31 @@ export const teamTools: StumpTool[] = [{
         const target = await teammate(ctx, args.person_id), now = ctx.now()
         mayChange(ctx, target)
         const handoffs = (await ctx.db.prepare("SELECT id FROM stump_handoffs WHERE person_id=? AND state IN ('open','join_first','held') ORDER BY due_at,id").bind(target.id).all<{ id: string }>()).results.map(row => row.id)
-        const scheduled = (await ctx.db.prepare("SELECT id,state FROM stump_items WHERE person_id=? AND state IN ('scheduled','paused') ORDER BY scheduled_at,id").bind(target.id).all<{ id: string; state: string }>()).results
-        // Their scheduled items go back to draft (nothing posts as someone who left), and their agents stop.
+        // Every item of theirs that could still go out goes back to draft: scheduled, paused, and held (a rate-limit or day-limit hold resumes by itself).
+        const scheduled = (await ctx.db.prepare("SELECT id,state FROM stump_items WHERE person_id=? AND state IN ('scheduled','paused','held') ORDER BY scheduled_at,id").bind(target.id).all<{ id: string; state: ItemState }>()).results
+        const mover = { db: ctx.db, person: ctx.person, agent: ctx.agent, now: () => now }
+        // Nothing posts as someone who left: their items return to draft, their agents and sign-in sessions end.
         await ctx.db.batch([
           ctx.db.prepare("UPDATE stump_people SET status='removed',removed_at=?,revision=revision+1 WHERE id=? AND status=? AND role<>'owner'").bind(now, target.id, target.status),
           ctx.db.prepare('UPDATE stump_agent_credentials SET revoked_at=? WHERE person_id=? AND revoked_at IS NULL').bind(now, target.id),
-          ...scheduled.flatMap(item => [
-            ctx.db.prepare("UPDATE stump_items SET state='draft',scheduled_at=NULL,updated_at=? WHERE id=? AND state=?").bind(now, item.id, item.state),
-            ctx.db.prepare("INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at) VALUES(?,?,?,'draft',?,?,'person removed',?)")
-              .bind(crypto.randomUUID(), item.id, item.state, ctx.person.id, ctx.agent?.id ?? null, now),
-          ]),
+          ctx.db.prepare('UPDATE oa_sessions SET revoked_at=? WHERE operator_id=? AND revoked_at IS NULL').bind(now, target.id),
+          ...scheduled.flatMap(item => moveItem(mover, item, 'draft', 'person removed', { scheduled_at: null, queued: 0, hold: null })),
           // Removing someone still to sign in cancels their invitation.
           await history(ctx, target.status === 'invited' ? 'cancel_invitation' : 'remove', target, { open_handoffs: handoffs.length, unscheduled_items: scheduled.length }),
         ])
+        // Their personal accounts are disconnected (revoked at the network where it allows), never passed to anyone else;
+        // company accounts they connected stay the company's (STUMP-CONNECT-001).
+        const personal = (await ctx.db.prepare("SELECT * FROM stump_accounts WHERE owner_kind='person' AND owner_person_id=? AND state<>'disconnected' ORDER BY network,handle").bind(target.id).all<AccountRow>()).results
+        const disconnected: Array<{ account_id: string; revoked: string; unscheduled: string[] }> = []
+        for (const account of personal) {
+          const done = await disconnectAccount(ctx, account)
+          disconnected.push({ account_id: account.id, revoked: done.revoked, unscheduled: done.unscheduled.map(item => item.item_id) })
+        }
         ctx.emit('team.removed', `stump://people/${target.id}`)
         // The removed person's record, with the open hand-offs and unscheduled items that now need an answer:
         // each hand-off moves to the venue's next member or expires, with its history (STUMP-HANDOFF-003.5).
-        return { ...publicPerson((await readPerson(ctx.db, target.id))!), open_handoffs: handoffs, handoffs_answered: await answerRemovedPerson(ctx, target.id), unscheduled_items: scheduled.map(item => item.id) }
+        return { ...publicPerson((await readPerson(ctx.db, target.id))!), open_handoffs: handoffs, handoffs_answered: await answerRemovedPerson(ctx, target.id),
+          unscheduled_items: [...new Set([...scheduled.map(item => item.id), ...disconnected.flatMap(account => account.unscheduled)])], disconnected_accounts: disconnected }
       },
     },
   },
