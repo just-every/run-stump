@@ -4,14 +4,23 @@ import { issueCredential, listCredentials, revokeCredential } from '../agent-doo
 import { agentOverview } from '../agent-door/overview.ts'
 import { policyAnswersResponse } from '../agent-door/policy-answers.ts'
 import type { StumpEnv } from '../env.ts'
+import type { StumpTool } from '../actions/types.ts'
 import { stumpTools } from '../tools/index.ts'
+import { readJsonObject } from './body.ts'
 import { answer, json, personContext, refusal, signedIn } from './person.ts'
 
-async function body(request: Request): Promise<Record<string, unknown> | null> {
-  try {
-    const value: unknown = await request.json()
-    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
-  } catch { return null }
+const MiB = 1024 * 1024
+/** Bodies of a few short fields: an agent credential's name. */
+const SMALL_BODY = 16 * 1024
+/** The longest string any of a tool's arguments may hold. */
+const longest = (value: unknown): number => !value || typeof value !== 'object' ? 0
+  : Math.max(typeof (value as { maxLength?: unknown }).maxLength === 'number' ? (value as { maxLength: number }).maxLength : 0, ...Object.values(value).map(longest))
+const limits = new Map<StumpTool, number>()
+/** A tool's request body cap: 1 MiB, the MCP door's own, or a little over its longest argument (an image's base64) when that is larger. */
+function bodyLimit(tool: StumpTool): number {
+  let limit = limits.get(tool)
+  if (limit === undefined) limits.set(tool, limit = Math.max(MiB, longest(tool.actions) + 64 * 1024))
+  return limit
 }
 
 /**
@@ -40,7 +49,8 @@ export async function personDoorResponse(request: Request, original: StumpEnv): 
       if (request.method !== 'POST') return refusal('method_not_allowed')
       const tool = stumpTools.find(item => item.name === action[1])
       if (!tool) return refusal('unknown_tool', { tool: action[1] })
-      const args = await body(request)
+      const args = await readJsonObject(request, bodyLimit(tool))
+      if (args === 'too_large') return refusal('request_too_large', { max_bytes: bodyLimit(tool) })
       if (!args) return refusal('invalid_arguments')
       return json({ result: await runAsPerson(tool, args, personContext(request, env, person)) })
     }
@@ -52,7 +62,9 @@ export async function personDoorResponse(request: Request, original: StumpEnv): 
         return json({ items, total: items.length })
       }
       if (request.method !== 'POST') return refusal('method_not_allowed')
-      const input = await body(request), name = typeof input?.name === 'string' ? input.name.trim() : ''
+      const input = await readJsonObject(request, SMALL_BODY)
+      if (input === 'too_large') return refusal('request_too_large', { max_bytes: SMALL_BODY })
+      const name = typeof input?.name === 'string' ? input.name.trim() : ''
       if (!name || name.length > 80) return refusal('invalid_arguments', { field: 'name' })
       return json(await issueCredential(env.DB, person.id, name), 201)
     }

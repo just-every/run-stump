@@ -21,7 +21,7 @@ export type { MastodonAccount } from './account.ts';
 export { statusLength, countableText, graphemeLength, checkStatusDraft, checkPoll, htmlToText } from './text.ts';
 export { checkMedia } from './media-check.ts';
 export { uploadMedia } from './media.ts';
-export { postStatus, getStatus, getStatusSource, readBack, deleteStatus, findPostedStatus, parseStatus } from './statuses.ts';
+export { postStatus, getStatus, getStatusSource, readBack, deleteStatus, findPostedStatus, parseStatus, searchStatus } from './statuses.ts';
 export type { FindCriteria } from './statuses.ts';
 export { publishThread } from './thread.ts';
 export type { ThreadItem, ThreadPosted, ThreadOutcome, ThreadPoster } from './thread.ts';

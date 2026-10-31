@@ -4,10 +4,13 @@
 // when the screen sends the whole policy to Base and clears these rows. Owner only,
 // through the person door: an agent never reads or writes them.
 import { isClass } from '../../modules/agent-door/policy/catalogue.ts'
+import { readJsonObject } from '../http/body.ts'
 import { json, refusal } from '../http/person.ts'
 import type { StumpPerson } from '../people/store.ts'
 
 const ANSWERS = ['autonomous', 'review', 'approval', 'blocked'] as const
+/** One answer is {class, answer}: a few dozen bytes. */
+const ANSWER_BODY = 4 * 1024
 
 export async function policyAnswersResponse(request: Request, db: D1Database, person: StumpPerson): Promise<Response> {
   if (person.role !== 'owner') return refusal('forbidden')
@@ -20,8 +23,9 @@ export async function policyAnswersResponse(request: Request, db: D1Database, pe
     return json({ answers: {} })
   }
   if (request.method !== 'PUT') return refusal('method_not_allowed')
-  let input: { class?: unknown; answer?: unknown }
-  try { input = await request.json() } catch { return refusal('invalid_arguments') }
+  const input = await readJsonObject(request, ANSWER_BODY)
+  if (input === 'too_large') return refusal('request_too_large', { max_bytes: ANSWER_BODY })
+  if (!input) return refusal('invalid_arguments')
   const cls = input?.class, answer = input?.answer
   if (typeof cls !== 'string' || !(isClass(cls) || cls === '*')) return refusal('invalid_arguments', { field: 'class' })
   if (typeof answer !== 'string' || !(ANSWERS as readonly string[]).includes(answer)) return refusal('invalid_arguments', { field: 'answer' })

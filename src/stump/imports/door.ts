@@ -8,6 +8,7 @@ import type { D1Sql, D1TargetAdapter } from '../../modules/import-kit/src/d1/ind
 import type { ImportDoorRawSource } from '../../modules/import-kit/src/door/types.ts'
 import { operatorAuth, runtimeBindings } from '../../auth.server'
 import type { StumpEnv } from '../env.ts'
+import { readCapped } from '../http/body.ts'
 import { REJECTED_KIND } from '../lib/imports/index.ts'
 import { resolvePerson } from '../people/store.ts'
 import { rowChanges, type PlanRow } from '../venues/import/changes.ts'
@@ -20,6 +21,8 @@ import { venueListTargets } from '../venues/import/targets.ts'
 /** The permanent door key for settings, lineage and history. Never change it. */
 export const IMPORT_DOOR_KEY = 'stump'
 const PREFIX = '/api/operator/import/'
+/** The largest call the kit accepts: one 64 KiB chunk, base64-encoded, with its fields. */
+const CALL_BYTES = 100_000
 
 interface ImportSource {
   destination: string
@@ -102,7 +105,10 @@ export async function importDoorResponse(request: Request, original: StumpEnv): 
     authorize: async () => ownerSession(session.id),
   })
   // The kit takes no query string: the source chose the namespace above, and each call goes on without it.
-  const action = url.pathname.slice(PREFIX.length), body = request.method === 'POST' ? await request.text() : null, input = parsed(body)
+  // The kit reads at most 100,000 bytes of a call (its readInput), so the door reads no more than that either.
+  const bytes = request.method === 'POST' ? await readCapped(request, CALL_BYTES) : null
+  if (!bytes && request.method === 'POST') return refused('request_too_large', 413)
+  const action = url.pathname.slice(PREFIX.length), body = bytes ? new TextDecoder().decode(bytes) : null, input = parsed(body)
   const kit = (verb: string, text: string | null) => {
     const copied = new Headers(request.headers); copied.delete('content-length')
     return handler(new Request(new URL(PREFIX + verb, url.origin), { method: request.method, headers: copied, body: text })) as Promise<Response>

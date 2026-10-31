@@ -12,6 +12,7 @@ export const refusal = (code: string, fields: Record<string, unknown> = {}) => j
 const STATUS: Record<string, number> = {
   unauthenticated: 401, not_a_member: 403, forbidden: 403, origin_refused: 403, act_refused: 403, self_escalation: 403,
   not_found: 404, unknown_tool: 404, method_not_allowed: 405, revision_conflict: 409, conflict: 409, owner_protected: 409, already_member: 409,
+  request_too_large: 413,
 }
 
 /** The signed-in Stump person behind a request, or the refusal to send. */

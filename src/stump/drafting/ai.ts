@@ -6,7 +6,7 @@ import { AiError, createAiClient } from '../../modules/ai/index.mjs'
 import { refuse } from '../actions/refusals.ts'
 import type { StumpEnv } from '../env.ts'
 import { claimsForRequest, type Claim } from '../lib/claims/index.ts'
-import { stumpFetch } from '../net/fetch.ts'
+import { NotPublicError, publicFetch, stumpFetch } from '../net/fetch.ts'
 import { providerConfig, providerMessage } from './provider.ts'
 import type { ProductRecord, VoiceRecord } from './records.ts'
 
@@ -51,15 +51,17 @@ async function sha256(text: string) {
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
-/** Reads a source page (a changelog entry, docs page or post) through the network edge, or refuses saying why. */
+/** Reads a public source page (a changelog entry, docs page or post) through the network edge, or refuses saying why. */
 export async function readSource(env: StumpEnv, url: string, now: number): Promise<Source> {
   let parsed: URL
   try { parsed = new URL(url) } catch { refuse('invalid_arguments', { field: 'source_url' }) }
   if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) refuse('invalid_arguments', { field: 'source_url' })
   let response: Response
   try {
-    response = await stumpFetch(env)(parsed.href, { headers: { accept: 'text/html, text/plain, application/xhtml+xml;q=0.9, */*;q=0.5' }, redirect: 'follow', signal: AbortSignal.timeout(15_000) })
-  } catch { refuse('source_unreadable', { source_url: parsed.href, reason: 'The page could not be reached.' }) }
+    response = await publicFetch(env)(parsed.href, { headers: { accept: 'text/html, text/plain, application/xhtml+xml;q=0.9, */*;q=0.5' }, redirect: 'follow', signal: AbortSignal.timeout(15_000) })
+  } catch (error) {
+    refuse('source_unreadable', { source_url: parsed.href, reason: error instanceof NotPublicError ? 'Stump reads public web pages only.' : 'The page could not be reached.' })
+  }
   if (!response.ok) { await response.body?.cancel(); refuse('source_unreadable', { source_url: parsed.href, status: response.status, reason: `The page answered ${response.status}.` }) }
   const reader = response.body?.getReader(), chunks: Uint8Array[] = []
   let size = 0
