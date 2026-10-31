@@ -93,6 +93,8 @@
 .lp-terminal { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 40px 32px; border-radius: 16px; background: var(--ink); color: #F3EFE6; box-shadow: var(--card-shadow); }
 .lp-command { margin: 0; min-width: 0; font: 400 18px/1.5 var(--mono); overflow-wrap: anywhere; }
 .lp-terminal code { font: inherit; }
+/* A command line breaks only at its spaces: the repository name stays whole. */
+.lp-keep { white-space: nowrap; }
 .lp-prompt { color: #6FCFA6; }
 .lp-tip { position: relative; display: inline-flex; flex: none; }
 .lp-tip [role="tooltip"] { position: absolute; bottom: calc(100% + 8px); right: 0; white-space: nowrap; background: var(--white); color: var(--ink); font-size: 13px; padding: 4px 8px; border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity .1s; }

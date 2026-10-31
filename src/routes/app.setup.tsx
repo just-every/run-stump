@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
 import { Icon } from '../stump/ui/icons.tsx'
-import { Outcome, SelectField, networkWord, useLoaded, useRun } from '../stump/ui/kit.tsx'
+import { Outcome, networkWord, useLoaded, useRun } from '../stump/ui/kit.tsx'
 
 // First-run setup (SPEC §4.2): after the owner confirms their account on Base's
 // /setup, Stump asks only what must be answered (L6): the company and the owner's
@@ -39,7 +39,8 @@ function SetupPage() {
     ])
     return { who, products: products.items, company: products.company_names[0] ?? '', accounts: accounts.items.filter(account => account.state === 'connected'), venues: venues.total, links }
   })
-  const { message, run } = useRun()
+  const { busy, message, run } = useRun()
+  const connectionId = useId()
   // The company site is kept as the company's own domain (Settings · Connections, Link tags), so setup shows it when it reopens.
   const [typed, setSite] = useState<string | null>(null)
   const site = typed ?? data?.links.own_domains[0] ?? ''
@@ -119,14 +120,15 @@ function SetupPage() {
                 <input key={`p-${productName}`} defaultValue={productName} maxLength={120} onBlur={event => void saveProduct(event.target.value.trim())} />
               </label>
               {product ? <Stored>{product.name} saved</Stored> : null}
-              {/* The owner's connection names the company itself, so it reads the same here beside the product, and the steps keep Open Today in
-                  the first screen. The select shows the stored value itself, so it needs no saved mark. */}
-              {data && ['owner', 'admin'].includes(data.who.person.role) ? <>
-                <SelectField label={`Your connection to ${company || 'the company'}`} value={data.who.person.connection ?? ''} onChange={event => void saveConnection(event.target.value)}>
+              {/* The owner's connection names the company itself, so it reads the same here beside the product. Its mark sits on the label's
+                  line, read back from Stump after each save (gone while one saves), so the steps keep Open Today in the first screen. */}
+              {data && ['owner', 'admin'].includes(data.who.person.role) ? <div className="st-field">
+                <span className="st-setup-connection-label"><label htmlFor={connectionId}>Your connection to {company || 'the company'}</label><span className="st-setup-done" role="status" aria-live="polite">{data.who.person.connection && !busy ? <><span className="st-tick" aria-hidden="true"><Icon name="check" /></span><span>Saved</span></> : null}</span></span>
+                <select id={connectionId} value={data.who.person.connection ?? ''} onChange={event => void saveConnection(event.target.value)}>
                   {data.who.person.connection ? null : <option value="" disabled>Choose one</option>}
                   {CONNECTIONS.map(item => <option key={item} value={item}>{item.charAt(0).toUpperCase() + item.slice(1)}</option>)}
-                </SelectField>
-              </> : null}
+                </select>
+              </div> : null}
             </div>
           </li>
           <li>

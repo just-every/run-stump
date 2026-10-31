@@ -13,9 +13,11 @@
 // together they match a claim whose wording spans them. The result for each clause is one of:
 //   matched          a current claim covers it
 //   banned           a claim the company must not make
-//   number_mismatch  it matches a claim but states another number than the claim's or
-//                    its proof's (a percent, multiplier or price in any form: "2x" or
-//                    "in half" against a proven 30% is a mismatch), or a percent,
+//   number_mismatch  it matches a claim but states a number that is not the claim's or
+//                    its proof's, even beside one that is ("a 30-minute visit in 1 minute"
+//                    against "a 30-minute visit in 2 minutes"; a percent, multiplier or
+//                    price in any form: "2x" or "in half" against a proven 30% is a
+//                    mismatch), or a percent,
 //                    multiplier or price where the claim and its proof state none
 //                    ("50% cheaper" against "cheaper than HubSpot"; expected is empty).
 //                    A proof's numbers come from its number, its text, or a plain-string
