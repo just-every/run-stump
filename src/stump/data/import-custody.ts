@@ -49,48 +49,83 @@ const textOf = (base64: string) => new TextDecoder().decode(Uint8Array.from(atob
 /** A refused row's key: its id and the line it starts on in its file. */
 const rowKey = (payload: Record<string, unknown>) => `${String(payload.id)}|${String(payload.line)}`
 
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 /**
- * The rows of the list's files that the reader refused and that name the
- * journalist where the file has them: a refused row keeps only its id and line,
- * so each is read back in the file it came from. In a Markdown list that is the
- * row's block, from its heading to the next; in a CSV it is the row's line.
+ * Whether a refused row's lines refer to one of these list ids: a Markdown `venue_id:` line naming it, or a CSV
+ * cell holding exactly it.
  */
-async function refusedRowsNaming(context: D1ImportContext, name: string): Promise<Set<string>> {
-  const db = context.storage.database as unknown as D1Database, full = fullNameMatcher(name), found = new Set<string>()
+function carriesListId(lines: string[], ids: Set<string>) {
+  if (!ids.size) return false
+  const alternatives = [...ids].map(escape).join('|')
+  const markdown = new RegExp(`^\\s*-?\\s*venue_id\\s*:\\s*["'\`]?(?:${alternatives})["'\`]?\\s*$`, 'i')
+  const cell = new RegExp(`(?:^|,)\\s*"?(?:${alternatives})"?\\s*(?:,|$)`)
+  return lines.some(line => markdown.test(line) || cell.test(line))
+}
+
+/** Whether a refused row's own id is one of these list ids or an entry under one (`<id>-...`). */
+const underListId = (id: string, ids: Set<string>) => [...ids].some(listId => id === listId || id.startsWith(`${listId}-`))
+
+/**
+ * The rows of the list's files that the reader refused and that hold the journalist. A refused row keeps only
+ * its id and line, so each is read back in the file it came from: in a Markdown list that is the row's block,
+ * from its heading to the next; in a CSV it is the row's line. A refused row holds her when that block names
+ * her in full, and, once her venue's list ids are known (the id of each venue record of hers the list wrote,
+ * and of each refused venue row naming her), when its own id is one of them or an entry under one, or its block
+ * points at one by `venue_id`.
+ */
+async function refusedRowsHolding(context: D1ImportContext, name: string, holdsVenue: (record: SourceRecord) => boolean): Promise<Set<string>> {
+  const db = context.storage.database as unknown as D1Database, full = fullNameMatcher(name), found = new Set<string>(), ids = new Set<string>()
   const jobs = (await db.prepare('SELECT * FROM ik_jobs WHERE destination=? ORDER BY id').bind(VENUE_DESTINATION).all<Record<string, unknown> & { id: string }>()).results
+  const refused: Array<{ payload: Record<string, unknown>; block: string[] }> = []
   for (const raw of jobs) {
     const plan = (await loadPlans([raw], db, context.storage.targets.planCodec)).get(raw.id)
     if (!plan) continue
     const files = (await readOriginals(plan, raw.id, context)).flatMap(original => original.kind === 'artifact' && original.original.status === 'retained' ? [textOf(original.original.base64).replace(/\r\n?/g, '\n').split('\n')] : [])
-    if (!files.some(lines => lines.some(line => full.test(line)))) continue
     for (const entry of plan.entries) {
+      const payload = (entry.source.payload ?? {}) as Record<string, unknown>
+      if (entry.source.kind === 'venue' && holdsVenue(entry.source) && typeof payload.external_id === 'string' && payload.external_id) ids.add(payload.external_id)
       if (entry.source.kind !== REJECTED_KIND) continue
-      const payload = (entry.source.payload ?? {}) as Record<string, unknown>, at = Number(payload.line)
-      if (!Number.isSafeInteger(at) || at < 1) continue
-      for (const lines of files) {
-        const start = lines[at - 1] ?? ''
-        const end = start.startsWith('#') ? lines.findIndex((line, index) => index >= at && /^#{2,3} /.test(line)) : at
-        if (lines.slice(at - 1, end < 0 ? lines.length : end).some(line => full.test(line))) found.add(rowKey(payload))
+      const at = Number(payload.line), block: string[] = []
+      if (Number.isSafeInteger(at) && at >= 1) {
+        for (const lines of files) {
+          const start = lines[at - 1] ?? ''
+          const end = start.startsWith('#') ? lines.findIndex((line, index) => index >= at && /^#{2,3} /.test(line)) : at
+          block.push(...lines.slice(at - 1, end < 0 ? lines.length : end))
+        }
       }
+      const naming = block.some(line => full.test(line)) || full.test(JSON.stringify(payload))
+      if (naming) found.add(rowKey(payload))
+      if (naming && payload.row_kind === 'venue' && typeof payload.id === 'string') ids.add(payload.id)
+      refused.push({ payload, block })
     }
+  }
+  for (const { payload, block } of refused) {
+    if (underListId(String(payload.id), ids) || carriesListId(block, ids)) found.add(rowKey(payload))
   }
   return found
 }
 
-/**
- * Which of the list's records hold the journalist: their venue (by its import
- * target, or a journalist venue under their name), an entry aimed at that venue
- * or naming them, and a refused row naming them, in its own words or where its
- * file has it. Matched on the decoded record, never logged.
- */
-function holdsJournalist(person: Journalist, refused: Set<string>) {
-  const full = fullNameMatcher(person.name)
+/** Whether a venue record the list wrote is the journalist's: by its import target, or a journalist venue under their name. */
+function holdsJournalistVenue(person: Journalist) {
   const targets = new Set(person.venueTargets), folded = foldName(person.name)
   return (record: SourceRecord) => {
     const payload = (record.payload ?? {}) as Record<string, unknown>
-    if (record.kind === 'venue') return targets.has(record.sourceId) || (payload.kind === 'journalist' && typeof payload.name === 'string' && foldName(payload.name) === folded)
+    return record.kind === 'venue' && (targets.has(record.sourceId) || (payload.kind === 'journalist' && typeof payload.name === 'string' && foldName(payload.name) === folded))
+  }
+}
+
+/**
+ * Which of the list's records hold the journalist: their venue, an entry aimed at that venue or naming them,
+ * and a refused row that holds them (refusedRowsHolding). Matched on the decoded record, never logged.
+ */
+function holdsJournalist(person: Journalist, refused: Set<string>) {
+  const full = fullNameMatcher(person.name), venue = holdsJournalistVenue(person), targets = new Set(person.venueTargets)
+  return (record: SourceRecord) => {
+    const payload = (record.payload ?? {}) as Record<string, unknown>
+    if (record.kind === 'venue') return venue(record)
     if (record.kind === 'draft') return targets.has(String(payload.venue_key)) || full.test(JSON.stringify(payload))
-    if (record.kind === REJECTED_KIND) return full.test(JSON.stringify(payload)) || refused.has(rowKey(payload))
+    if (record.kind === REJECTED_KIND) return refused.has(rowKey(payload))
     return false
   }
 }
@@ -115,7 +150,7 @@ export async function eraseWithImportCustody(ctx: ActionContext, erasureId: stri
         : { sql: '0', params: [] },
     },
   }
-  const holds = holdsJournalist(person, await refusedRowsNaming(context, person.name)), full = fullNameMatcher(person.name)
+  const holds = holdsJournalist(person, await refusedRowsHolding(context, person.name, holdsJournalistVenue(person))), full = fullNameMatcher(person.name)
   // Portability's restore checkpoint: an archive older than this erasure is refused whole.
   const checkpoint: D1Sql[] = (await redactionStatements(ctx.db)).map(toD1Sql)
   return retireD1ImportCustody({

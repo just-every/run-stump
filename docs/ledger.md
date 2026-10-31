@@ -16,7 +16,7 @@ A post reads as posted only with the network's own id and URL read back, or, for
 
 ## Corrections
 
-Entries are never overwritten. A correction adds a version, and the original stays readable. A post a venue's moderators removed is marked removed, with the reason, and stays on the record. Removing a post the company's own account made deletes it at the network first; for an agent that counts as destructive and external, so the company's agent policy decides. An entry under legal hold keeps its post at the network while the hold stands.
+Entries are never overwritten. A correction adds a version, and the original stays readable. A post a venue's moderators removed is marked removed, with the reason, and stays on the record. Removing a post the company's own account made deletes it at the network first; for an agent that counts as destructive and external, so the company's agent policy decides. An entry under legal hold keeps its post at the network while the hold stands, and so does every other entry for the same post. Stump deletes only a post its own publisher recorded: an entry whose network id was corrected is marked removed without a delete at the network.
 
 ## Search and history
 

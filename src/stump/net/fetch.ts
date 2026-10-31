@@ -96,13 +96,19 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]), MAX_HOPS = 5
  * exempt here, with or without the edge. Anything else throws NotPublicError
  * before a request is sent.
  */
+/**
+ * Throws NotPublicError unless the URL is a public web address (address.ts); a local
+ * runtime with no network edge also checks the name's public DNS answers, since its
+ * own network can reach private addresses. Loopback is not exempt.
+ */
+export async function assertPublic(env: Pick<StumpEnv, 'STUMP_NETWORK_EDGE' | 'AUTH_LOCAL'>, url: URL, fetcher: typeof fetch = fetch): Promise<void> {
+  if (!publicByName(url)) throw new NotPublicError(url)
+  if (env.AUTH_LOCAL === 'true' && !edgeOrigin(env) && !/^[\d.]+$|:/.test(hostOf(url)) && !await publicDns(fetcher, hostOf(url))) throw new NotPublicError(url)
+}
+
 export function publicFetch(env: Pick<StumpEnv, 'STUMP_NETWORK_EDGE' | 'AUTH_LOCAL'>, fetcher: typeof fetch = fetch, options: FetchOptions = {}): typeof fetch {
   const send = stumpFetch(env, fetcher, options)
-  const checkDns = env.AUTH_LOCAL === 'true' && !edgeOrigin(env)
-  const allowed = async (url: URL) => {
-    if (!publicByName(url)) throw new NotPublicError(url)
-    if (checkDns && !/^[\d.]+$|:/.test(hostOf(url)) && !await publicDns(fetcher, hostOf(url))) throw new NotPublicError(url)
-  }
+  const allowed = (url: URL) => assertPublic(env, url, fetcher)
   return async (input, init) => {
     const first = new Request(input, init)
     if (!['GET', 'HEAD'].includes(first.method)) throw new TypeError('publicFetch only reads.')
