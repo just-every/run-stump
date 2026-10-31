@@ -452,7 +452,7 @@
       "executable": false
     },
     "docs/brand.md": {
-      "sha256": "0d0f45f4b9310b06e53e500a38276d74aad39dce8086d6cc1b642d90b0a24b98",
+      "sha256": "7997e3ab061baddccec2103785d8a045e7424700d54c7f7a1df7c4ad64190e37",
       "executable": false
     },
     "docs/CLAIMS.md": {
@@ -476,7 +476,7 @@
       "executable": false
     },
     "docs/disclosure.md": {
-      "sha256": "7c3457267cf21fbba488327e1c09ef7ef6f1536e2de3304b700b0f30a29a9ef1",
+      "sha256": "099e3460844490eba9d7643db2e7586cd75774a297669849e65cd8b559d5a2bb",
       "executable": false
     },
     "docs/handoffs.md": {
@@ -3628,7 +3628,7 @@
       "executable": false
     },
     "src/stump/drafting/check.ts": {
-      "sha256": "932f100d1737532d52fda185d3549488181dc9a00b1467ef00fd641e07184a97",
+      "sha256": "ea8c8f8f027788d74816dc719917b84cff512e154437b0874758629824077f8f",
       "executable": false
     },
     "src/stump/drafting/diff.ts": {
@@ -3676,7 +3676,7 @@
       "executable": false
     },
     "src/stump/handoffs/claims.ts": {
-      "sha256": "6993758438738050c26e111406467358b86ea6eaacf9670d91d0e8033921f855",
+      "sha256": "f1c4d866eae8d086bc54ad947d7d818773e0ce8fcf7cf3f0a1771c900fa7eee8",
       "executable": false
     },
     "src/stump/handoffs/disclosure.ts": {
@@ -3908,19 +3908,19 @@
       "executable": false
     },
     "src/stump/lib/claims/check.ts": {
-      "sha256": "e3438f769a669dc363c48ab45c70b16149d5ca7f5fe62a067d5cfcde211159ba",
+      "sha256": "922c14c5fab1707f510ee0ba92fdceec4e7257ffc972771a17196a6f51114f28",
       "executable": false
     },
     "src/stump/lib/claims/disclosure.ts": {
-      "sha256": "4387bd3af678862d98a77d5275c4b4efedd972523e0245d7fcfd29dea397bdb2",
+      "sha256": "6bc76862b8cdc06a42e1369b9ac419d3d1a1d4ddbc23af253e9ecadf929c65e8",
       "executable": false
     },
     "src/stump/lib/claims/extract.ts": {
-      "sha256": "5d62ac1f47d7eed91fc0e6c10c2955af8e02a0a5166e0f13ba842c907aa9c4ef",
+      "sha256": "4f9a809fb2677ee9f5cf2b5b778096dd28b5307835511fe4c188384228df0cf8",
       "executable": false
     },
     "src/stump/lib/claims/index.ts": {
-      "sha256": "59985ab2c036e4474b723c29cf7184e0645a8958e2f71d3e5ab2f2812a7397c3",
+      "sha256": "75a7d0008251d4e6ec81bb150181a481f7c276d190d430fa69ba99945c4fd7e2",
       "executable": false
     },
     "src/stump/lib/claims/mentions.ts": {
@@ -4420,7 +4420,7 @@
       "executable": false
     },
     "src/stump/today/sections.ts": {
-      "sha256": "6a176a9c6088e61be08f60f01bdde5a589d6068137cb66a00fdcf5b0acac9359",
+      "sha256": "8898924afae16d3bef19ada98129903ba250f5fe4a13de810c9fa90ae2734131",
       "executable": false
     },
     "src/stump/today/TodayPage.tsx": {

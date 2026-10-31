@@ -59,7 +59,8 @@ const SECOND_PERSON = /\b(?:you can|you(?:'ll| will)? (?:get|receive|see)|lets? 
 /**
  * "Now" before a verb says what the product newly does: "recurring meetings now carry last week's tasks
  * forward", "it now sends tasks to Asana", "Now with offline mode". Not when it says only that something is out
- * ("is now live", "now available", "now in beta") or starts another phrase ("now that", "now the").
+ * ("is now live", "now available", "now in beta") or starts another phrase ("now that", "now the"). It is read
+ * only in a sentence about the product: "We now meet every Friday" says what the team does, not the product.
  */
 const NOW_DOES = /\bnow\s+(?:also\s+|automatically\s+)?(?!(?:is|are|was|were|be|been|being|live|available|out|here|open|in|on|at|the|a|an|that|this|these|those|and|or|but|for|to|you|we|it|i|ready|official|shipping|underway)\b)[a-z]{3,}\b/
 /**
@@ -193,7 +194,7 @@ export function readSentence(span: Span, ctx: ExtractContext, subject?: string, 
   if (anchored && SUPERLATIVE.test(said)) reasons.push('superlative')
   if (GUARANTEE.test(said) && (anchored || hasMetric)) reasons.push('guarantee')
   if (product !== undefined || firstPerson) {
-    if (CAPABILITY.test(said) || NOW_DOES.test(said) || announced || (product !== undefined && statesAction(said.trimStart(), ctx.product_names))) reasons.push('capability')
+    if (CAPABILITY.test(said) || announced || (product !== undefined && (NOW_DOES.test(said) || statesAction(said.trimStart(), ctx.product_names)))) reasons.push('capability')
   }
   if (reasons.length === 0) return undefined
   return { ...span, reasons, numbers, competitor: reasons.includes('comparison') ? competitor : undefined }

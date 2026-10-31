@@ -346,18 +346,34 @@ const NOT_NAMES = new Set(
   'monday tuesday wednesday thursday friday saturday sunday january february march april may june july august september october november december'.split(' '),
 )
 
+/** Words that open a greeting: "Hey Jordan,", "Thanks Sam Lee,". */
+const GREETINGS = new Set(
+  'hey hi hello hiya heya howdy yo dear thanks thx cheers congrats congratulations welcome morning evening sorry'.split(' '),
+)
+/** A greeting word, then one or two names or a handle, then a comma. */
+const GREETING = /^([\p{L}]+(?:\s+you)?)\s+[@\p{Lu}][\p{L}\p{N}_.'’-]*(?:\s+[@\p{Lu}][\p{L}\p{N}_.'’-]*)?\s*,/u
+
+/** Where a greeting that opens a clause ends ("Hey Jordan, " before "Brightwell sends ..."), or 0 when it opens with none. */
+function greetingEnd(text: string): number {
+  const m = GREETING.exec(text)
+  if (!m) return 0
+  const word = foldText(m[1] as string).replace(/\s+/g, ' ')
+  return GREETINGS.has(word) || word === 'thank you' ? m[0].length : 0
+}
+
 /**
  * The names a clause says, folded: each word written as a proper name ("Asana", "GitHub"), never the first word of a
- * sentence (or of what follows a colon), a link, a day or a month, or one of `known` (the company's products and people).
- * A claim covers a clause only when it names each of them too: "it now sends tasks to Asana as well as Linear and Jira"
- * says more than "Sends tasks to Linear and Jira".
+ * sentence (or of what follows a colon), a name the clause opens by greeting ("Hey Jordan,"), a link, a day or a month,
+ * or one of `known` (the company's products and people). A claim covers a clause only when it names each of them too:
+ * "it now sends tasks to Asana as well as Linear and Jira" says more than "Sends tasks to Linear and Jira".
  */
 function namesIn(text: string, span: Span, known: ReadonlySet<string>, ownHosts: readonly string[]): string[] {
   const shown = blankUrls(span.text, ownHosts)
+  const greeted = greetingEnd(shown)
   const out: string[] = []
   for (const m of shown.matchAll(/(?<![\p{L}\p{N}_@#'’.-])\p{Lu}[\p{Ll}\p{N}]*\p{Ll}[\p{L}\p{N}]*/gu)) {
     const at = m.index ?? 0
-    if (opensSentence(at === 0 ? text : shown, at === 0 ? span.start : at)) continue
+    if (at < greeted || opensSentence(at === 0 ? text : shown, at === 0 ? span.start : at)) continue
     const word = foldText(m[0])
     if (NOT_NAMES.has(word) || known.has(word)) continue
     out.push(word)

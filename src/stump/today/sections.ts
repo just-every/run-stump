@@ -8,7 +8,7 @@ import type { Handoff } from '../handoffs/ui/words.ts'
 import { rowTitle } from '../handoffs/ui/words.ts'
 import type { FindingView } from '../watches/ui-types.ts'
 import { dateIn, dayStartIn, timeIn } from '../ui/zones.ts'
-import { detectDisclosure } from '../lib/claims/index.ts'
+import { statesConnection } from '../lib/claims/index.ts'
 
 /** Where a row opens: the screen that owns the record. */
 export type Dest =
@@ -82,16 +82,7 @@ export function openingWords(text: string, terms: readonly string[] = []): strin
   if (!clean) return 'Untitled draft'
   const sentence = (from: string) => /^.+?[.!?](?=\s|$)/.exec(from)?.[0] ?? from
   const first = sentence(clean), rest = clean.slice(first.length).trim()
-  return rest && disclosureOnly(first, terms) ? sentence(rest) : first
-}
-const WEAK = /^(?:we|we['\u2019](?:re|ve|ll|d)|our|ours)$/iu
-/** A sentence that says the writer's connection and little else: "Disclosure: …", or a connection ("founder at Brightwell") with at most five other words. */
-function disclosureOnly(sentence: string, terms: readonly string[]): boolean {
-  if (/^(?:full )?disclosure\b/iu.test(sentence)) return true
-  const found = detectDisclosure(sentence, { terms }).matches.filter(match => !WEAK.test(match.text.trim()))
-  if (!found.length) return false
-  const rest = found.reduce((left, match) => left.slice(0, match.start) + ' '.repeat(match.end - match.start) + left.slice(match.end), sentence)
-  return rest.split(/\s+/).filter(word => /\p{L}/u.test(word)).length <= 5
+  return rest && statesConnection(first, terms) ? sentence(rest) : first
 }
 
 /** "X variant", "X and Mastodon variants", "Bluesky, X and Mastodon variants", in Compose's order of networks. */

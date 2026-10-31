@@ -2,7 +2,7 @@ export { BANNED_ACTS, bannedAct, findVoteRequests, matchActionRequest, matchAuto
 export type { ActRefusal, ActRequest, AutomationAction, AutomationSpec, AutomationTrigger, BannedAct, BannedActId, TextFinding } from './banned'
 export { checkClaims, claimsUsed, isCurrentRecord } from './check'
 export type { CheckClaimsInput, CheckClaimsResult, ClaimFlag, ClaimFlagCode } from './check'
-export { checkDisclosure, detectDisclosure } from './disclosure'
+export { checkDisclosure, detectDisclosure, statesConnection } from './disclosure'
 export type { DetectDisclosureOptions, DisclosureCheck, DisclosureCheckInput, DisclosureMatch, DisclosureResult, DisclosureStatus } from './disclosure'
 export { findClaimCandidates } from './extract'
 export type { CandidateReason, ClaimCandidate, ExtractContext } from './extract'
