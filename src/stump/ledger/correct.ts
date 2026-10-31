@@ -45,7 +45,7 @@ export async function correct(args: Args, ctx: ActionContext) {
  * only records a removal. Only a post the publisher recorded is deleted: an entry whose network id a correction
  * set says which post it refers to, not which post the account wrote, so removing it records the removal only.
  */
-export async function networkDelete(ctx: Pick<ActionContext, 'db'>, row: Record<string, unknown>) {
+export async function networkDelete(ctx: Pick<ActionContext, 'db'>, row: { id?: unknown; route?: unknown; account_id?: unknown; network_id?: unknown }) {
   if (row.route !== 'published' || typeof row.account_id !== 'string' || typeof row.network_id !== 'string') return null
   const account = await readAccount(ctx.db, row.account_id)
   if (account?.owner_kind !== 'company') return null
@@ -57,15 +57,23 @@ export async function networkDelete(ctx: Pick<ActionContext, 'db'>, row: Record<
 }
 
 /**
+ * The entry under legal hold for the same post on the same account, preferring the entry itself; null when none is.
+ * A hold on any entry recorded for the post keeps that post at its network.
+ */
+export async function holdOnPost(ctx: Pick<ActionContext, 'db'>, row: { id?: unknown }, target: { account: { id: string }; network_id: string }) {
+  const held = await ctx.db.prepare('SELECT id,legal_hold FROM stump_ledger WHERE account_id=? AND network_id=? AND legal_hold IS NOT NULL ORDER BY id=? DESC LIMIT 1')
+    .bind(target.account.id, target.network_id, String(row.id)).first<{ id: string; legal_hold: string }>()
+  return held ? { id: held.id, reason: (JSON.parse(held.legal_hold) as { reason?: string }).reason ?? null } : null
+}
+
+/**
  * A legal hold keeps the post at its network: the company's own delete is refused while a hold stands on any
  * entry of that account recorded for the same post, as an erasure keeps it.
  */
 export async function heldAtNetwork(ctx: Pick<ActionContext, 'db'>, row: Record<string, unknown>, target: { account: { id: string }; network_id: string }) {
-  const held = await ctx.db.prepare('SELECT id,legal_hold FROM stump_ledger WHERE account_id=? AND network_id=? AND legal_hold IS NOT NULL ORDER BY id=? DESC LIMIT 1')
-    .bind(target.account.id, target.network_id, String(row.id)).first<{ id: string; legal_hold: string }>()
+  const held = await holdOnPost(ctx, row, target)
   if (!held) return
-  const hold = JSON.parse(held.legal_hold) as { reason?: string }
-  refuse('conflict', { entry_id: String(row.id), ...held.id === row.id ? {} : { held_entry_id: held.id }, reason: 'The post is under legal hold, so it stays at the network.', legal_hold: hold.reason ?? null })
+  refuse('conflict', { entry_id: String(row.id), ...held.id === row.id ? {} : { held_entry_id: held.id }, reason: 'The post is under legal hold, so it stays at the network.', legal_hold: held.reason })
 }
 
 /**

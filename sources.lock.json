@@ -436,7 +436,7 @@
       "executable": false
     },
     "docs/accounts.md": {
-      "sha256": "f60adebcb9f19e35c7cbf9193f2fe866a10a631299dcf348725e2daa60394d10",
+      "sha256": "39d0f55bd4af01630064c50a5495c2f4ba850fe725578d35e2021d14c0d47739",
       "executable": false
     },
     "docs/agents.md": {
@@ -464,7 +464,7 @@
       "executable": false
     },
     "docs/data.md": {
-      "sha256": "b827d0a372e327ac767ae5c60e5feeb6c360ff217115497f26903277217e1656",
+      "sha256": "f5bbfe4f6a2b7d49ae60a75c6b7858bfec6151e0e2688606387ef7588e7c4d7f",
       "executable": false
     },
     "docs/deploy.md": {
@@ -3568,7 +3568,7 @@
       "executable": false
     },
     "src/stump/data/erase.ts": {
-      "sha256": "636024bff9be3f5e0b7e2ea4e7419c90543e0ea53d6cfece1fa2a901a7422d8f",
+      "sha256": "7e6a17d023d016578ba01268060de46ff4025f39fd0761db3be6418279eb6b4d",
       "executable": false
     },
     "src/stump/data/erased-uploads.ts": {
@@ -3784,7 +3784,7 @@
       "executable": false
     },
     "src/stump/ledger/correct.ts": {
-      "sha256": "f3ca9a2f5fec0e66a962b82aa16205a171e8d1bbb8f09fb4e79dd1d0aada7112",
+      "sha256": "0f6d3bc71d60acf75f30269f51e7f01553dd46d9828b515198711edff0ba8648",
       "executable": false
     },
     "src/stump/ledger/csv.ts": {
@@ -4120,7 +4120,7 @@
       "executable": false
     },
     "src/stump/lib/mastodon/http.ts": {
-      "sha256": "1c65fda1b64cd1aeb08d8901c71427b88d5a5385c171e620b581860d47c7d1c7",
+      "sha256": "d134b4dce979f9f65a35a6ced0a05cdadc29c0ee89f38d003fac944927850fb6",
       "executable": false
     },
     "src/stump/lib/mastodon/index.ts": {

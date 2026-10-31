@@ -26,6 +26,6 @@ Each X post shows its charge from your price table before it goes out, and the c
 
 ## Mastodon
 
-Name the instance by its https address on the public web, such as mastodon.social. Stump checks the address before it sends the instance anything.
+Name the instance by its https address on the public web, such as mastodon.social. Stump checks the address before it sends the instance anything, and talks only to that address: an instance that answers with a redirect to another address is refused, so name the address the instance itself answers on.
 
 The connection records the account's bot flag and whether the instance's rules require it. An agent publishes to that account only when the flag is set where the rules ask for it.
