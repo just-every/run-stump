@@ -74,20 +74,47 @@ export function lineFindings(line: string, input: ClaimInput) {
   return [...result.claims.map(finding => finding.status), ...result.flags.map(flag => flag.code)]
 }
 
-/** Where each disclosure line that on its own makes no claim and raises no flag stands in the text, as [start, end) spans. */
+/** A match at `at` opens a sentence: it starts the text, or only space and closing quotes or brackets stand between it and . ! ? … : or a line break. */
+function opensSentence(text: string, at: number) {
+  let k = at - 1
+  for (; k >= 0 && /\s/u.test(text[k]!); k--) if (/[\n\r\u2028\u2029]/u.test(text[k]!)) return true
+  while (k >= 0 && /["'\u201d\u2019)\]]/u.test(text[k]!)) k--
+  return k < 0 || /[.!?\u2026:]/u.test(text[k]!)
+}
+
+/**
+ * A match ending at `end` ends a sentence: the line ends with . ! ? … (and closing quotes or brackets) and space or the end of
+ * the text follows, or the text goes on with one of them, a line break or nothing.
+ */
+function closesSentence(text: string, end: number, line: string) {
+  const rest = text.slice(end)
+  if (/[.!?\u2026]["'\u201d\u2019)\]]*$/u.test(line)) return /^(?:\s|$)/u.test(rest)
+  return /^[^\S\n\r\u2028\u2029]*(?:[.!?\u2026]["'\u201d\u2019)\]]*(?:\s|$)|[\n\r\u2028\u2029]|$)/u.test(rest)
+}
+
+/**
+ * Where each disclosure line stands in the text as whole sentences of it, as [start, end) spans, for the lines that make no
+ * claim and raise no flag read on their own, with no product or with each product as their subject. A line inside a sentence
+ * is read with the rest of that sentence, which may name the product it is about.
+ */
 function lineSpans(text: string, lines: ReadonlyArray<string | null | undefined>, input: ClaimInput): Array<[number, number]> {
   const spans: Array<[number, number]> = []
+  const readings = [input, ...(input.products ?? []).map(product => ({ ...input, product_id: product.id }))]
   for (const line of new Set(lines.map(line => line?.trim()).filter((line): line is string => !!line))) {
-    if (lineFindings(line, input).length) continue
-    for (const match of text.matchAll(new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'))) spans.push([match.index, match.index + match[0].length])
+    if (readings.some(reading => lineFindings(line, reading).length)) continue
+    for (const match of text.matchAll(new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'))) {
+      const end = match.index + match[0].length
+      if (opensSentence(text, match.index) && closesSentence(text, end, line)) spans.push([match.index, end])
+    }
   }
   return spans
 }
 
 /**
  * The claim check of the whole text, read past its disclosure lines: a finding or flag is left out only when it lies wholly
- * inside a disclosure line that, read on its own, makes no claim and raises no flag, so a line such as "I work on Ferrous."
- * is never taken for a claim about the product, and no line takes any other word of the text out of the check.
+ * inside a disclosure line that stands as whole sentences of the text and, read on its own, makes no claim and raises no flag,
+ * so a line such as "I work on Ferrous." is never taken for a claim about the product, and no line takes any other word of the
+ * text out of the check.
  */
 export function claimsPastLines(text: string, lines: ReadonlyArray<string | null | undefined>, input: ClaimInput) {
   const result = checkClaims({ ...input, text })
