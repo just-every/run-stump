@@ -104,10 +104,12 @@ rer dev
 `rer install` installs the locked dependencies only. The Playwright browser a
 seed's tests use downloads the first time a command needs it (`rer verify`, or
 `rer run` of a script that runs Playwright), so an owner who only deploys never
-fetches it. `rer setup` ends by listing what a hosted deploy will still need,
-read from the deploy declaration: the Cloudflare account ID and API token (with
-the permissions, or the project's deploy guide), each required secret not yet
-set, and production sign-in's mail inputs.
+fetches it. Run on its own, `rer setup` ends by listing what a hosted deploy will
+still need, read from the deploy declaration: the Cloudflare account ID and API
+token (with the permissions, or the project's deploy guide), each required secret
+not yet set, and production sign-in's mail inputs. `rer dev` runs the same setup
+when a checkout has none yet, but prints only the addresses and the sign-in link;
+`rer deploy --dry-run` lists what a real deploy needs at any time.
 
 Commands that run project work select the exact Node version declared by the
 project. They use an exact matching installed runtime or a checksum-verified
@@ -331,13 +333,17 @@ complete remote import, as in the maintained references.
 ## Deployment and command inspection
 
 Real deployment uses the owner-account procedure and its private credentials.
-`rer deploy --dry-run` validates and builds locally, then reads the target
-secret bindings using `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. It uses
-the same required-secret resolver as deploy: every missing binding and its input
-name is reported with the same nonzero exit and error, including in `--json` mode.
+`rer deploy --dry-run` validates and builds locally and prints what it would
+deploy: the Worker, the D1 database and its migrations, the secrets (required and
+optional), the variables and the schedule. With no `CLOUDFLARE_ACCOUNT_ID` and
+`CLOUDFLARE_API_TOKEN` it stops there: it makes no Cloudflare request, lists what
+a real deploy needs (those two, with the token's permissions, and production
+sign-in's mail inputs) and exits 0. With them, it also reads the target's secret
+bindings through the same required-secret resolver as deploy: every missing
+binding and its input name is reported with the same nonzero exit and error,
+including in `--json` mode, and a refused secret-list read fails the dry run.
 Secrets held by the target are inherited; optional absent secrets stay unbound.
-Missing credentials or a refused secret-list read fail the dry run. It performs
-no provider writes, uploads, secret changes or resource creation. The default environment is `production`; select another with
+It performs no provider writes, uploads, secret changes or resource creation. The default environment is `production`; select another with
 `--environment NAME`. The dry run does not establish upload acceptance,
 hosted health or mail delivery.
 

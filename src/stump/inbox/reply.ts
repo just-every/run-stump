@@ -104,9 +104,9 @@ function sameCall(ctx: ActionContext, earlier: FullItemRow, text: string | null)
 }
 
 /** The classes of one reply: a public reply to someone who engaged first (known), what X charges for it, and X's step for an AI draft. */
-export function replyClasses(plan: ReplyPlan, aiHost: string) {
+export function replyClasses(plan: ReplyPlan, aiHost: string | null) {
   return [
-    { class: 'external' as const, facts: { measure: 1, counterparty: 'known' as const, ...(plan.generate ? { provider: aiHost } : {}) } },
+    { class: 'external' as const, facts: { measure: 1, counterparty: 'known' as const, ...(plan.generate && aiHost ? { provider: aiHost } : {}) } },
     ...(plan.charge_micro > 0 ? [{ class: 'money' as const, facts: { measure: plan.charge_micro / 1e6, currency: 'usd', counterparty: 'x' } }] : []),
     ...(plan.gated ? [{ class: 'gated' as const, facts: { measure: 1, provider: plan.account.network, step: X_AI_STEP } }] : []),
   ]

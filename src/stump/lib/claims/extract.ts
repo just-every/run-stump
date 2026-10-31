@@ -5,7 +5,7 @@
 // announcements are not claims. Text in a draft is data (D-7): nothing here changes
 // what the check does beyond which sentences it reads.
 
-import { maskUrlTerminators } from '../text/urls'
+import { extractUrls, maskUrlTerminators } from '../text/urls'
 import { extractNumbers } from './numbers'
 import type { FoundNumber } from './numbers'
 import { foldText, sentenceSpans } from './sentences'
@@ -28,6 +28,17 @@ export interface ExtractContext {
   own_hosts?: readonly string[]
 }
 
+/** The text with every link blanked to spaces (offsets kept): a link's host and path are not words the sentence says. */
+export function blankUrls(text: string, ownHosts: readonly string[] = []): string {
+  let out = ''
+  let cursor = 0
+  for (const u of extractUrls(text, { extraBareHosts: ownHosts })) {
+    out += text.slice(cursor, u.start) + ' '.repeat(u.end - u.start)
+    cursor = u.end
+  }
+  return out + text.slice(cursor)
+}
+
 /** A question ends in "?" outside any link: "Orbit is the fastest https://orbit.run/?ref=x" states a claim. */
 function isQuestion(text: string, ownHosts: readonly string[] = []): boolean {
   return maskUrlTerminators(text, { extraBareHosts: ownHosts }).endsWith('?')
@@ -43,6 +54,24 @@ const COMPARISON = /\b(?:\w+er|more \w+|less \w+|fewer \w+|better|worse) than\b|
 const CAPABILITY =
   /\b(supports?|integrates?|works? with|handles?|includes?|ships? with|syncs?|stores?|encrypts?|scales?|saves?|reduces?|increases?|cuts?|speeds? up|prevents?|detects?|blocks?|automates?|monitors?|tracks?|backs? up|runs? on|exports?|imports?|sends?|schedules?|publishes?|connects?|searches|notifies|alerts|generates|offers?|provides?|enables?|allows?|powers?|finds?|catches|keeps?|lets? you|helps? you|gives? you|makes? it|is (?:open[- ]source|secure|private|free|fast|reliable|accessible|self-?hosted)|has no|can (?:\w+ ){0,2}(?:import|export|send|post|schedule|sync|monitor|track|replace)|adds|introduces|brings|comes with|turns|converts|calculates|summari[sz]es|reminds|creates|emails you|shows you|you(?:'ll| will)? (?:get|receive|see)|you can)\b/
 const FIRST_PERSON_PLURAL = /\b(we|we're|we've|we'll|our|ours)\b/
+/** "You can", "lets you", "you'll get": what a product does, told to its reader. */
+const SECOND_PERSON = /\b(?:you can|you(?:'ll| will)? (?:get|receive|see)|lets? you|helps? you|gives? you|shows? you|emails? you)\b/
+/** Words that may stand before a sentence's verb: "and", "also", "now", "new:". */
+const LEAD_IN = '(?:(?:now|also|and|plus|new|then|even|still|automatically|already)[,:]?\\s+)*'
+/** A sentence that opens with what it does: "Adds a weekly summary", "Now syncs with Stripe". */
+const OPENS_WITH_CAPABILITY = new RegExp(`^${LEAD_IN}${CAPABILITY.source}`)
+/** A present-tense verb after the product's name or "it": "It also spots idle time", "Tickwise Timer bills by the minute". */
+const VERB_AFTER_SUBJECT = new RegExp(`^${LEAD_IN}([a-z]{2,}(?<![su]s)s)\\b(?:\\s+(\\S+))?`)
+/**
+ * Words ending in "s" that are not what a product does: verbs of how something is or seems
+ * ("It means a lot", "It was great") and common words that only look like verbs.
+ */
+const NOT_AN_ACTION = new Set([
+  'is', 'was', 'has', 'does', 'means', 'seems', 'feels', 'looks', 'sounds', 'matters', 'depends', 'happens', 'goes', 'belongs',
+  'its', 'this', 'ours', 'yours', 'thanks', 'always', 'sometimes', 'perhaps', 'news', 'towards', 'afterwards', 'besides', 'whereas',
+])
+/** After a plural noun, these show it is the noun's verb, not the product's ("Tickwise Timer users love it"). */
+const PLURAL_VERB = new Set(['are', 'were', 'have', 'had', 'do', 'did', "don't", 'can', 'could', 'will', 'would', 'should', 'may', 'might', 'love', 'like', 'say', 'said', 'get', 'got', 'want', 'need'])
 const QUANT_CONTEXT_UNITS = new Set([
   'minute', 'hour', 'second', 'ms', 'millisecond', 'day', 'week', 'step', 'click', 'line', 'request', 'query', 'user', 'customer',
   'team', 'integration', 'connector', 'language', 'region', 'country', 'developer', 'engineer', 'company', 'seat', 'site', 'app', 'download', 'star',
@@ -65,10 +94,44 @@ function wordCount(folded: string): number {
 }
 
 /**
+ * Does a sentence that names no product refer to the product before it? It does when it opens
+ * with "It", "This" or "They", tells the reader what they get ("Now you can edit each
+ * reminder", "You get your hours by client"), or opens with what it does ("Adds a weekly
+ * summary"). "Held post, first wording" and "Thanks, the first reply made my day" do not.
+ */
+export function refersToProduct(sentence: string): boolean {
+  const folded = foldText(sentence)
+  const opening = folded.trimStart()
+  return /^(?:it|its|this|that|they|these|those)\b/.test(opening) || SECOND_PERSON.test(folded) || OPENS_WITH_CAPABILITY.test(opening)
+}
+
+/** The clause after the product's name or "it" when it opens with one, else the whole clause ("asks before counting it"). */
+function afterSubject(opening: string, names: readonly string[]): string {
+  const pronoun = /^(?:and\s+)?it\s+/.exec(opening)
+  if (pronoun) return opening.slice(pronoun[0].length)
+  for (const n of names) {
+    const f = foldText(n).trim()
+    if (f !== '' && opening.startsWith(f) && /^\s/.test(opening.slice(f.length))) return opening.slice(f.length).trimStart()
+  }
+  return opening
+}
+
+/**
+ * Does a clause about the product say what it does with a verb of its own: "It also spots idle
+ * time", "Tickwise Timer bills by the minute", or "asks before counting it" after "and"?
+ */
+function statesAction(opening: string, names: readonly string[]): boolean {
+  const m = VERB_AFTER_SUBJECT.exec(afterSubject(opening, names))
+  if (!m) return false
+  const verb = m[1] as string
+  return !NOT_AN_ACTION.has(verb) && !PLURAL_VERB.has(m[2] ?? '')
+}
+
+/**
  * Read one sentence; `undefined` when it is not a claim. `subject` is the product the sentence
- * is about when it names none itself ("It also syncs with Stripe now", "Now you can edit each
- * reminder"): the product named before it in the draft, or the draft's own product. `found` is
- * the sentence's numbers when the caller has already read them (offsets within `span.text`).
+ * is about when it names none itself, given only when it refers to that product (see
+ * `refersToProduct`), or names it by its link. `found` is the sentence's numbers when the
+ * caller has already read them (offsets within `span.text`).
  */
 export function readSentence(span: Span, ctx: ExtractContext, subject?: string, found?: readonly FoundNumber[]): ClaimCandidate | undefined {
   const folded = foldText(span.text)
@@ -76,9 +139,11 @@ export function readSentence(span: Span, ctx: ExtractContext, subject?: string, 
   if (wordCount(folded) < 3) return undefined
 
   const numbers = found ? [...found] : extractNumbers(span.text)
+  // What the sentence says, outside its links: "changelog#1-8" is not "#1", nor "/best-practices" "best".
+  const said = foldText(blankUrls(span.text, ctx.own_hosts))
   const product = mentionsAny(folded, ctx.product_names) ?? subject
   const competitor = mentionsAny(folded, ctx.competitor_names)
-  const firstPerson = FIRST_PERSON_PLURAL.test(folded)
+  const firstPerson = FIRST_PERSON_PLURAL.test(said)
   const anchored = product !== undefined || competitor !== undefined || firstPerson
   const reasons: CandidateReason[] = []
 
@@ -87,17 +152,17 @@ export function readSentence(span: Span, ctx: ExtractContext, subject?: string, 
       n.kind === 'percent' ||
       n.kind === 'multiplier' ||
       // A money amount about a product, a competitor or "we" is a price ("Orbit starts at $29/mo").
-      (n.kind === 'money' && (anchored || PRICE_WORDS.test(folded))) ||
+      (n.kind === 'money' && (anchored || PRICE_WORDS.test(said))) ||
       (n.kind === 'count' && QUANT_CONTEXT_UNITS.has(n.unit)),
   )
   if (hasMetric) reasons.push('quantity')
-  if (COMPLIANCE.test(folded)) reasons.push('compliance')
-  if (competitor !== undefined && COMPARISON.test(folded)) reasons.push('comparison')
-  else if (/\b(?:\w+er|more \w+|less \w+|fewer \w+) than\b/.test(folded) && anchored) reasons.push('comparison')
-  if (anchored && SUPERLATIVE.test(folded)) reasons.push('superlative')
-  if (GUARANTEE.test(folded) && (anchored || hasMetric)) reasons.push('guarantee')
+  if (COMPLIANCE.test(said)) reasons.push('compliance')
+  if (competitor !== undefined && COMPARISON.test(said)) reasons.push('comparison')
+  else if (/\b(?:\w+er|more \w+|less \w+|fewer \w+) than\b/.test(said) && anchored) reasons.push('comparison')
+  if (anchored && SUPERLATIVE.test(said)) reasons.push('superlative')
+  if (GUARANTEE.test(said) && (anchored || hasMetric)) reasons.push('guarantee')
   if (product !== undefined || firstPerson) {
-    if (CAPABILITY.test(folded)) reasons.push('capability')
+    if (CAPABILITY.test(said) || (product !== undefined && statesAction(said.trimStart(), ctx.product_names))) reasons.push('capability')
   }
   if (reasons.length === 0) return undefined
   return { ...span, reasons, numbers, competitor: reasons.includes('comparison') ? competitor : undefined }
@@ -107,8 +172,8 @@ export function readSentence(span: Span, ctx: ExtractContext, subject?: string, 
  * The phrases that make a candidate a guarantee, a superlative, a compliance statement or a
  * comparison ("guaranteed", "fastest", "SOC 2", "faster than"), folded, for the reasons it carries.
  */
-export function strongPhrases(candidate: ClaimCandidate): string[] {
-  const folded = foldText(candidate.text)
+export function strongPhrases(candidate: ClaimCandidate, ownHosts: readonly string[] = []): string[] {
+  const folded = foldText(blankUrls(candidate.text, ownHosts))
   const kinds: Array<[CandidateReason, RegExp]> = [['guarantee', GUARANTEE], ['superlative', SUPERLATIVE], ['compliance', COMPLIANCE], ['comparison', COMPARISON]]
   const out: string[] = []
   for (const [reason, re] of kinds) {

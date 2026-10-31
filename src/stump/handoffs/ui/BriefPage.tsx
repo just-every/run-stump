@@ -146,8 +146,8 @@ function Work({ handoff, mine, viewer, editor, onChanged }: { handoff: Handoff; 
     const done = await act(() => runAction('stump.handoffs.manage', { action: 'edit', handoff_id: handoff.id, draft_text: draft, idempotency_key: key(), expected_revision: handoff.revision }), 'Saved')
     if (done) onChanged()
   }
-  async function copy() {
-    try { await navigator.clipboard.writeText(copyText); setMessage({ text: 'Copied', error: false }) }
+  async function copy(value = copyText, done = 'Copied') {
+    try { await navigator.clipboard.writeText(value); setMessage({ text: done, error: false }) }
     catch { setMessage({ text: 'Select the text and copy it.', error: true }) }
   }
   async function recordLink(event?: FormEvent) {
@@ -180,6 +180,11 @@ function Work({ handoff, mine, viewer, editor, onChanged }: { handoff: Handoff; 
         // Once posted, the words that went out, as the poster recorded them.
         : handoff.own_words ? <div className="st-ho-words"><h3>{mine ? 'Your own words' : `${(handoff.person_name ?? '').split(/\s+/)[0] || 'Their'}'s own words`}</h3><p>{handoff.own_words}</p></div> : null}
     </>}
+    {/* The product's link tagged for this hand-off: pasted into the post, the signups it brings join to it on the ledger. */}
+    {working && handoff.link ? <div className="st-ho-share">
+      <input readOnly aria-label="Your link" value={handoff.link} onFocus={event => event.currentTarget.select()} />
+      <button className="st-button" type="button" onClick={() => void copy(handoff.link!, 'Link copied')}>Copy link</button>
+    </div> : null}
     {working ? <>
       <div className="st-ho-buttons">
         <button className="st-button primary st-ho-copy" type="button" onClick={() => void copy()} disabled={!copyText}>Copy text</button>

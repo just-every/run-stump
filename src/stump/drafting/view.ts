@@ -4,7 +4,7 @@ export interface Flag { code: string; blocking: boolean; network?: string; count
 export interface Count { network: string; count: number; limit: number; unit: string; over: boolean; fits: boolean }
 export interface Account { id: string; network: string; handle: string; display_name: string | null; owner_kind: 'person' | 'company'; owner_person_id: string | null; state: string }
 export interface Master { id: string; person_id: string; text: string; account_ids: string[]; sources: Array<{ url: string; title: string | null }>; revision: number }
-export interface Variant { item_id: string; network: string | null; account_id: string | null; venue_id?: string | null; product_id?: string | null; handle: string | null; account_name: string | null; text: string; count: Count | null; flags: Flag[]; state: string; revision: number; differs_from_master: boolean }
+export interface Variant { item_id: string; network: string | null; account_id: string | null; venue_id?: string | null; product_id?: string | null; handle: string | null; account_name: string | null; text: string; sent_text?: string | null; count: Count | null; flags: Flag[]; state: string; revision: number; differs_from_master: boolean }
 export interface MasterPreview { master: Master; items: Variant[]; total: number }
 export interface ClaimFinding { status: 'matched' | 'unmatched' | 'banned' | 'stale' | 'number_mismatch'; claim_id?: string; text: string; expected?: string[]; found?: string[]; reason?: string; review_on?: string }
 export interface Check { passed: boolean; claims: ClaimFinding[]; flags: Flag[]; disclosure: { required: boolean; status: string }; duplicates: Array<{ id: string; kind: string }> }

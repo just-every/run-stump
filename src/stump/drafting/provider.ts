@@ -30,14 +30,6 @@ const installation = (env: StumpEnv) => aiConfig(env as AiEnv as unknown as Reco
 /** Where the provider comes from: Settings, the installation's AI_* settings, or nowhere yet. */
 export type ProviderSource = 'settings' | 'installation' | 'none'
 
-/** The provider's host, which each item's record and the external class name. */
-export async function aiHost(env: StumpEnv, db: D1Database): Promise<string> {
-  const row = await readRow(db)
-  if (row) return hostOf(row.base_url)
-  const config = installation(env)
-  return hostOf(config.direct?.baseUrl ?? config.models?.baseUrl)
-}
-
 /** The ai.provider.v1 configuration a drafting request uses, and where it came from. */
 export async function providerConfig(env: StumpEnv, db: D1Database): Promise<{ config: AiConfig; source: ProviderSource; host: string; apiKey: string | null }> {
   const row = await readRow(db)

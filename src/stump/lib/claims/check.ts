@@ -23,15 +23,16 @@
 //                    multiplier of that value.
 //   stale            it matches a claim past its review date
 //   unmatched        it reads as a factual claim (extract.ts) but no claim covers it
-// A sentence that names no product is about the product named before it in the draft, or
-// the draft's own product: "It also syncs with Stripe now" and "Now you can edit each
-// reminder" state what the product does, whether or not they name it. A link after a
-// sentence's end is a piece of its own, never part of the claim before it.
+// A sentence that names no product but refers to one ("It also syncs with Stripe now",
+// "Now you can edit each reminder", "Adds a weekly summary") is about the product named
+// before it in the draft, or the draft's own product; one that does not refer to it ("Held
+// post, first wording", "Thanks, the first reply made my day") is about no product. A link
+// after a sentence's end is a piece of its own, never part of the claim before it.
 // Priority when several apply: banned, number_mismatch, stale, matched. A person and an
 // agent submitting the same draft get the same result: the check reads only the text,
 // the claims, the profiles and today's date.
 
-import { readSentence, strongPhrases } from './extract'
+import { blankUrls, readSentence, refersToProduct, strongPhrases } from './extract'
 import type { ClaimCandidate } from './extract'
 import { extractMentions, hostOfUrl } from './mentions'
 import type { MentionSet } from './mentions'
@@ -214,17 +215,6 @@ function numberConflict(claimNumbers: readonly FoundNumber[], proofNumbers: read
 
 const label = (n: FoundNumber) => n.raw.trim()
 
-/** The text with every link blanked to spaces (offsets kept): a link's host and path are not words the sentence says. */
-function blankUrls(text: string, ownHosts: readonly string[]): string {
-  let out = ''
-  let cursor = 0
-  for (const u of extractUrls(text, { extraBareHosts: ownHosts })) {
-    out += text.slice(cursor, u.start) + ' '.repeat(u.end - u.start)
-    cursor = u.end
-  }
-  return out + text.slice(cursor)
-}
-
 function relevant(claims: readonly Claim[], productId: string | undefined): Claim[] {
   return claims.filter((c) => {
     if (!isCurrentRecord(c)) return false
@@ -387,7 +377,7 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
     }
     // A guarantee, superlative, compliance or comparison phrase the claim does not say is the
     // clause's own statement: the clause is not inside the claim, however few words it adds.
-    const strong = candidate ? strongPhrases(candidate).map(wordsOf) : []
+    const strong = candidate ? strongPhrases(candidate, ownHosts).map(wordsOf) : []
     const folded = foldText(span.text)
     let banned: Hit | undefined
     let best: Hit | undefined
@@ -423,8 +413,9 @@ export function checkClaims(input: CheckClaimsInput): CheckClaimsResult {
   let previousProduct: ProductProfile | undefined = input.product_id ? profileById.get(input.product_id) : input.products?.length === 1 ? input.products[0] : undefined
   for (const sentence of claimSentences(input.text, ownHosts)) {
     // "It supports SSO." after a sentence about Orbit is about Orbit, as is "Now you can export by client."
-    const carried = previousProduct
-    previousProduct = productIn(sentence) ?? carried
+    const before = previousProduct
+    const carried = before && refersToProduct(sentence.text) ? before : undefined
+    previousProduct = productIn(sentence) ?? before
 
     const ownNumbers = extractNumbers(sentence.text)
     sentenceNumbers = ownNumbers.map((n) => ({ ...n, start: n.start + sentence.start, end: n.end + sentence.start }))
