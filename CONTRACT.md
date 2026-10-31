@@ -710,7 +710,7 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 #### STUMP-TRUTH-002 — Disclosure enforced
 
-**Requirement.** Each person records their connection to the company (founder, employee, contractor, investor, advisor, friend or family) and their disclosure lines. Stump recognises the company, its products and competitors from the brand profile (STUMP-BRAND-001). An item that mentions them, from a connected person, anywhere other than the company's own accounts, discloses the connection before it moves on (D-2), with a disclosure line or its own plain words ("we", "our", "I built"); a bio line never counts. Where a network hides the end of a post behind "see more", the disclosure sits above the cut.
+**Requirement.** Each person records their connection to the company (founder, employee, contractor, investor, advisor, friend or family) and their disclosure lines. Stump recognises the company, its products and competitors from the brand profile (STUMP-BRAND-001). An item that mentions them, from a connected person, anywhere other than the company's own accounts, discloses the connection before it moves on (D-2), with a disclosure line or one of the fixed statements of connection `docs/disclosure.md` lists, such as "I work at Orbit", "we just shipped Orbit 2.0" from a founder or employee, or "the founder is my friend" from a friend; a bio line never counts. Where a network hides the end of a post behind "see more", the disclosure sits above the cut.
 
 **Acceptance.** Through the app, the API and MCP:
 1. An employee's reply naming a product without a disclosure cannot be marked ready; adding the venue's line lets it through.

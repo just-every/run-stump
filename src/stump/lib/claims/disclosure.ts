@@ -16,6 +16,15 @@
 //      that opens "We shipped|launched|released|built <product>" or "We just
 //      shipped|launched|released <product>", with anything after the product's name
 //      (kind "shipped").
+//   4. only for a writer whose recorded connection is friend or family: a fixed statement of
+//      that tie (kind "personal"). <founder> is "the founder", "the founder of <name>" or
+//      "<name>'s founder" (founder, co-founder or cofounder), and <founders> the same in the plural.
+//        friend: "<founder> is my friend", "<founders> are my friends",
+//          "I'm|I am a friend of <founder>|<founders>", "I'm|I am friends with <founder>|<founders>",
+//          "I'm|I am a friend of the <name> team"
+//        family: "My <relative> works at|for|on <name>", "My <relative> is a|an|the <role> at|of|on <name>",
+//          "My <relative> founded|co-founded|cofounded <name>", "<founder> is my <relative>",
+//          "Someone in my family works at|for|on <name>", <relative> one of RELATIVES below
 // A sentence is compared after trimming and collapsing its whitespace, ignoring case,
 // with an optional trailing ". ! …" and an optional leading "Disclosure:" or
 // "Disclosure -". Nothing else counts. A sentence ends at . ! ? or … followed by space
@@ -32,7 +41,7 @@
 import { namePattern, type MentionSet } from './mentions'
 import type { Connection } from './types'
 
-export type DisclosureKind = 'line' | 'statement' | 'shipped'
+export type DisclosureKind = 'line' | 'statement' | 'shipped' | 'personal'
 
 export interface DisclosureMatch {
   kind: DisclosureKind
@@ -60,7 +69,7 @@ export interface DetectDisclosureOptions {
   names?: readonly string[]
   /** The products' names and other names: what "We shipped <product>" names. */
   products?: readonly string[]
-  /** The writer's recorded connection: "We shipped <product>" counts only for a founder or an employee. */
+  /** The writer's recorded connection: "We shipped <product>" counts only for a founder or an employee, a friend's or family member's statement only for them. */
   connection?: Connection | null
   /** Characters visible before "see more" on the network, when it hides the end. */
   cut?: number
@@ -70,6 +79,11 @@ const ROLES = ['founder', 'co-founder', 'cofounder', 'employee', 'engineer', 'de
   'advisor', 'adviser', 'investor', 'owner', 'CEO', 'CTO'] as const
 
 const SHIPPING: readonly Connection[] = ['founder', 'employee']
+
+const RELATIVES = ['wife', 'husband', 'partner', 'spouse', 'fiancé', 'fiancée', 'fiance', 'fiancee', 'brother', 'sister', 'sibling', 'son', 'daughter', 'child',
+  'mother', 'mom', 'mum', 'father', 'dad', 'parent', 'stepmother', 'stepfather', 'stepbrother', 'stepsister', 'grandmother', 'grandfather', 'grandparent',
+  'grandson', 'granddaughter', 'aunt', 'uncle', 'niece', 'nephew', 'cousin', 'brother-in-law', 'sister-in-law', 'son-in-law', 'daughter-in-law',
+  'mother-in-law', 'father-in-law'] as const
 
 interface Sentence { text: string; start: number; end: number }
 
@@ -129,6 +143,46 @@ function statementPattern(names: readonly string[]): RegExp | null {
   ].join('|')})$`, 'iu')
 }
 
+/** Form 4: a friend's or a family member's fixed statement of their tie, naming the founder or one of `names`. */
+function personalPattern(connection: Connection | null | undefined, names: readonly string[]): RegExp | null {
+  if (connection !== 'friend' && connection !== 'family') return null
+  const name = alternation(names)
+  const am = "i(?:'m| am)"
+  const founder = '(?:founder|co-founder|cofounder)', founders = '(?:founders|co-founders|cofounders)'
+  const whose = (who: string) => `(?:the ${who}${name ? `(?: of ${name})?|${name}'s ${who}` : ''})`
+  const forms = connection === 'friend'
+    ? [`${whose(founder)} is my friend`, `${whose(founders)} are my friends`, `${am} (?:a friend of|friends with) (?:${whose(founder)}|${whose(founders)})`,
+      ...(name ? [`${am} a friend of the ${name} team`] : [])]
+    : [`${whose(founder)} is my (?:${RELATIVES.join('|')})`, ...(name ? [
+      `my (?:${RELATIVES.join('|')}) works (?:at|for|on) ${name}`,
+      `my (?:${RELATIVES.join('|')}) is (?:a|an|the) (?:${ROLES.join('|')}) (?:at|of|on) ${name}`,
+      `my (?:${RELATIVES.join('|')}) (?:founded|co-founded|cofounded) ${name}`,
+      `someone in my family works (?:at|for|on) ${name}`,
+    ] : [])]
+  return new RegExp(`^(?:${forms.join('|')})$`, 'iu')
+}
+
+/**
+ * Form 2 with what the tie is for, in up to six words that name no company or product and start no clause of their own: what a
+ * saved disclosure line may say ("Ferrous pays me to help with marketing.", "Ferrous sponsors my newsletter."). A post counts it
+ * only as a saved line, word for word.
+ */
+function purposePattern(names: readonly string[]): RegExp | null {
+  const name = alternation(names)
+  if (!name) return null
+  const am = "i(?:'m| am)"
+  const what = "([\\p{L}\\p{N}'-]+(?: [\\p{L}\\p{N}'-]+){0,5})"
+  return new RegExp(`^(?:${[
+    `${name} (?:pays|paid) me (?:to|for) ${what}`,
+    `${am} paid by ${name} (?:to|for) ${what}`,
+    `i work (?:at|for|on) ${name} as ${what}`,
+    `${name} (?:sponsors|sponsored) my ${what}`,
+  ].join('|')})$`, 'iu')
+}
+
+/** Words that would start a clause of their own inside a purpose ("… to tell you it syncs with Stripe"). */
+const CLAUSE = /(?:^| )(?:it|it's|its|they|they're|their|them|he|she|we|you|that|which|who)(?: |$)/u
+
 /** Form 3: "We shipped Orbit 2.0 …", opening the sentence with one of the products. */
 function shippedPattern(products: readonly string[]): RegExp | null {
   const product = alternation(products)
@@ -156,11 +210,14 @@ export function detectDisclosure(text: string, options: DetectDisclosureOptions 
     }
   }
 
-  // 2. A fixed statement naming the company or a product; 3. "We shipped <product>" from a founder or an employee.
+  // 2. A fixed statement naming the company or a product; 3. "We shipped <product>" from a founder or an employee;
+  // 4. a friend's or a family member's statement of their tie.
   const statement = statementPattern(options.names ?? [])
   const shipped = options.connection && SHIPPING.includes(options.connection) ? shippedPattern(options.products ?? []) : null
+  const personal = personalPattern(options.connection, options.names ?? [])
   sentences.forEach((sentence, i) => {
     const kind: DisclosureKind | null = statement && read[i]!.some(form => statement.test(form)) ? 'statement'
+      : personal && read[i]!.some(form => personal.test(form)) ? 'personal'
       : shipped && read[i]!.some(form => shipped.test(form)) ? 'shipped' : null
     if (kind) matches.push({ kind, text: sentence.text, start: sentence.start, end: sentence.end })
   })
@@ -218,12 +275,17 @@ export function checkDisclosure(input: DisclosureCheckInput): DisclosureCheck {
 }
 
 /**
- * The text says how the writer is connected and nothing else: every one of its sentences is a fixed statement (form 2) naming
- * one of `names`, or one of `lines`.
+ * The text says how the writer is connected and nothing else: every one of its sentences is one of `lines`, a fixed statement
+ * (form 2) naming one of `names`, or such a statement with what the tie is for ("Ferrous pays me to help with marketing.").
  */
 export function statesConnection(text: string, names: readonly string[] = [], lines: readonly string[] = []): boolean {
   const sentences = wholeSentences(text)
   if (!sentences.length) return false
   const found = detectDisclosure(text, { names, lines }).matches
-  return sentences.every(sentence => found.some(match => match.start <= sentence.start && sentence.end <= match.end))
+  const purpose = purposePattern(names), named = alternation(names)
+  const forPurpose = (sentence: Sentence) => !!purpose && readings(sentence.text).some(form => {
+    const what = purpose.exec(form)?.slice(1).find(part => part !== undefined)
+    return what !== undefined && !CLAUSE.test(what) && !(named && new RegExp(`(?<![\\p{L}\\p{N}_])${named}(?![\\p{L}\\p{N}_])`, 'iu').test(what))
+  })
+  return sentences.every(sentence => found.some(match => match.start <= sentence.start && sentence.end <= match.end) || forPurpose(sentence))
 }
