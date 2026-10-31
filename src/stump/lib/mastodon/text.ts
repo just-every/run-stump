@@ -131,12 +131,21 @@ export function checkPoll(poll: NonNullable<StatusDraft['poll']>, info: Instance
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
+/** Every tag removed, repeating until none is left, so removing one tag never joins its neighbours into another. */
+function stripTags(text: string): string {
+  let previous: string;
+  do {
+    previous = text;
+    text = text.replace(/<[^>]+>/g, '');
+  } while (text !== previous);
+  return text;
+}
+
 /** Mastodon content is HTML: paragraphs and line breaks become newlines, tags drop, entities decode. */
 export function htmlToText(html: string): string {
-  return html
+  return stripTags(html
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n'))
     .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
       if (e[0] === '#') {
         const cp = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);

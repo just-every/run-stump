@@ -22,6 +22,9 @@ after(() => app?.stop())
 const ok = async promise => { const answer = await promise; assert.equal(answer.error, null, JSON.stringify(answer.error)); return answer.result.structuredContent }
 const manage = args => ok(app.mcp(token, 'stump.watches.manage', args))
 const findings = id => ok(app.mcp(token, 'stump.findings.work', { action: 'list', watch_id: id }))
+const hostOf = url => new URL(url).hostname
+const onDomain = (url, domain) => hostOf(url) === domain || hostOf(url).endsWith(`.${domain}`)
+const atHost = (url, host) => new URL(url).protocol === 'https:' && hostOf(url) === host
 const classesOf = answer => answer.result?._meta?.['com.runeditrun/decision']?.classes?.map(item => item.class).sort().join(',')
 
 test('watches over Hacker News, feeds, Bluesky and Mastodon find threads once, rank them with reasons, alert Slack and a signed webhook, replay the event, and mute', async () => {
@@ -100,7 +103,7 @@ test('watches over Hacker News, feeds, Bluesky and Mastodon find threads once, r
   const at = part => items.find(item => item.url.includes(part))
   assert.ok(at('orbit-crm-small-team') && at('atom-orbit-crm') && at('podcast.example.test/ep12') && !at('ep11') && !at('/release'), 'matching items arrive with title, link and author; others do not')
   assert.equal(items.filter(item => item.url.includes('orbit-crm-small-team')).length, 1, 'an item reached through two feeds is one finding')
-  assert.ok(at('news.example.test/orbit-crm-review') && !items.some(item => item.url.includes('google.com')), 'a Google Alerts item links to the alerted page')
+  assert.ok(at('news.example.test/orbit-crm-review') && !items.some(item => onDomain(item.url, 'google.com')), 'a Google Alerts item links to the alerted page')
   assert.equal(at('ep12').transcript_url, `${F}/ep12.vtt`, 'a transcript match links the episode')
   assert.ok(at('ep12').reason_details.some(reason => reason.factor === 'matched_terms' && reason.points > 0 && /episode transcript/.test(reason.label)), 'and is credited with the match')
   assert.ok(items.every(item => !/[<>]|onerror|onclick/i.test(item.text + item.title)), 'markup in a feed item reaches no screen as HTML')
@@ -133,10 +136,10 @@ test('watches over Hacker News, feeds, Bluesky and Mastodon find threads once, r
   const grown = await manage({ action: 'create', name: 'Grown', terms: { all: ['orbit', 'crm'] }, sources: [{ kind: 'hn' }] })
   fake.state.requests.length = 0
   const added = await manage({ action: 'add_source', watch_id: grown.id, source: { kind: 'bluesky' } })
-  assert.ok(added.poll.added > 0 && fake.state.requests.every(request => request.startsWith('https://api.bsky.app')), 'adding a source backfills that source only')
+  assert.ok(added.poll.added > 0 && fake.state.requests.every(request => atHost(request, 'api.bsky.app')), 'adding a source backfills that source only')
   fake.state.requests.length = 0
   assert.equal((await manage({ action: 'backfill', watch_id: grown.id, source: 'bluesky' })).added, 0, 'a second backfill adds no duplicates')
-  assert.ok(fake.state.requests.length && fake.state.requests.every(request => request.startsWith('https://api.bsky.app')), 'a backfill naming a source reads that source only')
+  assert.ok(fake.state.requests.length && fake.state.requests.every(request => atHost(request, 'api.bsky.app')), 'a backfill naming a source reads that source only')
   assert.equal((await app.mcp(token, 'stump.watches.manage', { action: 'backfill', watch_id: grown.id, source: { kind: 'rss', url: `${F}/blog.xml` } })).error?.code, 'not_found', 'and refuses a source the watch does not follow')
   const count = (await findings(grown.id)).total
   await manage({ action: 'update', watch_id: grown.id, terms: { all: ['orbit', 'crm', 'recommendations'] } })

@@ -42,8 +42,14 @@ export function transcriptFormat(type: string, url: string, body?: string): Tran
   return 'text'
 }
 
+/** A cue's spoken words: every timing, voice or style tag removed, repeating until none is left. */
 function cueText(line: string): string {
-  return decodeEntities(line.replace(/<[^>]*>/g, '').replace(/\{\\[^}]*\}/g, '')).trim()
+  let text = line, previous: string
+  do {
+    previous = text
+    text = text.replace(/<[^>]*>/g, '').replace(/\{\\[^}]*\}/g, '')
+  } while (text !== previous)
+  return decodeEntities(text).trim()
 }
 
 /** Join cue lines into running text, dropping immediate repeats (rolling auto-captions repeat lines). */

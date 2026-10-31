@@ -7,6 +7,7 @@ import { stump } from './instance.mjs'
 // none reached Reddit. Everything else runs through Stump's own doors.
 const AI = 'https://ai.synthetic-stump.example'
 const seen = []
+const toAi = url => new URL(url).origin === AI
 const posts = new Map()
 const handles = new Map([['someone.bsky.social', 'did:plc:someone'], ['maya.synthetic.bsky.social', 'did:plc:maya']])
 async function edge(request) {
@@ -86,13 +87,13 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
   // Where AI text is banned, asking for a draft gets the brief: no AI call, talking points and facts, and someone not yet a member joins first.
   const asked = seen.length
   const brief = ok(await prepare('owner', { venue_id: noAi.id, person_id: maya.id, due_at: new Date(week(1)).toISOString(), generate: true }))
-  assert.ok(!seen.slice(asked).some(url => url.startsWith(AI)))
+  assert.ok(!seen.slice(asked).some(toAi))
   assert.equal(brief.state, 'join_first'); assert.equal(brief.draft_text, null); assert.ok(brief.talking_points.length && brief.join_steps.length && brief.own_words_required)
   assert.equal(brief.history[0].detail.text_not_used.rule, 'D-3')
   // A friend recommending the product gets talking points only and must attest, with no AI call.
   const friend = ok(await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(2) + 2 * DAY).toISOString(), recommends: true, generate: true }))
   assert.equal(friend.attestation_required, true); assert.equal(friend.draft_text, null); assert.equal(friend.history[0].detail.text_not_used.rule, 'D-8')
-  assert.ok(!seen.slice(asked).some(url => url.startsWith(AI)))
+  assert.ok(!seen.slice(asked).some(toAi))
   // The venue's shared limit counts across people and products: a full week holds the hand-off with the next open date.
   const full = ok(await prepare('owner', { venue_id: subreddit.id, person_id: priya.id, thread_url: thread, due_at: new Date(week(1) + 4 * DAY).toISOString() }))
   assert.deepEqual([full.state, full.hold.rule, full.next_open_at], ['held', 'shared_limit', new Date(week(3)).toISOString()])
