@@ -57,7 +57,7 @@ async function oneVoicePerThread(ctx: ActionContext, action: string, row: FullIt
     WHERE a.owner_kind='person' AND a.owner_person_id=? AND i.account_id<>? AND i.state IN ('posted','partly_posted','scheduled','posting','uncertain')
       AND (i.url=? OR json_extract(i.reply_to,'$.url')=?) ORDER BY COALESCE(i.posted_at,i.scheduled_at) LIMIT 1`)
     .bind(account.owner_person_id, account.id, thread, thread).first<{ url: string | null }>()
-  if (first) await refuseAct(ctx, TOOL, action, { rule: 'D-1', source: 'STUMP-TRUTH-001' }, { thread_url: thread, first_post: first.url ?? thread, account_id: account.id })
+  if (first) await refuseAct(ctx, TOOL, action, { rule: 'D-1', source: 'STUMP-TRUTH-001' }, { account_id: account.id }, { thread_url: thread, first_post: first.url ?? thread })
 }
 
 const xStatusId = (url: string) => /\/status(?:es)?\/(\d{1,19})/.exec(url)?.[1] ?? null

@@ -1,19 +1,30 @@
 // Erasure of a person outside the company (STUMP-DATA-002): a journalist by
 // their press contact, or an engager by their handles. Their personal data
 // leaves press contacts, pitches (which keep an anonymised reference),
-// journalist venues, findings and their alerts, the inbox items they wrote and
-// offers to send them to Orbit. Each of the company's posts that names them is asked to be
-// deleted at its network through that network's publisher, and the answer for
+// journalist venues and what the venue-list import keeps of them, findings and
+// their alerts, the inbox items they wrote, offers to send them to Orbit, and the
+// copies of their data the agent door and the refusal records hold. A finding's
+// address and the person's handle on each source stay as digests, so no later
+// poll brings them back. Each of the company's posts that names them is asked to
+// be deleted at its network through that network's publisher, and the answer for
 // each ledger entry comes back with its outcome; an entry under legal hold is
-// kept and named as kept. The erasure is audited by counts and outcomes only.
+// kept and named as kept. What was already sent to Orbit is listed so it can be
+// erased there too. The erasure is audited by counts, outcomes and references only.
 import { xPrices } from '../accounts/apps.ts'
 import { readAccount } from '../accounts/store.ts'
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args } from '../actions/types.ts'
+import type { D1Sql } from '../../modules/import-kit/src/d1/index.ts'
 import { publishers } from '../publish/publishers.ts'
+import { fullNameMatcher, nameMatcher, nameParts, pitchStatements } from './anonymise.ts'
+import { eraseWithImportCustody, holdsImports, importedVenues, rekeyVenue } from './import-custody.ts'
 import { recheckItems } from './recheck.ts'
 import { erasureRemoval } from './removal.ts'
+import { handleWords, residueStatements, type Trace } from './residue.ts'
+import { FINDING_SOURCES, tombstoneStatements, type ErasedFinding } from './tombstones.ts'
 import type { PublishContext, Publisher } from '../publish/types.ts'
+
+const sql = (text: string, ...params: unknown[]): D1Sql => ({ sql: text, params })
 
 export type SubjectKind = 'journalist' | 'engager'
 /** Where a handle names a person: the networks Stump publishes to and the sources findings come from. */
@@ -44,7 +55,7 @@ type Remove = (entry: { network: string; account_id: string; network_id: string 
 export interface EngagerData {
   name: string
   count(db: D1Database, handles: Handles): Promise<number>
-  remove(db: D1Database, handles: Handles): D1PreparedStatement[]
+  remove(handles: Handles): D1Sql[]
 }
 
 /** The inbox rows an engager wrote, each matched on its own network by the author's handle without '@' or case. */
@@ -60,11 +71,11 @@ const ENGAGER_DATA: readonly EngagerData[] = [{
     const { where, binds } = inboxMatch(handles)
     return (await db.prepare(`SELECT COUNT(*) AS n FROM stump_inbox_items WHERE ${where}`).bind(...binds).first<{ n: number }>())?.n ?? 0
   },
-  remove(db, handles) {
+  remove(handles) {
     const { where, binds } = inboxMatch(handles)
     return [
-      db.prepare(`DELETE FROM stump_stack_offers WHERE id IN (SELECT offer_id FROM stump_inbox_items WHERE offer_id IS NOT NULL AND (${where}))`).bind(...binds),
-      db.prepare(`DELETE FROM stump_inbox_items WHERE ${where}`).bind(...binds),
+      sql(`DELETE FROM stump_stack_offers WHERE id IN (SELECT offer_id FROM stump_inbox_items WHERE offer_id IS NOT NULL AND (${where}))`, ...binds),
+      sql(`DELETE FROM stump_inbox_items WHERE ${where}`, ...binds),
     ]
   },
 }]
@@ -127,6 +138,9 @@ function namesOnNetwork(network: string, handles: string[], post: { text: string
   return false
 }
 
+/** An offer of the person that already went to a seed: Orbit keeps the contact, so it is erased there too. */
+export interface SentOffer { offer_id: string; seed: string; sent_at: string | null; event_id: string | null; signal_id: string | null }
+
 /** Every record the erasure touches, found before anything changes. */
 export interface Scope {
   subject: Subject
@@ -136,6 +150,9 @@ export interface Scope {
   findings: string[]
   deliveries: number
   offers: string[]
+  /** The inbox items they wrote and the offers linked from them, which leave with them. */
+  inbox: { items: string[]; offers: string[] }
+  sent: SentOffer[]
   /** Records in the other engager sources, by source name. */
   other: Record<string, number>
   entries: Named[]
@@ -145,7 +162,7 @@ const namePattern = (name: string) => new RegExp(`(^|[^\\p{L}\\p{N}])${escape(na
 
 export async function scopeOf(ctx: ActionContext, subject: Subject): Promise<Scope> {
   const db = ctx.db
-  const scope: Scope = { subject, contact: null, pitches: [], venues: [], findings: [], deliveries: 0, offers: [], other: {}, entries: [] }
+  const scope: Scope = { subject, contact: null, pitches: [], venues: [], findings: [], deliveries: 0, offers: [], inbox: { items: [], offers: [] }, sent: [], other: {}, entries: [] }
   // The company's posts on the ledger that could name the person: what went out, published or handed off, and is not yet gone.
   const entries = (await db.prepare(`SELECT l.id,l.network,l.account_id,l.network_id,l.route,l.person_id,l.legal_hold,l.text,l.url,i.reply_to,i.recipient FROM stump_ledger l LEFT JOIN stump_items i ON i.id=l.item_id
     WHERE l.route IN ('published','handed_off') AND l.state IN ('posted','uncertain') ORDER BY l.posted_at,l.id`)
@@ -155,8 +172,16 @@ export async function scopeOf(ctx: ActionContext, subject: Subject): Promise<Sco
     const contact = await db.prepare('SELECT id,name FROM stump_press_contacts WHERE id=?').bind(subject.contact_id).first<{ id: string; name: string }>()
     if (!contact) refuse('not_found', { contact_id: subject.contact_id })
     scope.contact = contact
-    scope.pitches = (await db.prepare("SELECT id FROM stump_items WHERE json_extract(recipient,'$.contact_id')=? ORDER BY id").bind(contact.id).all<{ id: string }>()).results.map(row => row.id)
     scope.venues = (await db.prepare("SELECT id FROM stump_venues WHERE kind='journalist' AND lower(trim(name))=lower(trim(?)) ORDER BY id").bind(contact.name).all<{ id: string }>()).results.map(row => row.id)
+    // Pitches to the contact, everything aimed at their venue, and imported entries that name them.
+    const marks = scope.venues.map(() => '?').join(',')
+    const pitches = new Set((await db.prepare(`SELECT id FROM stump_items WHERE json_extract(recipient,'$.contact_id')=?${scope.venues.length ? ` OR venue_id IN (${marks})` : ''}`)
+      .bind(contact.id, ...scope.venues).all<{ id: string }>()).results.map(row => row.id))
+    const whole = fullNameMatcher(contact.name), last = nameParts(contact.name).at(-1)?.toLowerCase()
+    if (last) for (const row of (await db.prepare('SELECT item_id,value_json FROM stump_item_imports WHERE instr(lower(value_json),?)>0').bind(last).all<{ item_id: string; value_json: string }>()).results) {
+      if (whole.test(row.value_json)) pitches.add(row.item_id)
+    }
+    scope.pitches = [...pitches].sort()
     const named = namePattern(contact.name)
     names = entry => (entry.text !== null && named.test(entry.text)) || (entry.recipient !== null && (JSON.parse(entry.recipient) as { contact_id?: string }).contact_id === contact.id)
   } else {
@@ -177,6 +202,17 @@ export async function scopeOf(ctx: ActionContext, subject: Subject): Promise<Sco
       scope.offers.push(...(await db.prepare(`SELECT id FROM stump_stack_offers WHERE kind='engager' AND network=? AND lower(ltrim(trim(handle),'@')) IN (${marks}) ORDER BY id`).bind(network, ...list).all<{ id: string }>()).results.map(row => row.id))
     }
     for (const source of ENGAGER_DATA) scope.other[source.name] = await source.count(db, handles)
+    const { where, binds } = inboxMatch(handles)
+    const inbox = (await db.prepare(`SELECT id,offer_id FROM stump_inbox_items WHERE ${where}`).bind(...binds).all<{ id: string; offer_id: string | null }>()).results
+    scope.inbox = { items: inbox.map(row => row.id), offers: inbox.map(row => row.offer_id).filter((id): id is string => id !== null) }
+    // What already went to a seed: the seed keeps the contact, so the operator erases it there too.
+    const offered = [...new Set([...scope.offers, ...scope.inbox.offers])]
+    if (offered.length) {
+      scope.sent = (await db.prepare(`SELECT id,seed,sent_at,json_extract(outcome,'$.detail.event_id') AS event_id,json_extract(outcome,'$.detail.orbit_signal_id') AS signal_id
+        FROM stump_stack_offers WHERE state='sent' AND id IN (${offered.map(() => '?').join(',')}) ORDER BY sent_at,id`).bind(...offered)
+        .all<{ id: string; seed: string; sent_at: number | null; event_id: string | null; signal_id: string | null }>()).results
+        .map(row => ({ offer_id: row.id, seed: row.seed, sent_at: row.sent_at === null ? null : new Date(row.sent_at).toISOString(), event_id: row.event_id, signal_id: row.signal_id }))
+    }
     names = entry => entry.network !== null && namesOnNetwork(entry.network, on(handles, entry.network),
       { text: entry.text, url: entry.url, reply_url: entry.reply_to === null ? null : String((JSON.parse(entry.reply_to) as { url?: string }).url ?? '') })
   }
@@ -204,6 +240,18 @@ async function requestDeletion(ctx: ActionContext, entry: Named): Promise<Deleti
   return { ...answer, outcome: result.outcome, ...(result.error ? { error: result.error } : {}) }
 }
 
+/** What names the person in stored copies: the ids of their erased records, and their handles or their name. */
+function traceOf(scope: Scope): Trace {
+  if (scope.contact) {
+    const parts = nameParts(scope.contact.name)
+    return { ids: [scope.contact.id], words: new RegExp(nameMatcher(scope.contact.name).source, 'iu'), needles: [scope.contact.id, ...parts].map(text => text.toLowerCase()) }
+  }
+  const handles = Object.values(scope.subject.handles).flat()
+  const ids = [...scope.findings, ...scope.offers, ...scope.inbox.items, ...scope.inbox.offers]
+  const forms = handles.flatMap(handle => { const at = handle.indexOf('@'); return at > 0 ? [handle, handle.slice(0, at)] : [handle] })
+  return { ids, words: handleWords(handles), needles: [...new Set([...ids, ...forms].map(text => text.toLowerCase()))] }
+}
+
 export async function erase(ctx: ActionContext, scope: Scope) {
   const db = ctx.db, id = crypto.randomUUID()
   const deletion_requests: DeletionRequest[] = []
@@ -217,39 +265,56 @@ export async function erase(ctx: ActionContext, scope: Scope) {
     }
   }
 
-  const now = ctx.now(), statements: D1PreparedStatement[] = []
+  const now = ctx.now(), statements: D1Sql[] = []
   const list = (ids: string[]) => ids.map(() => '?').join(',')
+  let imported: Array<{ venue_id: string; target_id: string }> = []
   if (scope.contact) {
-    const name = scope.contact.name, reference = JSON.stringify({ contact_id: null, name: null, route: null, erased: `erasure:${id}` })
-    // Pitches keep their text with the journalist's name taken out, and an anonymised reference in place of the contact.
-    statements.push(db.prepare('DELETE FROM stump_press_contacts WHERE id=?').bind(scope.contact.id))
-    for (const item of scope.pitches) {
-      statements.push(
-        db.prepare(`UPDATE stump_items SET recipient=json_patch(recipient,?),text=replace(text,?,'[name erased]'),subject=replace(subject,?,'[name erased]') WHERE id=?`).bind(reference, name, name, item),
-        db.prepare("UPDATE stump_item_revisions SET text=replace(text,?,'[name erased]') WHERE item_id=?").bind(name, item))
-    }
+    const reference = { contact_id: null, name: null, route: null, erased: `erasure:${id}` }
+    imported = await importedVenues(db, scope.venues)
+    // Pitches keep their text with every form of the journalist's name taken out, and an anonymised reference in place of the contact.
+    statements.push(sql('DELETE FROM stump_press_contacts WHERE id=?', scope.contact.id), ...await pitchStatements(db, scope.pitches, nameMatcher(scope.contact.name), reference))
     for (const venue of scope.venues) {
-      statements.push(db.prepare(`UPDATE stump_venues SET name=?,url=NULL,url_key=NULL,details='{}',audience=NULL,why=NULL,reader_value=NULL,notes=NULL,archived=1,archived_at=?,archived_by=?,
-        revision=revision+1,updated_at=? WHERE id=?`).bind(`Erased journalist ${venue.slice(0, 8)}`, now, ctx.person.id, now, venue),
-      db.prepare("DELETE FROM stump_venue_history WHERE venue_id=? AND action<>'erased'").bind(venue),
-      db.prepare("INSERT INTO stump_venue_history(id,venue_id,action,person_id,agent_id,detail,at) VALUES(?,?,'erased',?,?,?,?)").bind(crypto.randomUUID(), venue, ctx.person.id, ctx.agent?.id ?? null, JSON.stringify({ erasure_id: id }), now))
+      statements.push(sql(`UPDATE stump_venues SET name=?,url=NULL,url_key=NULL,platform=NULL,details='{}',audience=NULL,why=NULL,reader_value=NULL,notes=NULL,rules='{}',shared_limit=NULL,
+        excluded=NULL,how_to_post='{}',requirements='{}',reception=NULL,archived=1,archived_at=?,archived_by=?,revision=revision+1,updated_at=? WHERE id=?`, `Erased journalist ${venue.slice(0, 8)}`, now, ctx.person.id, now, venue),
+      sql("DELETE FROM stump_venue_history WHERE venue_id=? AND action<>'erased'", venue),
+      sql("INSERT INTO stump_venue_history(id,venue_id,action,person_id,agent_id,detail,at) VALUES(?,?,'erased',?,?,?,?)", crypto.randomUUID(), venue, ctx.person.id, ctx.agent?.id ?? null, JSON.stringify({ erasure_id: id }), now))
     }
+    // What the list import wrote becomes Stump's own: an Undo leaves the anonymised venue and pitches alone.
+    if (scope.venues.length) statements.push(sql(`DELETE FROM stump_venue_imports WHERE venue_id IN (${list(scope.venues)})`, ...scope.venues))
+    if (scope.pitches.length) statements.push(sql(`DELETE FROM stump_item_imports WHERE item_id IN (${list(scope.pitches)})`, ...scope.pitches))
+    // The first venue the import wrote takes a new id, so the import's own target for it is erased (and refused if uploaded again).
+    if (imported[0]) statements.push(...rekeyVenue(imported[0].venue_id))
+  }
+  if (scope.subject.kind === 'engager') {
+    // Digests of each erased finding's address and of the person's handle on each source keep them out of later polls.
+    const found = scope.findings.length ? (await db.prepare(`SELECT url_key,source,json_extract(raw,'$.author_id') AS author_id FROM stump_findings WHERE id IN (${list(scope.findings)})`)
+      .bind(...scope.findings).all<ErasedFinding>()).results : []
+    statements.push(...await tombstoneStatements(id, found, FINDING_SOURCES.flatMap(source => on(scope.subject.handles, source).map(handle => ({ source, handle })))))
   }
   if (scope.findings.length) {
-    statements.push(db.prepare(`DELETE FROM stump_watch_deliveries WHERE finding_id IN (${list(scope.findings)})`).bind(...scope.findings),
-      db.prepare(`DELETE FROM stump_findings WHERE id IN (${list(scope.findings)})`).bind(...scope.findings))
+    statements.push(sql(`DELETE FROM stump_watch_deliveries WHERE finding_id IN (${list(scope.findings)})`, ...scope.findings),
+      sql(`DELETE FROM stump_findings WHERE id IN (${list(scope.findings)})`, ...scope.findings))
   }
-  if (scope.offers.length) statements.push(db.prepare(`DELETE FROM stump_stack_offers WHERE id IN (${list(scope.offers)})`).bind(...scope.offers))
-  if (scope.subject.kind === 'engager') for (const source of ENGAGER_DATA) statements.push(...source.remove(db, scope.subject.handles))
-  const counts = { ...scope.other, press_contacts: scope.contact ? 1 : 0, pitches_anonymised: scope.pitches.length, venues_anonymised: scope.venues.length, findings: scope.findings.length,
-    alert_deliveries: scope.deliveries, offers: scope.offers.length, ledger_entries: scope.entries.length }
-  // The audit names the kind of person and the counts, never who they were.
+  if (scope.offers.length) statements.push(sql(`DELETE FROM stump_stack_offers WHERE id IN (${list(scope.offers)})`, ...scope.offers))
+  if (scope.subject.kind === 'engager') for (const source of ENGAGER_DATA) statements.push(...source.remove(scope.subject.handles))
+  const residue = await residueStatements(db, traceOf(scope), id)
+  statements.push(...residue.statements)
+  const counts: Record<string, number> = { ...scope.other, press_contacts: scope.contact ? 1 : 0, pitches_anonymised: scope.pitches.length, venues_anonymised: scope.venues.length, findings: scope.findings.length,
+    alert_deliveries: scope.deliveries, offers: scope.offers.length, ledger_entries: scope.entries.length, sent_to_seeds: scope.sent.length,
+    agent_records: residue.agent_records, refusal_records: residue.refusal_records, import_records: 0 }
+  // The audit names the kind of person, the counts and references, never who they were.
   const audited = deletion_requests.map(({ ledger_id, network, outcome }) => ({ ledger_id, network, outcome }))
-  statements.push(db.prepare('INSERT INTO stump_erasures(id,kind,person_id,agent_id,counts,deletion_requests,at) VALUES(?,?,?,?,?,?,?)')
-    .bind(id, scope.subject.kind, ctx.person.id, ctx.agent?.id ?? null, JSON.stringify(counts), JSON.stringify(audited), now))
-  await db.batch(statements)
+  const sent_to_seeds = scope.sent.map(sent => ({ ...sent, outcome: 'manual' as const }))
+  statements.push(sql('INSERT INTO stump_erasures(id,kind,person_id,agent_id,counts,deletion_requests,sent_to_seeds,at) VALUES(?,?,?,?,?,?,?,?)',
+    id, scope.subject.kind, ctx.person.id, ctx.agent?.id ?? null, JSON.stringify(counts), JSON.stringify(audited), JSON.stringify(sent_to_seeds), now))
+  if (scope.contact && await holdsImports(db)) {
+    // The list import's copies of the journalist leave in the same batch as everything above.
+    const retired = await eraseWithImportCustody(ctx, id, { name: scope.contact.name, venueTargets: imported.map(venue => venue.target_id) }, statements, imported[0]?.target_id ?? null)
+    counts.import_records = retired.recordsErased
+    await db.prepare('UPDATE stump_erasures SET counts=? WHERE id=?').bind(JSON.stringify(counts), id).run()
+  } else await db.batch(statements.map(statement => db.prepare(statement.sql).bind(...statement.params ?? [])))
   // A pitch's flags quote its sentences: checked again, they hold the text as it is now.
   await recheckItems(db, scope.pitches, now)
   ctx.emit('person.erased', `stump://erasures/${id}`, { kind: scope.subject.kind })
-  return { erasure_id: id, kind: scope.subject.kind, removed: counts, deletion_requests }
+  return { erasure_id: id, kind: scope.subject.kind, removed: counts, deletion_requests, sent_to_seeds }
 }

@@ -37,7 +37,9 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
     const properties = tool.inputSchema.properties ?? {}
     const declared = Object.fromEntries(Object.entries(raw ?? {}).filter(([key]) => Object.hasOwn(properties, key)))
     row.ignored_arguments = Object.keys(raw ?? {}).filter(key => !Object.hasOwn(properties, key)).sort()
-    const key = !tool.readOnly && typeof raw?.idempotency_key === 'string' && raw.idempotency_key.length > 0 && raw.idempotency_key.length <= 200 && !raw.idempotency_key.includes('\0') ? raw.idempotency_key : null
+    // A call that only reads (a read-only tool, or a read action of a tool that also writes) claims no key and keeps no result.
+    const reads = tool.readOnly || tool.readsFor?.(declared) === true
+    const key = !reads && typeof raw?.idempotency_key === 'string' && raw.idempotency_key.length > 0 && raw.idempotency_key.length <= 200 && !raw.idempotency_key.includes('\0') ? raw.idempotency_key : null
     row.idempotency_key = key
     const operation = operationId === undefined ? undefined : await resumeOperation(rt, operationId, principal, key)
     const approvers = operation?.approvers ?? []
@@ -86,7 +88,7 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
       try { await nativeTarget(tool, sent, ctx) } catch (cause) { if (cause instanceof ToolRefusal) throw cause }
       return refuse('invalid_arguments', field === undefined ? undefined : { field })
     }
-    if (!tool.readOnly && !key) return refuse('idempotency_key_required')
+    if (!reads && !key) return refuse('idempotency_key_required')
     if (tool.widens === false && row.ignored_arguments.length) return refuse('invalid_arguments')
     if (tool.authority === 'none' && row.ignored_arguments.length) return refuse('undeclared_arguments')
     // A tool that closes its input schema (additionalProperties: false) refuses an argument it does not declare, naming it, instead of dropping it.
@@ -94,7 +96,7 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
     if (undeclared.length) return await refuseArguments(undeclared[0])
     let previous: { outcome: string | null; decision_id: string } | undefined
     const requestDigest = await digest({ name, arguments: declared, ...(principal.clientId === undefined ? {} : { client_id: principal.clientId }) })
-    if (tool.readOnly && requestState !== undefined) {
+    if (reads && requestState !== undefined) {
       if (typeof requestState !== 'string') return refuse('invalid_arguments')
       const pending = await rt.options.db.prepare("SELECT saved FROM agent_door_approvals WHERE json_extract(saved,'$.result.requestState')=?").bind(requestState).first<{ saved: string }>()
       const saved = pending ? JSON.parse(pending.saved) : null
@@ -114,7 +116,7 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
     const cached = previous?.outcome ? await approvalReplay(rt, JSON.parse(previous.outcome)) : undefined
     // Completed mutations retain their effect evidence after preparation is
     // consumed. Native classification must still admit the current sponsor.
-    const completed = !tool.readOnly && cached?.outcome === 'done'
+    const completed = !reads && cached?.outcome === 'done'
     let original: AuditRow | undefined
     if (completed) {
       const saved = await rt.options.db.prepare('SELECT row FROM agent_door_audit WHERE id=?').bind(previous!.decision_id).first<{ row: string }>()
@@ -155,7 +157,7 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
       await recoverAudit(rt, previous.decision_id, JSON.parse(previous.outcome))
       const original = await rt.options.db.prepare('SELECT row FROM agent_door_audit WHERE id=?').bind(previous.decision_id).first<{ row: string }>()
       row.operation_id = original ? JSON.parse(original.row).operation_id ?? previous.decision_id : previous.decision_id
-      if (tool.readOnly && cached.outcome === 'done') {
+      if (reads && cached.outcome === 'done') {
         // Aggregate visibility can live inside the native read rather than its
         // target/classifier. A retained approval cannot authorize old rows.
         // Start without cached content so a native refusal cannot expose it.

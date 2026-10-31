@@ -8,6 +8,7 @@ import { CORRECTABLE, currentVersion, holdsCurrent, type Correctable } from './e
 import { one } from './query.ts'
 
 const link = (value: string) => { try { return ['http:', 'https:'].includes(new URL(value).protocol) } catch { return false } }
+const REMOVABLE = ['posted', 'uncertain']
 const actor = (ctx: ActionContext) => ({ person_id: ctx.person.id, agent_id: ctx.agent?.id ?? null })
 
 /**
@@ -39,19 +40,43 @@ export async function correct(args: Args, ctx: ActionContext) {
   return (await one(ctx, id)).entry
 }
 
-const REMOVABLE = ['posted', 'uncertain']
+/** The company account and its publisher when removing the entry deletes its post at the network; null when it only records a removal. */
+export async function networkDelete(ctx: Pick<ActionContext, 'db'>, row: Record<string, unknown>) {
+  if (row.route !== 'published' || typeof row.account_id !== 'string' || typeof row.network_id !== 'string') return null
+  const account = await readAccount(ctx.db, row.account_id)
+  if (account?.owner_kind !== 'company') return null
+  const publisher = publishers[account.network]
+  return publisher ? { account, publisher, network_id: row.network_id } : null
+}
+
+/** A legal hold keeps the post at its network: the company's own delete is refused while the hold stands, as an erasure keeps it. */
+export function heldAtNetwork(row: Record<string, unknown>) {
+  if (!row.legal_hold) return
+  const hold = JSON.parse(String(row.legal_hold)) as { reason?: string }
+  refuse('conflict', { entry_id: String(row.id), reason: 'The entry is under legal hold, so its post stays at the network.', legal_hold: hold.reason ?? null })
+}
+
+/**
+ * What removing an entry computes: deleting the company's own post at its network is
+ * destructive and external (the public), one post; recording a removal a venue made is standard.
+ */
+export async function removalClasses(args: Args, ctx: ActionContext) {
+  const { row } = await one(ctx, String(args.entry_id))
+  if (!REMOVABLE.includes(String(row.state)) || !await networkDelete(ctx, row)) return [{ class: 'standard' as const, facts: { measure: 1 } }]
+  heldAtNetwork(row)
+  return [{ class: 'destructive' as const, facts: { measure: 1 } }, { class: 'external' as const, facts: { measure: 1, counterparty: 'public' } }]
+}
 
 /**
  * Where the company's own account posted the entry, Stump deletes the post at the network
  * first; a network that refuses leaves the entry as it was, and says why.
  */
 async function deleteAtNetwork(ctx: ActionContext, row: Record<string, unknown>): Promise<(RemoveOutcome & { at: string }) | null> {
-  if (row.route !== 'published' || typeof row.account_id !== 'string' || typeof row.network_id !== 'string') return null
-  const account = await readAccount(ctx.db, row.account_id)
-  if (account?.owner_kind !== 'company') return null
-  const publisher = publishers[account.network]
-  if (!publisher) return null
-  const answer = await publisher.remove({ network: account.network, account_id: account.id, network_id: row.network_id }, { db: ctx.db, env: ctx.env, account, prices: await xPrices(ctx.db), now: ctx.now })
+  const target = await networkDelete(ctx, row)
+  if (!target) return null
+  heldAtNetwork(row)
+  const { account, publisher, network_id } = target
+  const answer = await publisher.remove({ network: account.network, account_id: account.id, network_id }, { db: ctx.db, env: ctx.env, account, prices: await xPrices(ctx.db), now: ctx.now })
   if (answer.outcome === 'failed') refuse('network_refused', { entry_id: String(row.id), network: account.network, outcome: 'failed', message: answer.error ?? 'The network did not delete the post.' })
   return { ...answer, at: new Date(ctx.now()).toISOString() }
 }

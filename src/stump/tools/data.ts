@@ -30,7 +30,7 @@ async function scope(args: Args, ctx: ActionContext): Promise<Scope> {
 
 export const dataTools: StumpTool[] = [{
   name: 'stump.data.erase', title: 'Erase a person',
-  description: 'Erase a journalist or an engager: their record, contact route, findings, inbox items and offers leave Stump, pitches keep an anonymised reference, and each of the company\'s posts that names them is asked to be deleted at its network, answered with its outcome. An entry under legal hold is kept.',
+  description: 'Erase a journalist or an engager: their record, contact route, findings, inbox items and offers leave Stump (later polls do not collect them again), pitches keep an anonymised reference, and each of the company\'s posts that names them is asked to be deleted at its network, answered with its outcome. An entry under legal hold is kept. Offers already sent to Orbit are listed, to be erased there too.',
   scope: 'stump:data', classes: ['destructive', 'sensitive', 'external'], clauses: ['STUMP-DATA-002', 'STUMP-SURFACE-008', 'STUMP-SURFACE-015'],
   actions: {
     erase: {
@@ -48,7 +48,8 @@ export const dataTools: StumpTool[] = [{
       // What an approver sees names the kind of person and the counts, never who they are.
       async summary(args, ctx) {
         const read = await scope(args, ctx)
-        return { target: { name: `Erase a ${read.subject.kind}: ${removedCount(read)} records, ${read.entries.length} posts naming them` } }
+        const sent = read.sent.length ? `, ${read.sent.length} already sent to Orbit (erase them there too)` : ''
+        return { target: { name: `Erase ${read.subject.kind === 'engager' ? 'an' : 'a'} ${read.subject.kind}: ${removedCount(read)} records, ${read.entries.length} posts naming them${sent}` } }
       },
       async run(args, ctx) { return erase(ctx, await scope(args, ctx)) },
     },

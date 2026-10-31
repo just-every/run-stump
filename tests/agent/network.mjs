@@ -5,7 +5,8 @@
 // - X API v2: the OAuth 2.0 token exchange and the account read, so the
 //   journey connects the company's X account through its own app; the
 //   account's mentions timeline, where a member mentions it twice more on
-//   every read; and post creation and read-back, so a reply posts and reads back;
+//   every read; post creation and read-back, so a reply posts and reads back;
+//   and post deletion, so the company removes its own post;
 // - Bluesky's public AppView: a handle resolved to its DID (a did:web naming the
 //   handle's host), and a post thread read by that DID's at-URI, so the journey
 //   records a hand-off's link checked with the network.
@@ -52,6 +53,7 @@ async function x(request, url) {
     return json({ data: { id: post.id, text: post.text, edit_history_tweet_ids: post.edit_history_tweet_ids } }, 201)
   }
   const read = /^\/2\/tweets\/(\d+)$/.exec(url.pathname)
+  if (read && request.method === 'DELETE') return posts.delete(read[1]) ? json({ data: { deleted: true } }) : json({ title: 'Not Found', status: 404 }, 404)
   if (read && posts.has(read[1])) return json({ data: posts.get(read[1]), includes: { users: [COMPANY] } })
   return json({ title: 'Not Found', status: 404 }, 404)
 }

@@ -26,4 +26,10 @@ Stump erases a person outside the company, such as a journalist or someone who e
 
 Name an engager by their handle on each network or source, such as their X handle and their Hacker News name. Each handle is matched only on its own network, so someone else with the same name elsewhere is left alone.
 
-Posts the company made that name the person are listed for deletion at each network, each with its outcome, because a post already read or copied cannot be recalled.
+Posts the company made that name the person are listed for deletion at each network, each with its outcome, because a post already read or copied cannot be recalled. A post under legal hold stays, and is named as kept.
+
+An erased engager stays erased: later polls, overlap windows and backfills do not collect their posts again, and nothing alerts with them. Stump keeps only a digest of each erased post's address and of the person's handle on each source, never the address or handle itself.
+
+A journalist's name leaves their pitches in every form, in any case and in every revision, and what an outreach list import kept of them leaves too: their venue, the entries aimed at them and the uploaded file. Uploading the same list again is refused.
+
+Copies an agent's earlier calls hold, and the record of a refused action, lose the person as well; an agent repeating a read gets current records. If the person was already sent to Orbit, the answer lists each send so you can erase them there too.

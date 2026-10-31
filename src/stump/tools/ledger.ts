@@ -1,6 +1,6 @@
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpAction, StumpTool } from '../actions/types.ts'
-import { correct, corrections, legalHold, markRemoved } from '../ledger/correct.ts'
+import { correct, corrections, legalHold, markRemoved, removalClasses } from '../ledger/correct.ts'
 import { toCsv } from '../ledger/csv.ts'
 import { count, everything, one, page } from '../ledger/query.ts'
 import { ADMINS, EDITORS, EVERYONE } from '../people/roles.ts'
@@ -68,8 +68,8 @@ export const ledgerTools: StumpTool[] = [{
   },
 }, {
   name: 'stump.ledger.correct', title: 'Correct the ledger',
-  description: 'Add a corrected version of a ledger entry (the earlier versions stay readable), mark a post a venue removed with the reason, or put a legal hold on an entry.',
-  scope: 'stump:ledger', classes: ['standard'], clauses: ['STUMP-LEDGER-001'],
+  description: 'Add a corrected version of a ledger entry (the earlier versions stay readable), mark a post removed with the reason (a post on a company account is deleted at its network, unless the entry is under legal hold), or put a legal hold on an entry.',
+  scope: 'stump:ledger', classes: ['standard', 'destructive', 'external'], clauses: ['STUMP-LEDGER-001'],
   actions: {
     correct: {
       roles: EDITORS,
@@ -87,7 +87,8 @@ export const ledgerTools: StumpTool[] = [{
     mark_removed: {
       roles: EDITORS,
       properties: { entry_id: id, reason: { type: 'string', minLength: 1, maxLength: 500 } }, required: ['entry_id', 'reason'],
-      classify: () => standard(),
+      // Deleting the company's own post at its network computes destructive and external from the entry's records.
+      classify: removalClasses,
       summary: args => ({ target: { name: `Mark ledger entry ${String(args.entry_id)} removed` } }),
       target: args => ({ kind: 'ledger', id: String(args.entry_id) }),
       run: markRemoved,

@@ -512,7 +512,7 @@
       },
       "acknowledged": {
         "src/modules/agent-door/pipeline.ts": {
-          "sha256": "d96f32560325523314a7200088202e9bc020048f069f0ef202eb9c127ff6eaf3",
+          "sha256": "b5d1708a1604fcbff9a1edd8d36fe2cd878148b217426477e4304816f73a280d",
           "mode": "100644"
         },
         "src/modules/agent-door/execution.ts": {
@@ -548,7 +548,7 @@
           "mode": "100644"
         },
         "src/modules/agent-door/types.ts": {
-          "sha256": "56d369b0e097c9ce3fa59afe610e13adbe73c8084bc251ec740ff91c5fc7bbcf",
+          "sha256": "21dc4e76d689efb60af2b432e0f8f0a3a495ef533f7cfac5aa47fa555529ceb3",
           "mode": "100644"
         },
         "src/modules/agent-door/approvals.ts": {

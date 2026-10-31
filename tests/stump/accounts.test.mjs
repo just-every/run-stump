@@ -203,9 +203,17 @@ test('X refusing the account\'s token marks it expired, holds its posts with the
   assert.equal((await app.action('owner', 'stump.drafts.revise', { action: 'get', item_id: later.id })).body.result.state, 'held')
 })
 
-test('removing a post the company\'s account made deletes it at the network and keeps the entry on the record', async () => {
+test('removing a post the company\'s account made deletes it at the network and keeps the entry on the record, unless the entry is under legal hold', async () => {
   const owner = await app.owner()
   const account = await connectX()
+  // A held entry keeps its post: the delete is refused and nothing reaches the network.
+  const kept = (await app.action('owner', 'stump.drafts.write', { action: 'create', format: 'post', person_id: owner.id, account_id: account.id, network: 'x', text: 'Term bookings are under review.' })).body.result
+  const out = (await app.action('owner', 'stump.items.schedule', { action: 'publish', item_id: kept.id, account_id: account.id })).body.result.item
+  const held = (await app.action('owner', 'stump.ledger.search', { action: 'search', network: 'x' })).body.result.items.find(row => row.network_id === out.network_id)
+  assert.equal((await app.action('owner', 'stump.ledger.correct', { action: 'legal_hold', entry_id: held.id, reason: 'Dispute on file' })).status, 200)
+  const refused = await app.action('owner', 'stump.ledger.correct', { action: 'mark_removed', entry_id: held.id, reason: 'Posted too early' })
+  assert.deepEqual([refused.status, refused.body.legal_hold], [409, 'Dispute on file'])
+  assert.ok(!x.deleted.includes(out.network_id)); assert.equal((await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: held.id })).body.result.state, 'posted')
   const item = (await app.action('owner', 'stump.drafts.write', { action: 'create', format: 'post', person_id: owner.id, account_id: account.id, network: 'x', text: 'Clinics can now book a whole term at once.' })).body.result
   const posted = (await app.action('owner', 'stump.items.schedule', { action: 'publish', item_id: item.id, account_id: account.id })).body.result.item
   const entry = (await app.action('owner', 'stump.ledger.search', { action: 'search', network: 'x' })).body.result.items.find(row => row.network_id === posted.network_id)
