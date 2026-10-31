@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { explain } from './api.ts'
 import { extractUrls } from '../lib/text/index.ts'
 import { Icon, type IconName } from './icons.tsx'
@@ -140,6 +140,15 @@ export function proofText(proof: string): { url: string | null; words: string } 
   if (!link) return { url: null, words: proof.trim() }
   const words = `${proof.slice(0, link.start)} ${proof.slice(link.end)}`.replace(/\s+/g, ' ').trim()
   return { url: link.url, words: words.replace(/^\((.*)\)$/, '$1').trim() }
+}
+
+/**
+ * A select with its field label. The label holds only its own words and names the select by `for`, so the field is named
+ * exactly by its label wherever it is read; a label wrapped round a select reads the select's options as part of its words.
+ */
+export function SelectField({ label, children, ...select }: { label: ReactNode } & SelectHTMLAttributes<HTMLSelectElement>) {
+  const id = useId()
+  return <div className="st-field"><label htmlFor={id}>{label}</label><select id={id} {...select}>{children}</select></div>
 }
 
 /** A web page named by itself: "changelog" for brightwell.app/changelog/3-2, "r/healthIT rules" for a subreddit's rules page. */

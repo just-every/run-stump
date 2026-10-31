@@ -5,7 +5,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { runAction } from '../../ui/api.ts'
-import { Outcome, useLoaded, useRun } from '../../ui/kit.tsx'
+import { Outcome, useLoaded, useRun, SelectField } from '../../ui/kit.tsx'
 import type { Team } from '../../ui/types.ts'
 import type { Members, Venue } from '../../venues/ui/types.ts'
 
@@ -45,12 +45,12 @@ function HandoffForm({ venue, routes, members, team, me, onClose }: { venue: Ven
   if (products.data && !choices.length) return <p className="st-meta" style={{ marginTop: 12 }}>Add your product first in <a href="/app/settings/brand">Brand</a>, then hand off.</p>
   return <form onSubmit={submit} aria-label={`Hand off at ${venue.name}`} style={{ marginTop: 12 }}>
     <div className="st-form">
-      <label className="st-field">Who posts<select name="person" required defaultValue={people.find(person => person.status === 'active')?.id}>
+      <SelectField label="Who posts" name="person" required defaultValue={people.find(person => person.status === 'active')?.id}>
         {people.map(person => <option key={person.id} value={person.id} disabled={person.status !== 'active'}>
-          {person.display_name}{person.status !== 'active' ? ' (has not signed in yet)' : memberIds.has(person.id) ? '' : ' (joins first)'}</option>)}</select></label>
-      <label className="st-field">Product<select name="product" required>{choices.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>
+          {person.display_name}{person.status !== 'active' ? ' (has not signed in yet)' : memberIds.has(person.id) ? '' : ' (joins first)'}</option>)}</SelectField>
+      <SelectField label="Product" name="product" required>{choices.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</SelectField>
       <label className="st-field">Due<input name="due" type="date" required defaultValue={inDays(2)} min={inDays(0)} /></label>
-      <label className="st-field">If it is not posted by then<select name="lapse" defaultValue="expire">{Object.entries(LAPSE_WORDS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+      <SelectField label="If it is not posted by then" name="lapse" defaultValue="expire">{Object.entries(LAPSE_WORDS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</SelectField>
       <label className="st-field">Thread (optional)<input name="thread" type="url" maxLength={2048} placeholder="https://" autoComplete="off" /></label>
     </div>
     {draftable ? <>

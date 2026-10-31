@@ -5,7 +5,7 @@ import { AiProviderPanel } from '../stump/drafting/AiProviderPanel.tsx'
 import { screenStyles } from '../stump/ledger/screen-styles.ts'
 import type { ConnectionView, OfferView, PreviewView, RulesView } from '../stump/stack/view.ts'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, PanelTitle, Saved, handleWord, networkWord, useLoaded, useRun, useSaved, when } from '../stump/ui/kit.tsx'
+import { Outcome, PanelTitle, Saved, handleWord, networkWord, useLoaded, useRun, useSaved, when, SelectField } from '../stump/ui/kit.tsx'
 
 export const Route = createFileRoute('/app/settings/connections')({ component: ConnectionsPage })
 
@@ -132,8 +132,8 @@ function Links({ rules, admin, onChange }: { rules: RulesView; admin: boolean; o
       <div className="st-form">
         <label className="st-field">Your domains<input name="domains" required defaultValue={rules.own_domains.join(', ')} placeholder="example.com, docs.example.com" autoComplete="off"
           onBlur={event => { if (event.target.value.trim() !== rules.own_domains.join(', ')) void save() }} /></label>
-        <label className="st-field">Medium for posts Stump publishes<select name="published" defaultValue={rules.mediums?.published ?? 'social'} onChange={() => void save()}>{MEDIUMS.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
-        <label className="st-field">Medium for hand-offs<select name="handoff" defaultValue={rules.mediums?.handoff ?? 'community'} onChange={() => void save()}>{MEDIUMS.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+        <SelectField label="Medium for posts Stump publishes" name="published" defaultValue={rules.mediums?.published ?? 'social'} onChange={() => void save()}>{MEDIUMS.map(item => <option key={item} value={item}>{item}</option>)}</SelectField>
+        <SelectField label="Medium for hand-offs" name="handoff" defaultValue={rules.mediums?.handoff ?? 'community'} onChange={() => void save()}>{MEDIUMS.map(item => <option key={item} value={item}>{item}</option>)}</SelectField>
       </div>
       <div className="st-actions"><Outcome message={message?.error ? message : null} /><Saved shown={shown && !busy} /></div>
     </form> : set ? <p>{rules.own_domains.join(', ')} · posts {rules.mediums?.published}, hand-offs {rules.mediums?.handoff}</p> : <p className="st-meta">The company has not set its link rules yet.</p>}
@@ -144,7 +144,7 @@ function Links({ rules, admin, onChange }: { rules: RulesView; admin: boolean; o
         <div className="st-form">
           <label className="st-field">Text<input name="text" required defaultValue={`See https://${rules.own_domains[0] ?? 'example.com'}/pricing`} /></label>
           <label className="st-field">Goes to<input name="source" required defaultValue="bluesky" /></label>
-          <label className="st-field">Route<select name="route" defaultValue="published"><option value="published">Published</option><option value="handoff">Hand-off</option></select></label>
+          <SelectField label="Route" name="route" defaultValue="published"><option value="published">Published</option><option value="handoff">Hand-off</option></SelectField>
           <label className="st-field">Campaign<input name="campaign" placeholder="launch" /></label>
         </div>
         <div className="st-actions"><button className="st-button" type="submit" disabled={busy}>Show tags</button></div>

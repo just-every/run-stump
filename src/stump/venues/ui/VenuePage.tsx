@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
-import { Disc, Outcome, Tip, monthYear, useLoaded, useRun, when, words } from '../../ui/kit.tsx'
+import { Disc, Outcome, Tip, monthYear, useLoaded, useRun, when, words, SelectField } from '../../ui/kit.tsx'
 import type { Team } from '../../ui/types.ts'
 import { DETAIL_LABELS } from '../kinds.ts'
 import { kindLabel, limitWords, nextOpenWords, pitched, routeLabel, statusLabel, statusTone } from './labels.ts'
@@ -118,7 +118,7 @@ function RoutesCard({ venue, routes, editor, onChanged, handoff }: { venue: Venu
       {limiting ? <form onSubmit={setLimit} style={{ marginTop: 12 }}>
         <div className="st-form">
           <label className="st-field">Posts<input name="posts" type="number" min={0} max={1000} defaultValue={venue.shared_limit?.posts ?? 1} /></label>
-          <label className="st-field">Per<select name="per" defaultValue={venue.shared_limit?.per ?? 'week'}>{PERIODS.map(per => <option key={per} value={per}>{per}</option>)}</select></label>
+          <SelectField label="Per" name="per" defaultValue={venue.shared_limit?.per ?? 'week'}>{PERIODS.map(per => <option key={per} value={per}>{per}</option>)}</SelectField>
         </div>
         <p className="st-note">Set posts to 0 to remove the limit.</p>
         <Outcome message={message} />
@@ -163,7 +163,7 @@ function MembersCard({ venue, members, team, me: self, editor, onChanged }: { ve
     {choices.length && !adding ? <button className="st-button pill outline" type="button" style={{ marginTop: 12 }} onClick={() => setAdding(true)}>Record a member</button> : null}
     {adding ? <form onSubmit={add} style={{ marginTop: 12 }}>
       <div className="st-form">
-        <label className="st-field">Person<select name="person" required>{choices.map(person => <option key={person.id} value={person.id}>{person.display_name}</option>)}</select></label>
+        <SelectField label="Person" name="person" required>{choices.map(person => <option key={person.id} value={person.id}>{person.display_name}</option>)}</SelectField>
         <label className="st-field">Their handle there<input name="handle" required maxLength={120} autoComplete="off" /></label>
         <label className="st-field">Joined on<input name="joined_on" type="date" /></label>
         <label className="st-field">Karma (optional)<input name="karma" type="number" min={0} /></label>

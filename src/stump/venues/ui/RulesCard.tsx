@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { runAction } from '../../ui/api.ts'
-import { Disc, Outcome, sourceName, useRun } from '../../ui/kit.tsx'
+import { Disc, Outcome, sourceName, useRun, SelectField } from '../../ui/kit.tsx'
 import { readOn } from './labels.ts'
 import type { Rule, RuleKey, Venue } from './types.ts'
 
@@ -101,8 +101,8 @@ function RuleEditor({ venue, name, rule, onSaved, onClose }: { venue: Venue; nam
   }
   return <div className="st-panel" role="group" aria-label={`Edit ${LABELS[name]}`}>
     <div className="st-form">
-      {CHOICES[name] ? <label className="st-field">Rule<select value={value} disabled={busy} onChange={event => { setValue(event.target.value); void save({ value: event.target.value }) }}>
-        <option value="" disabled>Choose…</option>{Object.entries(CHOICES[name]!).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label> : null}
+      {CHOICES[name] ? <SelectField label="Rule" value={value} disabled={busy} onChange={event => { setValue(event.target.value); void save({ value: event.target.value }) }}>
+        <option value="" disabled>Choose…</option>{Object.entries(CHOICES[name]!).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</SelectField> : null}
       {name === 'disclosure_line' ? <label className="st-field">Line the venue asks for<input value={value} maxLength={280} onChange={event => setValue(event.target.value)} onBlur={() => void save()} /></label> : null}
       {name === 'self_promotion' && value === 'thread' ? <label className="st-field">Thread address<input type="url" value={thread} placeholder="https://" maxLength={2048} onChange={event => setThread(event.target.value)} onBlur={() => void save()} /></label> : null}
       {name === 'self_promotion' ? <label className="st-field">Which thread, day or ratio<input value={detail} maxLength={300} onChange={event => setDetail(event.target.value)} onBlur={() => void save()} /></label> : null}

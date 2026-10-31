@@ -5,7 +5,7 @@ import type { LedgerEntry } from '../stump/ledger/entry.ts'
 import { screenStyles } from '../stump/ledger/screen-styles.ts'
 import { NETWORK_OPTIONS, ROUTE_WORDS, STATE_WORDS, networkName } from '../stump/ledger/words.ts'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Chip, Empty, Outcome, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
+import { Chip, Empty, Outcome, useLoaded, useRun, when, SelectField } from '../stump/ui/kit.tsx'
 import type { Team } from '../stump/ui/types.ts'
 import { Icon } from '../stump/ui/icons.tsx'
 
@@ -72,12 +72,12 @@ function LedgerPage() {
         <div className="st-form">
           <label className="st-field">Network<input list="ledger-networks" value={filters.network ?? ''} maxLength={60} placeholder="Any" autoComplete="off" onChange={event => set('network', event.target.value.trim().toLowerCase())} />
             <datalist id="ledger-networks">{NETWORK_OPTIONS.map(item => <option key={item} value={item}>{networkName(item)}</option>)}</datalist></label>
-          <label className="st-field">Route<select value={filters.route ?? ''} onChange={event => set('route', event.target.value)}>
-            <option value="">Any</option>{Object.entries(ROUTE_WORDS).map(([id, word]) => <option key={id} value={id}>{word}</option>)}</select></label>
-          <label className="st-field">State<select value={filters.state ?? ''} onChange={event => set('state', event.target.value)}>
-            <option value="">Any</option>{Object.entries(STATE_WORDS).map(([id, word]) => <option key={id} value={id}>{word}</option>)}</select></label>
-          <label className="st-field">Person<select value={filters.person_id ?? ''} onChange={event => set('person_id', event.target.value)}>
-            <option value="">Anyone</option>{context.data?.team.items.map(item => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></label>
+          <SelectField label="Route" value={filters.route ?? ''} onChange={event => set('route', event.target.value)}>
+            <option value="">Any</option>{Object.entries(ROUTE_WORDS).map(([id, word]) => <option key={id} value={id}>{word}</option>)}</SelectField>
+          <SelectField label="State" value={filters.state ?? ''} onChange={event => set('state', event.target.value)}>
+            <option value="">Any</option>{Object.entries(STATE_WORDS).map(([id, word]) => <option key={id} value={id}>{word}</option>)}</SelectField>
+          <SelectField label="Person" value={filters.person_id ?? ''} onChange={event => set('person_id', event.target.value)}>
+            <option value="">Anyone</option>{context.data?.team.items.map(item => <option key={item.id} value={item.id}>{item.display_name}</option>)}</SelectField>
           <label className="st-field">Campaign<input value={filters.campaign ?? ''} maxLength={120} onChange={event => set('campaign', event.target.value)} /></label>
           <label className="st-field">From<input type="date" value={filters.from ?? ''} onChange={event => set('from', event.target.value)} /></label>
           <label className="st-field">To<input type="date" value={filters.to ?? ''} onChange={event => set('to', event.target.value)} /></label>

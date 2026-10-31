@@ -2,7 +2,7 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, type ReactNode } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, Saved, proofText, useLoaded, useRun, useSaved, words } from '../stump/ui/kit.tsx'
+import { Outcome, Saved, proofText, useLoaded, useRun, useSaved, words, SelectField } from '../stump/ui/kit.tsx'
 import type { Team } from '../stump/ui/types.ts'
 import { Disc } from '../stump/drafting/disc.tsx'
 import type { ClaimView, Product, VoiceView } from '../stump/drafting/view.ts'
@@ -205,8 +205,8 @@ function ClaimForm({ open, busy, team, me: self, products, initial, onAdd }: { o
     if (await onAdd(args)) { setForm(empty); close() }
   }}>
     <label className="st-field">Claim<input value={form.text} placeholder="Recurring bookings" onChange={set('text')} /></label>
-    <label className="st-field">Kind<select value={form.kind} onChange={set('kind')}><option value="allowed">May say, with proof</option><option value="banned">Must not say</option><option value="comparative">Comparison</option></select></label>
-    {products.length ? <label className="st-field">Product<select value={form.product_id} onChange={set('product_id')}><option value="">Every product</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label> : null}
+    <SelectField label="Kind" value={form.kind} onChange={set('kind')}><option value="allowed">May say, with proof</option><option value="banned">Must not say</option><option value="comparative">Comparison</option></SelectField>
+    {products.length ? <SelectField label="Product" value={form.product_id} onChange={set('product_id')}><option value="">Every product</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</SelectField> : null}
     {form.kind === 'banned' ? <label className="st-field">Reason<input value={form.reason} onChange={set('reason')} /></label> : <>
       {form.kind === 'allowed' ? <label className="st-field">Proof<input value={form.proof} placeholder="Link, document or number" onChange={set('proof')} /></label> : <>
         <label className="st-field">Competitor<input value={form.competitor} onChange={set('competitor')} /></label>
@@ -215,7 +215,7 @@ function ClaimForm({ open, busy, team, me: self, products, initial, onAdd }: { o
       </>}
       <label className="st-field">Review on<input type="date" value={form.review_on} onChange={set('review_on')} /></label>
     </>}
-    <label className="st-field">Owner<select value={form.owner_id} onChange={set('owner_id')}>{team.map(person => <option key={person.id} value={person.id}>{person.display_name}</option>)}</select></label>
+    <SelectField label="Owner" value={form.owner_id} onChange={set('owner_id')}>{team.map(person => <option key={person.id} value={person.id}>{person.display_name}</option>)}</SelectField>
     <button className="st-button primary" type="submit" disabled={busy || !form.text.trim()}>Add claim</button>
   </form>}</Adder>
 }
@@ -228,7 +228,7 @@ function VoiceForm({ open, busy, people, onAdd }: { open: boolean; busy: boolean
     event.preventDefault()
     if (await onAdd({ person_id: form.person_id, samples, do: list(form.do), dont: list(form.dont) })) { setForm(empty); close() }
   }}>
-    <label className="st-field">Person<select value={form.person_id} onChange={event => setForm({ ...form, person_id: event.target.value })}>{people.map(person => <option key={person.id} value={person.id}>{person.display_name}</option>)}</select></label>
+    <SelectField label="Person" value={form.person_id} onChange={event => setForm({ ...form, person_id: event.target.value })}>{people.map(person => <option key={person.id} value={person.id}>{person.display_name}</option>)}</SelectField>
     <label className="st-field">Do<input value={form.do} placeholder="short, plain" onChange={event => setForm({ ...form, do: event.target.value })} /></label>
     <label className="st-field">Don't<input value={form.dont} placeholder="exclamation marks" onChange={event => setForm({ ...form, dont: event.target.value })} /></label>
     <label className="st-field st-span">Their own posts, a blank line between each ({samples.length})

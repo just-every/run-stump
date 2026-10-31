@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { ActionError, explain, me, runAction } from '../stump/ui/api.ts'
 import { Disc } from '../stump/drafting/disc.tsx'
-import { Outcome, Tip, useLoaded, useRun } from '../stump/ui/kit.tsx'
+import { Outcome, Tip, useLoaded, useRun, SelectField } from '../stump/ui/kit.tsx'
 import { Icon } from '../stump/ui/icons.tsx'
 import { countText, extractUrls, NETWORK_LIMITS, type Network } from '../stump/lib/text/index.ts'
 import { accountLabel, claimRange, flagLine, networkName, proofLabel, spanAt, spanOf, type Account, type Check, type ClaimFinding, type ClaimView, type Count, type Flag, type MasterPreview, type Variant } from '../stump/drafting/view.ts'
@@ -184,12 +184,12 @@ function ComposePage() {
     })
     if (!showProduct && !rows.length) return null
     return <div className="st-form st-compose-aim">
-      {showProduct ? <label className="st-field">Product<select value={productNow} disabled={busy} onChange={event => void aim(list, event.target.value ? { product_id: event.target.value } : { clear: ['product'] })}>
-        <option value="">No product</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
-      {rows.map(({ variant, account, offered }) => <label className="st-field" key={variant.item_id}>Venue for {accountLabel(account)}<select value={variant.venue_id ?? ''} disabled={busy}
+      {showProduct ? <SelectField label="Product" value={productNow} disabled={busy} onChange={event => void aim(list, event.target.value ? { product_id: event.target.value } : { clear: ['product'] })}>
+        <option value="">No product</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField> : null}
+      {rows.map(({ variant, account, offered }) => <SelectField key={variant.item_id} label={<>Venue for {accountLabel(account)}</>} value={variant.venue_id ?? ''} disabled={busy}
         onChange={event => void aim([variant], event.target.value ? { venue_id: event.target.value } : { clear: ['venue'] })}>
         <option value="">No venue</option>{offered.map(venue => <option key={venue.id} value={venue.id} disabled={!venue.routes.includes('publish') && venue.id !== variant.venue_id}>
-          {venue.name}{venue.routes.includes('publish') ? '' : ' (no direct posts)'}</option>)}</select></label>)}
+          {venue.name}{venue.routes.includes('publish') ? '' : ' (no direct posts)'}</option>)}</SelectField>)}
     </div>
   }
   async function schedule(action: 'schedule_master' | 'queue') {
@@ -300,8 +300,8 @@ function ComposePage() {
         <section className="st-card" aria-labelledby="variants-title">
           <h2 className="st-card-head" id="variants-title"><Disc icon="pencil" />{alone.handle ? accountLabel({ handle: alone.handle, network: alone.network ?? '', display_name: alone.account_name }) : alone.network ? `${networkName(alone.network)} post` : 'Draft'}</h2>
           {!alone.account_id && !GONE[alone.state] ? accounts.length ? <div className="st-form st-compose-from">
-            <label className="st-field">Post from<select value={postFrom} onChange={event => setPostFrom(event.target.value)}>
-              <option value="">Choose an account</option>{accounts.filter(account => !alone.network || account.network === alone.network).map(account => <option key={account.id} value={account.id}>{accountLabel(account)}</option>)}</select></label>
+            <SelectField label="Post from" value={postFrom} onChange={event => setPostFrom(event.target.value)}>
+              <option value="">Choose an account</option>{accounts.filter(account => !alone.network || account.network === alone.network).map(account => <option key={account.id} value={account.id}>{accountLabel(account)}</option>)}</SelectField>
           </div> : <p className="st-meta"><Link to="/app/settings/accounts">Connect an account</Link> to post it.</p> : null}
           {GONE[alone.state] ? null : aimForm([alone])}
           <div className="st-variants">{variantCards}</div>
@@ -347,12 +347,12 @@ function ComposePage() {
           </div>
           {preview ? aimForm(variants) : null}
           {!preview && (products.length > 1 || picked.some(id => venuesFor(data?.venues ?? [], accounts.find(account => account.id === id)).length)) ? <div className="st-form st-compose-aim">
-            {products.length > 1 ? <label className="st-field">Product<select value={product} onChange={event => setProduct(event.target.value)}>
-              <option value="">No product</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
+            {products.length > 1 ? <SelectField label="Product" value={product} onChange={event => setProduct(event.target.value)}>
+              <option value="">No product</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField> : null}
             {picked.map(id => { const account = accounts.find(item => item.id === id), choices = venuesFor(data?.venues ?? [], account)
-              return account && choices.length ? <label className="st-field" key={id}>Venue for {accountLabel(account)}<select value={aimed[id] ?? ''} onChange={event => setAimed({ ...aimed, [id]: event.target.value })}>
+              return account && choices.length ? <SelectField key={id} label={<>Venue for {accountLabel(account)}</>} value={aimed[id] ?? ''} onChange={event => setAimed({ ...aimed, [id]: event.target.value })}>
                 <option value="">No venue</option>{choices.map(venue => <option key={venue.id} value={venue.id} disabled={!venue.routes.includes('publish')}>
-                  {venue.name}{venue.routes.includes('publish') ? '' : ' (no direct posts)'}</option>)}</select></label> : null })}
+                  {venue.name}{venue.routes.includes('publish') ? '' : ' (no direct posts)'}</option>)}</SelectField> : null })}
           </div> : null}
           {!preview ? <div className="st-actions st-open">
             <button className="st-button primary" type="button" disabled={busy || !picked.length || (!text.trim() && !source.trim()) || (!text.trim() && !!data?.noProvider)} onClick={() => void start()}>
@@ -485,8 +485,8 @@ function WhenPicker({ value, zone, zones, onChange, onZone }: { value: string; z
     {open ? <div className="st-when-pop" role="dialog" aria-label="When it goes out">
       <label className="st-field">Day<input type="date" value={dayPart ?? ''} onChange={event => event.target.value && onChange(`${event.target.value}T${timePart ?? '09:00'}`)} /></label>
       <label className="st-field">Time<input type="time" step={300} value={timePart ?? ''} onChange={event => event.target.value && onChange(`${dayPart}T${event.target.value}`)} /></label>
-      <label className="st-field">Time zone<select value={zone} onChange={event => onZone(event.target.value)}>
-        {zones.map(id => <option key={id} value={id}>{zoneName(id)}</option>)}</select></label>
+      <SelectField label="Time zone" value={zone} onChange={event => onZone(event.target.value)}>
+        {zones.map(id => <option key={id} value={id}>{zoneName(id)}</option>)}</SelectField>
       <button type="button" className="st-button primary small" onClick={() => setOpen(false)}>Done</button>
     </div> : null}
   </div>

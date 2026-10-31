@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, PanelTitle, useLoaded, useRun, when } from '../stump/ui/kit.tsx'
+import { Outcome, PanelTitle, useLoaded, useRun, when, SelectField } from '../stump/ui/kit.tsx'
 import type { PauseState, Resumed, Team } from '../stump/ui/types.ts'
 import { shownHandle } from '../stump/accounts/handle.ts'
 import { pauseChanged } from '../stump/ui/pause.tsx'
@@ -186,8 +186,8 @@ function AccountRow({ account, slots, scope, may, busy: pausing, name, onPause, 
           <input type="checkbox" checked={days.includes(value)} disabled={busy}
             onChange={event => { const chosen = event.target.checked ? [...days, value] : days.filter(day => day !== value); setDays(chosen); void save({ days: chosen }) }} />{label}</label>)}</div></div>
         <label className="st-field">Times<input value={times} placeholder="09:00, 14:00" disabled={busy} onChange={event => setTimes(event.target.value)} onBlur={() => void save({})} /></label>
-        <label className="st-field">Time zone<select value={zone} disabled={busy} onChange={event => { setZone(event.target.value); void save({ zone: event.target.value }) }}>
-          {zones().map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+        <SelectField label="Time zone" value={zone} disabled={busy} onChange={event => { setZone(event.target.value); void save({ zone: event.target.value }) }}>
+          {zones().map(item => <option key={item} value={item}>{item}</option>)}</SelectField>
       </div>
       <Outcome message={message} />
     </div> : null}

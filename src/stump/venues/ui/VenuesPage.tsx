@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
 import { Icon } from '../../ui/icons.tsx'
-import { Empty, useLoaded } from '../../ui/kit.tsx'
+import { Empty, useLoaded, SelectField } from '../../ui/kit.tsx'
 import { KIND_FIELDS, STATUS_LABELS } from '../kinds.ts'
 import { ImportPanel } from './ImportPanel.tsx'
 import { kindLabel, nextOpenWords, primaryRoute, statusLabel, statusTone } from './labels.ts'
@@ -67,10 +67,10 @@ export function VenuesPage() {
           <button key={name} className="st-chip" type="button" aria-label={`Remove filter ${FILTER_WORDS[name](String(value), products)}`} onClick={() => set(name, undefined)}>{FILTER_WORDS[name](String(value), products)} ×</button>)}</div> : null}
         {panel === 'filters' ? <div className="st-card" aria-label="Filters">
           <div className="st-form">
-            <label className="st-field">Kind<select value={filters.kind ?? ''} onChange={event => set('kind', event.target.value)}><option value="">Any kind</option>{Object.entries(KIND_FIELDS).map(([id, item]) => <option key={id} value={id}>{item.label}</option>)}</select></label>
-            <label className="st-field">Status<select value={filters.status ?? ''} onChange={event => set('status', event.target.value)}><option value="">Any status</option>{Object.entries(STATUS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-            <label className="st-field">Priority<select value={filters.priority ?? ''} onChange={event => set('priority', event.target.value)}><option value="">Any priority</option>{['top', 'high', 'medium', 'low'].map(item => <option key={item} value={item}>{item[0]!.toUpperCase() + item.slice(1)}</option>)}</select></label>
-            <label className="st-field">Product<select value={filters.product_id ?? ''} onChange={event => set('product_id', event.target.value)}><option value="">Any product</option>{[...products].map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+            <SelectField label="Kind" value={filters.kind ?? ''} onChange={event => set('kind', event.target.value)}><option value="">Any kind</option>{Object.entries(KIND_FIELDS).map(([id, item]) => <option key={id} value={id}>{item.label}</option>)}</SelectField>
+            <SelectField label="Status" value={filters.status ?? ''} onChange={event => set('status', event.target.value)}><option value="">Any status</option>{Object.entries(STATUS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</SelectField>
+            <SelectField label="Priority" value={filters.priority ?? ''} onChange={event => set('priority', event.target.value)}><option value="">Any priority</option>{['top', 'high', 'medium', 'low'].map(item => <option key={item} value={item}>{item[0]!.toUpperCase() + item.slice(1)}</option>)}</SelectField>
+            <SelectField label="Product" value={filters.product_id ?? ''} onChange={event => set('product_id', event.target.value)}><option value="">Any product</option>{[...products].map(([id, name]) => <option key={id} value={id}>{name}</option>)}</SelectField>
           </div>
           <div className="st-actions" style={{ marginTop: 12 }}>
             <label><input type="checkbox" checked={filters.include_excluded === true} onChange={event => set('include_excluded', event.target.checked || undefined)} /> Show excluded</label>

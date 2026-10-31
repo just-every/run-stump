@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { FilePick } from '../../ui/kit.tsx'
+import { FilePick, SelectField } from '../../ui/kit.tsx'
 import { applyPlan, ImportError, importStatus, planFile, undoPlan, type Change, type ImportSourceId, type Kept, type Plan } from './importer.ts'
 
 const SOURCES: Array<{ id: ImportSourceId; label: string; accept: string }> = [
@@ -101,7 +101,7 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
     <h2 id="import-title">Import a venue list</h2>
     {!plan ? <form onSubmit={review}>
       <div className="st-form">
-        <label className="st-field">Format<select value={source} onChange={event => setSource(event.target.value as ImportSourceId)}>{SOURCES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+        <SelectField label="Format" value={source} onChange={event => setSource(event.target.value as ImportSourceId)}>{SOURCES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</SelectField>
         <FilePick name="file" label="Choose the file" accept={SOURCES.find(item => item.id === source)!.accept} />
       </div>
       <p className="st-note">Stump reads the file and shows what it would add. Nothing changes until you apply it.</p>
