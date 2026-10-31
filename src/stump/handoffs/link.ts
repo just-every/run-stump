@@ -12,6 +12,8 @@ import type { VenueRow } from '../venues/model.ts'
 const ALIASES: Record<string, string> = { 'old.reddit.com': 'reddit.com', 'new.reddit.com': 'reddit.com', 'np.reddit.com': 'reddit.com', 'twitter.com': 'x.com', 'mobile.twitter.com': 'x.com', 'mobile.x.com': 'x.com',
   'discordapp.com': 'discord.com', 'ptb.discord.com': 'discord.com', 'canary.discord.com': 'discord.com' }
 const hostOf = (url: URL) => { const host = url.hostname.toLowerCase().replace(/^www\./, ''); return ALIASES[host] ?? host }
+/** Whether a host is the domain itself or one of its subdomains. */
+const onDomain = (host: string, domain: string) => host === domain || host.endsWith(`.${domain}`)
 
 export function parseLink(value: string): URL {
   let url: URL
@@ -54,7 +56,8 @@ export function onVenue(venue: Pick<VenueRow, 'url' | 'kind' | 'details'>, link:
 
 /** Why a link is not on the venue, in words: for a Discord server recorded only by its invite, how to record the server. */
 export function notOnVenueReason(venue: Pick<VenueRow, 'url' | 'kind' | 'details' | 'name'>, link: URL): string {
-  if ((venue.kind === 'discord' || /discord\.(gg|com)$/.test(venue.url ? new URL(venue.url).hostname : '')) && !discordServer(venue)) {
+  const home = venue.url ? hostOf(new URL(venue.url)) : ''
+  if ((venue.kind === 'discord' || onDomain(home, 'discord.gg') || onDomain(home, 'discord.com')) && !discordServer(venue)) {
     return `${venue.name} is recorded by its invite link, which names no server. Edit the venue and set Server to the server's id (the first number in a discord.com/channels/<server>/… link), then record the link again.`
   }
   if (venue.kind === 'discord') return `That link is not a message in ${venue.name}'s server. Copy the message link (discord.com/channels/…) from that server.`
@@ -63,7 +66,7 @@ export function notOnVenueReason(venue: Pick<VenueRow, 'url' | 'kind' | 'details
 
 /** The same post, whatever the tracking query or trailing slash. */
 export const sameLink = (a: string, b: string) => {
-  const key = (value: string) => { const url = new URL(value); return `${hostOf(url)}${url.pathname.replace(/\/+$/, '').toLowerCase()}${url.hostname.endsWith('ycombinator.com') ? url.search : ''}` }
+  const key = (value: string) => { const url = new URL(value); return `${hostOf(url)}${url.pathname.replace(/\/+$/, '').toLowerCase()}${onDomain(hostOf(url), 'ycombinator.com') ? url.search : ''}` }
   try { return key(a) === key(b) } catch { return false }
 }
 
@@ -82,7 +85,7 @@ export function methodFor(venue: Pick<VenueRow, 'platform' | 'kind'>, link: URL)
   if (host === 'bsky.app') return { method: 'bluesky', network: 'bluesky' }
   if (host === 'x.com') return { method: 'x', network: 'x' }
   if (host === 'news.ycombinator.com') return { method: 'hn', network: 'hn' }
-  if (venue.kind === 'slack' || host.endsWith('slack.com')) return { method: 'person', network: 'slack' }
+  if (venue.kind === 'slack' || onDomain(host, 'slack.com')) return { method: 'person', network: 'slack' }
   if (venue.kind === 'discord' || host === 'discord.com') return { method: 'person', network: 'discord' }
   if (platform === 'mastodon' || /^\/@[^/]+\/\d+\/?$/.test(link.pathname)) return { method: 'mastodon', network: 'mastodon' }
   return { method: 'person', network: platform || host }
