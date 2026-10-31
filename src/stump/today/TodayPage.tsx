@@ -4,7 +4,7 @@ import { HydrationUnit } from '../../base/hydration/unit'
 import type { ItemRecord } from '../drafting/records.ts'
 import type { Account } from '../drafting/view.ts'
 import type { Handoff } from '../handoffs/ui/words.ts'
-import { CONTRIBUTORS, READERS, type Role } from '../people/roles.ts'
+import { CONTRIBUTORS, EDITORS, READERS, type Role } from '../people/roles.ts'
 import { me, runAction } from '../ui/api.ts'
 import { Icon } from '../ui/icons.tsx'
 import { Chip, Empty, PanelTitle, Parts, useLoaded } from '../ui/kit.tsx'
@@ -127,6 +127,8 @@ export function TodayPage() {
   // A poster reads only their own work; Listening's findings are for the rest of the team.
   const reader = !work.data || READERS.includes(work.data.who.person.role as Role)
   const writer = !!work.data && CONTRIBUTORS.includes(work.data.who.person.role as Role)
+  // A contributor writes and marks a post ready; an editor schedules it.
+  const scheduler = !!work.data && EDITORS.includes(work.data.who.person.role as Role)
   const [focal, ...moreDue] = due?.rows ?? []
   const shownHeld = held ? allHeld ? held : held.slice(0, heldLimit) : []
   // Everything has answered once before the panels show, so a quiet day opens on its empty state and never flashes four empty panels.
@@ -194,7 +196,7 @@ export function TodayPage() {
           <section className="st-panel" aria-labelledby="today-out">
             <PanelTitle icon="send" id="today-out">Going out today</PanelTitle>
             <Failed error={work.error} />
-            {out && !out.length ? <Nothing>Nothing scheduled for today.{writer ? <> <Link to="/app/compose">Write a post</Link> and pick a time.</> : ' Posts the team schedules for today show here.'}</Nothing> : null}
+            {out && !out.length ? <Nothing>Nothing scheduled for today.{writer ? <> <Link to="/app/compose">Write a post</Link>{scheduler ? ' and pick a time.' : ' and mark it ready for an editor to schedule.'}</> : ' Posts the team schedules for today show here.'}</Nothing> : null}
             {out?.length ? <ul className="st-list">
               {/* One line at desktop width; at phone width the post's words are the name over one meta line (H16). */}
               {out.map(row => <li className="st-row" key={row.id}><Go className="st-today-out" to={row.to}>

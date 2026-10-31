@@ -21,7 +21,7 @@ import { eraseWithImportCustody, holdsImports, importedVenues, rekeyVenue } from
 import { recheckItems } from './recheck.ts'
 import { erasureRemoval } from './removal.ts'
 import { handleWords, residueStatements, type Trace } from './residue.ts'
-import { FINDING_SOURCES, tombstoneStatements, type ErasedFinding } from './tombstones.ts'
+import { TOMBSTONE_SOURCES, tombstoneStatements, type ErasedFinding } from './tombstones.ts'
 import type { PublishContext, Publisher } from '../publish/types.ts'
 
 const sql = (text: string, ...params: unknown[]): D1Sql => ({ sql: text, params })
@@ -240,16 +240,21 @@ async function requestDeletion(ctx: ActionContext, entry: Named): Promise<Deleti
   return { ...answer, outcome: result.outcome, ...(result.error ? { error: result.error } : {}) }
 }
 
-/** What names the person in stored copies: the ids of their erased records, and their handles or their name. */
+/**
+ * What names the person in stored copies: the ids of their erased records, and their handles or their name.
+ * A journalist's whole name names them anywhere; a single part of it (a first or last name another person may
+ * share) names them only inside a record tied to them, one that also holds their contact's, venue's or a pitch's id.
+ */
 function traceOf(scope: Scope): Trace {
   if (scope.contact) {
-    const parts = nameParts(scope.contact.name)
-    return { ids: [scope.contact.id], words: new RegExp(nameMatcher(scope.contact.name).source, 'iu'), needles: [scope.contact.id, ...parts].map(text => text.toLowerCase()) }
+    const ids = [scope.contact.id, ...scope.venues], tied = [...ids, ...scope.pitches], parts = nameParts(scope.contact.name)
+    return { ids, words: fullNameMatcher(scope.contact.name), tied: { ids: tied, words: new RegExp(nameMatcher(scope.contact.name).source, 'iu') },
+      needles: [...new Set([...tied, ...parts].map(text => text.toLowerCase()))] }
   }
   const handles = Object.values(scope.subject.handles).flat()
   const ids = [...scope.findings, ...scope.offers, ...scope.inbox.items, ...scope.inbox.offers]
   const forms = handles.flatMap(handle => { const at = handle.indexOf('@'); return at > 0 ? [handle, handle.slice(0, at)] : [handle] })
-  return { ids, words: handleWords(handles), needles: [...new Set([...ids, ...forms].map(text => text.toLowerCase()))] }
+  return { ids, words: handleWords(handles), tied: null, needles: [...new Set([...ids, ...forms].map(text => text.toLowerCase()))] }
 }
 
 export async function erase(ctx: ActionContext, scope: Scope) {
@@ -286,10 +291,13 @@ export async function erase(ctx: ActionContext, scope: Scope) {
     if (imported[0]) statements.push(...rekeyVenue(imported[0].venue_id))
   }
   if (scope.subject.kind === 'engager') {
-    // Digests of each erased finding's address and of the person's handle on each source keep them out of later polls.
+    // Digests of each erased finding's address and of the person's handle on each source keep them out of later polls;
+    // on X, their handle and the author id X gave their posts keep the inbox from storing a post of theirs as a thread's context.
     const found = scope.findings.length ? (await db.prepare(`SELECT url_key,source,json_extract(raw,'$.author_id') AS author_id FROM stump_findings WHERE id IN (${list(scope.findings)})`)
       .bind(...scope.findings).all<ErasedFinding>()).results : []
-    statements.push(...await tombstoneStatements(id, found, FINDING_SOURCES.flatMap(source => on(scope.subject.handles, source).map(handle => ({ source, handle })))))
+    const xAuthors = scope.inbox.items.length ? (await db.prepare(`SELECT DISTINCT author_id FROM stump_inbox_items WHERE network='x' AND author_id IS NOT NULL AND id IN (${list(scope.inbox.items)})`)
+      .bind(...scope.inbox.items).all<{ author_id: string }>()).results.map(row => ({ source: 'x', handle: row.author_id })) : []
+    statements.push(...await tombstoneStatements(db, id, found, [...TOMBSTONE_SOURCES.flatMap(source => on(scope.subject.handles, source).map(handle => ({ source, handle }))), ...xAuthors]))
   }
   if (scope.findings.length) {
     statements.push(sql(`DELETE FROM stump_watch_deliveries WHERE finding_id IN (${list(scope.findings)})`, ...scope.findings),

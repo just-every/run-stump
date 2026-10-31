@@ -11,8 +11,13 @@ import type { D1Sql } from '../../modules/import-kit/src/d1/index.ts'
 export interface Trace {
   /** Ids of the records the erasure removes, matched exactly. */
   ids: string[]
-  /** The person's handles or name as whole words, without case. */
+  /** The person's handles or whole name as words, without case: what names them in any record. */
   words: RegExp | null
+  /**
+   * Words that name the person only inside a record tied to them (one holding any of `ids`): each part
+   * of a journalist's name, which someone else may share. Elsewhere a part alone names nobody.
+   */
+  tied: { ids: string[]; words: RegExp } | null
   /** Lower-case fragments every match contains one of, to find candidate rows. */
   needles: string[]
 }
@@ -31,7 +36,11 @@ export function handleWords(handles: string[]): RegExp | null {
   return forms.size ? new RegExp(`(?<![\\p{L}\\p{N}_.-])@?(?:${[...forms].join('|')})(?![\\p{L}\\p{N}_-]|\\.[\\p{L}\\p{N}])`, 'iu') : null
 }
 
-const testOf = (trace: Trace, ids = true) => (text: string) => (ids && trace.ids.some(id => text.includes(id))) || (trace.words !== null && trace.words.test(text))
+/** What names the person inside one stored record (`record` is its whole text): a part of their name counts only in a record tied to them. */
+const testOf = (trace: Trace, record: string, ids = true) => {
+  const tied = trace.tied !== null && trace.tied.ids.some(id => record.includes(id)) ? trace.tied.words : null
+  return (text: string) => (ids && trace.ids.some(id => text.includes(id))) || (trace.words !== null && trace.words.test(text)) || (tied !== null && tied.test(text))
+}
 
 /**
  * A JSON value with each object that names the person replaced by `marker`:
@@ -74,43 +83,46 @@ async function candidates(db: D1Database, table: string, key: string[], columns:
 
 /** The statements that take the person out of the agent door's stored records and the refusal records, with how many rows each changes. */
 export async function residueStatements(db: D1Database, trace: Trace, erasureId: string): Promise<{ statements: D1Sql[]; agent_records: number; refusal_records: number }> {
-  const marker = { erased: `erasure:${erasureId}` }, names = testOf(trace), named = testOf(trace, false)
+  const marker = { erased: `erasure:${erasureId}` }
   const statements: D1Sql[] = []
   let agent = 0, refusals = 0
   const json = (text: unknown) => JSON.parse(String(text)) as unknown
   // Only what a call carried is redacted (its arguments, summary and result); who prepared or approved it stays.
-  const parts = (text: unknown, keys: string[]) => {
-    const value = json(text) as Record<string, unknown>
+  // Whether the record is tied to the person is read from the whole stored row.
+  const parts = (text: unknown, keys: string[], record: string) => {
+    const value = json(text) as Record<string, unknown>, names = testOf(trace, record)
     let changed = false
     for (const key of keys) if (Object.hasOwn(value, key)) { const next = redact(value[key], names, marker); if (next.changed) { value[key] = next.value; changed = true } }
     return { value, changed }
   }
+  const whole = (row: Record<string, unknown>, columns: string[]) => columns.map(column => String(row[column] ?? '')).join('\n')
   const RESULT = ['result', 'resources', 'fields']
   for (const row of await candidates(db, 'agent_door_calls', ['agent', 'key'], ['outcome'], trace.needles)) {
-    const outcome = parts(row.outcome, RESULT)
+    const outcome = parts(row.outcome, RESULT, whole(row, ['outcome']))
     if (!outcome.changed) continue
     agent += 1
     statements.push({ sql: 'UPDATE agent_door_calls SET outcome=? WHERE agent=? AND key=?', params: [JSON.stringify(outcome.value), row.agent, row.key] })
   }
   for (const row of await candidates(db, 'agent_door_approvals', ['id'], ['saved', 'result'], trace.needles)) {
     // An approval waiting for a decision that names the person no longer matches what was asked, so it cannot run.
-    const saved = parts(row.saved, ['args', 'summary'])
-    const inner = saved.value.result && typeof saved.value.result === 'object' ? parts(JSON.stringify(saved.value.result), RESULT) : null
+    const record = whole(row, ['saved', 'result'])
+    const saved = parts(row.saved, ['args', 'summary'], record)
+    const inner = saved.value.result && typeof saved.value.result === 'object' ? parts(JSON.stringify(saved.value.result), RESULT, record) : null
     if (inner?.changed) saved.value.result = inner.value
-    const result = row.result === null ? null : parts(row.result, RESULT)
+    const result = row.result === null ? null : parts(row.result, RESULT, record)
     if (!saved.changed && !inner?.changed && !result?.changed) continue
     agent += 1
     statements.push({ sql: 'UPDATE agent_door_approvals SET saved=?,result=? WHERE id=?', params: [JSON.stringify(saved.value), result === null ? null : JSON.stringify(result.value), row.id] })
   }
   for (const row of await candidates(db, 'agent_door_reviews', ['id'], ['saved'], trace.needles)) {
-    const saved = parts(row.saved, ['summary'])
+    const saved = parts(row.saved, ['summary'], whole(row, ['saved']))
     if (!saved.changed) continue
     agent += 1
     statements.push({ sql: 'UPDATE agent_door_reviews SET saved=? WHERE id=?', params: [JSON.stringify(saved.value), row.id] })
   }
   for (const row of await candidates(db, 'stump_refusals', ['id'], ['detail'], trace.needles)) {
     // A refusal keeps its rule and the ids it was about; a handle or post address naming the person leaves.
-    const detail = json(row.detail) as Record<string, unknown>
+    const detail = json(row.detail) as Record<string, unknown>, named = testOf(trace, String(row.detail), false)
     const kept = Object.fromEntries(Object.entries(detail).filter(([, value]) => !(typeof value === 'string' && named(value))))
     if (Object.keys(kept).length === Object.keys(detail).length) continue
     refusals += 1

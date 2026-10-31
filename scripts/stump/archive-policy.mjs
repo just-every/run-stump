@@ -1,7 +1,8 @@
 // What `rer export` writes and `rer import` restores (STUMP-DATA-001): every
 // record the company keeps in Stump, in one versioned archive, and no token or
-// key. Credentials, sealed secrets and consents in progress stay in the
-// installation. The archive holds each record as a restore leaves it, so
+// credential. Credentials, sealed secrets and consents in progress stay in the
+// installation. The erasure key that keys erasure digests travels with them,
+// so a restore keeps every erasure in force. The archive holds each record as a restore leaves it, so
 // exporting the restored installation gives the same records:
 //   - connected accounts wait for their owners to reconnect (no credentials):
 //     state expired, the accounts module's state for an account that needs reconnecting;

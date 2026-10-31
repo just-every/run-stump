@@ -11,6 +11,7 @@ import { xFor } from '../accounts/clients.ts'
 import { needsReconnect, type AccountRow } from '../accounts/store.ts'
 import { fetchXMentions, getXPost, quoteXRead, type XError, type XMention, type XPostReadback, type XPriceTable } from '../lib/x/index.ts'
 import { recordCall } from '../publish/parts.ts'
+import { erasedAuthors } from '../data/tombstones.ts'
 import { offerInboxEngager } from '../stack/index.ts'
 import { engagedFirst, engagementOf, kindOf, publicEmailOf } from './engagement.ts'
 import { ownPostIds, type InboxRow } from './store.ts'
@@ -58,11 +59,15 @@ export async function pollInbox(ctx: ActionContext, account: AccountRow) {
     .bind(account.id, ...parents).all<{ network_id: string; author_id: string | null }>()).results.map(row => [row.network_id, row.author_id])) : new Map<string, string | null>()
   for (const [id, author] of stored) if (author === userId) own.add(id)
   const mentionIds = new Set(mentions.map(post => post.id))
+  // A person erased from Stump stays erased: a post of theirs that someone else answers is never read or stored as
+  // the thread's context; the mention that answers it is kept, without that context (STUMP-DATA-002).
+  const erased = await erasedAuthors(db, 'x', mentions.map(post => post.inReplyToUserId))
   const threads: XPostReadback[] = []
   for (const id of parents) {
     if (own.has(id) || stored.has(id) || mentionIds.has(id) || stoppedBy) continue
     // A reply to the account's own post reads that post at the owned-read price; anything else at the post-read price.
     const answered = mentions.find(post => post.inReplyToPostId === id)
+    if (answered?.inReplyToUserId && erased.has(answered.inReplyToUserId)) continue
     const parent = await getXPost(x, id, prices, { owned: !!answered && answered.inReplyToUserId === userId })
     if (!parent.ok) {
       // A post that is gone or private is left out; a limit or exhausted credits stops further reads.
@@ -73,6 +78,9 @@ export async function pollInbox(ctx: ActionContext, account: AccountRow) {
     if (parent.value.authorId === userId) own.add(parent.value.id)
     threads.push(parent.value)
   }
+  // A quoted post names its author only once read: one by an erased author is paid for and dropped, never stored.
+  const erasedParents = await erasedAuthors(db, 'x', threads.flatMap(post => [post.authorId, post.authorUsername]))
+  const kept = threads.filter(post => !erasedParents.has(post.authorId ?? '') && !erasedParents.has(post.authorUsername ?? ''))
   const isOwnParent = (post: XPostReadback) => {
     const parent = parentOf(post)
     return !!parent && (own.has(parent) || (post.inReplyToPostId === parent && post.inReplyToUserId === userId))
@@ -91,7 +99,7 @@ export async function pollInbox(ctx: ActionContext, account: AccountRow) {
       occurred_at: post.createdAt ? Date.parse(post.createdAt) || now : now, received_at: now, reply_item_id: null, offer_id: null,
     }
   }
-  const rows = [...threads.map(post => rowOf(post, 'thread')), ...mentions.map(post => rowOf(post, 'mention'))]
+  const rows = [...kept.map(post => rowOf(post, 'thread')), ...mentions.map(post => rowOf(post, 'mention'))]
   const inserts = rows.map(row => db.prepare(`INSERT INTO stump_inbox_items(id,account_id,network,network_id,kind,url,text,author_id,author_handle,author_name,author_bio,author_public_email,conversation_id,
       parent_network_id,parent_url,parent_own,engaged_first,engagement,occurred_at,received_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(account_id,network_id) DO NOTHING`)
     .bind(row.id, row.account_id, row.network, row.network_id, row.kind, row.url, row.text, row.author_id, row.author_handle, row.author_name, row.author_bio, row.author_public_email, row.conversation_id,
