@@ -9,9 +9,11 @@
 //       "I built", "I founded", "full disclosure", "disclosure:", "affiliated with",
 //       "our product", "my own product" count wherever they appear;
 //       a first-person act counts only with the company or a product (or "it", "this",
-//       "the product") as its object: "I work at Acme", "I made Orbit", "we launched
-//       it", "I'm building Orbit" (not "I work at Stripe and use Orbit", "I made it to
-//       level 5", "I wrote about Orbit", "I started using Orbit");
+//       "the product") as its object: "I work at Acme", "I now work at Acme", "I made
+//       Orbit", "we launched it", "I'm building Orbit" (not "I work at Stripe and use
+//       Orbit", "I made it to level 5", "I wrote about Orbit", "I started using Orbit");
+//       a paid tie counts with the company or a product as the one paying: "Acme pays
+//       me", "Orbit sponsors my newsletter", "sponsored by Acme";
 //       a role counts with its object ("founder of Orbit", "an engineer at Acme") or as
 //       "I'm the founder" in a sentence naming the company or a product (not "I'm a
 //       developer and Orbit is great");
@@ -73,12 +75,15 @@ const ALWAYS: RegExp[] = [
   /\bour (?:product|company|startup|team|customers|users|app|platform)\b/giu,
 ]
 
-const I_ACTS = `i (?:made|created|wrote|designed|launched|started|shipped|maintain|develop|developed|co-?created|help(?:ed)? (?:build|make|run)|am building|${APOS}m building|work(?:ed)? (?:at|for|on)|am (?:with|at)|${APOS}m (?:with|at))`
+const I_ACTS = `i (?:(?:now|also|currently|still) )?(?:made|created|wrote|designed|launched|started|shipped|maintain|develop|developed|co-?created|help(?:ed)? (?:build|make|run)|am building|${APOS}m building|work(?:ed)? (?:at|for|on)|am (?:with|at)|${APOS}m (?:with|at))`
 const WE_ACTS = `we(?: (?:just|recently|finally))? (?:shipped|made|launched|released|created|wrote|developed|designed|announced|open-?sourced|started|maintain|develop|are building|${APOS}re building|${APOS}ve (?:shipped|built|launched|released|made))`
 const ROLE = '(?:co-?)?founders?|ceo|cto|coo|cpo|maintainers?|creators?|authors?|makers?|developers?|engineers?|designers?|employees?|(?:product )?managers?|(?:a )?member of the team'
 const DEFINITE_ROLE = '(?:co-?)?founders?|ceo|cto|coo|cpo|maintainers?|creators?'
 // "made it" is an idiom ("we made it!"), so after "made" only "this" or "the product" is an object.
 const PRONOUN_OBJECT = '(?:(?<!\\bmade\\s+)it|this|the (?:product|app|tool|company|startup|project))'
+/** What a company does for someone it pays: "pays me", "sponsors my newsletter", "employs us". */
+const PAYS = '(?:(?:now|also|currently) )?(?:pays|paid|sponsors|sponsored|employs|employed|compensates|compensated|hires|hired|funds|funded|commissions|commissioned)\\s+(?:me|us|my|our)\\b'
+const PAID_BY = '(?:paid|sponsored|employed|compensated|hired|funded|commissioned|contracted)\\s+by'
 
 function termAlternation(terms: readonly string[]): string | undefined {
   const parts = terms
@@ -99,6 +104,8 @@ function objectPatterns(term: string | undefined): RegExp[] {
     new RegExp(`\\b${WE_ACTS}\\s+${object}`, 'giu'),
     new RegExp(`\\b(?:${ROLE})\\s+(?:of|at|behind|on)\\s+${object}`, 'giu'),
   ]
+  // A paid tie names who pays: the company or a product, never "it" ("it pays me back").
+  if (term) out.push(new RegExp(`(?<![\\p{L}\\p{N}_])${term}\\s+${PAYS}`, 'giu'), new RegExp(`\\b${PAID_BY}\\s+(?:the\\s+)?${term}${end}`, 'giu'))
   return out
 }
 
@@ -221,4 +228,19 @@ export function checkDisclosure(input: DisclosureCheckInput): DisclosureCheck {
   if (!detection.disclosed) return { required, status: 'missing', detection, because }
   if (detection.above_cut === false) return { required, status: 'below_cut', detection, because }
   return { required, status: 'disclosed', detection, because }
+}
+
+const WEAK_ONLY = new RegExp(`^(?:we|we${APOS}(?:re|ve|ll|d)|our|ours)$`, 'iu')
+
+/**
+ * A sentence that says the writer's connection and little else: "Disclosure: …", or a connection in its own words
+ * ("founder at Brightwell", "Brightwell pays me to help with marketing") with at most five other words. Plain "we" or
+ * "our" beside a name is not a statement of connection on its own. `terms` are the company's and its products' names.
+ */
+export function statesConnection(sentence: string, terms: readonly string[] = []): boolean {
+  if (/^(?:full )?disclosure\b/iu.test(sentence.trim())) return true
+  const found = detectDisclosure(sentence, { terms }).matches.filter((match) => !WEAK_ONLY.test(match.text.trim()))
+  if (!found.length) return false
+  const rest = found.reduce((left, match) => left.slice(0, match.start) + ' '.repeat(match.end - match.start) + left.slice(match.end), sentence)
+  return rest.split(/\s+/).filter((word) => /\p{L}/u.test(word)).length <= 5
 }

@@ -30,10 +30,10 @@ In a post about a product, these are claims to back, whether or not the sentence
 
 - a number: a percent, a multiple, a price, or a count of minutes, hours, steps, clicks, users and the like ("cuts triage time by 30%", "takes 5 minutes");
 - a comparison, a superlative, a guarantee or a compliance statement ("faster than Deputy", "the fastest", "zero downtime", "SOC 2");
-- what the product does: "adds a weekly summary", "It also syncs with Stripe now", "Now you can edit each reminder", "recurring meetings now carry last week's open tasks forward", and what a person does with it, "the manager approves in one tap";
+- what the product does: "adds a weekly summary", "It also syncs with Stripe now", "Now you can edit each reminder", "recurring meetings now carry last week's open tasks forward", and what a person does with it, "the manager approves in one tap". News about the team rather than the product, such as "We now meet every Friday" or "Our docs now cover every setting", is not a claim;
 - whatever follows a lead-in that announces it as new ("New in 2.4:", "New:", "Just shipped:"): it is a feature of the product, however it is worded.
 
-A sentence that names something its claim does not, such as an integration or a platform, says more than the claim: against "Sends tasks to Linear and Jira", "it now sends tasks to Asana as well as Linear and Jira" is flagged until a claim backs Asana too. Your own products and people never count as something more.
+A sentence that names something its claim does not, such as an integration or a platform, says more than the claim: against "Sends tasks to Linear and Jira", "it now sends tasks to Asana as well as Linear and Jira" is flagged until a claim backs Asana too. Your own products, your teammates' names and a name you greet ("Hey Jordan, ...") never count as something more.
 
 ### Numbers against their proof
 

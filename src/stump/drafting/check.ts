@@ -2,7 +2,7 @@
 // STUMP-TRUTH-002, -003.5, -004). It reads only the item's text and the records
 // it names, so a person and an agent submitting the same item get the same
 // result, and stores its outcome in the item's flags as {code, blocking, ...facts}.
-import { bannedAct, checkClaims, checkDisclosure, claimsUsed, extractMentions, screenDraftForVenue, type ClaimFinding, type MentionSet } from '../lib/claims/index.ts'
+import { bannedAct, checkClaims, checkDisclosure, claimsUsed, extractMentions, screenDraftForVenue, statesConnection, type ClaimFinding, type MentionSet, type PersonProfile } from '../lib/claims/index.ts'
 import { countText, nearDuplicates, type Network, type TextCount } from '../lib/text/index.ts'
 import type { StumpPerson } from '../people/store.ts'
 import { readVenue, rulesOf, type VenueRow } from '../venues/model.ts'
@@ -22,21 +22,28 @@ export const counted = (network: unknown): network is Network => COUNTED.include
  */
 export const SEE_MORE_CUT: Partial<Record<string, number>> = { linkedin: 140 }
 
-export interface Brand { products: ProductRecord[]; claims: ClaimRecord[]; company_names: string[]; window_days: number }
+/** `people` is the team by display name: a teammate named in a post never makes it say more than a claim. */
+export interface Brand { products: ProductRecord[]; claims: ClaimRecord[]; company_names: string[]; people: PersonProfile[]; window_days: number }
 
-/** The company's brand memory as it is now: products, claims, its own names and the duplicate window. */
+/** The company's brand memory as it is now: products, claims, its own names, its team and the duplicate window. */
 export async function loadBrand(db: D1Database): Promise<Brand> {
-  const [products, claims, settings] = await db.batch([
+  const [products, claims, settings, people] = await db.batch([
     db.prepare('SELECT * FROM stump_products ORDER BY name,id'),
     db.prepare('SELECT * FROM stump_claims ORDER BY created_at,id'),
     db.prepare('SELECT company_names,duplicate_window_days FROM stump_drafting_settings WHERE id=1'),
+    db.prepare("SELECT id,display_name FROM stump_people WHERE status<>'removed' ORDER BY id"),
   ])
   const row = (settings!.results as Row[])[0]
   return {
     products: (products!.results as Row[]).map(productRecord), claims: (claims!.results as Row[]).map(claimRecord),
     company_names: parse<string[]>(row?.company_names, []), window_days: Number(row?.duplicate_window_days ?? 30),
+    people: (people!.results as Row[]).map(person => ({ id: String(person.id), name: String(person.display_name) })),
   }
 }
+
+/** What the claim check reads besides the text: the company's claims, products, own names and team, today in its zone. */
+export const claimInput = (brand: Brand, now: number, productId?: string | null) => ({ claims: brand.claims.map(libClaim), products: brand.products.map(productProfile),
+  company_names: brand.company_names, people: brand.people, ...(productId ? { product_id: productId } : {}), today: today(now) })
 
 export interface Draft {
   id?: string; format: string; network: string | null; account_id: string | null; venue_id: string | null
@@ -68,17 +75,32 @@ export const venueDisclosureLine = (venue: Pick<VenueRow, 'rules'> | null) => {
 
 type ClaimInput = Omit<Parameters<typeof checkClaims>[0], 'text'>
 
-/** What the claim check finds in a disclosure line read on its own: a line that finds anything is never read past. */
-export function lineFindings(line: string, input: ClaimInput) {
+/**
+ * How the claim check reads a disclosure line on its own, with what it found (claim statuses and flag codes):
+ * - `clean`: it finds nothing;
+ * - `connection`: it says how the writer is connected and little else ("Brightwell pays me to help with marketing."), and
+ *   all it finds is the product doing something or a claim the company backs;
+ * - `claim`: it says what the product does, and is not a statement of connection;
+ * - `blocking`: what no line may carry: a banned, stale or number-mismatched claim, a number, comparison, superlative,
+ *   guarantee or compliance statement no claim backs, or a word the brand avoids. The same findings stop a draft.
+ */
+export function lineVerdict(line: string, input: ClaimInput): { verdict: 'clean' | 'connection' | 'claim' | 'blocking'; found: string[] } {
   const result = checkClaims({ ...input, text: line })
-  return [...result.claims.map(finding => finding.status), ...result.flags.map(flag => flag.code)]
+  const found = [...result.claims.map(finding => finding.status), ...result.flags.map(flag => flag.code)]
+  if (!found.length) return { verdict: 'clean', found }
+  const stops = result.flags.some(flag => flag.code === 'avoid_word') || result.claims.some(finding => finding.status !== 'matched'
+    && (finding.status !== 'unmatched' || !finding.because?.length || finding.because.some(reason => reason !== 'capability')))
+  if (stops) return { verdict: 'blocking', found }
+  const terms = [...(input.company_names ?? []), ...(input.products ?? []).flatMap(product => [product.name, ...(product.other_names ?? [])])]
+  return { verdict: statesConnection(line, terms) ? 'connection' : 'claim', found }
 }
 
-/** Where each disclosure line that on its own makes no claim and raises no flag stands in the text, as [start, end) spans. */
+/** Where each disclosure line that is clean or a statement of connection (lineVerdict) stands in the text, as [start, end) spans. */
 function lineSpans(text: string, lines: ReadonlyArray<string | null | undefined>, input: ClaimInput): Array<[number, number]> {
   const spans: Array<[number, number]> = []
   for (const line of new Set(lines.map(line => line?.trim()).filter((line): line is string => !!line))) {
-    if (lineFindings(line, input).length) continue
+    const { verdict } = lineVerdict(line, input)
+    if (verdict !== 'clean' && verdict !== 'connection') continue
     for (const match of text.matchAll(new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'))) spans.push([match.index, match.index + match[0].length])
   }
   return spans
@@ -86,8 +108,9 @@ function lineSpans(text: string, lines: ReadonlyArray<string | null | undefined>
 
 /**
  * The claim check of the whole text, read past its disclosure lines: a finding or flag is left out only when it lies wholly
- * inside a disclosure line that, read on its own, makes no claim and raises no flag, so a line such as "I work on Ferrous."
- * is never taken for a claim about the product, and no line takes any other word of the text out of the check.
+ * inside a disclosure line that, read on its own, is clean or a statement of connection (lineVerdict), so neither "I work on
+ * Ferrous." nor "Ferrous pays me to help with marketing." is taken for a claim about the product, and no line takes any
+ * other word of the text out of the check.
  */
 export function claimsPastLines(text: string, lines: ReadonlyArray<string | null | undefined>, input: ClaimInput) {
   const result = checkClaims({ ...input, text })
@@ -99,15 +122,17 @@ export function claimsPastLines(text: string, lines: ReadonlyArray<string | null
 }
 
 /**
- * Refuses disclosure lines the claim check reads as a claim or flags, naming the first such line, so a line saved for a
- * person or a venue is only ever a statement of connection. `field` names the argument the lines came in.
+ * Refuses disclosure lines that are a claim or carry what stops a draft (lineVerdict), read for the company and for each
+ * product, naming the first such line, so a line saved for a person or a venue is only ever a statement of connection.
+ * `field` names the argument the lines came in.
  */
 export async function refuseClaimingLines(db: D1Database, lines: ReadonlyArray<string>, field: string, now: number) {
   const brand = await loadBrand(db)
-  const base = { claims: brand.claims.map(libClaim), products: brand.products.map(productProfile), company_names: brand.company_names, today: today(now) }
+  const base = claimInput(brand, now)
   for (const line of lines) {
-    const found = [base, ...brand.products.map(product => ({ ...base, product_id: product.id }))].flatMap(input => lineFindings(line, input))
-    if (!found.length) continue
+    const read = [base, ...brand.products.map(product => ({ ...base, product_id: product.id }))].map(input => lineVerdict(line, input))
+    if (read.every(({ verdict }) => verdict === 'clean' || verdict === 'connection')) continue
+    const found = read.flatMap(entry => entry.found)
     const what = found.includes('avoid_word') && found.every(code => code === 'avoid_word' || code === 'matched') ? 'uses a word the brand avoids' : 'reads as a claim about the product'
     refuse('invalid_arguments', { field, line, found: [...new Set(found)],
       reason: `"${line}" ${what}. A disclosure line says only how you are connected, such as "I work on ${brand.products[0]?.name ?? 'the product'}."` })
@@ -189,8 +214,7 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   // The disclosure lines that apply here: the venue's own, and the person's.
   const lines = [venueDisclosureLine(venue), ...(person?.disclosure_lines ?? [])].filter((line): line is string => !!line)
   // Claims and avoided words (STUMP-BRAND-001.2-.3, STUMP-BRAND-004), read past the disclosure lines; mentions from the whole text.
-  const claimCheck = claimsPastLines(text, lines, { claims: brand.claims.map(libClaim), products: brand.products.map(productProfile), company_names: brand.company_names,
-    ...(draft.product_id ? { product_id: draft.product_id } : {}), today: today(now) })
+  const claimCheck = claimsPastLines(text, lines, claimInput(brand, now, draft.product_id))
   const mentions = extractMentions(text, { products: brand.products.map(productProfile), company_names: brand.company_names })
   // One flag per place in the text: two products avoiding the same word flag it once.
   const avoided = new Set<string>()
