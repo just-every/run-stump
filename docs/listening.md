@@ -2,7 +2,7 @@ A watch finds the threads worth answering on open sources, ranks them, and says 
 
 ## Sources
 
-- **Hacker News**, through its public search: stories and comments, with points, author and time.
+- **Hacker News**, through its public search: stories and comments, with points, author and time. A story or comment HN has killed, flagged or deleted, and a comment under such a story, is left out: nobody can read or answer it.
 - **RSS and Atom feeds**: blogs, newsletters, podcasts and release feeds. Podcast transcripts linked from a feed are matched too.
 - **Bluesky** search, and **Mastodon** hashtags on the instances you choose.
 

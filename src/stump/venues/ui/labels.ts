@@ -56,7 +56,9 @@ export function nextOpen(iso: string | null, now = Date.now()): string | null {
 export const nextOpenWords = (venue: Pick<Venue, 'shared_limit' | 'next_open_at'>, now = Date.now()) =>
   venue.shared_limit ? nextOpen(venue.next_open_at, now) ?? 'Not within a year' : 'Any time'
 export const readOn = (date: string | null) => date ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`)) : null
-export const limitWords = (limit: { posts: number; per: string } | null) => limit ? `${limit.posts === 1 ? 'One post' : `${limit.posts}\u00a0posts`} a ${limit.per}` : null
+/** The period a shared limit counts, as a calendar period in UTC (venues/limits.ts): a week runs Monday to Sunday. */
+const PERIOD_WORDS: Record<string, string> = { day: 'a day', week: 'a week, Monday to Sunday', month: 'a calendar month', quarter: 'a calendar quarter', year: 'a calendar year' }
+export const limitWords = (limit: { posts: number; per: string } | null) => limit ? `${limit.posts === 1 ? 'One post' : `${limit.posts}\u00a0posts`} ${PERIOD_WORDS[limit.per] ?? `a ${limit.per}`}` : null
 
 /** The status dot: filled when the venue is ready to use, open otherwise. */
 export const statusTone = (status: string) => status === 'ready' ? 'ok' : status === 'hold' || status === 'excluded' ? 'held' : ''

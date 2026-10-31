@@ -6,15 +6,24 @@ import { Chip, Empty, useLoaded } from '../../ui/kit.tsx'
 import { handoffStyles } from './styles.ts'
 import { rowTitle, shortWhen, STATE, type Handoff } from './words.ts'
 
-/** The hand-off queue (SPEC §4.2): your own first, ordered by due date; a poster sees only theirs. */
+/** Hand-offs still to post: the ones a tab counts. */
+const WAITING = ['open', 'join_first', 'held']
+
+/**
+ * The hand-off queue (SPEC §4.2), ordered by due date; a poster sees only theirs. An owner or admin, who watches the whole
+ * team's, opens on Everyone; anyone else on their own. Each tab counts the hand-offs still to post in it.
+ */
 export function QueuePage() {
   const { data, error } = useLoaded(async () => {
     const [who, queue] = await Promise.all([me(), runAction<{ items: Handoff[]; total: number; mine: number }>('stump.handoffs.manage', { action: 'queue' })])
     return { who, queue }
   })
-  const [scope, setScope] = useState<'mine' | 'everyone'>('mine')
+  const [chosen, setScope] = useState<'mine' | 'everyone' | null>(null)
   const poster = data?.who.person.role === 'poster'
-  const items = data ? data.queue.items.filter(item => poster || scope === 'everyone' || item.person_id === data.who.person.id) : []
+  const scope = chosen ?? (data && ['owner', 'admin'].includes(data.who.person.role) ? 'everyone' : 'mine')
+  const mine = data ? data.queue.items.filter(item => item.person_id === data.who.person.id) : []
+  const items = data ? poster || scope === 'mine' ? mine : data.queue.items : []
+  const waiting = (list: Handoff[]) => list.filter(item => WAITING.includes(item.state)).length
   return <HydrationUnit>
     <style>{handoffStyles}</style>
     <section className="st-page st-handoffs" aria-labelledby="handoffs-title">
@@ -22,8 +31,8 @@ export function QueuePage() {
       {error ? <p className="st-error" role="alert">{error}</p> : null}
       {data && !poster ? <div className="st-ho-toolbar">
         <div className="st-segmented" role="group" aria-label="Whose hand-offs">
-          <button type="button" aria-pressed={scope === 'mine'} onClick={() => setScope('mine')}>Mine</button>
-          <button type="button" aria-pressed={scope === 'everyone'} onClick={() => setScope('everyone')}>Everyone</button>
+          <button type="button" aria-pressed={scope === 'mine'} onClick={() => setScope('mine')}>Mine<span className="st-ho-tab-count">{waiting(mine)}</span></button>
+          <button type="button" aria-pressed={scope === 'everyone'} onClick={() => setScope('everyone')}>Everyone<span className="st-ho-tab-count">{waiting(data.queue.items)}</span></button>
         </div>
       </div> : null}
       {data && !items.length ? <Empty title={scope === 'mine' || poster ? 'Nothing to post by hand' : 'No hand-offs yet'}>

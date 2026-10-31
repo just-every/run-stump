@@ -4,16 +4,20 @@
 import { runAction } from '../ui/api.ts'
 import { openingWords } from '../today/sections.ts'
 import type { ItemRecord } from './records.ts'
+import { otherServer } from '../venues/server.ts'
 import { networkName, type Account } from './view.ts'
 
 /** A venue as the variant's venue picker reads it. */
-export interface VenueChoice { id: string; name: string; platform: string | null; archived: boolean; excluded: unknown; routes: string[] }
+export interface VenueChoice { id: string; name: string; platform: string | null; url: string | null; archived: boolean; excluded: unknown; routes: string[] }
 
-/** The venues a variant for this account can be aimed at: open venues on the account's network, those it may publish to first. */
-export function venuesFor(venues: VenueChoice[], account: Pick<Account, 'network'> | undefined) {
+/**
+ * The venues a variant for this account can be aimed at: open venues on the account's network (on Mastodon, on the account's own
+ * server: a venue on another server never receives the post), those it may publish to first.
+ */
+export function venuesFor(venues: VenueChoice[], account: Pick<Account, 'network' | 'instance'> | undefined) {
   if (!account) return []
   const network = networkName(account.network).toLowerCase()
-  return venues.filter(venue => !venue.archived && !venue.excluded && (venue.platform ?? '').trim().toLowerCase() === network)
+  return venues.filter(venue => !venue.archived && !venue.excluded && (venue.platform ?? '').trim().toLowerCase() === network && !otherServer(venue, account))
     .sort((a, b) => Number(b.routes.includes('publish')) - Number(a.routes.includes('publish')) || a.name.localeCompare(b.name))
 }
 

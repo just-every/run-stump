@@ -3,6 +3,7 @@
 // restyle of the tokens restyles them too.
 export const handoffStyles = `
 .st-handoffs .st-ho-toolbar { margin: 0 0 24px; }
+.st-handoffs .st-ho-tab-count { margin-left: 8px; color: var(--stump-muted); font-variant-numeric: tabular-nums; }
 .st-handoffs .st-ho-list { list-style: none; margin: 0; padding: 0 24px; background: var(--stump-white); border: 1px solid var(--stump-hairline); border-radius: var(--stump-radius); }
 .st-handoffs .st-ho-row { border-top: 1px solid var(--stump-hairline); }
 .st-handoffs .st-ho-row:first-child { border-top: 0; }

@@ -2,7 +2,7 @@ import { pageName, proofText } from '../ui/kit.tsx'
 // The drafting records as the screens read them from the person door.
 export interface Flag { code: string; blocking: boolean; network?: string; count?: number; limit?: number; text?: string; claim_id?: string; expected?: string[]; reason?: string; rule?: string; matches?: Array<{ id: string; kind: string }>; [fact: string]: unknown }
 export interface Count { network: string; count: number; limit: number; unit: string; over: boolean; fits: boolean }
-export interface Account { id: string; network: string; handle: string; display_name: string | null; owner_kind: 'person' | 'company'; owner_person_id: string | null; state: string }
+export interface Account { id: string; network: string; handle: string; display_name: string | null; owner_kind: 'person' | 'company'; owner_person_id: string | null; state: string; instance?: string | null }
 export interface Master { id: string; person_id: string; text: string; account_ids: string[]; sources: Array<{ url: string; title: string | null }>; revision: number }
 export interface Variant { item_id: string; network: string | null; account_id: string | null; venue_id?: string | null; product_id?: string | null; handle: string | null; account_name: string | null; text: string; sent_text?: string | null; count: Count | null; flags: Flag[]; state: string; revision: number; differs_from_master: boolean }
 export interface MasterPreview { master: Master; items: Variant[]; total: number }
@@ -109,6 +109,7 @@ export function flagLine(flag: Flag, span?: string | null): string {
     case 'vote_request': return `${quote(String(flag.text ?? ''))} asks for votes`
     case 'alt_text_missing': return `${String(flag.name ?? 'An image')} needs alt text`
     case 'venue_rule': return String(flag.reason ?? `Held by the venue's ${String(flag.rule ?? '')} rule`)
+    case 'venue_other_server': return `The venue is on ${String(flag.venue_host)}; this account posts on ${String(flag.account_host)}`
     default: return flag.code.replace(/_/g, ' ')
   }
 }

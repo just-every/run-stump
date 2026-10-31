@@ -2,6 +2,7 @@
 import { ActionError, explain } from '../../ui/api.ts'
 import type { ChipTone } from '../../ui/kit.tsx'
 import type { HandoffRecord } from '../model.ts'
+import { limitWords } from '../../venues/ui/labels.ts'
 
 export type Handoff = HandoffRecord
 type Rule = { value: unknown; source_url: string | null; read_at: string | null; sourced: boolean; detail?: string | null; thread_url?: string | null }
@@ -81,7 +82,7 @@ export function ruleLines(rules: Record<string, Rule | null>): Array<{ key: stri
 }
 
 /** The venue's shared limit as the poster reads it: "One post a week, for the whole company". */
-export const limitLine = (limit: { posts: number; per: string } | null) => limit ? `${limit.posts === 1 ? 'One post' : `${limit.posts}\u00a0posts`} a ${limit.per}, for the whole company` : null
+export const limitLine = (limit: { posts: number; per: string } | null) => limit ? `${limitWords(limit)}, for the whole company` : null
 
 /** Plain words for the refusals a person meets on these screens, naming what the refusal names. */
 export function say(error: unknown): string {

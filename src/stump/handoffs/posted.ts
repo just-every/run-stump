@@ -10,6 +10,8 @@ import { readPerson } from '../people/store.ts'
 import { annotateLedgerEntry } from '../stack/index.ts'
 import { memberOf } from '../venues/members.ts'
 import { rulesOf, venueOrRefuse, type VenueRow } from '../venues/model.ts'
+import { venueDisclosureLine } from '../drafting/check.ts'
+import { recordedClaims } from './claims.ts'
 import { recordedDisclosure } from './disclosure.ts'
 import { recordHandedOff } from './ledger.ts'
 import { authorMatches, checkLink, methodFor, notOnVenueReason, onVenue, parseLink, sameLink, venueMethod, type Checked } from './link.ts'
@@ -88,19 +90,21 @@ export async function record(args: Args, ctx: ActionContext) {
   const agent = ctx.agent ? { id: ctx.agent.id, name: ctx.agent.name } : prepared
   // The text as posted: read back where the network shows it, else what the person posted, with the company's own links tagged for the hand-off route.
   const text = checked.text ?? await tagOwnLinks(ctx.db, { text: ownWords ?? row!.draft_text!, route: 'handoff', source: venue.platform ?? venue.name, campaign: row!.campaign, content: shortContent(row!.id) })
-  const item = row!.item_id ? await ctx.db.prepare('SELECT revision,claims_used FROM stump_items WHERE id=?').bind(row!.item_id).first<{ revision: number; claims_used: string }>() : null
+  const item = row!.item_id ? await ctx.db.prepare('SELECT revision FROM stump_items WHERE id=?').bind(row!.item_id).first<{ revision: number }>() : null
+  // The claims the posted text itself makes: the entry lists only those it matches, and names each sentence no claim backs.
+  const claims = await recordedClaims(ctx.db, row!.product_id, text, [row!.disclosure_line, venueDisclosureLine(venue), ...person.disclosure_lines], now)
   const ledgerId = crypto.randomUUID(), postedAt = checked.posted_at ?? now
   const [, updated] = await ctx.db.batch([
     recordHandedOff(ctx.db, { handoff_id: row!.id, item_id: row!.item_id, venue_id: venue.id, network: checked.network, network_id: checked.network_id, url: link.href,
       person_id: person.id, person_name: person.display_name, agent, text, disclosure_line: row!.disclosure_line,
-      claims: item ? JSON.parse(item.claims_used) as string[] : (JSON.parse(row!.facts) as Array<{ claim_id: string }>).map(fact => fact.claim_id),
+      claims: claims.used,
       product_id: row!.product_id, campaign: row!.campaign, confirmation: checked.confirmation, revision: item?.revision ?? null, posted_at: postedAt }, ledgerId, now),
     ...move(actor, row!, 'posted', 'posted', { url: link.href, ledger_id: ledgerId, confirmation: checked.confirmation, posted_at: postedAt, own_words: ownWords,
-      attested_at: args.attest_own_words === true ? now : null, hold: null }, { url: link.href, confirmation: checked.confirmation, network: checked.network, ledger_id: ledgerId }),
+      attested_at: args.attest_own_words === true ? now : null, hold: null }, { url: link.href, confirmation: checked.confirmation, network: checked.network, ledger_id: ledgerId, ...(claims.unbacked.length ? { unbacked: claims.unbacked } : {}) }),
   ])
   if (!updated!.meta.changes) refuse('revision_conflict', { handoff_id: row!.id })
   ctx.emit('handoff.posted', `stump://handoffs/${row!.id}`, { ledger_id: ledgerId })
   // Each post is annotated in Vane; with Vane not connected the annotation waits as an offer.
   const annotation = await annotateLedgerEntry(ctx.env, ledgerId, ctx.person.id, now)
-  return { state: 'posted' as const, confirmation: checked.confirmation, ledger_id: ledgerId, url: link.href, network: checked.network, annotation: annotation.status }
+  return { state: 'posted' as const, confirmation: checked.confirmation, ledger_id: ledgerId, url: link.href, network: checked.network, claims: claims.used, unbacked: claims.unbacked, annotation: annotation.status }
 }

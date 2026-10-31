@@ -2,7 +2,7 @@
 // (STUMP-HANDOFF-001): pick the member who posts, the product, when it is due
 // and what happens if it lapses, and optionally the thread and a draft. The
 // brief opens next. stump.handoffs.prepare decides the route and every check.
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 import { runAction } from '../../ui/api.ts'
 import { Outcome, useLoaded, useRun, SelectField } from '../../ui/kit.tsx'
@@ -25,6 +25,10 @@ export function HandoffStart({ venue, routes, members, team, me }: { venue: Venu
 function HandoffForm({ venue, routes, members, team, me, onClose }: { venue: Venue; routes: string[]; members: Members; team: Team; me: { id: string; role: string }; onClose(): void }) {
   const navigate = useNavigate()
   const products = useLoaded(() => runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' }))
+  // Drafting it here needs the company's own AI provider: with none set, ticking the box says where it is set, as Compose does.
+  const ai = useLoaded(() => runAction<{ source: string }>('stump.setup.ai', { action: 'get' }))
+  const [generate, setGenerate] = useState(false)
+  const admin = ['owner', 'admin'].includes(me.role)
   const { busy, message, run } = useRun()
   const editor = ['owner', 'admin', 'editor'].includes(me.role)
   // Members first (a non-member gets the venue's join steps), then the rest of the team who post; a contributor hands off only to themselves.
@@ -55,7 +59,10 @@ function HandoffForm({ venue, routes, members, team, me, onClose }: { venue: Ven
     </div>
     {draftable ? <>
       <label className="st-field" style={{ marginTop: 12 }}>Draft (optional)<textarea name="text" rows={3} maxLength={25_000} placeholder="Leave empty for a brief with talking points" /></label>
-      <label className="st-field st-check"><input name="generate" type="checkbox" />Or draft it with your AI provider</label>
+      <label className="st-field st-check"><input name="generate" type="checkbox" checked={generate} onChange={event => setGenerate(event.target.checked)} />Or draft it with your AI provider</label>
+      {generate && ai.data?.source === 'none' ? <p className="st-meta st-handoff-noai">{admin
+        ? <>No AI provider yet. <Link to="/app/settings/connections">Set one in Settings › Connections</Link> to draft it here.</>
+        : <>No AI provider yet. An owner or admin sets one in Settings › Connections to draft it here.</>}</p> : null}
     </> : <p className="st-note">{venue.name} bans AI-written text: the member gets talking points and facts, and writes their own words.</p>}
     <Outcome message={message} />
     <div className="st-actions" style={{ marginTop: 12 }}>

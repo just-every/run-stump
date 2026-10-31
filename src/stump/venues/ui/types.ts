@@ -9,7 +9,7 @@ export interface Venue {
   audience: string | null; why: string | null; reader_value: string | null; how_to_post: Record<string, unknown>; requirements: Record<string, unknown>
   reception: string | null; notes: string | null; imported: boolean; revision: number; created_at: string; updated_at: string; archived_at: string | null
 }
-export interface VenueItem { id: string; master_id: string | null; product_id: string | null; product_name: string | null; handoff: { id: string; state: string } | null; format: string; state: string; text: string | null; routes: string[]; hold: { reason?: string; rule?: string } | null; flags: string[]; scheduled_at: string | null; history: Array<{ from_state: string | null; to_state: string; reason: string | null; at: string }> }
+export interface VenueItem { kind?: 'item' | 'handoff'; id: string; master_id: string | null; product_id: string | null; product_name: string | null; handoff: { id: string; state: string } | null; format: string; state: string; text: string | null; routes: string[]; hold: { reason?: string; rule?: string } | null; flags: string[]; scheduled_at: string | null; history: Array<{ from_state: string | null; to_state: string; reason: string | null; at: string }> }
 export interface VenueList { items: Venue[]; total: number }
 export interface RouteAnswer { venue_id: string; routes: string[]; reasons: Array<{ route: string; open: boolean; rule: string | null; because: string }>; unsourced: string[] }
 export interface Unmet { gate: string; need: number | boolean; has: number | boolean | null }

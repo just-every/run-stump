@@ -6,7 +6,7 @@ Open the venue under **Venues**. Where its rules keep posting for its members, i
 
 - **Who posts**: a member of the venue (anyone else gets the venue's join steps first). An invited teammate can receive a hand-off once they have accepted their invitation by signing in; until then the hand-off is refused with that reason.
 - **Product**, the **due** date, and what happens **if it is not posted by then**: let it expire, hand it to the next member, or move it to the venue's next opening.
-- Optionally the **thread** it belongs in (a link on the venue), and a **draft**: write it, leave it empty for a brief with talking points, or let your [AI provider](/docs/ai-provider) draft it where the venue allows AI-written text.
+- Optionally the **thread** it belongs in (a link on the venue), and a **draft**: write it, leave it empty for a brief with talking points, or let your [AI provider](/docs/ai-provider) draft it where the venue allows AI-written text. With no provider set, ticking **Or draft it with your AI provider** says where one is set.
 
 The brief opens next. Editors and admins hand off to anyone on the team; a contributor hands off only to themselves. From **Listening**, a finding on a venue you have recorded has **Hand off** too, with the thread filled in.
 
@@ -33,13 +33,15 @@ A hand-off waits, with the reason on it, while something stops the post:
 
 ## Who sees a hand-off
 
-Each person works their own queue, ordered by due date. A poster sees only their own hand-offs. A person who is not yet a member of the venue gets its join steps and gates first.
+Each person works their own queue, ordered by due date. **Hand-offs** has two tabs, **Mine** and **Everyone**, each with the number of hand-offs still to post in it; an owner or admin opens on **Everyone**, anyone else on **Mine**. A poster sees only their own hand-offs. A person who is not yet a member of the venue gets its join steps and gates first.
 
 ## Record the link
 
 Paste the link to the post. Stump checks that it belongs to the venue (for a Discord server, that the message link's server is the venue's server; see [Venues](/docs/venues)), and where the network offers an official way to confirm the post and its author, uses it. Reddit, LinkedIn and members-only links are recorded as confirmed by the person, and Stump makes no request to their pages.
 
 A confirmed link marks the hand-off posted and writes the [ledger](/docs/ledger) entry with the posted text. A link to another venue or another author is refused, with the reason.
+
+The claim check runs on the text recorded: the text read back from the network, else the person's own words or the draft. The ledger entry lists only the claims that text matches, and the brief names each sentence no claim on record backs (a number the proof does not give, say), so someone can back it under **Settings › Brand** or correct the post.
 
 ## When a hand-off lapses
 

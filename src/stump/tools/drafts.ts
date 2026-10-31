@@ -375,7 +375,7 @@ export const draftTools: StumpTool[] = [{
       async run(_args, ctx) {
         // The accounts a person drafts for: the company's, and their own. A poster sees only their own (STUMP-TEAM-001.2).
         const own = ['owner', 'admin', 'editor'].includes(ctx.person.role) ? '' : ctx.person.role === 'poster' ? " WHERE owner_kind='person' AND owner_person_id=?" : " WHERE owner_kind='company' OR owner_person_id=?"
-        const rows = await ctx.db.prepare(`SELECT id,network,handle,display_name,owner_kind,owner_person_id,state FROM stump_accounts${own} ORDER BY owner_kind='person',network,handle`)
+        const rows = await ctx.db.prepare(`SELECT id,network,handle,display_name,owner_kind,owner_person_id,state,instance FROM stump_accounts${own} ORDER BY owner_kind='person',network,handle`)
           .bind(...(own ? [ctx.person.id] : [])).all<Row>()
         return { items: rows.results, total: rows.results.length }
       },

@@ -276,9 +276,10 @@ function ComposePage() {
     </ul>
   </section>
 
-  const variantCards = allVariants.map(variant => <VariantCard key={`${variant.item_id}-${variant.revision}`} variant={variant} claims={claimRanges(variant)}
+  // A card keeps its place while its own saves land, so typing carries on across them.
+  const variantCards = allVariants.map(variant => <VariantCard key={variant.item_id} variant={variant} claims={claimRanges(variant)}
     select={fixing?.item === variant.item_id ? { range: fixRange(variant, fixing.flag), at: fixing.at } : null} onSelected={() => setFixing(null)}
-    onSave={next => void saveVariant(variant, next)} />)
+    onSave={next => saveVariant(variant, next)} />)
 
   const variantsPanel = <section className="st-card" aria-labelledby="variants-title">
     <h2 className="st-card-head" id="variants-title"><Disc icon="grid" />Variants</h2>
@@ -387,13 +388,37 @@ function ComposePage() {
   </HydrationUnit>
 }
 
-function VariantCard({ variant, claims, select, onSelected, onSave }: { variant: Variant; claims: Array<[number, number]>; select: { range: [number, number] | null; at: number } | null; onSelected(): void; onSave: (text: string) => void }) {
+/** How long typing rests before a variant saves and its checks run again. */
+const SETTLE_MS = 900
+
+function VariantCard({ variant, claims, select, onSelected, onSave }: { variant: Variant; claims: Array<[number, number]>; select: { range: [number, number] | null; at: number } | null; onSelected(): void; onSave: (text: string) => Promise<void> }) {
   const flags = blocking(variant.flags)
   // A flagged variant opens on what to fix; one that has gone out opens on the text it sends.
   const [open, setOpen] = useState(flags.length > 0 || !!GONE[variant.state])
   // Once it has left, the card shows the exact text the account sends: its links tagged, or as the network read it back.
   const [text, setText] = useState(variant.sent_text ?? variant.text)
   const field = useRef<HTMLTextAreaElement>(null)
+  // The text saves once typing rests, and on leaving the field, so the checks follow the words without a click away. One save
+  // runs at a time, each against the revision the last one made; a newer revision from elsewhere (the master, a re-aim) shows
+  // here once the field is not being typed in.
+  const latest = useRef({ text, onSave }), timer = useRef<ReturnType<typeof setTimeout> | null>(null), saving = useRef<Promise<void> | null>(null), queued = useRef(false)
+  latest.current = { text, onSave }
+  useEffect(() => { if (document.activeElement !== field.current) setText(variant.sent_text ?? variant.text) }, [variant.revision, variant.state])
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
+  function save() {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null }
+    // A save asked for while one runs waits for it, and for the card to read the revision it made.
+    if (saving.current) {
+      if (!queued.current) { queued.current = true; void saving.current.then(() => { timer.current = setTimeout(() => { queued.current = false; save() }, 50) }) }
+      return
+    }
+    saving.current = latest.current.onSave(latest.current.text).finally(() => { saving.current = null })
+  }
+  function type(next: string) {
+    setText(next)
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(save, SETTLE_MS)
+  }
   const over = variant.count ? variant.count.count > variant.count.limit : false
   // "Fix claim": open the card, put the cursor in its text and select the claim, so typing replaces it.
   useEffect(() => {
@@ -421,7 +446,7 @@ function VariantCard({ variant, claims, select, onSelected, onSave }: { variant:
       <label className="st-sr" htmlFor={`variant-${variant.item_id}`}>{variant.network ? `${networkName(variant.network)} text` : 'Post text'}</label>
       <div className="st-variant-field">
         <Marked text={text} network={variant.network} limit={over ? variant.count!.limit : null} claims={text === variant.text ? claims : []} />
-        <textarea ref={field} id={`variant-${variant.item_id}`} value={text} rows={6} spellCheck readOnly={!!GONE[variant.state]} onChange={event => setText(event.target.value)} onBlur={() => onSave(text)} />
+        <textarea ref={field} id={`variant-${variant.item_id}`} value={text} rows={6} spellCheck readOnly={!!GONE[variant.state]} onChange={event => type(event.target.value)} onBlur={save} />
       </div>
     </div>
   </article>

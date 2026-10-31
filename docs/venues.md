@@ -25,6 +25,10 @@ Every rule is a field with the URL it came from and the date it was read:
 
 A rule is sourced only with both its source page and the date you read it. A rule with either missing reads as unsourced, and the rule editor says which half is missing. In the editor, choose the rule's value first; its source and date save with it as you type.
 
+## Shared limits
+
+A venue's shared limit is how often the whole company may post there, across every person and product: one post a week, say. It counts calendar periods in UTC: a week runs Monday to Sunday, and a month, quarter or year starts on its first day. A scheduled post, an open hand-off, and every post and hand-off already on the ledger take a place in their period. When the period is full, the next post or hand-off holds until the next period with room, and the venue's page shows when that is (**Next open**). The venue's **Products** card counts everything aimed at the venue for each product, hand-offs with a brief included.
+
 ## Discord servers
 
 Discord message links look like `https://discord.com/channels/<server id>/<channel id>/<message id>`. To record a hand-off's link at a Discord venue, Stump needs the server: record the venue by a `https://discord.com/channels/<server id>` address, or keep its invite link (`discord.gg/…`) as the address and set **Server** to the server id (the first number in any message link from it). A message link from another server is refused, naming the venue.
