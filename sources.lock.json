@@ -540,7 +540,7 @@
       "executable": false
     },
     "docs/team.md": {
-      "sha256": "c260a49d053f405687907f24554d4639916ed61943f374c4c14a6536c9254db4",
+      "sha256": "2aabc9826f301eb5024e6b66c54bfd11759d5ddac9d4f2b70358d040ed543fda",
       "executable": false
     },
     "docs/venues.md": {
@@ -3632,7 +3632,7 @@
       "executable": false
     },
     "src/stump/drafting/check.ts": {
-      "sha256": "fb225fb21e7e053b4e490db552e58b7cef5f54e5d2574404e7a4c339914d410a",
+      "sha256": "0a8b5831146949be03297cace87702c6966fcb00c2ca95d4c9b220daaf047e51",
       "executable": false
     },
     "src/stump/drafting/diff.ts": {
@@ -3916,7 +3916,7 @@
       "executable": false
     },
     "src/stump/lib/claims/disclosure.ts": {
-      "sha256": "2cd282c44f4d22b6f408c7b3237deaca3dd092c9eab2428f39772971855fe5e7",
+      "sha256": "fa88b4b14682aa92137a197edce1bc73acfaf3214e20a8d53159b2f255465660",
       "executable": false
     },
     "src/stump/lib/claims/extract.ts": {
@@ -4316,7 +4316,7 @@
       "executable": false
     },
     "src/stump/people/store.ts": {
-      "sha256": "a54358740106dcb16cbc752f482ed4a44828026eb3ef6b0f637f98ae0706601a",
+      "sha256": "20a77b328cbe7bfe973ab47e76171c47999f092d8b60a3b99bcacf88c9f3b135",
       "executable": false
     },
     "src/stump/publish/bluesky.ts": {
@@ -4492,7 +4492,7 @@
       "executable": false
     },
     "src/stump/tools/team.ts": {
-      "sha256": "8480c5c1f655d49a88bd1a7de8b5368a87ef2d7f0126ae3ca9bf22d8174def51",
+      "sha256": "e3a0acb664631f3e08108ff3c1ae96ce73d8a981c9b8cf6a23c278f48c9b6a11",
       "executable": false
     },
     "src/stump/tools/venues.ts": {

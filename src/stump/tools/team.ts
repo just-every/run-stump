@@ -96,6 +96,11 @@ export const teamTools: StumpTool[] = [{
         if (args.disclosure_lines !== undefined) await refuseClaimingLines(ctx.db, args.disclosure_lines as string[], 'disclosure_lines', ctx.now())
         const member = await ctx.db.prepare("SELECT id FROM stump_people WHERE email=? AND status='active'").bind(address).first<{ id: string }>()
         if (member) refuse('already_member', { person_id: member.id })
+        // Inviting someone again never renames them through an agent: the name on the invitation is the one they join with.
+        if (ctx.agent) {
+          const pending = await ctx.db.prepare("SELECT display_name FROM stump_people WHERE email=? AND status='invited'").bind(address).first<{ display_name: string }>()
+          if (pending && pending.display_name !== String(args.display_name)) refuse('person_only', { field: 'display_name', reason: 'Names on the team are recorded by a signed-in owner or admin.' })
+        }
         // The person is Base's operator for this email, invited and holding nothing until they sign in (D-1).
         // Inviting someone already invited replaces the invitation, so the newest role and connection apply.
         const id = await ctx.admin.invite({ email: address, displayName: String(args.display_name) }), now = ctx.now()

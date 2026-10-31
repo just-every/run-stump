@@ -13,7 +13,8 @@
 //       Orbit", "we launched it", "I'm building Orbit" (not "I work at Stripe and use
 //       Orbit", "I made it to level 5", "I wrote about Orbit", "I started using Orbit");
 //       a paid tie counts with the company or a product as the one paying: "Acme pays
-//       me", "Orbit sponsors my newsletter", "sponsored by Acme" (not "Orbit paid us back");
+//       me", "Orbit sponsors my newsletter", "sponsored by Acme" (not "Orbit paid us back",
+//       "Orbit pays us dividends" or "Orbit pays my front desk back in hours");
 //       a role counts with its object ("founder of Orbit", "an engineer at Acme") or as
 //       "I'm the founder" in a sentence naming the company or a product (not "I'm a
 //       developer and Orbit is great");
@@ -82,10 +83,16 @@ const DEFINITE_ROLE = '(?:co-?)?founders?|ceo|cto|coo|cpo|maintainers?|creators?
 // "made it" is an idiom ("we made it!"), so after "made" only "this" or "the product" is an object.
 const PRONOUN_OBJECT = '(?:(?<!\\bmade\\s+)it|this|the (?:product|app|tool|company|startup|project))'
 /**
- * What a company does for someone it pays: "pays me", "sponsors my newsletter", "employs us". "Pays me back" and "paid us
- * back" say the product was worth it, not that anyone is paid, so they never count.
+ * What a company does for someone it pays: "pays me", "sponsors my newsletter", "employs us". After "me" or "us" the tie
+ * reads only when the clause ends there or goes on to say how ("to help with marketing", "for this post", "as a
+ * contractor", "since 2024", "full-time"): "pays me back", "pays us dividends" and "pays me right back in saved hours"
+ * say the product was worth it, not that anyone is paid. After "my" or "our", "back" a few words on ("pays my front desk
+ * back in hours") says the same.
  */
-const PAYS = '(?:(?:now|also|currently) )?(?:pays|paid|sponsors|sponsored|employs|employed|compensates|compensated|hires|hired|funds|funded|commissions|commissioned)\\s+(?:me|us|my|our)\\b(?!\\s+back\\b)'
+const PAID_ACT = '(?:pays|paid|sponsors|sponsored|employs|employed|compensates|compensated|hires|hired|funds|funded|commissions|commissioned)'
+const PAID_ME = `(?:me|us)(?=\\s+(?:to|for|as|since|full-?time|part-?time)\\b|\\s*(?:[.,;:!?)\\u2013\\u2014\\n-]|$))`
+const PAID_MINE = `(?:my|our)\\b(?!(?:\\s+[\\p{L}\\p{N}${APOS.slice(1, -1)}-]+){1,4}\\s+back\\b)`
+const PAYS = `(?:(?:now|also|currently) )?${PAID_ACT}\\s+(?:${PAID_ME}|${PAID_MINE})`
 const PAID_BY = '(?:paid|sponsored|employed|compensated|hired|funded|commissioned|contracted)\\s+by'
 
 function termAlternation(terms: readonly string[]): string | undefined {
