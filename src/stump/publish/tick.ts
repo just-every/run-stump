@@ -17,6 +17,9 @@ export async function sendable(db: D1Database, row: ItemRow, account: AccountRow
   return outgoing(db, await dueItem(db, row, account), row.campaign)
 }
 
+export interface Flag { code: string; blocking: boolean; [fact: string]: unknown }
+export const blockingFlags = (row: Pick<ItemRow, 'flags'>) => (JSON.parse(row.flags) as Flag[]).filter(flag => flag.blocking === true)
+
 /** Agents are paused by the person door's Pause agents, or by Business Pause (BASE-AGENT-011). */
 async function agentsPaused(db: D1Database): Promise<boolean> {
   const row = await db.prepare("SELECT local_paused, json_extract(envelope,'$.paused') AS business FROM agent_door_state WHERE id=1").first<{ local_paused: number; business: number | null }>()
@@ -122,7 +125,7 @@ async function apply(db: D1Database, mover: Mover, item: ItemRow & { state: 'pos
  * rate limit or day limit is over go back on the schedule; then every due item
  * no Pause covers goes out through its network's publisher, one claim at a
  * time. While agents are paused, items an agent scheduled are not sent; once
- * due they hold until a person reschedules them.
+ * due they hold until a person reschedules them. An item a blocking check stops holds too.
  */
 export async function publishDue(env: StumpEnv, now = Date.now(), publishers: Readonly<Record<string, Publisher>> = registered) {
   const db = env.DB, mover: Mover = { db, person: null, agent: null, now: () => now }
@@ -133,6 +136,12 @@ export async function publishDue(env: StumpEnv, now = Date.now(), publishers: Re
   const agentHold = await agentsPaused(db)
   const due = (await db.prepare(`SELECT * FROM stump_items i WHERE state='scheduled' AND scheduled_at<=? AND ${NOT_PAUSED('i')} ORDER BY scheduled_at,id LIMIT 25`).bind(now).all<ItemRow>()).results
   for (const item of due) {
+    // A blocking check never posts, whichever door put the item on the schedule.
+    const flagged = blockingFlags(item)[0]
+    if (flagged) {
+      await db.batch(moveItem(mover, item, 'held', `held: ${flagged.code}`, { hold: hold(holdOwner(item), `A check stops it (${flagged.code}). Fix it, then schedule it again.`, { kind: 'check', flag: flagged }) }))
+      held.push(item.id); continue
+    }
     if (agentHold && agentScheduled(item)) {
       await db.batch(moveItem(mover, item, 'held', 'agents paused', { hold: hold(holdOwner(item), 'Its time passed while agents were paused. Reschedule or drop it.', { kind: 'agents_paused' }) }))
       held.push(item.id); continue

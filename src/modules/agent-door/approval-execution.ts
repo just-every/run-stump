@@ -1,4 +1,4 @@
-import type { SavedApproval, ApprovalMark } from './approvals.ts'
+import { DROP_SEALED, openArguments, type SavedApproval, type ApprovalMark } from './approvals.ts'
 import type { Runtime } from './types.ts'
 import { audit, newAudit, recordDecision, outcomeRow, usage, usageToday } from './audit.ts'
 import { classify, context, livePrincipal, runTool, sameFacts, digest, selfEscalation, summary, type Effect } from './execution.ts'
@@ -23,7 +23,8 @@ export async function executeApproval(rt: Runtime, id: string, saved: SavedAppro
   const by = [...new Set(approvals.map(mark => mark.person))]
   const approvers: Array<{ id: string; name: string }> = []
   try {
-    const principal = await livePrincipal(rt, { ...saved.principal, operationId: saved.principal.operationId ?? saved.decision_id, idempotencyKey: saved.key }), state = await policyState(rt), tool = savedTool(rt, saved.tool, saved.args)
+    const args = await openArguments(rt, saved)
+    const principal = await livePrincipal(rt, { ...saved.principal, operationId: saved.principal.operationId ?? saved.decision_id, idempotencyKey: saved.key }), state = await policyState(rt), tool = savedTool(rt, saved.tool, args)
     if (tool?.authority === 'none') row.authority = 'none'
     const refusal = policyRefusal(rt, state, tool?.classes)
     if (saved.principal.consent && state.revoked.consents.includes(saved.principal.consent)) result = { ...result, outcome: 'refused', code: 'consent_revoked' }
@@ -38,15 +39,15 @@ export async function executeApproval(rt: Runtime, id: string, saved: SavedAppro
         if (!approvers.some(item => item.id === person.id)) approvers.push({ id: person.id, name: person.name })
       }
       const ctx = context(rt, principal, saved.door, [], approvers)
-      const target = await nativeTarget(tool, saved.args, ctx)
+      const target = await nativeTarget(tool, args, ctx)
       if (saved.tool !== 'resources/read') row.resource = target
-      const authority = typeof tool.authority === 'function' ? await tool.authority(saved.args, ctx) : null
-      const currentRevision = tool.revision && saved.expected_revision !== undefined ? await tool.revision(saved.args, ctx) : undefined
+      const authority = typeof tool.authority === 'function' ? await tool.authority(args, ctx) : null
+      const currentRevision = tool.revision && saved.expected_revision !== undefined ? await tool.revision(args, ctx) : undefined
       if (tool.widens === false && authority?.widens) result = { ...result, outcome: 'refused', code: 'narrowing_contract_violation' }
       else if (selfEscalation(authority, principal)) result = { ...result, outcome: 'refused', code: 'self_escalation' }
       else if (tool.revision && saved.expected_revision !== undefined && currentRevision !== saved.expected_revision) result = { ...result, outcome: 'refused', code: 'revision_conflict', fields: { current_revision: currentRevision } }
       else {
-        const classes = await classify(tool, saved.args, ctx)
+        const classes = await classify(tool, args, ctx)
         row.classes = classes
         locked = await acquireDecision(rt, row.id)
         if (!locked) throw new Error('decision_busy')
@@ -55,11 +56,11 @@ export async function executeApproval(rt: Runtime, id: string, saved: SavedAppro
         evidence = { document: state.document!, usage: sums, classes, result: fresh.result, rules: fresh.classes }
         result.decision = { id: saved.decision_id, disposition: fresh.result, revision: state.revision, classes: fresh.classes.map(item => ({ ...item, facts: classes.find(value => value.class === item.class)!.facts })) }
         recordDecision(row, result.decision)
-        if (!sameFacts(saved.classes, classes) || await digest(await summary(tool, saved.args, ctx, target)) !== saved.summary_sha256 || canonical(fresh.classes) !== canonical(saved.evidence.rules)) throw new Error('approval_evidence_changed')
+        if (!sameFacts(saved.classes, classes) || await digest(await summary(tool, args, ctx, target)) !== saved.summary_sha256 || canonical(fresh.classes) !== canonical(saved.evidence.rules)) throw new Error('approval_evidence_changed')
         row.approval = { id, by }
         if (!await startExecution(rt, row, principal, classes, state, evidence)) throw new Error(principal.consent && (await policyState(rt)).revoked.consents.includes(principal.consent) ? 'consent_revoked' : 'decision_busy')
         await releaseDecision(rt, row.id); locked = false
-        const run = await runTool(rt, tool, saved.args, principal, result, saved.door, approvers, row.id)
+        const run = await runTool(rt, tool, args, principal, result, saved.door, approvers, row.id)
         result = run.result; effects = run.effects
       }
     }
@@ -71,7 +72,7 @@ export async function executeApproval(rt: Runtime, id: string, saved: SavedAppro
   const state = result.outcome === 'done' ? 'executed' : 'refused'
   // Keep the recorded outcome durable before attempting the final audit write.
   await rt.options.db.batch([
-    rt.options.db.prepare('UPDATE agent_door_approvals SET state=?,result=? WHERE id=?').bind(state, JSON.stringify(result), id),
+    rt.options.db.prepare(`UPDATE agent_door_approvals SET state=?,result=?,${DROP_SEALED} WHERE id=?`).bind(state, JSON.stringify(result), id),
     ...(saved.key === null ? [] : [rt.options.db.prepare('UPDATE agent_door_calls SET state=?,outcome=? WHERE agent=? AND key=?').bind(result.outcome, JSON.stringify(result), saved.principal.agent.id, saved.claimKey ?? saved.key)]),
   ])
   if (row.outcome === 'running') row.outcome = result.outcome

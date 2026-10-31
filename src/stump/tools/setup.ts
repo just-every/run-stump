@@ -25,7 +25,7 @@ export const setupTools: StumpTool[] = [{
     },
     set: {
       roles: ADMINS,
-      properties: { network: { enum: [...APP_NETWORKS] }, client_id: { type: 'string', minLength: 1, maxLength: 300 }, client_secret: { type: 'string', minLength: 1, maxLength: 300 } },
+      properties: { network: { enum: [...APP_NETWORKS] }, client_id: { type: 'string', minLength: 1, maxLength: 300 }, client_secret: { type: 'string', minLength: 1, maxLength: 300, writeOnly: true } },
       required: ['network', 'client_id', 'client_secret'],
       // The developer app is a step a person completes at the network; its keys are a security setting.
       classify: args => [security(`${String(args.network)}_app`), { class: 'gated', facts: { measure: 1, provider: String(args.network), step: 'developer_app' } }],

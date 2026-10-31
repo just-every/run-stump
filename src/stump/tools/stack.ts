@@ -30,7 +30,7 @@ export const stackTools: StumpTool[] = [{
       roles: ADMINS,
       properties: {
         seed, origin: { type: 'string', minLength: 8, maxLength: 300 }, source_id: { type: 'string', minLength: 1, maxLength: 100 }, site_id: { type: 'string', minLength: 1, maxLength: 100 },
-        secret: { type: 'string', minLength: 20, maxLength: 256 },
+        secret: { type: 'string', minLength: 20, maxLength: 256, writeOnly: true },
       },
       required: ['seed', 'origin', 'secret'],
       classify: args => [{ class: 'security', facts: { measure: 1, setting: `${String(args.seed)} connection` } }],

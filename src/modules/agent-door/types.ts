@@ -88,6 +88,8 @@ export interface AgentDoorOptions {
     verify(input: { kind: string; tool: string; args: Record<string, unknown>; principal: Principal; reference: string }): Promise<boolean>
   }
   currentScopes?(principal: Principal): Promise<string[]>
+  /** Seals the writeOnly arguments a held call carries while it waits for its approval, so no secret rests in clear. */
+  sealing?: { seal(purpose: string, value: unknown): Promise<string>; open(purpose: string, sealed: string): Promise<unknown> }
   paths?: string[]; limits?: { requestsPerMinute?: number; maxBodyBytes?: number }
   onEvent?(event: AgentEvent): void | Promise<void>; now?(): number
 }

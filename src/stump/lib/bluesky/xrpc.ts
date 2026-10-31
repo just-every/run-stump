@@ -66,7 +66,12 @@ export function createTransport(config: TransportConfig): Transport {
       if (!res.ok) return fail(res.error);
       auth = { ...res.value, nonces: { authServer: res.value.nonces.authServer, pds: pdsNonce.value } };
     }
-    await config.onAuthChange?.(auth);
+    try {
+      await config.onAuthChange?.(auth);
+    } catch (err) {
+      // The caller could not keep the new session, so nothing more is sent with it.
+      return fail({ kind: 'forbidden', code: 'session_not_kept', message: err instanceof Error ? err.message : 'The new session was not kept', outcomeUnknown: false });
+    }
     return ok(true);
   };
 

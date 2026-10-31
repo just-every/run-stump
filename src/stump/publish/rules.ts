@@ -1,6 +1,7 @@
 import type { RuleSource } from '../actions/refusals.ts'
 import { shownHandle } from '../accounts/handle.ts'
 import type { AccountRow } from '../accounts/store.ts'
+import { bannedAct } from '../lib/claims/index.ts'
 
 // D-4's rules for agent-initiated publishing: an X account carries X's
 // Automated label with its operator named in the bio, and a Mastodon account
@@ -9,6 +10,15 @@ import type { AccountRow } from '../accounts/store.ts'
 
 const READ_AT = '2026-10-30'
 export const X_AUTOMATION: RuleSource = { rule: 'D-4', source: 'https://help.x.com/en/rules-and-policies/x-automation', read_at: READ_AT }
+
+const unengaged = bannedAct('x_unengaged_reply')
+/** D-4: an API reply on X only to an account that engaged with the replying account first. */
+export const UNENGAGED: RuleSource = { rule: 'D-4', source: unengaged.source_url, read_at: unengaged.read_at }
+/** X's developer guidelines: one reply per interaction. */
+export const ONE_REPLY: RuleSource = { rule: 'D-4', source: 'https://docs.x.com/developer-guidelines', read_at: unengaged.read_at }
+
+/** The provider step an AI-drafted reply on X waits at until the company records X's approval (STUMP-SURFACE-005.4). */
+export const X_AI_STEP = 'x_ai_reply_approval'
 
 export interface BrokenRule { reason: 'x_automated_label' | 'mastodon_bot_flag'; message: string; source: RuleSource; rules?: Array<{ id: string; text: string }> }
 

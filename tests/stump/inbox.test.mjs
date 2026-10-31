@@ -127,6 +127,16 @@ test('the company reads its X mentions once at its read price, answers only peop
   assert.ok(repeat.hold.matches.some(match => match.id === replied.item_id || match.id === replied.ledger_id))
   const rewritten = ok(await inbox('stump.inbox.reply', { action: 'reply', inbox_item_id: bo.id, account_id: account.id, text: 'Thanks for pointing Ana our way.' }))
   assert.deepEqual([rewritten.item_id, rewritten.state, x.created.length], [repeat.item_id, 'posted', 2])
+
+  // A reply written in the composer and published from the schedule answers its interaction too: a second one is refused from every door.
+  const me = (await app.json('owner', '/app/api/me')).body.person, kit = of(PEOPLE.kit.username)
+  const composed = text => inbox('stump.drafts.write', { action: 'create', format: 'reply', person_id: me.id, account_id: account.id, network: 'x', text, reply_to: { url: kit.url } }).then(ok)
+  const first = ok(await inbox('stump.items.schedule', { action: 'publish', item_id: (await composed('Glad it helps, Kit.')).id }))
+  assert.deepEqual([first.item.state, x.created.length, x.created[2].reply.in_reply_to_tweet_id], ['posted', 3, kit.network_id])
+  const twice = await inbox('stump.items.schedule', { action: 'publish', item_id: (await composed('Patterns also cover monthly visits.')).id })
+  const viaInbox = await inbox('stump.inbox.reply', { action: 'reply', inbox_item_id: kit.id, account_id: account.id, text: 'One more thing, Kit.' })
+  assert.deepEqual([twice.body.act, twice.body.reply_item_id, viaInbox.body.act, viaInbox.body.reply_item_id, x.created.length],
+    ['x_one_reply_per_interaction', first.item.id, 'x_one_reply_per_interaction', first.item.id, 3])
 })
 
 test('people who engaged first with substance become offers to Orbit, signed, with only a publicly shown email and one identity each; a failed send stays offered', async () => {

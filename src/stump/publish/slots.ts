@@ -2,7 +2,7 @@ import { refuse } from '../actions/refusals.ts'
 import type { ActionContext } from '../actions/types.ts'
 import type { AccountRow } from '../accounts/store.ts'
 import { mover } from './schedule.ts'
-import { moveItem } from '../items/state.ts'
+import { IMPORT_HOLD_SQL, moveItem } from '../items/state.ts'
 import { onSlot, slotTimes, validZone, WEEKDAYS, type Slot, type Weekday } from './time.ts'
 
 // Queue slots per account, in the account's own time zone (STUMP-PLAN-002).
@@ -51,7 +51,8 @@ export async function saveSlots(ctx: ActionContext, account: AccountRow, next: S
   await ctx.db.prepare(`INSERT INTO stump_queue_slots(account_id,time_zone,slots,updated_by,updated_at) VALUES(?,?,?,?,?)
     ON CONFLICT(account_id) DO UPDATE SET time_zone=excluded.time_zone,slots=excluded.slots,updated_by=excluded.updated_by,updated_at=excluded.updated_at`)
     .bind(account.id, next.time_zone, JSON.stringify(next.slots), ctx.person.id, now).run()
-  const queued = (await ctx.db.prepare("SELECT id,state,scheduled_at FROM stump_items WHERE account_id=? AND queued=1 AND state IN ('scheduled','paused') AND scheduled_at>? ORDER BY scheduled_at,id")
+  // An imported post waiting for the person's release is not on the queue until it is released.
+  const queued = (await ctx.db.prepare(`SELECT id,state,scheduled_at FROM stump_items WHERE account_id=? AND queued=1 AND state IN ('scheduled','paused') AND scheduled_at>? AND NOT ${IMPORT_HOLD_SQL} ORDER BY scheduled_at,id`)
     .bind(account.id, now).all<{ id: string; state: 'scheduled' | 'paused'; scheduled_at: number }>()).results
   const moved: Array<{ item_id: string; from: string; to: string | null }> = [], claimed = new Set<number>()
   for (const item of queued) {

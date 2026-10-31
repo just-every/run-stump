@@ -52,9 +52,17 @@ export async function openCredentials(env: StumpEnv, row: AccountRow): Promise<C
 
 export const sealCredentials = (env: StumpEnv, accountId: string, credentials: Credentials) => seal(env, `account:${accountId}`, credentials)
 
-export async function saveCredentials(db: D1Database, env: StumpEnv, accountId: string, credentials: Credentials, expiresAt: number | null, now: number) {
-  await db.prepare('UPDATE stump_accounts SET credentials=?,token_expires_at=?,updated_at=? WHERE id=?')
-    .bind(await sealCredentials(env, accountId, credentials), expiresAt, now, accountId).run()
+/**
+ * Keeps refreshed credentials only in place of the ones they replace, on an account that
+ * is still connected: a refresh that overlaps a disconnect or a reconnect keeps nothing.
+ * Answers the sealed value kept, or null when nothing was kept; the caller then gives the
+ * new grant back to the network and sends nothing with it.
+ */
+export async function saveCredentials(db: D1Database, env: StumpEnv, accountId: string, credentials: Credentials, expiresAt: number | null, now: number, replacing: string | null): Promise<string | null> {
+  const sealed = await sealCredentials(env, accountId, credentials)
+  const kept = await db.prepare("UPDATE stump_accounts SET credentials=?,token_expires_at=?,updated_at=? WHERE id=? AND state='connected' AND credentials IS ? RETURNING id")
+    .bind(sealed, expiresAt, now, accountId, replacing).first()
+  return kept ? sealed : null
 }
 
 /** How the network refused an account's credentials: revoked by the person or the network, or expired. */
@@ -84,7 +92,8 @@ export async function needsReconnect(db: D1Database, env: StumpEnv, row: Account
   const stateReason = because === 'expired' ? 'Its access expired at the network.' : 'Its access was revoked at the network.'
   const held = (await db.prepare("SELECT id FROM stump_items WHERE account_id=? AND state='scheduled'").bind(row.id).all<{ id: string }>()).results.map(item => item.id)
   await db.batch([
-    db.prepare("UPDATE stump_accounts SET state='expired',state_reason=?,reconnect_url=?,updated_at=?,revision=revision+1 WHERE id=?").bind(stateReason, reconnect, now, row.id),
+    // A disconnected account stays disconnected: a refusal that arrives after its owner disconnected it changes nothing.
+    db.prepare("UPDATE stump_accounts SET state='expired',state_reason=?,reconnect_url=?,updated_at=?,revision=revision+1 WHERE id=? AND state<>'disconnected'").bind(stateReason, reconnect, now, row.id),
     ...held.flatMap(id => [
       db.prepare("UPDATE stump_items SET state='held',hold=?,updated_at=? WHERE id=? AND state='scheduled'").bind(JSON.stringify({ owner_id: owner, reason, next_attempt_at: null, kind: 'reconnect' }), now, id),
       db.prepare("INSERT INTO stump_item_history(id,item_id,from_state,to_state,reason,at) SELECT ?,?,'scheduled','held','account needs reconnecting',? WHERE changes()=1").bind(crypto.randomUUID(), id, now),

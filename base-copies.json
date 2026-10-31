@@ -504,11 +504,15 @@
         "src/modules/agent-door/policy/decide.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/policy/SHA256SUMS": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/policy/PROVENANCE.md": "2135c394939f4a737adabdc8003b0e667b31ac5a",
-        "src/modules/agent-door/counting.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
+        "src/modules/agent-door/counting.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/types.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/approvals.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/approval-execution.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/policy-store.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
       },
       "acknowledged": {
         "src/modules/agent-door/pipeline.ts": {
-          "sha256": "ab8e2b0680e248545c0013759feb49ba3bb11f0fff70d048c7c5447345503af5",
+          "sha256": "d96f32560325523314a7200088202e9bc020048f069f0ef202eb9c127ff6eaf3",
           "mode": "100644"
         },
         "src/modules/agent-door/execution.ts": {
@@ -541,6 +545,22 @@
         },
         "src/modules/agent-door/counting.ts": {
           "sha256": "3b9db7f2113c36ab0d825129f73a4e94adbd7a706b48e52ac28445377ea5c3c7",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/types.ts": {
+          "sha256": "56d369b0e097c9ce3fa59afe610e13adbe73c8084bc251ec740ff91c5fc7bbcf",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/approvals.ts": {
+          "sha256": "c7f4a4c3b42c28277a11416a7d7a4fe2f34d2d977158614e661f01436e79c8a9",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/approval-execution.ts": {
+          "sha256": "b707c795701f58fe01d6833aab166e7b337407c1e892275cdb2a9f67d2baa586",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/policy-store.ts": {
+          "sha256": "f03d52aa71b36c0f5ce13df6287603f8ac61e291a098252ee38c861f8dae7546",
           "mode": "100644"
         }
       }

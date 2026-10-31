@@ -1,9 +1,11 @@
+import { ToolRefusal } from '../../modules/agent-door/index.ts'
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
 import { shownHandle } from '../accounts/handle.ts'
 import { readAccount, type AccountRow } from '../accounts/store.ts'
 import { EDITORS, EVERYONE } from '../people/roles.ts'
 import { moveItem, pauseFor, type ItemState } from '../items/state.ts'
+import { approvalLine } from '../publish/evidence.ts'
 import { readItem } from '../publish/items.ts'
 import { commit, item as readSchedulable, money, mover, prepare, publishClasses, remaining, scheduleClasses } from '../publish/schedule.ts'
 import { checkSlots, nextOpen, saveSlots, slotsView } from '../publish/slots.ts'
@@ -95,7 +97,8 @@ export const calendarTools: StumpTool[] = [{
         const removed = await ctx.db.prepare('DELETE FROM stump_pause WHERE scope_key=? RETURNING scope_key').bind(key(target)).first()
         if (!removed) return { scope: target.scope, account_id: target.account_id, paused: false, will_post: [], held_overdue: [] }
         // Items another Pause still covers stay paused; the rest go out at their time, and overdue ones hold until a person reschedules or drops them.
-        const paused = (await ctx.db.prepare(`SELECT id,state,account_id,scheduled_at FROM stump_items i WHERE state='paused'${inScope(target)}
+        // An item paused for its own reason (an import waiting for the person's release, a restore) is not the Pause's to release.
+        const paused = (await ctx.db.prepare(`SELECT id,state,account_id,scheduled_at FROM stump_items i WHERE state='paused' AND hold IS NULL${inScope(target)}
           AND NOT EXISTS(SELECT 1 FROM stump_pause p WHERE p.scope_key='all' OR p.scope_key='account:'||i.account_id) ORDER BY scheduled_at,id`)
           .bind(...scopeArgs(target)).all<{ id: string; state: ItemState; account_id: string | null; scheduled_at: number | null }>()).results
         const due = paused.filter(item => item.scheduled_at !== null && item.scheduled_at > now), overdue = paused.filter(item => !due.includes(item))
@@ -165,15 +168,20 @@ export const calendarTools: StumpTool[] = [{
       async classify(args, ctx) { return [{ class: 'live', facts: { measure: 1, service: 'publishing queue' } }, ...scheduleClasses([await queued(ctx, args)])] },
       async summary(args, ctx) {
         const plan = await queued(ctx, args)
-        return { target: { id: plan.item.id, name: `Queue on ${plan.account.network} ${shownHandle(plan.account)} for ${new Date(plan.at).toISOString()}` }, items: [plan.item.id], ...money(plan.charge_micro) }
+        return { target: { id: plan.item.id, name: `Queue on ${plan.account.network} ${shownHandle(plan.account)} for ${new Date(plan.at).toISOString()}` }, items: [await approvalLine(plan.item, plan.account.id, plan.due)], ...money(plan.charge_micro) }
       },
       target: args => ({ kind: 'item', id: String(args.item_id) }),
+      revision: async (args, ctx) => (await readSchedulable(ctx, args.item_id)).revision,
       async run(args, ctx) { return { item: await commit(ctx, await queued(ctx, args), { queued: true }) } },
     },
     release_import: {
       roles: EDITORS,
       properties: { item_ids: { type: 'array', minItems: 1, maxItems: 500, items: accountId }, confirm_source_cleared: { type: 'boolean' } },
       required: ['item_ids', 'confirm_source_cleared'],
+      // Confirming the old tool's queue is cleared is the person's own act: an agent's call is refused before any policy decision (BASE-AGENT-008).
+      async refuses(args, ctx) {
+        if (ctx.agent) refuse('person_only', { field: 'confirm_source_cleared', reason: 'The person confirms the old tool no longer holds these posts, and releases them.' })
+      },
       async classify(args, ctx) {
         const { followers, charge_micro } = await releasable(ctx, args)
         return [{ class: 'live', facts: { measure: (args.item_ids as string[]).length, service: 'publishing queue' } }, ...publishClasses(followers, charge_micro)]
@@ -185,14 +193,21 @@ export const calendarTools: StumpTool[] = [{
       async run(args, ctx) {
         // Imported queued posts stay paused until the person confirms the old tool's queue is cleared, so nothing posts twice.
         if (args.confirm_source_cleared !== true) refuse('confirm_source_cleared', { reason: 'Clear the queue in the tool you switched from first.' })
-        const now = ctx.now(), released: string[] = [], overdue: string[] = [], stillPaused: string[] = [], skipped: Array<{ item_id: string; reason: string }> = []
+        const now = ctx.now(), released: string[] = [], overdue: string[] = [], stillPaused: string[] = [], skipped: Array<{ item_id: string; reason: string; fields?: Record<string, unknown> }> = []
         for (const id of args.item_ids as string[]) {
           const row = await readItem(ctx.db, id)
           const imported = row ? (JSON.parse(row.options) as { imported_from?: unknown }).imported_from : undefined
           if (!row || row.state !== 'paused' || !imported) { skipped.push({ item_id: id, reason: !row ? 'not_found' : row.state !== 'paused' ? 'not_paused' : 'not_imported' }); continue }
           if (await pauseFor(ctx.db, row.account_id)) { stillPaused.push(id); continue }
           if (row.scheduled_at !== null && row.scheduled_at > now) {
-            await ctx.db.batch(moveItem(mover(ctx), row, 'scheduled', 'import released'))
+            // A released post goes on the schedule through every check a schedule meets; one that fails stays paused, named with its reason.
+            try {
+              await commit(ctx, await prepare(ctx, 'release_import', { item_id: row.id, account_id: row.account_id ?? undefined, at: new Date(row.scheduled_at).toISOString(), time_zone: row.time_zone ?? undefined }, { accountMayWait: true }), { reason: 'import released' })
+            } catch (error) {
+              if (!(error instanceof ToolRefusal)) throw error
+              skipped.push({ item_id: id, reason: error.code, ...(error.details ? { fields: error.details } : {}) })
+              continue
+            }
             released.push(id)
           } else {
             await ctx.db.batch(moveItem(mover(ctx), row, 'held', 'import released after its time',

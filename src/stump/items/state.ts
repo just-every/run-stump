@@ -22,17 +22,17 @@ export interface Mover { db: D1Database; person: { id: string } | null; agent: {
 
 /**
  * Move one item from the state it is in to another, recorded in its history.
- * Answers false when the item has moved meanwhile (the guard is the old state).
- * Extra columns set in the same write are named in `set`.
+ * Changes nothing when the item has moved meanwhile (the guard is the old state,
+ * and the revision when one is given). Extra columns set in the same write are named in `set`.
  */
-export function moveItem(mover: Mover, item: { id: string; state: ItemState }, to: ItemState, reason: string, set: Record<string, unknown> = {}): D1PreparedStatement[] {
+export function moveItem(mover: Mover, item: { id: string; state: ItemState }, to: ItemState, reason: string, set: Record<string, unknown> = {}, guard: { revision?: number } = {}): D1PreparedStatement[] {
   if (!TRANSITIONS[item.state].includes(to)) throw new Error(`An item cannot move from ${item.state} to ${to}`)
   const columns = Object.keys(set)
   if (columns.some(column => !/^[a-z_]+$/.test(column))) throw new Error('Invalid item column')
   const assignments = ['state=?', 'updated_at=?', ...columns.map(column => `${column}=?`)].join(',')
-  const now = mover.now()
+  const now = mover.now(), revision = guard.revision === undefined ? [] : [guard.revision]
   return [
-    mover.db.prepare(`UPDATE stump_items SET ${assignments} WHERE id=? AND state=?`).bind(to, now, ...columns.map(column => set[column]), item.id, item.state),
+    mover.db.prepare(`UPDATE stump_items SET ${assignments} WHERE id=? AND state=?${revision.length ? ' AND revision=?' : ''}`).bind(to, now, ...columns.map(column => set[column]), item.id, item.state, ...revision),
     mover.db.prepare(`INSERT INTO stump_item_history(id,item_id,from_state,to_state,person_id,agent_id,reason,at)
       SELECT ?,?,?,?,?,?,?,? WHERE changes()=1`).bind(crypto.randomUUID(), item.id, item.state, to, mover.person?.id ?? null, mover.agent?.id ?? null, reason, now),
   ]
@@ -46,3 +46,12 @@ export async function pauseFor(db: D1Database, accountId: string | null): Promis
 
 /** SQL that is true while nothing pauses the item's account; `item` is the stump_items alias. */
 export const NOT_PAUSED = (item: string) => `NOT EXISTS(SELECT 1 FROM stump_pause p WHERE p.scope_key='all' OR p.scope_key='account:'||${item}.account_id)`
+
+/**
+ * An imported post waits, paused, until the person confirms the tool it came from no longer
+ * queues it and releases it (stump.calendar.plan release_import). Nothing else schedules it or
+ * lifts that hold, so it never posts twice.
+ */
+export const IMPORT_HOLD_SQL = "COALESCE(json_extract(hold,'$.kind'),'')='import'"
+export const heldForImport = (row: { hold?: unknown }) =>
+  typeof row.hold === 'string' && (JSON.parse(row.hold) as { kind?: unknown } | null)?.kind === 'import'

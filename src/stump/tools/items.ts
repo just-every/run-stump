@@ -3,9 +3,12 @@ import { refuse, refuseAct } from '../actions/refusals.ts'
 import type { ActionContext, Args, StumpTool } from '../actions/types.ts'
 import { shownHandle } from '../accounts/handle.ts'
 import { readAccount } from '../accounts/store.ts'
-import { storeCheck } from '../drafting/items.ts'
+import { loadBrand } from '../drafting/check.ts'
+import { prepareSave, readItem as readDraft, storeCheck } from '../drafting/items.ts'
+import { parse } from '../drafting/records.ts'
 import { moveItem, pauseFor } from '../items/state.ts'
 import { CONTRIBUTORS, EDITORS } from '../people/roles.ts'
+import { approvalLine } from '../publish/evidence.ts'
 import { itemView, readItem, type FullItemRow } from '../publish/items.ts'
 import { agentRuleBroken } from '../publish/rules.ts'
 import { blockingFlags, commit, holdOwner, item, mayPublishTo, mover, prepare, money, publishClasses, remaining, resolveUncertain, scheduleClasses, sendNow, SCHEDULABLE, type Plan } from '../publish/schedule.ts'
@@ -23,10 +26,20 @@ const MEDIA_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
 /** A D1 row holds about 2 MB; an image stays under it. */
 const MEDIA_MAX_BYTES = 1_900_000
 
-const summary = (plans: Plan[], verb: string) => ({
+/** What an approver sees and approves: each post's words, revision and content, so an edit before the approval runs asks again. */
+const summary = async (plans: Plan[], verb: string) => ({
   target: { name: `${verb} ${plans.length === 1 ? `on ${plans[0]!.account.network} ${shownHandle(plans[0]!.account)}` : `${plans.length} posts`}` },
-  items: plans.map(plan => plan.item.id), ...money(plans.reduce((sum, plan) => sum + plan.charge_micro, 0)),
+  items: await Promise.all(plans.map(plan => approvalLine(plan.item, plan.account.id, plan.due))), ...money(plans.reduce((sum, plan) => sum + plan.charge_micro, 0)),
 })
+/** The revision a call on one item names. */
+const itemRevision = async (args: Args, ctx: ActionContext) => (await item(ctx, args.item_id)).revision
+/** The master's revision a schedule_master call names. */
+async function masterRevision(args: Args, ctx: ActionContext) {
+  const row = await ctx.db.prepare('SELECT revision FROM stump_masters WHERE id=?').bind(String(args.master_id)).first<{ revision: number }>()
+  if (!row) refuse('not_found', { master_id: String(args.master_id) })
+  return row.revision
+}
+
 /** What sending the rest of one item computes: its remaining posts and their charge. */
 async function rest(ctx: ActionContext, row: FullItemRow, verb: string) {
   const left = await remaining(ctx, row)
@@ -77,6 +90,28 @@ async function masterPlan(ctx: ActionContext, args: Args): Promise<MasterPlan> {
   return { plans, held }
 }
 
+/**
+ * A change to an item's media is an edit (STUMP-SURFACE-009): the media write and a new
+ * revision of the item's words land together, so an item that was ready, scheduled or
+ * paused returns to draft with its approval cleared, and what it waited on is asked
+ * for again. The item's stored check then reads the media as it is now
+ * (STUMP-PUBLISH-002.5). Answers the item as saved.
+ */
+async function mediaEdit(ctx: ActionContext, itemId: string, change: (revision: number) => D1PreparedStatement, reason: string): Promise<FullItemRow> {
+  const row = await readDraft(ctx, itemId)
+  if (row.person_id !== ctx.person.id && !EDITORS.includes(ctx.person.role)) refuse('forbidden', { item_id: itemId })
+  const saved = await prepareSave(ctx, await loadBrand(ctx.db), row, { text: (row.text as string | null) ?? null, parts: parse<string[] | null>(row.parts, null) }, reason)
+  const [written, update] = await ctx.db.batch([change(Number(row.revision)), ...saved.statements])
+  if (!written!.meta.changes || !update!.meta.changes) {
+    const current = await readItem(ctx.db, itemId)
+    refuse('revision_conflict', { item_id: itemId, current_revision: current?.revision ?? null })
+  }
+  const next = (await readItem(ctx.db, itemId))!
+  await storeCheck(ctx, { ...next })
+  ctx.emit('item.saved', `stump://items/${itemId}`, { revision: saved.revision })
+  return (await readItem(ctx.db, itemId))!
+}
+
 export const itemTools: StumpTool[] = [{
   name: TOOL, title: 'Schedule and publish items',
   description: 'Schedule an item to a connected account at a time in its time zone, publish it now, resume a partly posted thread, settle an item the network never confirmed, or schedule every variant of a master post with one action. A post reads as posted only once the network reads it back.',
@@ -87,7 +122,7 @@ export const itemTools: StumpTool[] = [{
       properties: { item_id: id, account_id: id, at, time_zone: { type: 'string', minLength: 1, maxLength: 64 } }, required: ['item_id', 'account_id', 'at'],
       async classify(args, ctx) { return scheduleClasses([await prepare(ctx, 'schedule', args)]) },
       async summary(args, ctx) { return summary([await prepare(ctx, 'schedule', args)], 'Schedule a post') },
-      target: args => ({ kind: 'item', id: String(args.item_id) }),
+      target: args => ({ kind: 'item', id: String(args.item_id) }), revision: itemRevision,
       async run(args, ctx) { return { item: await commit(ctx, await prepare(ctx, 'schedule', args)) } },
     },
     publish: {
@@ -95,7 +130,7 @@ export const itemTools: StumpTool[] = [{
       properties: { item_id: id, account_id: id }, required: ['item_id'],
       async classify(args, ctx) { return scheduleClasses([await prepare(ctx, 'publish', args, { now: true })]) },
       async summary(args, ctx) { return summary([await prepare(ctx, 'publish', args, { now: true })], 'Publish now') },
-      target: args => ({ kind: 'item', id: String(args.item_id) }),
+      target: args => ({ kind: 'item', id: String(args.item_id) }), revision: itemRevision,
       async run(args, ctx) {
         const plan = await prepare(ctx, 'publish', args, { now: true })
         const pause = await pauseFor(ctx.db, plan.account.id)
@@ -117,7 +152,7 @@ export const itemTools: StumpTool[] = [{
         const { row, plan } = await resumable(ctx, args)
         return plan ? summary([plan], 'Resume') : (await rest(ctx, row, 'Resume')).summary
       },
-      target: args => ({ kind: 'item', id: String(args.item_id) }),
+      target: args => ({ kind: 'item', id: String(args.item_id) }), revision: itemRevision,
       async run(args, ctx) {
         const { row, plan } = await resumable(ctx, args)
         if (!plan) return sendNow(ctx, row.id, 'partly_posted')
@@ -164,7 +199,7 @@ export const itemTools: StumpTool[] = [{
       properties: { master_id: id, at }, required: ['master_id', 'at'],
       async classify(args, ctx) { const plan = await masterPlan(ctx, args); return scheduleClasses(plan.plans, plan.held.length) },
       async summary(args, ctx) { return summary((await masterPlan(ctx, args)).plans, 'Schedule every variant') },
-      target: args => ({ kind: 'master', id: String(args.master_id) }),
+      target: args => ({ kind: 'master', id: String(args.master_id) }), revision: masterRevision,
       async run(args, ctx) {
         const plan = await masterPlan(ctx, args), now = ctx.now()
         for (const hold of plan.held) {
@@ -191,11 +226,8 @@ export const itemTools: StumpTool[] = [{
         alt: { type: 'string', maxLength: 2000 } },
       required: ['item_id', 'file'],
       classify: () => [{ class: 'standard', facts: { measure: 1 } }],
-      target: args => ({ kind: 'item', id: String(args.item_id) }),
+      target: args => ({ kind: 'item', id: String(args.item_id) }), revision: itemRevision,
       async run(args, ctx) {
-        const row = await item(ctx, args.item_id)
-        if (row.person_id !== ctx.person.id && !EDITORS.includes(ctx.person.role)) refuse('forbidden', { item_id: row.id })
-        if (!['draft', 'ready', 'held', 'failed', 'scheduled', 'paused'].includes(row.state)) refuse('not_editable', { item_id: row.id, state: row.state })
         const file = args.file as { name: string; type: string; base64: string }
         let bytes: Uint8Array
         try { bytes = Uint8Array.from(atob(file.base64), char => char.charCodeAt(0)) } catch { refuse('invalid_arguments', { field: 'file.base64' }) }
@@ -203,11 +235,10 @@ export const itemTools: StumpTool[] = [{
         if (bytes.byteLength > MEDIA_MAX_BYTES) refuse('media_too_large', { size: bytes.byteLength, limit: MEDIA_MAX_BYTES })
         const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(bytes)))].map(byte => byte.toString(16).padStart(2, '0')).join('')
         const mediaId = crypto.randomUUID(), alt = typeof args.alt === 'string' && args.alt.trim() ? args.alt.trim() : null
-        await ctx.db.prepare('INSERT INTO stump_media(id,item_id,name,type,size,sha256,bytes,alt,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
-          .bind(mediaId, row.id, file.name, file.type, bytes.byteLength, sha, bytes, alt, ctx.person.id, ctx.now()).run()
-        // The item's stored flags follow its media: an image without alt text flags it, one with alt text does not (STUMP-PUBLISH-002.5).
-        await storeCheck(ctx, { ...row })
-        return { media: { id: mediaId, item_id: row.id, name: file.name, type: file.type, size: bytes.byteLength, sha256: sha, alt }, item: await itemView(ctx.db, (await readItem(ctx.db, row.id))!) }
+        const row = await mediaEdit(ctx, String(args.item_id), revision => ctx.db.prepare(`INSERT INTO stump_media(id,item_id,name,type,size,sha256,bytes,alt,created_by,created_at)
+          SELECT ?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM stump_items WHERE id=? AND revision=?)`)
+          .bind(mediaId, String(args.item_id), file.name, file.type, bytes.byteLength, sha, bytes, alt, ctx.person.id, ctx.now(), String(args.item_id), revision), 'image attached')
+        return { media: { id: mediaId, item_id: row.id, name: file.name, type: file.type, size: bytes.byteLength, sha256: sha, alt }, item: await itemView(ctx.db, row) }
       },
     },
     set_alt: {
@@ -221,11 +252,13 @@ export const itemTools: StumpTool[] = [{
         if (!media) refuse('not_found', { media_id: String(args.media_id) })
         if (media.person_id !== ctx.person.id && !EDITORS.includes(ctx.person.role)) refuse('forbidden', { media_id: media.id })
         const alt = String(args.alt).trim() || null
-        await ctx.db.prepare('UPDATE stump_media SET alt=? WHERE id=?').bind(alt, media.id).run()
-        // Setting or clearing alt text checks the item again, so its stored flags (and publishing) read the media as it is now (STUMP-PUBLISH-002.5).
-        const row = media.item_id ? await readItem(ctx.db, media.item_id) : null
-        if (row) await storeCheck(ctx, { ...row })
-        return { media: { id: media.id, item_id: media.item_id, name: media.name, type: media.type, size: media.size, alt }, ...(row ? { item: await itemView(ctx.db, (await readItem(ctx.db, row.id))!) } : {}) }
+        if (!media.item_id) {
+          await ctx.db.prepare('UPDATE stump_media SET alt=? WHERE id=?').bind(alt, media.id).run()
+          return { media: { id: media.id, item_id: null, name: media.name, type: media.type, size: media.size, alt } }
+        }
+        const row = await mediaEdit(ctx, media.item_id, revision => ctx.db.prepare('UPDATE stump_media SET alt=? WHERE id=? AND EXISTS(SELECT 1 FROM stump_items WHERE id=? AND revision=?)')
+          .bind(alt, media.id, media.item_id, revision), 'alt text changed')
+        return { media: { id: media.id, item_id: media.item_id, name: media.name, type: media.type, size: media.size, alt }, item: await itemView(ctx.db, row) }
       },
     },
   },
