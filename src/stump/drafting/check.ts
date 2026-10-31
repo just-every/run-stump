@@ -2,8 +2,8 @@
 // STUMP-TRUTH-002, -003.5, -004). It reads only the item's text and the records
 // it names, so a person and an agent submitting the same item get the same
 // result, and stores its outcome in the item's flags as {code, blocking, ...facts}.
-import { offeredDisclosureLine } from '../people/disclosure-lines.ts'
-import { bannedAct, checkClaims, checkDisclosure, claimsUsed, extractMentions, screenDraftForVenue, sentencesAsRead, statesConnection, type ClaimFinding, type MentionSet, type PersonProfile } from '../lib/claims/index.ts'
+import { offeredDisclosureLine, plainDisclosureLine } from '../people/disclosure-lines.ts'
+import { bannedAct, checkClaims, checkDisclosure, claimsUsed, detectDisclosure, extractMentions, screenDraftForVenue, statesConnection, type ClaimFinding, type MentionSet, type PersonProfile } from '../lib/claims/index.ts'
 import { countText, nearDuplicates, type Network, type TextCount } from '../lib/text/index.ts'
 import { acceptSignedIn, type StumpPerson } from '../people/store.ts'
 import { readVenue, rulesOf, type VenueRow } from '../venues/model.ts'
@@ -96,58 +96,28 @@ export function lineVerdict(line: string, input: ClaimInput): { verdict: 'clean'
   const stops = result.flags.some(flag => flag.code === 'avoid_word') || result.claims.some(finding => finding.status !== 'matched'
     && (finding.status !== 'unmatched' || !finding.because?.length || finding.because.some(reason => reason !== 'capability')))
   if (stops) return { verdict: 'blocking', found }
-  const terms = [...(input.company_names ?? []), ...(input.products ?? []).flatMap(product => [product.name, ...(product.other_names ?? [])])]
-  return { verdict: statesConnection(line, terms) ? 'connection' : 'claim', found }
+  return { verdict: statesConnection(line, namesOf(input)) ? 'connection' : 'claim', found }
 }
 
-/**
- * A match at `at` opens a sentence: it starts the text, or only space and closing quotes or brackets stand between it and
- * . ! ? … or a line break. A colon opens no sentence: the claim check reads what follows it with the clause before it.
- */
-function opensSentence(text: string, at: number) {
-  let k = at - 1
-  for (; k >= 0 && /\s/u.test(text[k]!); k--) if (/[\n\r\u2028\u2029]/u.test(text[k]!)) return true
-  while (k >= 0 && /["'\u201d\u2019)\]]/u.test(text[k]!)) k--
-  return k < 0 || /[.!?\u2026]/u.test(text[k]!)
-}
+/** The company's and its products' names and other names, as the claim check's input carries them. */
+const namesOf = (input: ClaimInput) => [...(input.company_names ?? []), ...(input.products ?? []).flatMap(product => [product.name, ...(product.other_names ?? [])])]
 
 /**
- * A match ending at `end` ends a sentence: the line ends with . ! ? … (and closing quotes or brackets) and space or the end of
- * the text follows, or the text goes on with one of them, a line break or nothing.
- */
-function closesSentence(text: string, end: number, line: string) {
-  const rest = text.slice(end)
-  if (/[.!?\u2026]["'\u201d\u2019)\]]*$/u.test(line)) return /^(?:\s|$)/u.test(rest)
-  return /^[^\S\n\r\u2028\u2029]*(?:[.!?\u2026]["'\u201d\u2019)\]]*(?:\s|$)|[\n\r\u2028\u2029]|$)/u.test(rest)
-}
-
-/**
- * Where each disclosure line stands in the text as whole sentences of it, as [start, end) spans, for the lines that read on
- * their own, with no product or with each product as their subject, are clean or a statement of connection (lineVerdict).
- * A line stands as whole sentences only where the claim check's own sentences start where it starts and end where it ends
- * (or after its closing . ! ? …): a line inside a sentence is read with the rest of that sentence, which may name the
- * product it is about.
+ * Where the text's disclosure sentences stand, as [start, end) spans: the lines that read on their own, with no product or with
+ * each product as their subject, are clean or a statement of connection (lineVerdict), and the fixed statements of connection,
+ * each only where it stands as whole sentences of the text (detectDisclosure).
  */
 function lineSpans(text: string, lines: ReadonlyArray<string | null | undefined>, input: ClaimInput): Array<[number, number]> {
-  const spans: Array<[number, number]> = []
   const readings = [input, ...(input.products ?? []).map(product => ({ ...input, product_id: product.id }))]
-  const sentences = sentencesAsRead(text, input.products)
-  const starts = new Set(sentences.map(sentence => sentence.start)), ends = new Set(sentences.map(sentence => sentence.end))
-  const endsSentence = (end: number) => ends.has(end) || ends.has(end + (/^[.!?\u2026]+["'\u201d\u2019)\]]*/u.exec(text.slice(end))?.[0].length ?? 0))
-  for (const line of new Set(lines.map(line => line?.trim()).filter((line): line is string => !!line))) {
-    if (!readings.every(reading => ['clean', 'connection'].includes(lineVerdict(line, reading).verdict))) continue
-    for (const match of text.matchAll(new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'))) {
-      const end = match.index + match[0].length
-      if (starts.has(match.index) && endsSentence(end) && opensSentence(text, match.index) && closesSentence(text, end, line)) spans.push([match.index, end])
-    }
-  }
-  return spans
+  const clean = [...new Set(lines.map(line => line?.trim()).filter((line): line is string => !!line))]
+    .filter(line => readings.every(reading => ['clean', 'connection'].includes(lineVerdict(line, reading).verdict)))
+  return detectDisclosure(text, { lines: clean, names: namesOf(input) }).matches.map(match => [match.start, match.end])
 }
 
 /**
- * The claim check of the whole text, read past its disclosure lines: a finding or flag is left out only when it lies wholly
+ * The claim check of the whole text, read past its disclosure sentences: a finding or flag is left out only when it lies wholly
  * inside a disclosure line that stands as whole sentences of the text and, read on its own, is clean or a statement of
- * connection (lineVerdict), so neither "I work on Ferrous." nor "Ferrous pays me to help with marketing." is taken for a claim
+ * connection (lineVerdict), or inside a fixed statement of connection ("Ferrous pays me."), so neither is taken for a claim
  * about the product, and no line takes any other word of the text out of the check.
  */
 export function claimsPastLines(text: string, lines: ReadonlyArray<string | null | undefined>, input: ClaimInput) {
@@ -193,8 +163,22 @@ async function mediaWithoutAlt(db: D1Database, itemId: string | undefined) {
   return rows.results
 }
 
-/** Every company and product name the brand profile knows: what makes "we" and "our" a disclosure. */
+/** Every company and product name the brand profile knows: what a statement of connection names. */
 export const brandTerms = (brand: Brand) => [...new Set([...brand.company_names, ...brand.products.flatMap(product => [product.name, ...product.other_names])].filter(Boolean))]
+/** Every product name and other name: what "We shipped <product>" names. */
+const productNames = (brand: Brand) => [...new Set(brand.products.flatMap(product => [product.name, ...product.other_names]).filter(Boolean))]
+
+/**
+ * What disclosure reads for a writer (D-2): the venue's line, the writer's own lines, the plain line Stump offers for their
+ * connection naming the company or a product (so the line added in one click counts), the names a statement may name, and
+ * their connection.
+ */
+export function disclosureReading(brand: Brand, venueLine: string | null, person: Pick<StumpPerson, 'connection' | 'disclosure_lines'> | null) {
+  const names = brandTerms(brand)
+  const plain = person?.connection ? names.map(name => plainDisclosureLine(person.connection, name)) : []
+  return { lines: [venueLine, ...(person?.disclosure_lines ?? []), ...plain].filter((line): line is string => !!line?.trim()), names, products: productNames(brand),
+    connection: person?.connection ?? null }
+}
 
 /** The text names the company or one of its products, by name, other name or URL. */
 export function namesCompany(brand: Brand, text: string) {
@@ -249,10 +233,10 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   const network = draft.network ?? account?.network ?? null
   const flags: Flag[] = []
 
-  // The disclosure lines that apply here: the venue's own, and the person's.
-  const lines = [venueDisclosureLine(venue), ...(person?.disclosure_lines ?? [])].filter((line): line is string => !!line)
-  // Claims and avoided words (STUMP-BRAND-001.2-.3, STUMP-BRAND-004), read past the disclosure lines; mentions from the whole text.
-  const claimCheck = claimsPastLines(text, lines, claimInput(brand, now, draft.product_id))
+  // What discloses here: the venue's line, the person's own lines, the plain line for their connection and the fixed statements.
+  const reading = disclosureReading(brand, venueDisclosureLine(venue), person)
+  // Claims and avoided words (STUMP-BRAND-001.2-.3, STUMP-BRAND-004), read past the disclosure sentences; mentions from the whole text.
+  const claimCheck = claimsPastLines(text, reading.lines, claimInput(brand, now, draft.product_id))
   const mentions = extractMentions(text, { products: brand.products.map(productProfile), company_names: brand.company_names })
   // One flag per place in the text: two products avoiding the same word flag it once.
   const avoided = new Set<string>()
@@ -281,8 +265,7 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
 
   // Disclosure (D-2, STUMP-TRUTH-002): a connected person, anywhere but the company's own accounts.
   const cut = network ? SEE_MORE_CUT[network] : undefined
-  const disclosure = checkDisclosure({ text, mentions, connection: person?.connection ?? null, company_account: account?.owner_kind === 'company',
-    lines, terms: brandTerms(brand), ...(cut ? { cut } : {}) })
+  const disclosure = checkDisclosure({ text, mentions, company_account: account?.owner_kind === 'company', ...reading, ...(cut ? { cut } : {}) })
   // A missing disclosure offers the line to add (`line`): the venue's, else the person's own, else the plain line for their connection.
   if (disclosure.status === 'missing') {
     // It names the company, else the item's product, else the product the text names (a reply has no product of its own).
