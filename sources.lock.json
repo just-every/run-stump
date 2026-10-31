@@ -4444,7 +4444,7 @@
       "executable": false
     },
     "src/stump/tools/ledger.ts": {
-      "sha256": "87149f64c5fe702aa26c87de4d5adf5b14d30c5c0360ac08df5803cb62f82439",
+      "sha256": "ca193aa6c73c18f1ac9bf12292a2cf260568530276b68081be1eb202da71fc3f",
       "executable": false
     },
     "src/stump/tools/links.ts": {
