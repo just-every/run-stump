@@ -7,6 +7,7 @@ import { countText, nearDuplicates, type Network, type TextCount } from '../lib/
 import type { StumpPerson } from '../people/store.ts'
 import { readVenue, rulesOf, type VenueRow } from '../venues/model.ts'
 import { holdFor, type VenueHold } from '../venues/rules.ts'
+import { otherServer } from '../venues/server.ts'
 import { claimRecord, itemText, libClaim, parse, productProfile, productRecord, today, type ClaimRecord, type Flag, type ProductRecord, type Row } from './records.ts'
 
 /** The networks whose counting rule Stump knows (lib/text). */
@@ -42,7 +43,7 @@ export interface Draft {
   /** Where the item is aimed inside its venue: the post it answers, or options.thread_url / options.post_url. */
   reply_to?: unknown; options?: Record<string, unknown> | null
 }
-export interface Account { id: string; network: string; handle: string; display_name: string | null; owner_kind: 'person' | 'company'; owner_person_id: string | null }
+export interface Account { id: string; network: string; handle: string; display_name: string | null; owner_kind: 'person' | 'company'; owner_person_id: string | null; instance: string | null }
 
 export interface CheckResult {
   passed: boolean
@@ -58,10 +59,30 @@ export interface CheckResult {
 }
 
 export const readAccount = (db: D1Database, id: string) =>
-  db.prepare('SELECT id,network,handle,display_name,owner_kind,owner_person_id FROM stump_accounts WHERE id=?').bind(id).first<Account>()
+  db.prepare('SELECT id,network,handle,display_name,owner_kind,owner_person_id,instance FROM stump_accounts WHERE id=?').bind(id).first<Account>()
 export const venueDisclosureLine = (venue: Pick<VenueRow, 'rules'> | null) => {
   const value = venue ? rulesOf(venue).disclosure_line?.value : undefined
   return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+/**
+ * The text with each disclosure line blanked to spaces of the same length, so the claim check reads every other word where it
+ * stands and never takes a line such as "I work on Ferrous." for a claim about the product.
+ */
+export function withoutLines(text: string, lines: ReadonlyArray<string | null | undefined>): string {
+  let out = text
+  for (const line of lines) {
+    const needle = line?.trim()
+    if (needle) out = out.replace(new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), match => ' '.repeat(match.length))
+  }
+  return out
+}
+
+/** The claim check of `text` read past its disclosure lines, each finding and flag quoting the text's own words at its place. */
+export function claimsPastLines(text: string, lines: ReadonlyArray<string | null | undefined>, input: Omit<Parameters<typeof checkClaims>[0], 'text'>) {
+  const result = checkClaims({ ...input, text: withoutLines(text, lines) })
+  const own = <T extends { start?: number; end?: number; text?: string }>(item: T): T => typeof item.start === 'number' && typeof item.end === 'number' && typeof item.text === 'string' ? { ...item, text: text.slice(item.start, item.end) } : item
+  return { ...result, claims: result.claims.map(own), flags: result.flags.map(own) }
 }
 
 /** The venue rule holding this draft where it is aimed, read the way the venue register reads its items. */
@@ -136,9 +157,12 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   const network = draft.network ?? account?.network ?? null
   const flags: Flag[] = []
 
-  // Claims, avoided words and mentions (STUMP-BRAND-001.2-.3, STUMP-BRAND-004).
-  const claimCheck = checkClaims({ text, claims: brand.claims.map(libClaim), products: brand.products.map(productProfile), company_names: brand.company_names,
+  // The disclosure lines that apply here: the venue's own, and the person's.
+  const lines = [venueDisclosureLine(venue), ...(person?.disclosure_lines ?? [])].filter((line): line is string => !!line)
+  // Claims and avoided words (STUMP-BRAND-001.2-.3, STUMP-BRAND-004), read past the disclosure lines; mentions from the whole text.
+  const claimCheck = claimsPastLines(text, lines, { claims: brand.claims.map(libClaim), products: brand.products.map(productProfile), company_names: brand.company_names,
     ...(draft.product_id ? { product_id: draft.product_id } : {}), today: today(now) })
+  const mentions = extractMentions(text, { products: brand.products.map(productProfile), company_names: brand.company_names })
   // One flag per place in the text: two products avoiding the same word flag it once.
   const avoided = new Set<string>()
   const unmatched = new Map(claimCheck.claims.filter(finding => finding.status === 'unmatched').map(finding => [`${finding.start}:${finding.end}`, finding.because ?? []]))
@@ -165,9 +189,8 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   flags.push(...counts.flags)
 
   // Disclosure (D-2, STUMP-TRUTH-002): a connected person, anywhere but the company's own accounts.
-  const lines = [venueDisclosureLine(venue), ...(person?.disclosure_lines ?? [])].filter((line): line is string => !!line)
   const cut = network ? SEE_MORE_CUT[network] : undefined
-  const disclosure = checkDisclosure({ text, mentions: claimCheck.mentions, connection: person?.connection ?? null, company_account: account?.owner_kind === 'company',
+  const disclosure = checkDisclosure({ text, mentions, connection: person?.connection ?? null, company_account: account?.owner_kind === 'company',
     lines, terms: brandTerms(brand), ...(cut ? { cut } : {}) })
   if (disclosure.status === 'missing') flags.push({ code: 'disclosure_missing', blocking: true, rule: 'D-2', because: disclosure.because, connection: person?.connection ?? null, ...(venueDisclosureLine(venue) ? { venue_line: venueDisclosureLine(venue) } : {}) })
   if (disclosure.status === 'below_cut') flags.push({ code: 'disclosure_below_cut', blocking: true, rule: 'D-2', cut, network })
@@ -181,6 +204,10 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   // `where` and `thread_url` let a screen link the words that name the venue's thread, never printing its address.
   if (held) flags.push({ code: 'venue_rule', blocking: true, venue_id: held.venue_id, rule: held.rule, reason: held.reason, source_url: held.source_url,
     ...(held.where ? { where: held.where } : {}), ...(held.thread_url ? { thread_url: held.thread_url } : {}) })
+  // A Mastodon venue on another server than the account's: the post would go out on the account's own server, not there.
+  const servers = otherServer(venue, account)
+  if (venue && servers) flags.push({ code: 'venue_other_server', blocking: true, venue_id: venue.id, ...servers,
+    reason: `${venue.name} is on ${servers.venue_host}, and this account posts on ${servers.account_host}. Aim it at a venue on ${servers.account_host}, or post from an account on ${servers.venue_host}.` })
 
   // Vote requests where the venue's platform bans them (STUMP-TRUTH-003.5).
   for (const finding of venue?.platform ? screenDraftForVenue(text, venue.platform) : []) {
@@ -201,7 +228,7 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   // A draft passes when nothing stops it and every claim it makes is matched (STUMP-BRAND-004.1, .4): a statement only flagged for a
   // person to back leaves it free to be marked ready, but it has not passed until someone backs or removes it.
   return {
-    passed: !flags.some(flag => flag.blocking) && claimCheck.claims.every(finding => finding.status === 'matched'), claims: claimCheck.claims, mentions: claimCheck.mentions, flags, counts: counts.counts,
+    passed: !flags.some(flag => flag.blocking) && claimCheck.claims.every(finding => finding.status === 'matched'), claims: claimCheck.claims, mentions, flags, counts: counts.counts,
     disclosure: { required: disclosure.required, status: disclosure.status, because: disclosure.because }, duplicates, claims_used: claimsUsed(claimCheck.claims), venue_hold: held,
   }
 }

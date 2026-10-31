@@ -54,24 +54,30 @@ const notExcluded = (status: unknown) => { if (status === 'excluded') refuse('in
 
 /**
  * The items aimed at a venue, by product, with their routes, hold and latest history (STUMP-VENUE-001.6, -002.4). Each carries its
- * product's name and, when a hand-off carries it, that hand-off and its state, so every screen names and states it alike.
+ * product's name and, when a hand-off carries it, that hand-off and its state, so every screen names and states it alike. A
+ * hand-off with no item (a brief with talking points) is listed too, as `kind: "handoff"` with the hand-off's own id.
  */
 async function itemsAt(ctx: ActionContext, id: string) {
-  const items = (await ctx.db.prepare(`SELECT i.id,i.master_id,i.product_id,p.name AS product_name,i.format,i.state,i.routes,i.hold,i.flags,i.scheduled_at,i.text,i.parts,
+  const items = (await ctx.db.prepare(`SELECT i.id,i.master_id,i.product_id,p.name AS product_name,i.format,i.state,i.routes,i.hold,i.flags,i.scheduled_at,i.text,i.parts,i.updated_at,
       (SELECT h.id FROM stump_handoffs h WHERE h.item_id=i.id ORDER BY h.created_at DESC,h.id DESC LIMIT 1) AS handoff_id,
       (SELECT h.state FROM stump_handoffs h WHERE h.item_id=i.id ORDER BY h.created_at DESC,h.id DESC LIMIT 1) AS handoff_state
     FROM stump_items i LEFT JOIN stump_products p ON p.id=i.product_id WHERE i.venue_id=? ORDER BY i.updated_at DESC,i.id LIMIT 200`).bind(id)
-    .all<{ id: string; master_id: string | null; product_id: string | null; product_name: string | null; format: string; state: string; routes: string; hold: string | null; flags: string; scheduled_at: number | null; text: string | null; parts: string | null; handoff_id: string | null; handoff_state: string | null }>()).results
+    .all<{ id: string; master_id: string | null; product_id: string | null; product_name: string | null; format: string; state: string; routes: string; hold: string | null; flags: string; scheduled_at: number | null; text: string | null; parts: string | null; updated_at: number; handoff_id: string | null; handoff_state: string | null }>()).results
+  const briefs = (await ctx.db.prepare(`SELECT h.id,h.product_id,p.name AS product_name,h.state,h.updated_at FROM stump_handoffs h LEFT JOIN stump_products p ON p.id=h.product_id
+    WHERE h.venue_id=? AND h.item_id IS NULL ORDER BY h.updated_at DESC,h.id LIMIT 200`).bind(id).all<{ id: string; product_id: string | null; product_name: string | null; state: string; updated_at: number }>()).results
   const history = (await ctx.db.prepare(`SELECT item_id,from_state,to_state,reason,at FROM stump_item_history WHERE item_id IN (SELECT value FROM json_each(?)) ORDER BY at DESC,id`)
     .bind(JSON.stringify(items.map(item => item.id))).all<{ item_id: string; from_state: string | null; to_state: string; reason: string | null; at: number }>()).results
-  return items.map(item => ({
-    id: item.id, master_id: item.master_id, product_id: item.product_id, product_name: item.product_name, format: item.format, state: item.state, routes: JSON.parse(item.routes) as string[], hold: item.hold ? JSON.parse(item.hold) : null,
+  return [...items.map(item => ({
+    kind: 'item' as const, at: item.updated_at, id: item.id, master_id: item.master_id, product_id: item.product_id, product_name: item.product_name, format: item.format, state: item.state, routes: JSON.parse(item.routes) as string[], hold: item.hold ? JSON.parse(item.hold) : null,
     handoff: item.handoff_id ? { id: item.handoff_id, state: item.handoff_state! } : null,
     // Its words, so a screen can name an item with no product by its opening words, as Today does.
     text: item.text ?? (item.parts ? (JSON.parse(item.parts) as string[])[0] ?? null : null),
     flags: (JSON.parse(item.flags) as Array<{ code: string }>).map(flag => flag.code), scheduled_at: item.scheduled_at === null ? null : new Date(item.scheduled_at).toISOString(),
     history: history.filter(row => row.item_id === item.id).slice(0, 5).map(row => ({ from_state: row.from_state, to_state: row.to_state, reason: row.reason, at: new Date(row.at).toISOString() })),
-  }))
+  })), ...briefs.map(brief => ({
+    kind: 'handoff' as const, at: brief.updated_at, id: brief.id, master_id: null, product_id: brief.product_id, product_name: brief.product_name, format: 'post', state: brief.state, routes: [] as string[], hold: null,
+    handoff: { id: brief.id, state: brief.state }, text: null, flags: [] as string[], scheduled_at: null, history: [] as Array<{ from_state: string | null; to_state: string; reason: string | null; at: string }>,
+  }))].sort((a, b) => b.at - a.at || a.id.localeCompare(b.id)).slice(0, 200).map(({ at, ...item }) => { void at; return item })
 }
 
 /** A second venue for the same place is refused, naming the first (STUMP-VENUE-001.3, .4). */

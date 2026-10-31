@@ -136,7 +136,7 @@ function Standards() {
 
 function Terminal() {
   return <div className="lp-terminal" data-copy-scope>
-    <p className="lp-command"><span className="lp-prompt" aria-hidden="true">&gt; </span><code>npx -y @runeditrun/rer cli install</code></p>
+    <p className="lp-command"><span className="lp-prompt" aria-hidden="true">&gt; </span><code>npx -y @runeditrun/rer dev just-every/run-stump</code></p>
     <span className="lp-tip">
       <button type="button" className="lp-copy" data-copy aria-label="Copy command" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="11" height="11" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.75" /><path d="M5 15V6.5A1.5 1.5 0 0 1 6.5 5H15" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" /></svg>

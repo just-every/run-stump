@@ -138,10 +138,14 @@ test('a member gets a brief and a draft for a venue that keeps posting for its m
   // Bluesky is read back from the AppView: its author must be Maya's handle, and the ledger keeps the text as posted.
   posts.set('at://did:plc:someone/app.bsky.feed.post/3kaa', { uri: 'at://did:plc:someone/app.bsky.feed.post/3kaa', author: { did: 'did:plc:someone', handle: 'someone.bsky.social' }, record: { text: 'Not Maya.', createdAt: new Date().toISOString() } })
   assert.equal((await record('maya', { handoff_id: sky.id, url: 'https://bsky.app/profile/someone.bsky.social/post/3kaa' })).body.code, 'author_mismatch')
-  posts.set('at://did:plc:maya/app.bsky.feed.post/3kbb', { uri: 'at://did:plc:maya/app.bsky.feed.post/3kbb', author: { did: 'did:plc:maya', handle: 'maya.synthetic.bsky.social' }, record: { text: 'I work at Brightwell. Recurring bookings are here.', createdAt: new Date().toISOString() } })
+  const said = 'I work at Brightwell. Recurring bookings are here, and our desk saves 40% of its time with them.'
+  posts.set('at://did:plc:maya/app.bsky.feed.post/3kbb', { uri: 'at://did:plc:maya/app.bsky.feed.post/3kbb', author: { did: 'did:plc:maya', handle: 'maya.synthetic.bsky.social' }, record: { text: said, createdAt: new Date().toISOString() } })
   const checked = ok(await record('maya', { handoff_id: sky.id, url: 'https://bsky.app/profile/maya.synthetic.bsky.social/post/3kbb' }))
   assert.equal(checked.confirmation, 'network')
-  assert.equal(ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: checked.ledger_id })).text, 'I work at Brightwell. Recurring bookings are here.')
+  // The claim check runs on the text as posted: the number no claim backs is named, and the entry lists only the claims that text matches.
+  assert.ok(checked.unbacked.some(item => item.text.includes('40%')), JSON.stringify(checked.unbacked))
+  const posted2 = ok(await app.action('owner', 'stump.ledger.search', { action: 'get', entry_id: checked.ledger_id }))
+  assert.deepEqual([posted2.text, posted2.claims], [said, checked.claims])
 })
 
 test('a hand-off never waits in silence: a hold runs its lapse at its review date, a rule change holds it, and removing a person moves it on', async () => {

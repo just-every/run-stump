@@ -100,14 +100,18 @@ export async function venueOrRefuse(db: D1Database, id: unknown): Promise<VenueR
 
 export interface ProductLink { product_id: string; name: string | null; fit: number | null; items: number }
 
-/** Each venue's products with their fit and the items aimed at the venue for that product, in three reads for any number of venues. */
+/**
+ * Each venue's products with their fit and what is aimed at the venue for that product (its items, and hand-offs that carry no
+ * item, such as a brief with talking points), in two reads for any number of venues.
+ */
 export async function productLinks(db: D1Database, ids: string[]): Promise<Map<string, ProductLink[]>> {
   const links = new Map<string, ProductLink[]>(ids.map(id => [id, []]))
   if (!ids.length) return links
   const list = JSON.stringify(ids)
   const rows = (await db.prepare(`SELECT vp.venue_id,vp.product_id,vp.fit,p.name FROM stump_venue_products vp LEFT JOIN stump_products p ON p.id=vp.product_id
     WHERE vp.venue_id IN (SELECT value FROM json_each(?)) ORDER BY p.name,vp.product_id`).bind(list).all<{ venue_id: string; product_id: string; fit: number | null; name: string | null }>()).results
-  const counts = (await db.prepare(`SELECT venue_id,product_id,COUNT(*) AS n FROM stump_items WHERE venue_id IN (SELECT value FROM json_each(?)) GROUP BY venue_id,product_id`)
+  const counts = (await db.prepare(`SELECT venue_id,product_id,COUNT(*) AS n FROM (SELECT venue_id,product_id FROM stump_items WHERE venue_id IN (SELECT value FROM json_each(?1))
+    UNION ALL SELECT venue_id,product_id FROM stump_handoffs WHERE item_id IS NULL AND venue_id IN (SELECT value FROM json_each(?1))) GROUP BY venue_id,product_id`)
     .bind(list).all<{ venue_id: string; product_id: string | null; n: number }>()).results
   const items = new Map(counts.map(row => [`${row.venue_id}|${row.product_id}`, row.n]))
   for (const row of rows) links.get(row.venue_id)!.push({ product_id: row.product_id, name: row.name, fit: row.fit, items: items.get(`${row.venue_id}|${row.product_id}`) ?? 0 })

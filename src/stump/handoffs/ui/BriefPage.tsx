@@ -110,9 +110,14 @@ function Notice({ handoff, mine, onChanged }: { handoff: Handoff; mine: boolean;
     </div> : null}
     <Outcome message={message} />
   </div>
-  if (handoff.state === 'posted') return <div className="st-ho-notice" role="note">
-    <p><a href={handoff.url!} target="_blank" rel="noreferrer noopener">{handoff.url!.replace(/^https?:\/\/(www\.)?/, '')}</a> · {handoff.confirmation === 'network' ? 'checked with the network' : `confirmed by ${mine ? 'you' : handoff.person_name}`} · on the <a href="/app/ledger">ledger</a></p>
-  </div>
+  if (handoff.state === 'posted') {
+    // The claim check ran on the words recorded: a sentence no claim on record backs is named, so someone can back it or correct the post.
+    const unbacked = ([...handoff.history].reverse().find(entry => entry.to === 'posted')?.detail.unbacked as Array<{ text: string }> | undefined) ?? []
+    return <div className="st-ho-notice" role="note">
+      <p><a href={handoff.url!} target="_blank" rel="noreferrer noopener">{handoff.url!.replace(/^https?:\/\/(www\.)?/, '')}</a> · {handoff.confirmation === 'network' ? 'checked with the network' : `confirmed by ${mine ? 'you' : handoff.person_name}`} · on the <a href="/app/ledger">ledger</a></p>
+      {unbacked.length ? <p>No claim on record backs {unbacked.map(item => `“${item.text}”`).join(' or ')}</p> : null}
+    </div>
+  }
   if (handoff.state === 'skipped' || handoff.state === 'expired') {
     const last = [...handoff.history].reverse().find(entry => entry.to === handoff.state)
     // The state is on the chip above; the notice gives the reason, when one was given.

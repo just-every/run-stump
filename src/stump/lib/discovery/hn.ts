@@ -107,13 +107,21 @@ function kindOf(tags: string[]): string {
   return 'story'
 }
 
-/** Map one Algolia hit to a finding; null when it lacks an id or a time. */
+/**
+ * Algolia keeps an item HN killed, flagged or deleted with its words replaced by a marker ("[dead]", "[flagged]",
+ * "[deleted]"), and a comment keeps its story's marked title. Neither can be read or answered, so neither is a finding.
+ */
+const REMOVED = /^\[(?:dead|flagged|deleted)(?:\s+(?:dead|flagged|deleted))*\]$/i
+const removed = (value: unknown) => REMOVED.test(htmlToText(str(value)).trim())
+
+/** Map one Algolia hit to a finding; null when it lacks an id or a time, or HN removed it or its story. */
 export function hnHitToFinding(hit: HnHit): Finding | null {
   const id = typeof hit.objectID === 'string' || typeof hit.objectID === 'number' ? String(hit.objectID) : ''
   const createdAt = num(hit.created_at_i)
   if (!id || createdAt === null) return null
   const tags = Array.isArray(hit._tags) ? hit._tags.filter((t): t is string => typeof t === 'string') : []
   const kind = kindOf(tags)
+  if (kind === 'comment' ? removed(hit.comment_text) || removed(hit.story_title) : removed(hit.title) || removed(hit.story_text)) return null
   const html = kind === 'comment' ? str(hit.comment_text) : str(hit.story_text)
   const links = [str(hit.url), str(hit.story_url), ...extractLinks(html)].filter((u) => /^https?:\/\//i.test(u))
   const storyId = hit.story_id !== undefined && hit.story_id !== null ? String(hit.story_id) : ''
