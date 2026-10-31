@@ -5,6 +5,7 @@ import { claimsForRequest } from '../lib/claims/index.ts'
 import { libClaim, today } from '../drafting/records.ts'
 import type { Brand } from '../drafting/check.ts'
 import type { StumpPerson } from '../people/store.ts'
+import { offeredDisclosureLine } from '../people/disclosure-lines.ts'
 import { usage } from '../venues/limits.ts'
 import { rulesOf, type VenueRow } from '../venues/model.ts'
 import type { Fact } from './model.ts'
@@ -24,16 +25,6 @@ export function factsFor(brand: Brand, productId: string, now: number, usedFirst
  */
 export const outsideVoice = (person: Pick<StumpPerson, 'connection' | 'role'>) => person.connection ? !['founder', 'employee'].includes(person.connection) : person.role !== 'owner'
 
-const LINES: Record<string, (company: string) => string> = {
-  founder: company => `I'm a founder of ${company}.`,
-  employee: company => `I work at ${company}.`,
-  contractor: company => `I work on ${company} as a contractor.`,
-  investor: company => `Disclosure: I'm an investor in ${company}.`,
-  advisor: company => `Disclosure: I advise ${company}.`,
-  friend: company => `Disclosure: I'm a friend of the ${company} team.`,
-  family: company => `Disclosure: someone in my family works at ${company}.`,
-}
-
 /**
  * The disclosure the person makes there (D-2): the venue's own line where it
  * asks for one, else one of the person's disclosure lines, else the plain line
@@ -41,10 +32,7 @@ const LINES: Record<string, (company: string) => string> = {
  */
 export function disclosureFor(venue: VenueRow, person: Pick<StumpPerson, 'connection' | 'disclosure_lines'>, brand: Brand, productName: string): string {
   const venueLine = rulesOf(venue).disclosure_line?.value
-  if (typeof venueLine === 'string' && venueLine.trim()) return venueLine.trim()
-  if (person.disclosure_lines[0]?.trim()) return person.disclosure_lines[0].trim()
-  const company = brand.company_names[0] ?? productName
-  return (LINES[person.connection ?? ''] ?? (name => `I work on ${name}.`))(company)
+  return offeredDisclosureLine(typeof venueLine === 'string' ? venueLine : null, person, brand.company_names[0] ?? productName)
 }
 
 /** Talking points for a person writing their own words: what the product does, the facts, what readers get, and how to say the connection. */

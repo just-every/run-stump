@@ -1941,7 +1941,7 @@ The primary journey: load the venues worth showing up in with their rules, teach
 
 **Acceptance.** Through the app and the export and restore doors:
 1. Export, restore into an empty installation and export again gives equivalent archives.
-2. The archive holds no token or key.
+2. No network token, app secret or agent credential leaves in the archive; it carries the installation's erasure key, so a restored installation keeps every erasure in force.
 3. Restored accounts read as waiting for their owners to reconnect.
 4. Scheduled items restore paused.
 

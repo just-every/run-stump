@@ -10,7 +10,7 @@ rer export --output exports/stump.rer
 
 Run it while the app is stopped.
 
-Network tokens, app keys and the secrets for Orbit, Vane and alert webhooks never leave the installation.
+Network tokens, app secrets, agent credentials and the secrets for Orbit, Vane and alert webhooks never leave the installation. The archive carries the installation's erasure key, so a restored installation keeps every erasure in force.
 
 ## Restore
 

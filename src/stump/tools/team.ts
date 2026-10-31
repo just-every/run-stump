@@ -87,7 +87,12 @@ export const teamTools: StumpTool[] = [{
       properties: { email, display_name: { type: 'string', minLength: 1, maxLength: 120 }, role, connection: { enum: [...CONNECTIONS] }, disclosure_lines: lines },
       required: ['email', 'display_name', 'role'],
       classify: () => access('widens'),
-      summary: args => ({ target: { email: normalEmail(args.email), name: String(args.display_name) }, role: String(args.role) }),
+      // An approver reads what the invitation records for the person: their connection and the disclosure lines they would hold.
+      summary: args => {
+        const lines = (args.disclosure_lines as string[] | undefined) ?? []
+        const items = [...(args.connection ? [`Connection: ${String(args.connection)}`] : []), ...lines.map(line => `Disclosure line: "${line}"`)]
+        return { target: { email: normalEmail(args.email), name: String(args.display_name) }, role: String(args.role), ...(items.length ? { items } : {}) }
+      },
       authority: async args => ({ subject: normalEmail(args.email), widens: true }),
       async run(args, ctx) {
         const address = normalEmail(args.email)
@@ -96,10 +101,16 @@ export const teamTools: StumpTool[] = [{
         if (args.disclosure_lines !== undefined) await refuseClaimingLines(ctx.db, args.disclosure_lines as string[], 'disclosure_lines', ctx.now())
         const member = await ctx.db.prepare("SELECT id FROM stump_people WHERE email=? AND status='active'").bind(address).first<{ id: string }>()
         if (member) refuse('already_member', { person_id: member.id })
-        // Inviting someone again never renames them through an agent: the name on the invitation is the one they join with.
+        // Inviting someone again through an agent keeps what a signed-in person recorded on the invitation: the name they join
+        // with, their connection and their disclosure lines, as an agent's update of the person does.
         if (ctx.agent) {
-          const pending = await ctx.db.prepare("SELECT display_name FROM stump_people WHERE email=? AND status='invited'").bind(address).first<{ display_name: string }>()
+          const pending = await ctx.db.prepare("SELECT display_name,connection,disclosure_lines FROM stump_people WHERE email=? AND status='invited'").bind(address)
+            .first<{ display_name: string; connection: string | null; disclosure_lines: string | null }>()
           if (pending && pending.display_name !== String(args.display_name)) refuse('person_only', { field: 'display_name', reason: 'Names on the team are recorded by a signed-in owner or admin.' })
+          if (pending && (pending.connection ?? null) !== ((args.connection as string | undefined) ?? null)) refuse('person_only', { field: 'connection', reason: 'Another person\'s connection and disclosure lines are recorded by a signed-in person.' })
+          if (pending && !sameLines(JSON.parse(pending.disclosure_lines ?? '[]') as string[], (args.disclosure_lines as string[] | undefined) ?? [])) {
+            refuse('person_only', { field: 'disclosure_lines', reason: 'Another person\'s connection and disclosure lines are recorded by a signed-in person.' })
+          }
         }
         // The person is Base's operator for this email, invited and holding nothing until they sign in (D-1).
         // Inviting someone already invited replaces the invitation, so the newest role and connection apply.
