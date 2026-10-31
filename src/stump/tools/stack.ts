@@ -3,21 +3,23 @@ import type { ActionContext, StumpTool } from '../actions/types.ts'
 import { ADMINS, EDITORS } from '../people/roles.ts'
 import { countOffers, dropConnection, listConnections, listOffers, publicOffer, readOffer, saveConnection, sendOffer, type Seed } from '../stack/index.ts'
 import { SealError } from '../stack/seal.ts'
+import { assertNamedService, NotPublicError } from '../net/fetch.ts'
 
 const seed = { enum: ['orbit', 'vane'] }
 const standard = (measure = 1) => [{ class: 'standard' as const, facts: { measure } }]
 const ID = /^[A-Za-z0-9._:-]{1,100}$/
 
-/** The address of a sibling seed: an origin only, https unless this is a local runtime or a loopback address. */
-function originOf(raw: string, ctx: ActionContext): string {
+/** The address of a sibling seed: an origin only, https unless this is a local runtime, and on the public web unless it is on this machine in a local runtime. */
+async function originOf(raw: string, ctx: ActionContext): Promise<string> {
   let url: URL
   try { url = new URL(raw) } catch { return refuse('invalid_arguments', { field: 'origin', reason: 'Use the seed\'s web address, like https://orbit.example.com.' }) }
-  const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase()
-  const loopback = host === 'localhost' || host.endsWith('.localhost') || host === '::1' || /^127(?:\.\d{1,3}){3}$/.test(host)
   const local = ctx.env.AUTH_LOCAL === 'true'
   if (url.username || url.password || url.search || url.hash || url.pathname.replace(/\/+$/, '') !== '') refuse('invalid_arguments', { field: 'origin', reason: 'Use the address alone, without a path.' })
   if (url.protocol !== 'https:' && !(local && url.protocol === 'http:')) refuse('invalid_arguments', { field: 'origin', reason: 'Use an https address.' })
-  if (!local && (loopback || /^(10|127|169\.254|192\.168)\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host))) refuse('invalid_arguments', { field: 'origin', reason: 'Use the address the seed answers on the internet.' })
+  try { await assertNamedService(ctx.env, url) } catch (error) {
+    if (error instanceof NotPublicError) refuse('invalid_arguments', { field: 'origin', reason: 'Use the address the seed answers on the internet.' })
+    throw error
+  }
   return url.origin
 }
 
@@ -37,7 +39,7 @@ export const stackTools: StumpTool[] = [{
       summary: args => ({ target: { name: `Connect ${String(args.seed)}` } }),
       target: args => ({ kind: 'connection', id: String(args.seed) }),
       async run(args, ctx) {
-        const which = args.seed as Seed, origin = originOf(String(args.origin), ctx)
+        const which = args.seed as Seed, origin = await originOf(String(args.origin), ctx)
         const id = which === 'orbit' ? args.source_id : args.site_id
         if (typeof id !== 'string' || !ID.test(id) || (which === 'orbit' && !/^[A-Za-z0-9_-]{1,80}$/.test(id))) refuse('invalid_arguments', { field: which === 'orbit' ? 'source_id' : 'site_id', reason: `Name the ${which === 'orbit' ? 'signal source' : 'site'} to send to.` })
         const secret = String(args.secret)

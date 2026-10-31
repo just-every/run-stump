@@ -4,7 +4,7 @@ Stump drafts with your company's own AI provider and model, with your key. Nothi
 
 An owner or admin opens **Settings › Connections › AI provider** and enters:
 
-- **Provider address**: any OpenAI-compatible API, such as `https://api.openai.com/v1`, `https://openrouter.ai/api/v1`, a Cloudflare AI Gateway address, or a server on this computer (`http://127.0.0.1:PORT/v1`). It must be https, or plain http on this computer.
+- **Provider address**: any OpenAI-compatible API, such as `https://api.openai.com/v1`, `https://openrouter.ai/api/v1`, a Cloudflare AI Gateway address, or, when Stump runs on your own computer (`rer dev`), a server on that computer (`http://127.0.0.1:PORT/v1`). It must be https on the public web, or plain http on this computer; a deployed Stump reaches only public addresses.
 - **Model**: the model's exact id, such as `gpt-4.1-mini`.
 - **Key**: the provider's API key. Stump seals it and never shows it again; the screen shows its last four characters.
 

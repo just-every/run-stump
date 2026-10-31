@@ -42,7 +42,7 @@ export async function sendOffer(env: StumpEnv, offerId: string, by: string | nul
     const outcome: SendOutcome = { ok: false, status: null, at: new Date(now).toISOString(), detail: {}, error: error instanceof SealError ? error.message : 'The stored secret could not be read.' }
     return { status: 'failed', offer: await record(env, offer, outcome, by, now), outcome }
   }
-  const fetcher = stumpFetch(env)
+  const fetcher = stumpFetch(env, undefined, { named: [connection.origin] })
   let outcome: SendOutcome
   if (offer.kind === 'engager') {
     outcome = await postSignal(fetcher, { origin: connection.origin, source_id: connection.external_id, secret }, engagerEvent(connection.external_id, {

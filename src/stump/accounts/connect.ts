@@ -25,14 +25,53 @@ const loopback = (hostname: string) => {
 }
 const originOf = (url: string) => { try { return new URL(url).origin } catch { return null } }
 
-/** A Bluesky server a person names: an https origin, or an http one on this machine in a local runtime. */
-function namedServer(ctx: ActionContext, value: string): string {
+/**
+ * Refuses, as the person's own input, an address that is not on the public web (net/address.ts),
+ * before Stump sends it anything. Only a local runtime lets through a loopback service, and only
+ * the one the person named (`named`).
+ */
+async function requirePublic(ctx: ActionContext, network: Network, value: string, field: string, what: (host: string) => string, named: string | null): Promise<void> {
+  let url: URL
+  try { url = new URL(value) } catch { return refuse('invalid_arguments', { field, reason: `${what(value)}, which is not a web address.` }) }
+  if (named && ctx.env.AUTH_LOCAL === 'true' && loopback(url.hostname) && originOf(named) === url.origin) return
+  try {
+    await assertPublic(ctx.env, url)
+  } catch (error) {
+    if (error instanceof NotPublicError) refuse('invalid_arguments', { field, reason: `${what(url.host)}, which is not on the public web.` })
+    networkError(network, { code: 'dns', message: error instanceof Error ? error.message : String(error) })
+  }
+}
+
+/**
+ * The fetch one connection step uses: stumpFetch's public-address rule on every address,
+ * with only the loopback service the person named let through in a local runtime. It keeps
+ * the first address it refused, so the step is refused as the person's input.
+ */
+function connectionFetch(ctx: ActionContext, named: string | null) {
+  const send = stumpFetch(ctx.env, undefined, { named: [named] })
+  let refused: string | null = null
+  const guarded: typeof fetch = async (input, init) => {
+    try { return await send(input, init) } catch (error) { if (error instanceof NotPublicError) refused ??= error.host; throw error }
+  }
+  return { fetch: guarded, refused: () => refused }
+}
+
+/** A failed connection step: refused as input when it reached for an address off the public web, else as the network's answer. */
+function stepFailed(net: ReturnType<typeof connectionFetch>, network: Network, field: string, error: { message: string; code?: string | null; kind?: string }): never {
+  const refused = net.refused()
+  if (refused) refuse('invalid_arguments', { field, reason: `The account's record names ${refused}, which is not on the public web.` })
+  return networkError(network, error)
+}
+
+/** A Bluesky server a person names: an https origin on the public web, or an http one on this machine in a local runtime. */
+async function namedServer(ctx: ActionContext, value: string): Promise<string> {
   let url: URL | null = null
   try { url = new URL(value.trim()) } catch { /* refused below */ }
   const local = !!url && ctx.env.AUTH_LOCAL === 'true' && loopback(url.hostname)
   if (!url || !(url.protocol === 'https:' || (local && url.protocol === 'http:')) || url.pathname.replace(/\/+$/, '') !== '' || url.search || url.hash || url.username || url.password) {
     refuse('invalid_arguments', { field: 'service', reason: 'Name the Bluesky server by its https address, such as https://bsky.social.' })
   }
+  await requirePublic(ctx, 'bluesky', url.origin, 'service', host => `You named the Bluesky server ${host}`, url.origin)
   return url.origin
 }
 
@@ -44,15 +83,19 @@ function namedServer(ctx: ActionContext, value: string): string {
  * for its own accounts.
  */
 async function blueskyIdentity(ctx: ActionContext, identifier: string, service: string | null, stored: string | null) {
-  const fetch = stumpFetch(ctx.env), hint = service ?? stored, hintOrigin = hint ? originOf(hint) : null
+  const hint = service ?? stored, hintOrigin = hint ? originOf(hint) : null
   const local = !!hintOrigin && ctx.env.AUTH_LOCAL === 'true' && loopback(new URL(hintOrigin).hostname)
+  // A did:web host, the PLC directory and the handle resolver are all checked before they are asked.
+  const net = connectionFetch(ctx, local ? hintOrigin : null)
   const identity = local
-    ? await resolveIdentityAtServer({ fetch }, hintOrigin!, identifier)
-    : await resolveIdentity({ fetch }, identifier, { handleResolverUrl: DEFAULT_BLUESKY_SERVICE })
-  if (!identity.ok) networkError('bluesky', identity.error)
+    ? await resolveIdentityAtServer({ fetch: net.fetch }, hintOrigin!, identifier)
+    : await resolveIdentity({ fetch: net.fetch }, identifier, { handleResolverUrl: DEFAULT_BLUESKY_SERVICE })
+  if (!identity.ok) stepFailed(net, 'bluesky', 'handle', identity.error)
   if (service && originOf(identity.value.pdsUrl) !== service) {
     networkError('bluesky', { kind: 'validation', code: 'pds_mismatch', message: `${identity.value.did} keeps its records on ${identity.value.pdsUrl}, not ${service}.` })
   }
+  // The server the account's DID document names: on the public web, or the one on this machine the person named.
+  await requirePublic(ctx, 'bluesky', identity.value.pdsUrl, 'handle', host => `${identity.value.did} keeps its records on ${host}`, local ? hintOrigin : null)
   return { ...identity.value, local }
 }
 
@@ -84,7 +127,7 @@ function networkError(network: Network, error: { message: string; code?: string 
 async function mastodonApp(ctx: ActionContext, origin: string, redirectUri: string): Promise<RegisteredApp> {
   const stored = await ctx.db.prepare('SELECT registration FROM stump_mastodon_apps WHERE origin=? AND redirect_uri=?').bind(origin, redirectUri).first<{ registration: string }>()
   if (stored) return unseal<RegisteredApp>(ctx.env, `mastodon-app:${origin}`, stored.registration)
-  const registered = await registerApp({ fetch: stumpFetch(ctx.env) }, origin, { clientName: 'Stump', redirectUris: [redirectUri], website: ctx.env.AUTH_ORIGIN })
+  const registered = await registerApp({ fetch: stumpFetch(ctx.env, undefined, { named: [origin] }) }, origin, { clientName: 'Stump', redirectUris: [redirectUri], website: ctx.env.AUTH_ORIGIN })
   if (!registered.ok) networkError('mastodon', registered.error)
   await ctx.db.prepare('INSERT INTO stump_mastodon_apps(origin,redirect_uri,registration,created_at) VALUES(?,?,?,?) ON CONFLICT DO NOTHING')
     .bind(origin, redirectUri, await seal(ctx.env, `mastodon-app:${origin}`, registered.value), ctx.now()).run()
@@ -99,14 +142,7 @@ async function mastodonApp(ctx: ActionContext, origin: string, redirectUri: stri
 async function mastodonInstance(ctx: ActionContext, value: string): Promise<string> {
   const instance = normalizeInstance(value)
   if (!instance.ok) refuse('invalid_arguments', { field: 'instance', reason: instance.message })
-  const url = new URL(instance.origin)
-  if (ctx.env.AUTH_LOCAL === 'true' && loopback(url.hostname)) return instance.origin
-  try {
-    await assertPublic(ctx.env, url)
-  } catch (error) {
-    if (error instanceof NotPublicError) refuse('invalid_arguments', { field: 'instance', reason: `${url.host} is not a Mastodon instance on the public web.` })
-    networkError('mastodon', { code: 'dns', message: error instanceof Error ? error.message : String(error) })
-  }
+  await requirePublic(ctx, 'mastodon', instance.origin, 'instance', host => `You named the Mastodon instance ${host}`, instance.origin)
   return instance.origin
 }
 
@@ -128,7 +164,7 @@ async function refuseOwnedElsewhere(ctx: ActionContext, network: Network, networ
 export async function startConnection(ctx: ActionContext, input: StartInput) {
   const { network } = input
   if (input.owner === 'company' && !isAdmin(ctx)) refuse('forbidden', { reason: 'company_accounts_need_admin', role: ctx.person.role })
-  const state = randomToken(32), id = crypto.randomUUID(), fetch = stumpFetch(ctx.env)
+  const state = randomToken(32), id = crypto.randomUUID()
   let pending: Pending, consentUrl: string | null = null
   if (network === 'mastodon') {
     const origin = await mastodonInstance(ctx, input.instance ?? input.account?.instance ?? '')
@@ -139,16 +175,18 @@ export async function startConnection(ctx: ActionContext, input: StartInput) {
     // A reconnect names the account by its own DID; its stored server is only a hint, since an account may move to another server.
     const identifier = (input.account?.network_user_id ?? input.handle ?? input.account?.handle ?? '').trim().replace(/^@/, '')
     if (!identifier) refuse('invalid_arguments', { field: 'handle' })
-    const identity = await blueskyIdentity(ctx, identifier, input.service === undefined ? null : namedServer(ctx, input.service), input.account?.instance ?? null)
+    const identity = await blueskyIdentity(ctx, identifier, input.service === undefined ? null : await namedServer(ctx, input.service), input.account?.instance ?? null)
     // The handle already names its DID, so an account someone else owns is refused here, before any consent screen.
     await refuseOwnedElsewhere(ctx, 'bluesky', identity.did, { kind: input.owner === 'company' ? 'company' : 'person', person_id: input.owner === 'company' ? null : ctx.person.id })
-    const offered = await discoverOAuth({ fetch }, identity.pdsUrl)
-    if (!offered.ok) networkError('bluesky', offered.error)
+    // The authorization server the PDS names, and every endpoint its metadata names, are checked before they are asked.
+    const net = connectionFetch(ctx, identity.local ? identity.pdsUrl : null)
+    const offered = await discoverOAuth({ fetch: net.fetch }, identity.pdsUrl)
+    if (!offered.ok) stepFailed(net, 'bluesky', 'handle', offered.error)
     if (offered.value === null) {
       pending = { network, method: 'app_password', did: identity.did, handle: identity.handle, pds_url: identity.pdsUrl }
     } else {
-      const started = await startOAuth({ fetch }, blueskyOAuthClient(ctx.env), { identifier: identity.did, handleResolverUrl: identity.local ? identity.pdsUrl : DEFAULT_BLUESKY_SERVICE, identity })
-      if (!started.ok) networkError('bluesky', started.error)
+      const started = await startOAuth({ fetch: net.fetch }, blueskyOAuthClient(ctx.env), { identifier: identity.did, handleResolverUrl: identity.local ? identity.pdsUrl : DEFAULT_BLUESKY_SERVICE, identity })
+      if (!started.ok) stepFailed(net, 'bluesky', 'handle', started.error)
       // The library made its own state; Stump's binds the consent to this person.
       pending = { network, method: 'oauth', oauth: started.value.pending }
       consentUrl = started.value.authorizeUrl
@@ -232,7 +270,9 @@ export async function completeConnection(ctx: ActionContext, input: CompleteInpu
 }
 
 async function exchange(ctx: ActionContext, connection: ConnectionRow, pending: Pending, input: CompleteInput): Promise<Connected> {
-  const fetch = stumpFetch(ctx.env), now = ctx.now
+  // The service checked when the connection started: the instance or server the person named, or the one the account's record names.
+  const service = pending.network === 'mastodon' ? pending.origin : pending.network === 'bluesky' ? pending.method === 'oauth' ? pending.oauth.pdsUrl : pending.pds_url : null
+  const fetch = stumpFetch(ctx.env, undefined, { named: [service] }), now = ctx.now
   if (pending.network === 'bluesky' && pending.method === 'app_password') {
     if (!input.app_password) refuse('invalid_arguments', { field: 'app_password' })
     const session = await createSession({ fetch }, pending.pds_url, { identifier: pending.did, password: input.app_password })
@@ -297,7 +337,7 @@ async function exchange(ctx: ActionContext, connection: ConnectionRow, pending: 
  * which the session must be for. A session for any other DID is ended and refused.
  */
 async function bluesky(ctx: ActionContext, pdsUrl: string, auth: BlueskyAuth, expected: { did: string; handle: string | null }): Promise<Connected> {
-  const fetch = stumpFetch(ctx.env)
+  const fetch = stumpFetch(ctx.env, undefined, { named: [pdsUrl] })
   const client = createBlueskyClient({ fetch, pdsUrl, auth, oauthClient: blueskyOAuthClient(ctx.env), onAuthChange: next => { auth = next } })
   const profile = auth.did === expected.did ? await client.profile() : null
   if (profile && !profile.ok) networkError('bluesky', profile.error)
@@ -343,7 +383,7 @@ export async function disconnectAccount(ctx: ActionContext, row: AccountRow) {
 }
 
 async function revokeAtNetwork(ctx: ActionContext, creds: Credentials): Promise<'revoked' | 'not_supported' | 'failed'> {
-  const fetch = stumpFetch(ctx.env)
+  const fetch = stumpFetch(ctx.env, undefined, { named: [creds.network === 'mastodon' ? creds.origin : creds.network === 'bluesky' ? creds.pds_url : null] })
   if (creds.network === 'mastodon') {
     const app = await mastodonApp(ctx, creds.origin, creds.redirect_uri)
     return (await revokeToken({ fetch }, creds.origin, { clientId: app.clientId, clientSecret: app.clientSecret, token: creds.access_token })).ok ? 'revoked' : 'failed'

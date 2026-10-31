@@ -38,7 +38,9 @@ interface DeliveryRow { event_id: string; channel: Channel; watch_id: string; fi
 /** Sends one stored event on one channel, and records the outcome on its row (the failure with its time, never the address). */
 async function attempt(ctx: AlertContext, watch: WatchRow, row: DeliveryRow): Promise<DeliveryResult> {
   const now = ctx.now(), message = JSON.parse(row.message) as AlertMessage
-  const fetch = stumpFetch(ctx.env), send = (url: string, init?: RequestInit) => fetch(url, init)
+  // The webhook's address is the one a person named for this watch; Slack's is on Slack.
+  const named = row.channel === 'webhook' && watch.alerts?.webhook ? await open(ctx.env, `${watch.id}:webhook.url`, watch.alerts.webhook.url) : null
+  const fetch = stumpFetch(ctx.env, undefined, { named: [named] }), send = (url: string, init?: RequestInit) => fetch(url, init)
   let result: DeliveryResult
   try {
     if (row.channel === 'slack' && watch.alerts?.slack) {

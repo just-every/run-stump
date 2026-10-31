@@ -53,7 +53,7 @@ export async function mastodonFor(env: StumpEnv, row: AccountRow): Promise<Opene
   const creds = await credentials(env, row)
   if (notReady(creds)) return creds
   if (creds.network !== 'mastodon') throw new Error('Not a Mastodon account')
-  return { ok: true, credentials: creds, client: createMastodonClient({ fetch: stumpFetch(env), instance: creds.origin, accessToken: creds.access_token }) }
+  return { ok: true, credentials: creds, client: createMastodonClient({ fetch: stumpFetch(env, undefined, { named: [creds.origin] }), instance: creds.origin, accessToken: creds.access_token }) }
 }
 
 export async function blueskyFor(env: StumpEnv, db: D1Database, row: AccountRow, now: () => number): Promise<Opened<BlueskyClient> | NotReady> {
@@ -62,14 +62,14 @@ export async function blueskyFor(env: StumpEnv, db: D1Database, row: AccountRow,
   if (creds.network !== 'bluesky') throw new Error('Not a Bluesky account')
   let held = row.credentials
   const client = createBlueskyClient({
-    fetch: stumpFetch(env), pdsUrl: creds.pds_url, auth: creds.auth, oauthClient: blueskyOAuthClient(env),
+    fetch: stumpFetch(env, undefined, { named: [creds.pds_url] }), pdsUrl: creds.pds_url, auth: creds.auth, oauthClient: blueskyOAuthClient(env),
     // Refresh tokens are single use: keep each new session before the next call. A session the account no
     // longer holds (disconnected or reconnected meanwhile) is ended at its server, and nothing is sent with it.
     onAuthChange: async auth => {
       const expires = auth.kind === 'password' ? auth.refreshExpiresAtMs : auth.expiresAtMs
       const kept = await saveCredentials(db, env, row.id, { ...creds, auth }, expires, now(), held)
       if (!kept) {
-        await createBlueskyClient({ fetch: stumpFetch(env), pdsUrl: creds.pds_url, auth, oauthClient: blueskyOAuthClient(env) }).disconnect()
+        await createBlueskyClient({ fetch: stumpFetch(env, undefined, { named: [creds.pds_url] }), pdsUrl: creds.pds_url, auth, oauthClient: blueskyOAuthClient(env) }).disconnect()
         throw new Error(`${shownHandle(row)} was disconnected or reconnected while its session refreshed.`)
       }
       held = kept
