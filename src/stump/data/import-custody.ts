@@ -9,6 +9,8 @@
 import { toD1Sql } from '@runeditrun/rer/modules/erasure/fence'
 import { redactionStatements } from '@runeditrun/rer/modules/portability/journal'
 import { retireD1ImportCustody, type D1ImportContext, type D1Sql } from '../../modules/import-kit/src/d1/index.ts'
+import { readOriginals } from '../../modules/import-kit/src/d1/originals.ts'
+import { loadPlans } from '../../modules/import-kit/src/d1/plans.ts'
 import type { SourceRecord } from '../../modules/import-kit/src/types.ts'
 import type { ActionContext } from '../actions/types.ts'
 import { foldName, REJECTED_KIND } from '../lib/imports/index.ts'
@@ -43,20 +45,52 @@ export async function holdsImports(db: D1Database): Promise<boolean> {
 
 export interface Journalist { name: string; venueTargets: string[] }
 
+const textOf = (base64: string) => new TextDecoder().decode(Uint8Array.from(atob(base64), char => char.charCodeAt(0)))
+/** A refused row's key: its id and the line it starts on in its file. */
+const rowKey = (payload: Record<string, unknown>) => `${String(payload.id)}|${String(payload.line)}`
+
+/**
+ * The rows of the list's files that the reader refused and that name the
+ * journalist where the file has them: a refused row keeps only its id and line,
+ * so each is read back in the file it came from. In a Markdown list that is the
+ * row's block, from its heading to the next; in a CSV it is the row's line.
+ */
+async function refusedRowsNaming(context: D1ImportContext, name: string): Promise<Set<string>> {
+  const db = context.storage.database as unknown as D1Database, full = fullNameMatcher(name), found = new Set<string>()
+  const jobs = (await db.prepare('SELECT * FROM ik_jobs WHERE destination=? ORDER BY id').bind(VENUE_DESTINATION).all<Record<string, unknown> & { id: string }>()).results
+  for (const raw of jobs) {
+    const plan = (await loadPlans([raw], db, context.storage.targets.planCodec)).get(raw.id)
+    if (!plan) continue
+    const files = (await readOriginals(plan, raw.id, context)).flatMap(original => original.kind === 'artifact' && original.original.status === 'retained' ? [textOf(original.original.base64).replace(/\r\n?/g, '\n').split('\n')] : [])
+    if (!files.some(lines => lines.some(line => full.test(line)))) continue
+    for (const entry of plan.entries) {
+      if (entry.source.kind !== REJECTED_KIND) continue
+      const payload = (entry.source.payload ?? {}) as Record<string, unknown>, at = Number(payload.line)
+      if (!Number.isSafeInteger(at) || at < 1) continue
+      for (const lines of files) {
+        const start = lines[at - 1] ?? ''
+        const end = start.startsWith('#') ? lines.findIndex((line, index) => index >= at && /^#{2,3} /.test(line)) : at
+        if (lines.slice(at - 1, end < 0 ? lines.length : end).some(line => full.test(line))) found.add(rowKey(payload))
+      }
+    }
+  }
+  return found
+}
+
 /**
  * Which of the list's records hold the journalist: their venue (by its import
  * target, or a journalist venue under their name), an entry aimed at that venue
- * or naming them, and a refused row naming them. Matched on the decoded record,
- * never logged.
+ * or naming them, and a refused row naming them, in its own words or where its
+ * file has it. Matched on the decoded record, never logged.
  */
-function holdsJournalist(person: Journalist) {
+function holdsJournalist(person: Journalist, refused: Set<string>) {
   const full = fullNameMatcher(person.name)
   const targets = new Set(person.venueTargets), folded = foldName(person.name)
   return (record: SourceRecord) => {
     const payload = (record.payload ?? {}) as Record<string, unknown>
     if (record.kind === 'venue') return targets.has(record.sourceId) || (payload.kind === 'journalist' && typeof payload.name === 'string' && foldName(payload.name) === folded)
     if (record.kind === 'draft') return targets.has(String(payload.venue_key)) || full.test(JSON.stringify(payload))
-    if (record.kind === REJECTED_KIND) return full.test(JSON.stringify(payload))
+    if (record.kind === REJECTED_KIND) return full.test(JSON.stringify(payload)) || refused.has(rowKey(payload))
     return false
   }
 }
@@ -81,7 +115,7 @@ export async function eraseWithImportCustody(ctx: ActionContext, erasureId: stri
         : { sql: '0', params: [] },
     },
   }
-  const holds = holdsJournalist(person), full = fullNameMatcher(person.name)
+  const holds = holdsJournalist(person, await refusedRowsNaming(context, person.name)), full = fullNameMatcher(person.name)
   // Portability's restore checkpoint: an archive older than this erasure is refused whole.
   const checkpoint: D1Sql[] = (await redactionStatements(ctx.db)).map(toD1Sql)
   return retireD1ImportCustody({

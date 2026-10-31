@@ -4,8 +4,10 @@ import { xPrices } from '../accounts/apps.ts'
 import { readAccount, type AccountRow } from '../accounts/store.ts'
 import { heldForImport, moveItem, pauseFor, type ItemState, type Mover } from '../items/state.ts'
 import { ANSWERED, ownPostIds } from '../inbox/store.ts'
+import { checkDraft, loadBrand } from '../drafting/check.ts'
 import { recordOutcome } from '../ledger/record.ts'
 import { EDITORS } from '../people/roles.ts'
+import { readPerson } from '../people/store.ts'
 import { itemView, readItem, type FullItemRow } from './items.ts'
 import { publishers } from './publishers.ts'
 import { agentRuleBroken, ONE_REPLY, UNENGAGED, X_AI_STEP } from './rules.ts'
@@ -25,7 +27,8 @@ const TOOL = 'stump.items.schedule'
 export { blockingFlags }
 export type { Flag } from './tick.ts'
 
-export interface Plan { item: FullItemRow; account: AccountRow; due: DueItem; at: number; zone: string; charge_micro: number; posts: number }
+/** `checked` holds the draft check run again for an account other than the one the item was checked for, which commit stores. */
+export interface Plan { item: FullItemRow; account: AccountRow; due: DueItem; at: number; zone: string; charge_micro: number; posts: number; checked: { flags: string; claims_used: string } | null }
 
 export const mover = (ctx: ActionContext): Mover => ({ db: ctx.db, person: ctx.person, agent: ctx.agent, now: ctx.now })
 
@@ -107,9 +110,23 @@ function providerStep(row: FullItemRow, account: AccountRow): { provider: string
   return null
 }
 
+/**
+ * The item's draft check for the account it goes out on. Disclosure, near-duplicates and the
+ * network's count depend on the account, so an item checked for another account (or none) is
+ * checked again for this one, and that check decides (D-2, STUMP-TRUTH-004).
+ */
+async function checkedFor(ctx: ActionContext, row: FullItemRow, account: AccountRow): Promise<Plan['checked']> {
+  if (row.account_id === account.id) return null
+  const draft = { ...row, account_id: account.id, network: row.network ?? account.network, parts: row.parts ? JSON.parse(row.parts) as string[] : null,
+    reply_to: row.reply_to ? JSON.parse(row.reply_to) as unknown : null, options: JSON.parse(row.options) as Record<string, unknown> }
+  const check = await checkDraft(ctx.db, await loadBrand(ctx.db), draft, await readPerson(ctx.db, row.person_id), ctx.now())
+  return { flags: JSON.stringify(check.flags), claims_used: JSON.stringify(check.claims_used) }
+}
+
 /** Checks one item for one account at one time and answers what scheduling it means. Changes nothing. */
 export async function prepare(ctx: ActionContext, action: string, input: { item_id?: unknown; account_id?: unknown; at?: unknown; time_zone?: unknown }, options: { now?: boolean; holdFlagged?: boolean; accountMayWait?: boolean } = {}): Promise<Plan> {
-  const row = await item(ctx, input.item_id)
+  const stored = await item(ctx, input.item_id)
+  let row = stored
   if (!SCHEDULABLE.includes(row.state)) refuse('not_schedulable', { item_id: row.id, state: row.state })
   // An imported post goes on the schedule only when the person releases it, confirming the tool it came from no longer queues it.
   if (heldForImport(row) && action !== 'release_import') {
@@ -132,6 +149,8 @@ export async function prepare(ctx: ActionContext, action: string, input: { item_
   // Whatever the policy says, a step a provider keeps for a person stays with that person.
   const step = providerStep(row, account)
   if (step) refuse('held', { item_id: row.id, ...step })
+  const checked = await checkedFor(ctx, stored, account)
+  if (checked) row = { ...stored, flags: checked.flags }
   const flagged = blockingFlags(row)
   if (flagged.length && !options.holdFlagged) refuse('item_flagged', { item_id: row.id, flag: flagged[0]!.code, flags: flagged })
   // The checks see the text as it will go out, own links tagged (STUMP-LINK-001).
@@ -150,7 +169,7 @@ export async function prepare(ctx: ActionContext, action: string, input: { item_
   // The network's own check needs the account open; an account that waits for its owner is checked when it is scheduled again.
   const problems = waiting ? [] : await publisher.check({ ...due, scheduled_at: at }, env)
   if (problems.length) refuse(problems.some(problem => /too_long|over/.test(problem.code)) ? 'over_limit' : 'not_publishable', { network: account.network, account_id: account.id, problems })
-  return { item: row, account, due, at, zone, charge_micro: publisher.quote?.(due, env.prices) ?? 0, posts: due.format === 'thread' ? due.parts?.length ?? 0 : 1 }
+  return { item: row, account, due, at, zone, charge_micro: publisher.quote?.(due, env.prices) ?? 0, posts: due.format === 'thread' ? due.parts?.length ?? 0 : 1, checked }
 }
 
 /** The charge in US dollars as the approval summary's amount, paid to X. */
@@ -200,6 +219,8 @@ export async function commit(ctx: ActionContext, plan: Plan, options: { queued?:
   const scheduledBy = JSON.stringify({ person_id: ctx.person.id, agent: ctx.agent ? { id: ctx.agent.id, name: ctx.agent.name } : null, approved_by: ctx.approvers, at: new Date(now).toISOString() })
   const set = {
     account_id: account.id, network: account.network, scheduled_at: plan.at, time_zone: plan.zone, scheduled_by: scheduledBy, queued: options.queued ? 1 : 0, hold: null, error: null,
+    // The check for the account it now goes out on replaces the one made for another account.
+    ...(plan.checked ? { flags: plan.checked.flags, claims_used: plan.checked.claims_used } : {}),
     ...(ctx.approvers.length ? { approved_by: JSON.stringify(ctx.approvers) } : {}),
     ...(ctx.agent && !row.agent ? { agent: JSON.stringify({ id: ctx.agent.id, name: ctx.agent.name }) } : {}),
   }

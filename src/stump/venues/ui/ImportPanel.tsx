@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { FilePick } from '../../ui/kit.tsx'
-import { applyPlan, ImportError, planFile, undoPlan, type Change, type ImportSourceId, type Kept, type Plan } from './importer.ts'
+import { applyPlan, ImportError, importStatus, planFile, undoPlan, type Change, type ImportSourceId, type Kept, type Plan } from './importer.ts'
 
 const SOURCES: Array<{ id: ImportSourceId; label: string; accept: string }> = [
   { id: 'outreach-md', label: 'Venue list (Markdown)', accept: '.md,.markdown,text/markdown,text/plain' },
@@ -12,7 +12,10 @@ const WORDS: Record<string, string> = {
   owner_required: 'Only the owner can import.', origin_required: 'Reload the page and try again.',
   namespace_has_pending_import: 'An earlier import of this kind is still being applied. Try again once it finishes.',
   import_superseded: 'A newer import holds these records. Undo the newer one first.',
+  earlier_import_holds_records: 'An earlier import of this list still holds some of these rows, and an erasure removed its saved copy, so this file cannot be compared with it. Undo that import and any import of this list since, then upload this file again. Anything edited or used in Stump since stays as it is.',
 }
+/** Codes Stump explains in its own words, ahead of the door's. */
+const OWN_WORDS = new Set(['earlier_import_holds_records'])
 const words = (field: string) => field.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase())
 /** A field's value as a person reads it: a rule by its value, a list by its items. */
 function shown(value: unknown): string {
@@ -42,7 +45,30 @@ function ChangeRow({ change }: { change: Change }) {
 }
 
 // The reader's own words say what it expected (a heading, a column); otherwise the code in plain words.
-const explain = (error: unknown) => error instanceof ImportError ? (typeof error.details.reason === 'string' ? error.details.reason : null) ?? WORDS[error.code] ?? `The import was refused: ${error.code.replace(/_/g, ' ')}.` : 'Something went wrong. Try again.'
+const explain = (error: unknown) => error instanceof ImportError ? (OWN_WORDS.has(error.code) ? WORDS[error.code] : null) ?? (typeof error.details.reason === 'string' ? error.details.reason : null) ?? WORDS[error.code] ?? `The import was refused: ${error.code.replace(/_/g, ' ')}.` : 'Something went wrong. Try again.'
+/** The earlier imports a refusal names as still holding rows of this file. */
+const holdersOf = (error: unknown) => error instanceof ImportError && error.code === 'earlier_import_holds_records' && Array.isArray(error.details.planIds) ? error.details.planIds.filter((id): id is string => typeof id === 'string') : []
+
+/**
+ * Undoes the named earlier imports. One with a newer import of the list over it is undone only after
+ * that one, so the newest is undone first until the named one can be.
+ */
+async function undoThrough(source: ImportSourceId, plans: string[]): Promise<Kept[]> {
+  const kept: Kept[] = [], left = [...plans], undone = new Set<string>()
+  while (left.length) {
+    try {
+      kept.push(...(await undoPlan(source, left[0]!)).kept)
+      undone.add(left.shift()!)
+      continue
+    } catch (cause) { if (!(cause instanceof ImportError) || cause.code !== 'import_superseded') throw cause }
+    const head = (await importStatus(source)).head?.planId
+    if (!head || undone.has(head)) throw new ImportError('import_superseded')
+    kept.push(...(await undoPlan(source, head)).kept)
+    undone.add(head)
+    if (left.includes(head)) left.splice(left.indexOf(head), 1)
+  }
+  return kept
+}
 
 /** The import entry point: choose the file, read its dry run, apply it, and undo it. */
 export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose(): void }) {
@@ -52,7 +78,9 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
   const [kept, setKept] = useState<Kept[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const run = async (work: () => Promise<void>) => { setBusy(true); setError(null); try { await work() } catch (cause) { setError(explain(cause)) } finally { setBusy(false) } }
+  const [holders, setHolders] = useState<string[]>([])
+  const [notice, setNotice] = useState<string | null>(null)
+  const run = async (work: () => Promise<void>) => { setBusy(true); setError(null); setNotice(null); setHolders([]); try { await work() } catch (cause) { setError(explain(cause)); setHolders(holdersOf(cause)) } finally { setBusy(false) } }
 
   async function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -78,8 +106,11 @@ export function ImportPanel({ onChanged, onClose }: { onChanged(): void; onClose
       </div>
       <p className="st-note">Stump reads the file and shows what it would add. Nothing changes until you apply it.</p>
       {error ? <p className="st-error" role="alert">{error}</p> : null}
+      {notice ? <p className="st-note" role="status">{notice}</p> : null}
       <div className="st-actions">
         <button className="st-button primary pill" type="submit" disabled={busy}>{busy ? 'Reading…' : 'Review import'}</button>
+        {holders.length ? <button className="st-button pill outline" type="button" disabled={busy}
+          onClick={() => void run(async () => { const undone = await undoThrough(source, holders); onChanged(); setNotice(`Earlier imports undone${undone.length ? `; ${plural(undone.length, 'record')} edited or in use since stayed` : ''}. Upload the file again.`) })}>Undo earlier imports</button> : null}
         <button className="st-button pill" type="button" onClick={onClose}>Cancel</button>
       </div>
     </form> : <div>

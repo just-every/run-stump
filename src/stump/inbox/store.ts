@@ -22,7 +22,11 @@ interface ReplyRow { id: string; state: string; text: string | null; url: string
 interface OfferRow { id: string; state: string; outcome: string | null; sent_at: number | null; attempts: number }
 interface OwnPost { network_id: string; url: string | null; text: string | null; ledger_id: string | null }
 
-/** The company's own posts among these ids, from what Stump posted (its parts and its ledger). */
+/**
+ * The company's own posts among these ids, from what Stump posted (its parts and its ledger). A ledger entry
+ * counts by the network id it was recorded with: a correction that changed that id says what the entry
+ * refers to, not which post the account wrote.
+ */
 async function ownPosts(db: D1Database, accountId: string, ids: string[]): Promise<Map<string, OwnPost>> {
   const found = new Map<string, OwnPost>()
   if (!ids.length) return found
@@ -30,7 +34,8 @@ async function ownPosts(db: D1Database, accountId: string, ids: string[]): Promi
   const [parts, ledger] = await db.batch([
     db.prepare(`SELECT p.network_id,p.url,COALESCE(p.text,i.text) AS text,(SELECT l.id FROM stump_ledger l WHERE l.item_id=p.item_id AND l.account_id=p.account_id AND l.route='published') AS ledger_id
       FROM stump_item_parts p JOIN stump_items i ON i.id=p.item_id WHERE p.account_id=? AND p.network_id IN (${marks})`).bind(accountId, ...ids),
-    db.prepare(`SELECT network_id,url,text,id AS ledger_id FROM stump_ledger WHERE account_id=? AND network_id IN (${marks})`).bind(accountId, ...ids),
+    db.prepare(`SELECT l.network_id,l.url,l.text,l.id AS ledger_id FROM stump_ledger l WHERE l.account_id=? AND l.network_id IN (${marks})
+      AND NOT EXISTS(SELECT 1 FROM stump_ledger_versions v WHERE v.entry_id=l.id AND v.kind='correction' AND json_extract(v.fields,'$.network_id') IS NOT NULL)`).bind(accountId, ...ids),
   ])
   for (const row of [...(ledger!.results as unknown as OwnPost[]), ...(parts!.results as unknown as OwnPost[])]) found.set(row.network_id, { ...found.get(row.network_id), ...row, ledger_id: row.ledger_id ?? found.get(row.network_id)?.ledger_id ?? null })
   return found

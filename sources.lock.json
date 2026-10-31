@@ -440,7 +440,7 @@
       "executable": false
     },
     "docs/agents.md": {
-      "sha256": "72c8b4e3ab6442f3eb633e27910864a814e420e102f9fe561f5956a4c60469a4",
+      "sha256": "c168bc1dd940261ad18fde37b5d7408f6d003fa78d6dda658db78a0ae8556a24",
       "executable": false
     },
     "docs/ai-provider.md": {
@@ -759,6 +759,10 @@
       "sha256": "21457d419d277033dd0f2130f7285c70e410d653997e71c635ecc93420bd5540",
       "executable": false
     },
+    "migrations/core/0611_stump_erasure_key.sql": {
+      "sha256": "395e98358614ba76a6e99b3e38190f6859ed2d6683025cef0b46708239acdf4f",
+      "executable": false
+    },
     "migrations/core/0700_stump_offer_engagement_handoff_thread.sql": {
       "sha256": "28e79a5eeedb779ce158c4403438a004ddf0ad5b388a8618f4c4deec413a4df4",
       "executable": false
@@ -968,7 +972,7 @@
       "executable": false
     },
     "scripts/stump/archive-policy.mjs": {
-      "sha256": "cfecfd9dd86bdeddaa9a4a8d9c9115d63c3049b7fd688859d610d3dcb856aa3e",
+      "sha256": "16184cf5e8ee54b9f56cd90472369cb72e24af5660217bb6827783a93aed30f9",
       "executable": false
     },
     "scripts/stump/local-only.d.mts": {
@@ -3564,11 +3568,15 @@
       "executable": false
     },
     "src/stump/data/erase.ts": {
-      "sha256": "cb196916315292f952b33cf29dbe2c4ab93305e4cf7ea08b918fbe0cc72cb946",
+      "sha256": "636024bff9be3f5e0b7e2ea4e7419c90543e0ea53d6cfece1fa2a901a7422d8f",
+      "executable": false
+    },
+    "src/stump/data/erased-uploads.ts": {
+      "sha256": "d9cfac222bd8b2c9633d20b2443236d4db31c6d611aa0296e01499b7702f3945",
       "executable": false
     },
     "src/stump/data/import-custody.ts": {
-      "sha256": "7136c2a805fb848c966919ce0a71d95de94f22719b7d24e01c0a5af4bea75109",
+      "sha256": "cc8db2cc10fc1f982953d30958b9ad0c54991d71a5952851871816e7eb2e50d5",
       "executable": false
     },
     "src/stump/data/recheck.ts": {
@@ -3584,11 +3592,11 @@
       "executable": false
     },
     "src/stump/data/residue.ts": {
-      "sha256": "996fd297620a03d7566a4c595965916e73e66a6263f2f311c9fd79ff80fdfc1e",
+      "sha256": "8b2c97436eb362a6d421c030fc4a03e8b8127d17f89ae98097440a593d7eaee9",
       "executable": false
     },
     "src/stump/data/tombstones.ts": {
-      "sha256": "bb0fb4d7111e5e2d8cf06b4dc1a05e3dc28ee3c7499dbc55a3b18ca6e5651985",
+      "sha256": "63b3db3ded4487e37754a18378b34566c97ed061d94c1fe9acf9783298cb7440",
       "executable": false
     },
     "src/stump/data/ui/BufferImport.tsx": {
@@ -3744,7 +3752,7 @@
       "executable": false
     },
     "src/stump/imports/door.ts": {
-      "sha256": "becec299562ec72fd2672c077f8631ede1bab8487700ce236daaf64367eaa231",
+      "sha256": "c2aff250605af0986c93c2090c654af7cc8f1e7e3b8b039f93b2e94ce3934254",
       "executable": false
     },
     "src/stump/inbox/engagement.ts": {
@@ -3756,7 +3764,7 @@
       "executable": false
     },
     "src/stump/inbox/poll.ts": {
-      "sha256": "7e3cdec9f45379f7f5e801895d2422a3a16a198913587b4998cbdedcbebff1ca",
+      "sha256": "51998bcd39646af1b27a65e18017be11fdc6d77f117c0be4b8b3427eeb07d8b5",
       "executable": false
     },
     "src/stump/inbox/reply.ts": {
@@ -3764,7 +3772,7 @@
       "executable": false
     },
     "src/stump/inbox/store.ts": {
-      "sha256": "584346fe0e1e8d566617497a6f92b103075ce6357e8e2d2a3071e24eafc5c870",
+      "sha256": "191f2d8c4d4280d1b5788c3ea502cb7a61ccfb55644522b207becb019fdde2aa",
       "executable": false
     },
     "src/stump/inbox/styles.ts": {
@@ -4324,7 +4332,7 @@
       "executable": false
     },
     "src/stump/publish/schedule.ts": {
-      "sha256": "69443bc6fd5ad9d0a24b23ac3dc50b5fdbb16f4c66918f489c0882a747982013",
+      "sha256": "54eaf675f132b4fe8f3f138c8b163ea0cf1266db71335fe1b83f0c4eba95f480",
       "executable": false
     },
     "src/stump/publish/slots.ts": {
@@ -4392,7 +4400,7 @@
       "executable": false
     },
     "src/stump/today/TodayPage.tsx": {
-      "sha256": "e2d2f53dbfeb50e59d8cf9002cbbc7936041b352014c485b3e52b89410678a28",
+      "sha256": "1e8a71614f1fdb658d4c515b138f388640bc17bf98766be9c10a757babe2e75d",
       "executable": false
     },
     "src/stump/tools/accounts.ts": {
@@ -4456,7 +4464,7 @@
       "executable": false
     },
     "src/stump/tools/team.ts": {
-      "sha256": "3c24bc7bd45c0c5bbd0b19e16f03bdea943ef0eb6c8a76364462fb40d2c3ecc1",
+      "sha256": "80074c9193944c0b436833cc691eae476f6e384314a2530547f68b301d378e97",
       "executable": false
     },
     "src/stump/tools/venues.ts": {
@@ -4540,11 +4548,11 @@
       "executable": false
     },
     "src/stump/venues/ui/importer.ts": {
-      "sha256": "484a4a01249fd5f699dcc717f9aedf53d607333836a6a81becb0b413777d8cc1",
+      "sha256": "3e4b482c0a3b5dd84e0ce7a8687ee33a881fa51fa05433ea35280517d3765582",
       "executable": false
     },
     "src/stump/venues/ui/ImportPanel.tsx": {
-      "sha256": "38a3ce4d0217f8a4470805a1795d0432bd57a5d622d7cb7faf416be82c9be9b7",
+      "sha256": "3da4c645ded683db2c6729d12d612cc4c89ecaa6bfedd19fc591beba333b4f20",
       "executable": false
     },
     "src/stump/venues/ui/labels.ts": {

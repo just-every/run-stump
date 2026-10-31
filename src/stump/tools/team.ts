@@ -6,7 +6,7 @@ import { answerRemovedPerson } from '../handoffs/lapse.ts'
 import { outsideVoice } from '../handoffs/brief.ts'
 import { disconnectAccount } from '../accounts/connect.ts'
 import type { AccountRow } from '../accounts/store.ts'
-import { moveItem, type ItemState } from '../items/state.ts'
+import { IMPORT_HOLD_SQL, moveItem, type ItemState } from '../items/state.ts'
 
 const email = { type: 'string', format: 'email', minLength: 3, maxLength: 254 }
 const personId = { type: 'string', minLength: 1, maxLength: 64 }
@@ -171,11 +171,12 @@ export const teamTools: StumpTool[] = [{
       },
       target: args => ({ kind: 'person', id: String(args.person_id) }),
       // Read before the role check, so a caller who would widen their own reach is told self_escalation.
+      // The owner already holds every authority, so recording their own connection widens nothing of theirs.
       async authority(args, ctx) {
         const target = await readPerson(ctx.db, String(args.person_id))
         if (!target || target.status === 'removed') return null
         const connection = args.connection === undefined ? target.connection : args.connection as StumpPerson['connection']
-        return { subject: target.id, widens: connection !== target.connection && outsideVoice(target) && !outsideVoice({ role: target.role, connection }) }
+        return { subject: target.id, widens: target.role !== 'owner' && connection !== target.connection && outsideVoice(target) && !outsideVoice({ role: target.role, connection }) }
       },
       async run(args, ctx) {
         const { target, connection, lines } = await updating(ctx, args)
@@ -200,7 +201,8 @@ export const teamTools: StumpTool[] = [{
         mayChange(ctx, target)
         const handoffs = (await ctx.db.prepare("SELECT id FROM stump_handoffs WHERE person_id=? AND state IN ('open','join_first','held') ORDER BY due_at,id").bind(target.id).all<{ id: string }>()).results.map(row => row.id)
         // Every item of theirs that could still go out goes back to draft: scheduled, paused, and held (a rate-limit or day-limit hold resumes by itself).
-        const scheduled = (await ctx.db.prepare("SELECT id,state FROM stump_items WHERE person_id=? AND state IN ('scheduled','paused','held') ORDER BY scheduled_at,id").bind(target.id).all<{ id: string; state: ItemState }>()).results
+        // An imported post waiting for its release keeps waiting: nothing schedules it until a person releases it, and the release checks it again.
+        const scheduled = (await ctx.db.prepare(`SELECT id,state FROM stump_items WHERE person_id=? AND state IN ('scheduled','paused','held') AND NOT ${IMPORT_HOLD_SQL} ORDER BY scheduled_at,id`).bind(target.id).all<{ id: string; state: ItemState }>()).results
         const mover = { db: ctx.db, person: ctx.person, agent: ctx.agent, now: () => now }
         // Nothing posts as someone who left: their items return to draft, their agents and sign-in sessions end.
         await ctx.db.batch([
