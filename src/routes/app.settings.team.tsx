@@ -37,7 +37,7 @@ function TeamPage() {
           : `Invitation sent to ${person.email}.`) }} onCancel={() => setInviting(false)} /> : null}
         <table className="st-table" aria-labelledby="people-title">
           <thead><tr><th scope="col">Name</th><th scope="col">Role</th><th scope="col">Connection</th>{manage ? <th scope="col"><span className="st-sr">Actions</span></th> : null}</tr></thead>
-          <tbody>{data ? members.map(person => <Person key={person.id} person={person} manage={manage} owner={data.me.person.role === 'owner'} self={person.id === data.me.person.id} onChange={changed} label={label} />) : null}</tbody>
+          <tbody>{data ? members.map(person => <Person key={person.id} person={person} manage={manage} owner={data.me.person.role === 'owner'} viewerRole={data.me.person.role} self={person.id === data.me.person.id} onChange={changed} label={label} />) : null}</tbody>
         </table>
       </div>
       {invited.length ? <div className="st-panel">
@@ -87,12 +87,14 @@ function removedNote(person: RemovedPerson) {
 }
 
 /** A teammate's row: the role as text with a dot (SPEC §4.2); changing the role and removing them live in the row's ⋯ menu (H13, H15). */
-function Person({ person, manage, owner, self, onChange, label }: { person: TeamPerson; manage: boolean; owner: boolean; self: boolean; onChange(note: string): void; label(value: string): string }) {
+function Person({ person, manage, owner, viewerRole, self, onChange, label }: { person: TeamPerson; manage: boolean; owner: boolean; viewerRole: string; self: boolean; onChange(note: string): void; label(value: string): string }) {
   const { busy, message, run } = useRun()
-  const [mode, setMode] = useState<'role' | 'remove' | null>(null)
+  const [mode, setMode] = useState<'role' | 'connection' | 'remove' | null>(null)
   const [open, setOpen] = useState<Handoff[] | null>(null)
   const choices = owner && !self ? ['owner', ...ROLES] : ROLES
   const editable = manage && person.role !== 'owner'
+  // A connection is recorded by an owner or admin: the owner records their own, and an admin never another admin's.
+  const connectable = manage && (self || (person.role !== 'owner' && !(viewerRole === 'admin' && person.role === 'admin')))
   async function askRemove() {
     setMode('remove')
     // Removing someone lists their open hand-offs first, so nobody is surprised by who must pick them up.
@@ -114,6 +116,15 @@ function Person({ person, manage, owner, self, onChange, label }: { person: Team
         </SelectField>
         <button className="st-button quiet small" type="button" onClick={() => setMode(null)}>Done</button>
       </div> : null}
+      {mode === 'connection' ? <div className="st-team-edit">
+        <SelectField label="Connection to the company" className="st-select" value={person.connection ?? ''} disabled={busy}
+          onChange={event => void run(() => runAction<TeamPerson>('stump.team.manage', { action: 'update', idempotency_key: key(), person_id: person.id, connection: event.target.value }))
+            .then(changed => { if (changed) { setMode(null); onChange(`${self ? 'Your' : `${changed.display_name}'s`} connection is now ${words(changed.connection ?? '')}.`) } })}>
+          {person.connection ? null : <option value="" disabled>Choose one</option>}
+          {CONNECTIONS.map(item => <option key={item} value={item}>{label(item)}</option>)}
+        </SelectField>
+        <button className="st-button quiet small" type="button" onClick={() => setMode(null)}>Done</button>
+      </div> : null}
       {mode === 'remove' ? <div className="st-team-edit" role="group" aria-label={`Remove ${person.display_name}`}>
         <p className="st-team-confirm">{open === null ? `Remove ${person.display_name}?` : open.length
           ? `${open.length} open ${open.length === 1 ? 'hand-off needs' : 'hand-offs need'} someone new when ${person.display_name} goes:`
@@ -128,10 +139,12 @@ function Person({ person, manage, owner, self, onChange, label }: { person: Team
       <Outcome message={message?.error ? message : null} />
     </div></div></td>
     <td><span className="st-team-role"><span className="st-dot" aria-hidden="true" />{label(person.role)}</span></td>
-    <td>{person.connection ? <Chip>{label(person.connection)}</Chip> : <span className="st-meta">Not set</span>}</td>
-    {manage ? <td className="st-team-more">{editable ? <MoreMenu label={`More actions for ${person.display_name}`} items={[
-      { label: 'Change role', run: () => setMode('role') },
-      { label: 'Remove…', danger: true, run: () => void askRemove() },
+    <td>{person.connection ? <Chip>{label(person.connection)}</Chip> : connectable
+      ? <button className="st-button quiet small" type="button" onClick={() => setMode('connection')}>Set connection</button> : <span className="st-meta">Not set</span>}</td>
+    {manage ? <td className="st-team-more">{editable || connectable ? <MoreMenu label={`More actions for ${person.display_name}`} items={[
+      ...(editable ? [{ label: 'Change role', run: () => setMode('role') }] : []),
+      ...(connectable ? [{ label: person.connection ? 'Change connection' : 'Set connection', run: () => setMode('connection') }] : []),
+      ...(editable ? [{ label: 'Remove…', danger: true, run: () => void askRemove() }] : []),
     ]} /> : null}</td> : null}
   </tr>
 }

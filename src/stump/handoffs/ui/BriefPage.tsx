@@ -54,7 +54,8 @@ export function BriefPage({ handoffId }: { handoffId: string }) {
         <header className="st-ho-head">
           <h1 id="brief-title">{briefTitle(handoff)}</h1>
           <p className="st-ho-sub">
-            <span>{handoff.state === 'posted' ? `Posted ${dayOf(handoff.posted_at)}` : dueLine(handoff.due_at)} · {handoff.person_name}</span>
+            {/* The company's own limit for the venue, shared by everyone who posts there, belongs with when it is due. */}
+            <span>{[handoff.state === 'posted' ? `Posted ${dayOf(handoff.posted_at)}` : dueLine(handoff.due_at), handoff.person_name, limitLine(handoff.venue.shared_limit)].filter(Boolean).join(' · ')}</span>
             {/* Posted says itself once, in the line before it: the notice under it carries the link, with no second "Posted". */}
             {handoff.state !== 'open' && handoff.state !== 'posted' ? <Chip tone={STATE[handoff.state]!.tone} tick={STATE[handoff.state]!.tick}>{STATE[handoff.state]!.label}</Chip> : null}
           </p>
@@ -70,8 +71,6 @@ export function BriefPage({ handoffId }: { handoffId: string }) {
                   ? <><a href={line.rule.source_url} target="_blank" rel="noreferrer noopener">source</a> · read {dayOf(`${line.rule.read_at}T12:00:00Z`)}</>
                   : <Chip tone="held">unsourced</Chip>}</span>
               </div>)}
-              {/* The company's own limit for the venue, shared by everyone who posts there. */}
-              {handoff.venue.shared_limit ? <div className="st-ho-rule"><span>{limitLine(handoff.venue.shared_limit)}</span></div> : null}
             </Side>
             {handoff.why ? <Side icon="check" title="Why it fits"><p>{handoff.why}</p></Side> : null}
             <Side icon="ledger" title="Facts">

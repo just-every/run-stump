@@ -77,7 +77,7 @@ async function masterPlan(ctx: ActionContext, args: Args): Promise<MasterPlan> {
   const plans: Plan[] = [], held: MasterPlan['held'] = []
   for (const variant of rows) {
     try {
-      const plan = await prepare(ctx, 'schedule_master', { item_id: variant.id, at: args.at }, { holdFlagged: true })
+      const plan = await prepare(ctx, 'schedule_master', { item_id: variant.id, at: args.at, ...(args.time_zone !== undefined ? { time_zone: args.time_zone } : {}) }, { holdFlagged: true })
       const flagged = blockingFlags(plan.item)
       if (flagged.length) held.push({ item_id: variant.id, reason: flagged[0]!.code, flag: flagged[0] })
       else plans.push(plan)
@@ -196,7 +196,8 @@ export const itemTools: StumpTool[] = [{
     },
     schedule_master: {
       roles: EDITORS,
-      properties: { master_id: id, at }, required: ['master_id', 'at'],
+      // `time_zone` is the zone the person scheduled in, kept on each variant so its time reads the same to everyone.
+      properties: { master_id: id, at, time_zone: { type: 'string', minLength: 1, maxLength: 64 } }, required: ['master_id', 'at'],
       async classify(args, ctx) { const plan = await masterPlan(ctx, args); return scheduleClasses(plan.plans, plan.held.length) },
       async summary(args, ctx) { return summary((await masterPlan(ctx, args)).plans, 'Schedule every variant') },
       target: args => ({ kind: 'master', id: String(args.master_id) }), revision: masterRevision,

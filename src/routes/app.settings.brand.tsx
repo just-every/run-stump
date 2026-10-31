@@ -25,20 +25,22 @@ const shortDate = (value: string | null) => {
 }
 const bare = (value: string) => value.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
 /**
- * A proof as the claims list shows it: its own words (label, number, date, or the note typed after a link), then the page
- * that backs it as its address ("brightwell.app/changelog/3-2"), linked, so the reader sees which page it is and can open it.
+ * A proof as the claims list shows it: its own words (label, number, date, or the note typed with a link) and the page that
+ * backs it as its address ("brightwell.app/changelog/3-2"), linked, in the order they were typed, so the reader sees which page it is and can open it.
  */
 function Proof({ proof }: { proof: unknown }) {
   const isUrl = (value: unknown): value is string => typeof value === 'string' && /^https?:\/\//.test(value)
-  let words = '', url: string | null = null
-  if (typeof proof === 'string') ({ url, words } = proofText(proof))
+  let words = '', url: string | null = null, linkFirst = false
+  if (typeof proof === 'string') ({ url, words, linkFirst } = proofText(proof))
   else if (proof && typeof proof === 'object') {
     const { text, document, number, unit, url: page, date } = proof as Record<string, string | number | undefined>
     const amount = number === undefined ? undefined : unit === undefined ? number : /^[$€£¥]$/u.test(String(unit)) ? `${unit}${number}` : /^(%|x|×)$/iu.test(String(unit)) ? `${number}${unit}` : `${number} ${unit}`
     words = [text ?? document, amount, date].filter(item => item !== undefined && item !== null && item !== '').join(' · ')
     url = isUrl(page) ? page : null
   }
-  return <>{words}{words && url ? ' · ' : ''}{url ? <a className="st-proof-link" href={url} target="_blank" rel="noreferrer noopener">{bare(url)}</a> : null}</>
+  // The page and its words read in the order they were typed.
+  const page = url ? <a className="st-proof-link" href={url} target="_blank" rel="noreferrer noopener">{bare(url)}</a> : null
+  return linkFirst ? <>{page}{' · '}{words}</> : <>{words}{words && url ? ' · ' : ''}{page}</>
 }
 
 function BrandPage() {
@@ -63,7 +65,8 @@ function BrandPage() {
   const { shown, saved } = useSaved()
   const editor = data ? ['owner', 'admin', 'editor'].includes(data.who.person.role) : false
   const writer = data ? data.who.person.role !== 'viewer' : false
-  const name = (id: string) => data?.team.find(person => person.id === id)?.display_name ?? 'Someone who left'
+  // A person's name never breaks across lines, nor from the "owner" before it ("owner Sam Ortiz"), as the review date does not.
+  const name = (id: string) => (data?.team.find(person => person.id === id)?.display_name ?? 'Someone who left').replace(/ /g, '\u00a0')
   /** The product a claim backs, first on its line: one product's name, or "Every product" for a claim recorded for all of them. */
   const productOf = (claim: ClaimView) => claim.product_id === null ? 'Every product' : data?.products.find(product => product.id === claim.product_id)?.name ?? null
 
@@ -95,8 +98,8 @@ function BrandPage() {
         <ul className="st-list">{data?.claims.map(claim => <li className="st-kv" key={claim.id}>
           <div className="st-name">{claim.kind === 'banned' ? <span className="st-pill danger">banned</span> : claim.stale ? <span className="st-pill danger">stale</span> : null}{claim.text}</div>
           <div className="st-meta">{productOf(claim) ? `${productOf(claim)} · ` : ''}{claim.kind === 'banned' ? `reason: ${claim.reason ?? ''}`
-            : claim.kind === 'comparative' ? `vs ${claim.competitor ?? ''} · source ${shortDate(claim.source_date)} · owner ${name(claim.owner_id)} · review ${shortDate(claim.review_on)}`
-            : <>proof: <Proof proof={claim.proof} /> · owner {name(claim.owner_id)} · review {shortDate(claim.review_on)}</>}</div>
+            : claim.kind === 'comparative' ? `vs ${claim.competitor ?? ''} · source ${shortDate(claim.source_date)} · owner\u00a0${name(claim.owner_id)} · review ${shortDate(claim.review_on)}`
+            : <>proof: <Proof proof={claim.proof} /> · owner{'\u00a0'}{name(claim.owner_id)} · review {shortDate(claim.review_on)}</>}</div>
         </li>)}</ul>
         {writer && data ? <ClaimForm key={sentence ?? ''} open={!data.claims.length || !!sentence} busy={busy} team={data.team.filter(person => person.status === 'active')} me={data.who.person.id} products={data.products}
           initial={sentence ? { text: sentence, product_id: data.draftProduct ?? '' } : null}
@@ -125,18 +128,17 @@ function ProductProfile({ product, save }: { product: Product; save: (args: Reco
   const [open, setOpen] = useState(false)
   const words = open || product.words_use.length > 0 || product.words_avoid.length > 0
   // What the product is, who it is for, where it lives and what it is compared with: what each AI request and the claim check read
-  // (STUMP-BRAND-001). Only the ones that hold a value show; one quiet button names the empty ones and opens just those (H15).
+  // (STUMP-BRAND-001). Only the ones that hold a value show; one quiet "Add details", the same words for every product, opens just the empty ones (H15).
   const details = [
-    { label: 'what it is', ask: 'what it is', value: product.description ?? '', hint: 'What it does, in a sentence', save: (value: string) => save({ description: value || null }) },
-    { label: 'for', ask: "who it's for", value: product.audience ?? '', hint: 'Who it is for', save: (value: string) => save({ audience: value || null }) },
-    { label: 'links', ask: 'links', value: product.urls.join(', '), hint: 'https://…', save: (value: string) => save({ urls: list(value) }) },
-    { label: 'compared with', ask: 'comparisons', value: product.competitors.join(', '), hint: 'Competitors', save: (value: string) => save({ competitors: list(value) }) },
-    { label: 'also called', ask: 'other names', value: product.other_names.join(', '), hint: 'Other names', save: (value: string) => save({ other_names: list(value) }) },
+    { label: 'what it is', value: product.description ?? '', hint: 'What it does, in a sentence', save: (value: string) => save({ description: value || null }) },
+    { label: 'for', value: product.audience ?? '', hint: 'Who it is for', save: (value: string) => save({ audience: value || null }) },
+    { label: 'links', value: product.urls.join(', '), hint: 'https://…', save: (value: string) => save({ urls: list(value) }) },
+    { label: 'compared with', value: product.competitors.join(', '), hint: 'Competitors', save: (value: string) => save({ competitors: list(value) }) },
+    { label: 'also called', value: product.other_names.join(', '), hint: 'Other names', save: (value: string) => save({ other_names: list(value) }) },
   ]
   const [revealed, setRevealed] = useState<string[]>([])
   const shown = details.filter(field => field.value || revealed.includes(field.label))
   const missing = details.filter(field => !shown.includes(field))
-  const described = details.some(field => field.value)
   return <div className="st-profile">
     <div className="st-profile-tone">
       <ProfileField label="tone" product={product.name} value={product.tone} hint="How it sounds" onSave={tone => save({ tone })} />
@@ -148,15 +150,12 @@ function ProductProfile({ product, save }: { product: Product; save: (args: Reco
     </> : null}
     {shown.map(field => <ProfileField key={field.label} label={field.label} product={product.name} value={field.value} hint={field.hint} focus={revealed[0] === field.label} allowEmpty onSave={field.save} />)}
     {missing.length ? <button className="st-add-words" type="button" onClick={() => setRevealed(missing.map(field => field.label))}>
-      {described ? `Add ${joined(missing.map(field => field.ask))}` : 'Add description, audience and links'}</button> : null}
+      Add details</button> : null}
     {/* A name that is also an everyday word ("Rota") counts only with its capitals, in drafts and in what listening finds. */}
     <label className="st-match-case"><input type="checkbox" defaultChecked={product.match_case} onChange={event => void save({ match_case: event.target.checked })} />
       Count {product.name} only when written {product.name}, not {product.name.toLowerCase() === product.name ? product.name.toUpperCase() : product.name.toLowerCase()}</label>
   </div>
 }
-
-/** "a, b and c". */
-const joined = (items: string[]) => items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0] ?? ''
 
 /**
  * One profile field edited in place: it saves when the field loses focus (or on Enter), with no Save button. A field holding a value

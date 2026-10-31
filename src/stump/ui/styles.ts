@@ -192,12 +192,13 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
 .st-button.danger { color: var(--stump-danger); background: transparent; border-color: transparent; }
 .st-button.danger:hover { background: var(--stump-danger-tint); }
 .st-button:disabled { opacity: .55; cursor: default; transform: none; }
-/* The one disabled ink pill (C8): the ink fill and white text at 40 %, never a grey fill, on every screen. */
-.st-button.primary:disabled, .st-button.primary:disabled:hover, .st-button.ink:disabled, .st-drafting .st-button.ink:disabled, .st-drafting .st-button.ink:disabled:hover { opacity: .4; background: var(--stump-ink); border-color: var(--stump-ink); color: var(--stump-white); transform: none; }
+/* The one disabled ink pill (C8): its outline and label in ink at 35 % on no fill, so it reads quieter than any live button, never a solid grey block, on every screen. */
+.st-button.primary:disabled, .st-button.primary:disabled:hover, .st-button.ink:disabled, .st-drafting .st-button.ink:disabled, .st-drafting .st-button.ink:disabled:hover { opacity: 1; background: transparent; border-color: rgba(28, 27, 24, .35); color: rgba(28, 27, 24, .35); transform: none; }
 /* Save as you go (L15): a quiet "✓ Saved" beside what saved */
 .st-saved-mark { display: inline-flex; align-items: center; gap: 4px; min-height: 20px; font-size: var(--stump-size-small); color: var(--stump-emerald-text); font-weight: 500; }
 .st-saved-mark:empty { min-height: 0; }
 .st-agents-note { margin: 12px 0 0; }
+.st-agents .st-table td.st-agents-revoke { text-align: right; padding-right: 0; }
 /* The file field (kit FilePick): one outline pill and the chosen file's name beside it */
 .st-file { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; position: relative; cursor: pointer; }
 .st-file .st-button { pointer-events: none; }
@@ -318,13 +319,9 @@ code { font-family: var(--stump-mono); font-size: .9em; background: var(--stump-
   .st-topbar-brand { display: inline-flex; align-items: center; gap: 8px; margin-right: auto; color: var(--stump-ink); text-decoration: none; font: 800 20px/1 var(--stump-font); letter-spacing: -0.02em; min-height: 44px; }
   .st-topbar-brand img { width: 28px; height: 28px; }
   .st-topbar-divider { display: none; }
-  .st-pause { min-height: 44px; }
-  .st-pause:not(.paused) { width: 44px; padding: 0; justify-content: center; }
-  .st-pause:not(.paused) .st-pause-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .st-pause:not(.paused) .st-pause-icon { background: transparent; }
-  .st-pause:not(.paused) .st-pause-icon svg { width: 18px; height: 18px; }
-  .st-pause.paused { padding: 0 14px 0 6px; }
-  .st-pause.paused .st-pause-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* A labelled pill ("Pause", "Resume"), set apart from the avatar, so it is never an unexplained round button beside it. */
+  .st-pause { min-height: 44px; padding: 0 14px 0 6px; gap: 8px; margin-right: 8px; }
+  .st-pause .st-pause-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .st-topbar .st-tip:not(.st-menu-tip) [role="tooltip"] { left: auto; right: 0; transform: none; }
   .st-avatar { width: 44px; height: 44px; padding: 4px; background-clip: content-box; font-size: 14px; }
   .st-main { padding: 24px 16px 48px; }
@@ -571,6 +568,9 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting button.st-pill:focus-visible, .st-drafting .st-quiet-link:focus-visible { outline: 2px solid var(--stump-emerald); outline-offset: 2px; }
 .st-drafting .st-check-list li.danger span.st-fix { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
 .st-drafting .st-quiet-link { color: var(--stump-muted); font-size: var(--stump-size-small); text-decoration: underline; text-underline-offset: 3px; }
+/* The earlier posts a near-duplicate hold names, one link each under the hold. */
+.st-drafting .st-repeats { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; min-width: 0; }
+.st-drafting .st-repeats li { display: block; font-size: var(--stump-size-small); overflow-wrap: anywhere; }
 .st-drafting .st-when-short { display: none; }
 /* Settings · Brand: each row's name and detail share a first baseline, and one quiet "Add words" follows the tone (H15) */
 .st-drafting .st-kv { align-items: baseline; }
@@ -794,7 +794,7 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-today .st-today-grid { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 24px; align-items: start; }
 .st-today .st-today-main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .st-today .st-panel { margin: 0; min-width: 0; }
-.st-today .st-today-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
+.st-today .st-today-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
 /* A row's name is one line, cut by the row itself (the plate's one-line rows). */
 .st-today .st-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .st-today .st-today-pair.single { grid-template-columns: minmax(0, 1fr); }

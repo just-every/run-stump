@@ -11,6 +11,7 @@ import { Icon } from '../ui/icons.tsx'
 import { Chip, Empty, PanelTitle, Parts, useLoaded } from '../ui/kit.tsx'
 import { JOB_WORDS, chipsFor, jobOf } from '../watches/finding-view.ts'
 import type { FindingList, WatchList } from '../watches/ui-types.ts'
+import { dateIn, workingZone } from '../ui/zones.ts'
 import { approvalRows, dayOf, dueToday, findingChips, goingOut, heldRows, worthAnswering, type Day, type Dest, type WaitingApproval } from './sections.ts'
 
 // Today (SPEC §4.2): what needs this person today, each row opening the screen
@@ -29,7 +30,7 @@ async function loadWork() {
     page<ItemRecord>('stump.drafts.revise', { action: 'list', state: 'paused' }),
     page<Account>('stump.accounts.connect', { action: 'list' }),
     reader ? page<{ id: string; name: string }>('stump.venues.manage', { action: 'list' }) : null,
-    page<{ id: string; name: string }>('stump.brand.manage', { action: 'product_list' }),
+    runAction<{ items: Array<{ id: string; name: string; other_names: string[] }>; company_names: string[] }>('stump.brand.manage', { action: 'product_list' }),
     // Agent calls that wait for a decision hold work as much as a flagged draft does (Base's approvals door, as Settings · Agents reads it).
     approvals().then(answer => answer.approvals.filter(item => item.state === 'pending')),
     toolTitles(),
@@ -41,6 +42,8 @@ async function loadWork() {
     accounts: new Map(accounts.items.map(account => [account.id, account])),
     venues: new Map((venues?.items ?? []).map(venue => [venue.id, venue.name])),
     products: new Map(products.items.map(product => [product.id, product.name])),
+    // The names a draft's disclosure sentence names, so a held draft is named by what it is about.
+    terms: [...products.company_names, ...products.items.flatMap(product => [product.name, ...product.other_names])],
   }
 }
 
@@ -109,10 +112,10 @@ function Failed({ error }: { error: string | null }) {
 }
 
 export function TodayPage() {
-  // The day is the viewer's own, read once in the browser, so the server's clock never shows.
+  // The day is the one in the zone this person schedules in, read once in the browser, so the server's clock never shows.
   const [now, setNow] = useState<number | null>(null)
   useEffect(() => { setNow(Date.now()) }, [])
-  const day = now === null ? null : dayOf(now)
+  const day = now === null ? null : dayOf(now, workingZone())
   const work = useLoaded(loadWork)
   const findings = useLoaded(loadFindings)
   const week = useLoaded(async () => day ? loadWeek(day) : null)
@@ -130,7 +133,7 @@ export function TodayPage() {
 
   const personId = work.data?.who.person.id ?? ''
   const due = work.data && day ? dueToday(work.data.queue, personId, day) : null
-  const held = work.data ? [...approvalRows(work.data.waiting), ...heldRows(work.data.items, work.data.queue, personId, work.data.venues, work.data.accounts, work.data.products)] : null
+  const held = work.data ? [...approvalRows(work.data.waiting), ...heldRows(work.data.items, work.data.queue, personId, work.data.venues, work.data.accounts, work.data.products, work.data.terms)] : null
   const out = work.data && day ? goingOut(work.data.items, work.data.accounts, day) : null
   // A poster reads only their own work; Listening's findings are for the rest of the team.
   const reader = !work.data || READERS.includes(work.data.who.person.role as Role)
@@ -148,7 +151,7 @@ export function TodayPage() {
   return <HydrationUnit>
     <section className="st-page st-today" aria-labelledby="today-title">
       <h1 id="today-title">Today</h1>
-      <p className="st-lead">{now === null ? ' ' : new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(now))}</p>
+      <p className="st-lead">{now === null ? ' ' : dateIn(now, day!.zone, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
       {ready || work.error ? <div className={counted ? 'st-today-grid' : 'st-today-grid solo'}>
         {quiet && work.data ? <div className="st-today-main"><Quiet role={work.data.who.person.role as Role} venues={work.data.venues.size} product={[...work.data.products.values()][0] ?? null} /></div> : <div className="st-today-main">
           <section className="st-panel focus" aria-labelledby="today-due">

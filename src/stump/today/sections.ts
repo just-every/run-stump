@@ -1,12 +1,14 @@
 // What Today shows, shaped from the records the person door answers: hand-offs
 // due today (the person's own first), what is held and why, what goes out today,
-// and threads worth answering. Times are the viewer's own day.
+// and threads worth answering. The day is the one in the zone this person schedules in (zones.ts), and every time shows its zone.
 import type { Account, Flag } from '../drafting/view.ts'
 import { flagLine, networkName, spanOf } from '../drafting/view.ts'
 import type { ItemRecord } from '../drafting/records.ts'
 import type { Handoff } from '../handoffs/ui/words.ts'
 import { rowTitle } from '../handoffs/ui/words.ts'
 import type { FindingView } from '../watches/ui-types.ts'
+import { dateIn, dayStartIn, timeIn } from '../ui/zones.ts'
+import { detectDisclosure } from '../lib/claims/index.ts'
 
 /** Where a row opens: the screen that owns the record. */
 export type Dest =
@@ -15,21 +17,18 @@ export type Dest =
   | { kind: 'listening'; watch: string; finding: string; act?: boolean }
   | { kind: 'approval'; id: string }
 
-export interface Day { start: number; end: number; week: number }
+export interface Day { start: number; end: number; week: number; zone: string }
 
-/** The viewer's day and week (from Monday), in their own time zone. */
-export function dayOf(now: number): Day {
-  const start = new Date(now); start.setHours(0, 0, 0, 0)
-  const end = new Date(start); end.setDate(end.getDate() + 1)
-  const week = new Date(start); week.setDate(week.getDate() - ((week.getDay() + 6) % 7))
-  return { start: start.getTime(), end: end.getTime(), week: week.getTime() }
+/** The day and week (from Monday) that hold `now` in `zone`, the zone this person schedules in. */
+export function dayOf(now: number, zone: string): Day {
+  const weekday = new Date(dayStartIn(now, zone) + 12 * 3_600_000).getUTCDay()
+  return { start: dayStartIn(now, zone), end: dayStartIn(now, zone, 1), week: dayStartIn(now, zone, -((weekday + 6) % 7)), zone }
 }
 
 const ACTIVE = ['open', 'join_first']
 const at = (iso: string | null) => iso ? Date.parse(iso) : NaN
-export const timeOf = (iso: string) => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
-export const dayTimeOf = (iso: string) => `${new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(new Date(iso))} ${timeOf(iso)}`
-const dateOf = (iso: string) => new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(iso))
+const dayTimeOf = (iso: string, zone: string) => `${dateIn(iso, zone, { weekday: 'short' })} ${timeIn(iso, zone)}`
+const dateOf = (iso: string, zone: string) => dateIn(iso, zone, { weekday: 'short', month: 'short', day: 'numeric' })
 const firstName = (name: string | null) => name?.trim().split(/\s+/)[0] ?? 'Someone who left'
 
 export interface DueRow { id: string; title: string; due: string; who: string; mine: boolean }
@@ -44,13 +43,13 @@ export function dueToday(queue: Handoff[], personId: string, day: Day) {
     const name = mine ? 'You' : firstName(handoff.person_name)
     return {
       id: handoff.id, title: rowTitle(handoff), mine,
-      due: at(when) < day.start ? `Was due ${dayTimeOf(when)}` : `Due ${timeOf(when)}`,
+      due: at(when) < day.start ? `Was due ${dayTimeOf(when, day.zone)}` : `Due ${timeIn(when, day.zone)}`,
       who: handoff.state === 'join_first' ? `${name} ${mine ? 'join' : 'joins'} first, then ${mine ? 'post' : 'posts'} by hand` : `${name} ${mine ? 'post' : 'posts'} by hand`,
     }
   })
   const next = active.filter(handoff => at(handoff.due_at) >= day.end)
     .sort((a, b) => Number(b.person_id === personId) - Number(a.person_id === personId) || at(a.due_at) - at(b.due_at))[0]
-  return { rows, next: next ? { id: next.id, title: rowTitle(next), when: dateOf(next.due_at!) } : null }
+  return { rows, next: next ? { id: next.id, title: rowTitle(next), when: dateOf(next.due_at!, day.zone) } : null }
 }
 
 /** A held row: its name, then one meta line (H16). `thread` links the words in the meta that name a venue's promotion thread; the address itself is never printed. */
@@ -61,23 +60,38 @@ const blockingOf = (item: ItemRecord) => (item.flags as Flag[]).filter(flag => f
 
 /**
  * An item aimed at a venue or a recipient, in a few words: "Reply on Indie Hackers", "Pitch to Healthcare Dive". A standalone
- * post is named by its own product ("Brightwell Rooms post"), else its opening words, never by the venue, so it never reads as that venue's hand-off;
+ * post is named by its own product ("Post about Brightwell Rooms"), else its opening words, never by the venue, so it never reads as that venue's hand-off;
  * the meta line says where it is aimed and why it holds.
  */
-function placedName(item: ItemRecord, venues: Map<string, string>, products: Map<string, string>): string | null {
+function placedName(item: ItemRecord, venues: Map<string, string>, products: Map<string, string>, terms: readonly string[]): string | null {
   const format = FORMAT[String(item.format)] ?? 'Draft'
   const venue = item.venue_id ? venues.get(String(item.venue_id)) : null
-  if (venue && item.format === 'post') { const product = item.product_id ? products.get(String(item.product_id)) : null; return product ? `${product} post` : openingWords(String(item.text ?? (item.parts as string[] | null)?.[0] ?? '')) }
+  if (venue && item.format === 'post') { const product = item.product_id ? products.get(String(item.product_id)) : null; return product ? `Post about ${product}` : openingWords(String(item.text ?? (item.parts as string[] | null)?.[0] ?? ''), terms) }
   if (venue) return `${format} on ${venue}`
   if (item.format === 'pitch') { const to = (item.recipient as { name?: string } | null)?.name; return to ? `Pitch to ${to}` : 'Pitch' }
   return null
 }
 
-/** A post with no master, named by its opening words: its first sentence, links left out. The row cuts it to one line itself. */
-export function openingWords(text: string): string {
+/**
+ * A post with no master, named by its opening words: its first sentence, links left out, or the sentence after it when the first
+ * only says how the writer is connected ("I'm a founder at Brightwell."), so a draft is named by what it is about. `terms` are the
+ * company's and its products' names, which a disclosure names. The row cuts it to one line itself.
+ */
+export function openingWords(text: string, terms: readonly string[] = []): string {
   const clean = text.replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim()
   if (!clean) return 'Untitled draft'
-  return /^.+?[.!?](?=\s|$)/.exec(clean)?.[0] ?? clean
+  const sentence = (from: string) => /^.+?[.!?](?=\s|$)/.exec(from)?.[0] ?? from
+  const first = sentence(clean), rest = clean.slice(first.length).trim()
+  return rest && disclosureOnly(first, terms) ? sentence(rest) : first
+}
+const WEAK = /^(?:we|we['\u2019](?:re|ve|ll|d)|our|ours)$/iu
+/** A sentence that says the writer's connection and little else: "Disclosure: …", or a connection ("founder at Brightwell") with at most five other words. */
+function disclosureOnly(sentence: string, terms: readonly string[]): boolean {
+  if (/^(?:full )?disclosure\b/iu.test(sentence)) return true
+  const found = detectDisclosure(sentence, { terms }).matches.filter(match => !WEAK.test(match.text.trim()))
+  if (!found.length) return false
+  const rest = found.reduce((left, match) => left.slice(0, match.start) + ' '.repeat(match.end - match.start) + left.slice(match.end), sentence)
+  return rest.split(/\s+/).filter(word => /\p{L}/u.test(word)).length <= 5
 }
 
 /** "X variant", "X and Mastodon variants", "Bluesky, X and Mastodon variants", in Compose's order of networks. */
@@ -95,7 +109,7 @@ const variantsName = (networks: string[]) => {
  * hand-off is the hand-off's, so only a held hand-off shows here, with its own
  * hold. The person's own come first, then the most recently changed.
  */
-export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string, venues: Map<string, string>, accounts: Map<string, Account>, products: Map<string, string> = new Map()): HeldRow[] {
+export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string, venues: Map<string, string>, accounts: Map<string, Account>, products: Map<string, string> = new Map(), terms: readonly string[] = []): HeldRow[] {
   const handedOff = new Set(queue.flatMap(handoff => handoff.item_id ? [handoff.item_id] : []))
   const names = new Map(venues)
   for (const handoff of queue) names.set(handoff.venue_id, handoff.venue.name)
@@ -117,7 +131,7 @@ export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string
       : { label: over ? master ? 'Edit variant' : 'Edit post' : 'Open draft', to: { kind: 'compose' as const, ...draft } }
     const thread = flag && typeof flag.thread_url === 'string' && typeof flag.where === 'string' && reason.includes(flag.where) ? { words: flag.where, url: flag.thread_url } : null
     const mine = item.person_id === personId, changed = at(item.updated_at)
-    const placed = placedName(item, names, products)
+    const placed = placedName(item, names, products, terms)
     if (master && !placed) {
       // One row per problem the master's variants share; a limit is each variant's own.
       const key = `master:${master}:${over ? `over:${item.id}` : reason}`
@@ -125,7 +139,7 @@ export function heldRows(items: ItemRecord[], queue: Handoff[], personId: string
       if (row) { row.networks.push(network); row.name = variantsName(row.networks); row.mine ||= mine; row.at = Math.max(row.at, changed); continue }
       rows.set(key, { key, name: variantsName([network]), meta: reason, networks: [network], thread, action, mine, at: changed })
     } else {
-      const name = placed ?? openingWords(String(item.text ?? (item.parts as string[] | null)?.[0] ?? ''))
+      const name = placed ?? openingWords(String(item.text ?? (item.parts as string[] | null)?.[0] ?? ''), terms)
       rows.set(`item:${item.id}`, { key: `item:${item.id}`, name, meta: placed || !item.network && !item.account_id ? reason : `${network} · ${reason}`, networks: [], thread, action, mine, at: changed })
     }
   }
@@ -152,7 +166,7 @@ export function approvalRows(asks: WaitingApproval[]): HeldRow[] {
 
 export interface OutRow { id: string; time: string; network: string; who: string; text: string; paused: boolean; to: Dest }
 
-/** Items scheduled for the rest of today, in time order; a paused one says so. */
+/** Items scheduled for the rest of today, in time order, each at its time in the zone it was scheduled in ("3:25 PM PT"); a paused one says so. */
 export function goingOut(items: ItemRecord[], accounts: Map<string, Account>, day: Day): OutRow[] {
   return items.filter(item => (item.state === 'scheduled' || item.state === 'paused') && item.scheduled_at && at(item.scheduled_at) >= day.start && at(item.scheduled_at) < day.end)
     .sort((a, b) => at(a.scheduled_at) - at(b.scheduled_at))
@@ -161,7 +175,7 @@ export function goingOut(items: ItemRecord[], accounts: Map<string, Account>, da
       const network = String(item.network ?? account?.network ?? '')
       const who = account ? account.network === 'linkedin' ? account.display_name ?? account.handle : account.handle.startsWith('@') ? account.handle : `@${account.handle}` : ''
       const parts = item.parts as string[] | null
-      return { id: item.id, time: timeOf(item.scheduled_at!), network: networkName(network || null), who, text: String(item.text ?? parts?.[0] ?? ''),
+      return { id: item.id, time: timeIn(item.scheduled_at!, typeof item.time_zone === 'string' && item.time_zone ? item.time_zone : day.zone), network: networkName(network || null), who, text: String(item.text ?? parts?.[0] ?? ''),
         paused: item.state === 'paused', to: { kind: 'compose' as const, ...(typeof item.master_id === 'string' ? { master: item.master_id } : { item: item.id }) } }
     })
 }

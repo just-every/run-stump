@@ -97,7 +97,7 @@ function Connect({ items, refresh }: { items: Array<{ client_id: string; name: s
         <tbody>{live.map(item => <tr key={item.client_id}>
           <td><span className="st-name">{item.name}</span></td>
           <td className="st-meta">{when(item.created_at)}</td>
-          <td><button className="st-button danger small" type="button" disabled={busy} onClick={() => void run(() => revokeCredential(item.client_id), () => `${item.name} can no longer act.`).then(refresh)}>Revoke</button></td>
+          <td className="st-agents-revoke"><button className="st-button danger small" type="button" disabled={busy} onClick={() => void run(() => revokeCredential(item.client_id), () => `${item.name} can no longer act.`).then(refresh)}>Revoke</button></td>
         </tr>)}</tbody>
       </table> : null}
     </section>

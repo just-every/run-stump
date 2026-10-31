@@ -41,9 +41,12 @@ const ago = (iso: string | null, now: number) => {
  */
 export async function openDrafts(now = Date.now()): Promise<DraftRow[]> {
   const list = (state: string) => runAction<{ items: ItemRecord[] }>('stump.drafts.revise', { action: 'list', state })
-  const [draft, ready, held, queue, team] = await Promise.all([list('draft'), list('ready'), list('held'),
+  const [draft, ready, held, queue, team, brand] = await Promise.all([list('draft'), list('ready'), list('held'),
     runAction<{ items: Array<{ item_id: string | null }> }>('stump.handoffs.manage', { action: 'queue' }),
-    runAction<{ items: Array<{ id: string; display_name: string }> }>('stump.team.manage', { action: 'list' })])
+    runAction<{ items: Array<{ id: string; display_name: string }> }>('stump.team.manage', { action: 'list' }),
+    runAction<{ items: Array<{ name: string; other_names: string[] }>; company_names: string[] }>('stump.brand.manage', { action: 'product_list' })])
+  // The names a disclosure sentence names, so a draft opening with one is named by its next sentence.
+  const terms = [...brand.company_names, ...brand.items.flatMap(product => [product.name, ...product.other_names])]
   const handedOff = new Set(queue.items.flatMap(handoff => handoff.item_id ? [handoff.item_id] : []))
   const names = new Map(team.items.map(person => [person.id, person.display_name]))
   const items = [...draft.items, ...ready.items, ...held.items].filter(item => !handedOff.has(item.id))
@@ -57,7 +60,7 @@ export async function openDrafts(now = Date.now()): Promise<DraftRow[]> {
     if (row) { row.items.push(item); if (network && !row.networks.includes(network)) row.networks.push(network); continue }
     const person = names.get(String(item.person_id)) ?? 'Someone who left'
     const agent = (item.agent as { name?: string } | null)?.name
-    const words = item.format === 'pitch' && item.subject ? String(item.subject) : openingWords(String(item.text ?? (item.parts as string[] | null)?.[0] ?? ''))
+    const words = item.format === 'pitch' && item.subject ? String(item.subject) : openingWords(String(item.text ?? (item.parts as string[] | null)?.[0] ?? ''), terms)
     rows.set(key, { key, name: words, networks: network ? [network] : [], who: agent ? `${agent} for ${person}` : person, at: item.updated_at as string | null, items: [item],
       to: master ? { master } : { item: item.id } })
   }

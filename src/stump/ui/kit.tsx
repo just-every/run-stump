@@ -132,14 +132,17 @@ export const accountWord = (account: { handle: string; network: string; display_
   `${handleWord(account.handle, account.network, account.display_name)} · ${networkWord(account.network)}`
 
 /**
- * A proof typed as one line ("https://brightwell.app/benchmarks (10 minutes median, 20 staff)"): the page it names, and its
- * own words around that page, a note's brackets dropped ("10 minutes median, 20 staff"). Only the page is ever a link.
+ * A proof typed as one line ("https://brightwell.app/benchmarks (10 minutes median, 20 staff)", "https://brightwell.app/benchmarks:
+ * 40% median"): the page it names, and its own words around that page, a note's brackets and the colon or dash joining it to the
+ * page dropped ("10 minutes median, 20 staff"). `linkFirst` when the page was typed before its words. Only the page is ever a link.
  */
-export function proofText(proof: string): { url: string | null; words: string } {
+export function proofText(proof: string): { url: string | null; words: string; linkFirst: boolean } {
   const link = extractUrls(proof, { bare: false })[0]
-  if (!link) return { url: null, words: proof.trim() }
-  const words = `${proof.slice(0, link.start)} ${proof.slice(link.end)}`.replace(/\s+/g, ' ').trim()
-  return { url: link.url, words: words.replace(/^\((.*)\)$/, '$1').trim() }
+  if (!link) return { url: null, words: proof.trim(), linkFirst: false }
+  // What joined the words to the page ("page: note", "note - page", "page (note)") is punctuation, never part of the words.
+  const before = proof.slice(0, link.start).replace(/[\s:;,·|–—-]+$/u, '').trim(), after = proof.slice(link.end).replace(/^[\s:;,·|–—-]+/u, '').trim()
+  const words = [before, after].filter(Boolean).join(' ').replace(/\s+/g, ' ')
+  return { url: link.url, words: words.replace(/^\((.*)\)$/, '$1').trim(), linkFirst: !before && !!after }
 }
 
 /**

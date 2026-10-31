@@ -25,6 +25,10 @@
 .docs-toc a:hover, .docs-toc-compact a:hover { color: var(--emerald-text); }
 /* The section in view, marked by the page's scroll script (src/site/shell/document.ts) */
 .docs-toc a[aria-current="location"], .docs-toc-compact a[aria-current="location"] { color: var(--emerald-text); font-weight: 600; }
+/* The current section's 2 px emerald bar sits on the column's own rule (docs/DOCS-1440.png); the link itself has no border. */
+.docs-toc a { position: relative; }
+.docs-toc a[aria-current="location"]::before { content: ""; position: absolute; left: -25px; top: 4px; bottom: 4px; width: 2px; background: var(--emerald); }
+.docs-toc ul ul a[aria-current="location"]::before { left: -39px; }
 .docs-toc-compact { display: none; margin-top: 14px; }
 .docs-toc-compact summary, .docs-menu summary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--outline); border-radius: 999px; background: var(--white); color: var(--ink); font: 500 15px/20px var(--font); cursor: pointer; list-style: none; }
 .docs-toc-compact summary::-webkit-details-marker, .docs-menu summary::-webkit-details-marker { display: none; }
@@ -46,6 +50,8 @@
 .docs-prose li { margin: 4px 0; }
 .docs-prose ol > li::marker { color: var(--emerald-text); font-weight: 700; }
 .docs-prose code { font: .88em/1.4 var(--mono); background: var(--sunk); border-radius: 6px; padding: 2px 6px; color: var(--ink); overflow-wrap: anywhere; }
+/* Short inline code stays whole; a longer one breaks only at its spaces (scripts/site/docs.mjs). */
+.docs-prose code.docs-nowrap, .docs-prose code .docs-keep { white-space: nowrap; }
 .docs-code { margin: 20px 0 24px; border-radius: 16px; background: var(--ink); color: #F3EFE6; overflow: hidden; }
 .docs-code-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 0 20px; color: #B9B3A6; font: 700 13px/18px var(--font); letter-spacing: .1em; text-transform: uppercase; }
 .docs-copy { min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: rgba(255,255,255,.1); color: #F3EFE6; font: 600 13px/1 var(--font); letter-spacing: 0; text-transform: none; cursor: pointer; }
@@ -55,14 +61,15 @@
 /* The one line a block exists for wraps inside the card at every width instead of scrolling out of sight; Copy still copies it exactly. */
 .docs-code pre { margin: 0; padding: 10px 20px 20px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .docs-code code { background: none; padding: 0; color: inherit; font: 15px/1.6 var(--mono); overflow-wrap: anywhere; }
+/* Each word of a line stays whole, so a command breaks only at its spaces (scripts/site/docs.mjs). */
 .docs-code .docs-keep { white-space: nowrap; }
 /* A shell command's wrapped tail hangs 2ch in under it, so it never reads as a second command. */
 .docs-code--shell code { line-height: 1.5; }
 .docs-code--shell .docs-line { display: block; min-height: 1.5em; padding-left: 2ch; text-indent: -2ch; }
-/* At 1200 and wider a code card takes the article's full width, so a command keeps one line; prose stays at 38em. */
+/* At 1200 and wider a code card and a table take the article's full width, to the pager's edge; prose stays at 38em. */
 @media (min-width: 1200px) {
   .docs-prose { max-width: none; }
-  .docs-prose > :not(.docs-code) { max-width: 684px; }
+  .docs-prose > :not(.docs-code):not(.docs-table) { max-width: 684px; }
   .docs-code pre { padding-inline: 18px; }
   .docs-code code { font-size: 14px; }
   .docs-code--shell code { font-size: 13.5px; }

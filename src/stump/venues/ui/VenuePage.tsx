@@ -249,13 +249,13 @@ function ItemLink({ item, children }: { item: VenueItem; children: ReactNode }) 
 
 const cap = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 /**
- * An item aimed here, named as Today names it: by its product ("Brightwell post"), whether or not this venue lists that product,
+ * An item aimed here, named as Today names it: by its product ("Post about Brightwell"), whether or not this venue lists that product,
  * else a post by its opening words.
  */
 function itemName(item: VenueItem, names: Map<string, string>): string {
   const product = item.product_name ?? (item.product_id ? names.get(item.product_id) : null)
-  if (product) return `${product} ${item.format}`
-  return item.format === 'post' && item.text ? openingWords(item.text) : cap(item.format)
+  if (product) return `${cap(item.format)} about ${product}`
+  return item.format === 'post' && item.text ? openingWords(item.text, [...names.values()]) : cap(item.format)
 }
 
 /** Where an item aimed here stands, in words: a hand-off's own state as Hand-offs says it, else the rule that holds it, never its code. */

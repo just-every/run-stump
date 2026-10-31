@@ -120,16 +120,16 @@ async function earlierTexts(db: D1Database, draft: Draft, now: number, windowDay
     db.prepare(`SELECT i.id,i.text,i.parts,i.network,i.account_id,i.venue_id,i.master_id,COALESCE(i.posted_at,i.scheduled_at,i.updated_at) AS at,a.owner_kind
       FROM stump_items i LEFT JOIN stump_accounts a ON a.id=i.account_id
       WHERE i.state IN ${QUEUED} AND i.id<>? AND COALESCE(i.posted_at,i.scheduled_at,i.updated_at)>=?`).bind(draft.id ?? '', since),
-    db.prepare(`SELECT l.id,l.handoff_id,l.text,l.network,l.account_id,l.venue_id,l.url,l.posted_at AS at,a.owner_kind FROM stump_ledger l LEFT JOIN stump_accounts a ON a.id=l.account_id
+    db.prepare(`SELECT l.id,l.item_id,l.handoff_id,l.text,l.network,l.account_id,l.venue_id,l.url,l.posted_at AS at,a.owner_kind FROM stump_ledger l LEFT JOIN stump_accounts a ON a.id=l.account_id
       WHERE l.state IN ('posted','uncertain') AND l.text IS NOT NULL AND COALESCE(l.item_id,'')<>? AND COALESCE(l.posted_at,l.created_at)>=?`).bind(draft.id ?? '', since),
   ])
   const scope = (row: Row) => ({ network: (row.network as string | null) ?? undefined, account_id: (row.account_id as string | null) ?? undefined,
     venue_id: (row.venue_id as string | null) ?? undefined, own_account: row.owner_kind === 'company', group_id: (row.master_id as string | null) ?? undefined })
   // A handed-off post's ledger entry also names its hand-off, so a hold names the earlier hand-off as well as the post.
-  const kinds = new Map<string, { kind: 'item' | 'ledger'; url: string | null; handoff_id: string | null }>()
+  const kinds = new Map<string, { kind: 'item' | 'ledger'; url: string | null; handoff_id: string | null; item_id?: string | null }>()
   const texts = [
     ...(items!.results as Row[]).map(row => { kinds.set(`item:${row.id}`, { kind: 'item', url: null, handoff_id: null }); return { id: `item:${row.id}`, text: itemText(row), at: new Date(Number(row.at)).toISOString(), scope: scope(row) } }),
-    ...(ledger!.results as Row[]).map(row => { kinds.set(`ledger:${row.id}`, { kind: 'ledger', url: (row.url as string | null) ?? null, handoff_id: (row.handoff_id as string | null) ?? null }); return { id: `ledger:${row.id}`, text: String(row.text), at: new Date(Number(row.at)).toISOString(), scope: scope(row) } }),
+    ...(ledger!.results as Row[]).map(row => { kinds.set(`ledger:${row.id}`, { kind: 'ledger', url: (row.url as string | null) ?? null, handoff_id: (row.handoff_id as string | null) ?? null, item_id: (row.item_id as string | null) ?? null }); return { id: `ledger:${row.id}`, text: String(row.text), at: new Date(Number(row.at)).toISOString(), scope: scope(row) } }),
   ]
   return { texts, kinds }
 }
@@ -219,7 +219,9 @@ export async function checkDraft(db: D1Database, brand: Brand, draft: Draft, per
   const earlier = await earlierTexts(db, draft, now, brand.window_days)
   const repeat = nearDuplicates(text, earlier.texts, { window_days: brand.window_days, now: new Date(now).toISOString(),
     scope: { network: network ?? undefined, account_id: draft.account_id ?? undefined, venue_id: draft.venue_id ?? undefined, own_account: account?.owner_kind === 'company', group_id: draft.master_id ?? undefined } })
-  const duplicates = repeat.held ? repeat.matches.map(match => {
+  // A published item and its own ledger entry are one earlier post: the entry, which carries the post's address, names it.
+  const onLedger = new Set(repeat.matches.flatMap(match => earlier.kinds.get(match.id)?.item_id ?? []))
+  const duplicates = repeat.held ? repeat.matches.filter(match => !(match.id.startsWith('item:') && onLedger.has(match.id.slice(5)))).map(match => {
     const [kind, id] = [earlier.kinds.get(match.id)!, match.id.slice(match.id.indexOf(':') + 1)]
     return { id, kind: kind.kind, score: Math.round(match.score * 1000) / 1000, url: kind.url, ...(kind.handoff_id ? { handoff_id: kind.handoff_id } : {}) }
   }) : []

@@ -9,6 +9,7 @@ import { countText, extractUrls, NETWORK_LIMITS, type Network } from '../stump/l
 import { accountLabel, claimRange, flagLine, networkName, proofLabel, spanAt, spanOf, type Account, type Check, type ClaimFinding, type ClaimView, type Count, type Flag, type MasterPreview, type Variant } from '../stump/drafting/view.ts'
 import type { ItemRecord } from '../stump/drafting/records.ts'
 import { openDrafts, venuesFor, type VenueChoice } from '../stump/drafting/drafts-list.ts'
+import { earlierPosts, postsOf, type EarlierPost } from '../stump/drafting/repeats.ts'
 import { US_ZONES, deviceZone, instantIn, nextHour, storeZone, storedZone, zoneName } from '../stump/ui/zones.ts'
 
 // `master` opens a master post and its variants; `item` opens one draft that has no master; `fix` names the
@@ -81,10 +82,12 @@ function ComposePage() {
     // With nothing open: the drafts waiting (an agent's among them) to open and review, and what a new post is for and where it goes.
     // Products and venues aim a new post, and re-aim an open one.
     const blank = !preview && !alone
-    const [drafts, products, venues, ai] = await Promise.all([blank ? openDrafts() : [], runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' }),
-      runAction<{ items: VenueChoice[] }>('stump.venues.manage', { action: 'list' }), blank ? runAction<{ source: string }>('stump.setup.ai', { action: 'get' }) : null])
+    const [drafts, products, venues, ai, repeats] = await Promise.all([blank ? openDrafts() : [], runAction<{ items: Array<{ id: string; name: string }> }>('stump.brand.manage', { action: 'product_list' }),
+      runAction<{ items: VenueChoice[] }>('stump.venues.manage', { action: 'list' }), blank ? runAction<{ source: string }>('stump.setup.ai', { action: 'get' }) : null,
+      // The earlier posts a near-duplicate hold names, to link under it.
+      earlierPosts((preview?.items ?? (alone ? [alone] : [])).flatMap(variant => variant.flags))])
     return { who, accounts: targets.items, claims: claims.items, preview, alone, checks: checks.filter((check): check is Check & { item_id: string } => !!check), drafts, products: products.items, venues: venues.items,
-      noProvider: ai?.source === 'none' }
+      noProvider: ai?.source === 'none', repeats }
   })
   useEffect(() => { void refresh() }, [masterId, itemId, refresh])
   // The variant and the claim selected for fixing: from the address on arrival (its first claim to fix), then from each "Fix claim".
@@ -197,7 +200,7 @@ function ComposePage() {
     setNote(null)
     try {
       const at = new Date(instantIn(when, zone)).toISOString()
-      if (action === 'schedule_master' && preview) await runAction('stump.items.schedule', { action: 'schedule_master', master_id: preview.master.id, at, idempotency_key: key() })
+      if (action === 'schedule_master' && preview) await runAction('stump.items.schedule', { action: 'schedule_master', master_id: preview.master.id, at, time_zone: zone, idempotency_key: key() })
       else if (action === 'schedule_master' && alone) await runAction('stump.items.schedule', { action: 'schedule', item_id: alone.item_id, account_id: aloneAccount, at, time_zone: zone, idempotency_key: key() })
       else await Promise.all(variants.filter(variant => !blocking(variant.flags).length).map(variant => runAction('stump.calendar.plan', { action: 'queue', item_id: variant.item_id, account_id: variant.account_id ?? aloneAccount, idempotency_key: key() })))
       setNote({ text: action === 'schedule_master' ? 'Scheduled.' : 'Added to the queue.', error: false })
@@ -248,18 +251,22 @@ function ComposePage() {
   const disclosure = data?.checks.find(check => check.disclosure.required)
   const repeats = variants.some(variant => variant.flags.some(flag => flag.code === 'near_duplicate'))
 
+  // A tick says only what passed: claims matched shows once one has; with none, the summary names what is left to fix, or that checks pass.
+  const claimsMatched = `${matched.size} ${matched.size === 1 ? 'claim' : 'claims'} matched`
+  const summary = [matched.size ? claimsMatched : null, flagRows.size ? `${flagRows.size} to fix` : null].filter(Boolean).join(' · ') || 'Checks pass'
   const checks = <section className={checksOpen ? 'st-card st-checks open' : 'st-card st-checks'} aria-labelledby="checks-title">
     <button className="st-checks-toggle" type="button" aria-expanded={checksOpen} onClick={() => setChecksOpen(!checksOpen)}>
       <Disc icon={flagRows.size ? 'alert' : 'check'} tone={flagRows.size ? 'danger' : undefined} />
-      <span>{matched.size} {matched.size === 1 ? 'claim' : 'claims'} matched{flagRows.size ? ` · ${flagRows.size} to fix` : ''}</span>
+      <span>{summary}</span>
       <span className="st-chevron" aria-hidden="true"><Icon name="chevronRight" /></span>
     </button>
     <h2 className="st-card-head" id="checks-title"><Disc icon={flagRows.size ? 'alert' : 'check'} tone={flagRows.size ? 'danger' : undefined} />Checks</h2>
     <ul className="st-check-list">
-      <li className="st-check-matched"><Disc icon="check" /><span>{matched.size} {matched.size === 1 ? 'claim' : 'claims'} matched</span></li>
+      {matched.size ? <li className="st-check-matched"><Disc icon="check" /><span>{claimsMatched}</span></li> : null}
       {(data?.claims ?? []).filter(claim => matched.has(claim.id)).map(claim => <li key={claim.id} className="st-check-detail"><span>{claim.text}{proofLabel(claim.proof) ? ` · ${proofLabel(claim.proof)}` : ''}</span></li>)}
       {[...flagRows.values()].map(({ flag, item }) => <li key={`${flag.code}-${String(flag.text ?? flag.network)}`} className="danger"><Disc icon="alert" tone="danger" /><span>
         {flagLine(flag, spanOf(flag, claimsOf()))}
+        {flag.code === 'near_duplicate' ? <Repeats posts={postsOf(flag, data?.repeats ?? new Map())} /> : null}
         {flag.code.startsWith('claim_') ? <span className="st-fix">
           <button className="st-pill" type="button" onClick={() => setFixing({ item, at: Date.now(), flag })}>Fix claim</button>
           {/* A banned claim has no proof to update: the words come out of the post. */}
@@ -450,6 +457,18 @@ function VariantCard({ variant, claims, select, onSelected, onSave }: { variant:
       </div>
     </div>
   </article>
+}
+
+/** The earlier posts a near-duplicate hold names, each opening where it lives: on its network once posted, else in Compose. */
+function Repeats({ posts }: { posts: EarlierPost[] }) {
+  if (!posts.length) return null
+  const day = (iso: string | null) => iso ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(iso)) : null
+  return <ul className="st-repeats">{posts.map(post => {
+    const words = <>{[post.network, day(post.at)].filter(Boolean).join(' · ')}{post.words ? <> · <q>{post.words}</q></> : null}</>
+    return <li key={post.key}>{post.to === null ? words : 'href' in post.to
+      ? <a className="st-quiet-link" href={post.to.href} target="_blank" rel="noreferrer noopener">{words} ↗</a>
+      : <Link className="st-quiet-link" to="/app/compose" search={post.to.compose}>{words}</Link>}</li>
+  })}</ul>
 }
 
 /** Where a text first runs past its network's limit, counted the network's way (links at their own weight). */
