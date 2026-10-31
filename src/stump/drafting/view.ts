@@ -1,4 +1,4 @@
-import { pageName } from '../ui/kit.tsx'
+import { pageName, proofText } from '../ui/kit.tsx'
 // The drafting records as the screens read them from the person door.
 export interface Flag { code: string; blocking: boolean; network?: string; count?: number; limit?: number; text?: string; claim_id?: string; expected?: string[]; reason?: string; rule?: string; matches?: Array<{ id: string; kind: string }>; [fact: string]: unknown }
 export interface Count { network: string; count: number; limit: number; unit: string; over: boolean; fits: boolean }
@@ -14,7 +14,8 @@ export interface VoiceView { id: string; person_id: string; name: string; do: st
 
 /** A claim's proof in a few words: its own label, else the page it lives on ("changelog"). */
 export function proofLabel(proof: unknown): string {
-  if (typeof proof === 'string') return /^https?:\/\//.test(proof) ? pageName(proof) : proof
+  // A link with a note after it reads as the note ("10 minutes median, 20 staff"); a bare link as its page's name.
+  if (typeof proof === 'string') { const { url, words } = proofText(proof); return words || (url ? pageName(url) : '') }
   if (!proof || typeof proof !== 'object') return ''
   const { text, document, url } = proof as Record<string, unknown>
   return String(text ?? document ?? (typeof url === 'string' ? pageName(url) : ''))

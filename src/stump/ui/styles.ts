@@ -489,6 +489,8 @@ button.st-rule-label { font-weight: 600; justify-self: start; }
 .st-drafting .st-compose > .st-card { margin-bottom: 0; }
 .st-drafting .st-source-chip { display: inline-flex; align-items: center; gap: 12px; margin-top: calc(var(--stump-space) * 2); padding: 10px 18px 10px 12px; border-radius: var(--stump-pill); background: var(--stump-emerald-tint); overflow-wrap: anywhere; }
 .st-drafting .st-source-chip .st-disc { width: 28px; height: 28px; }
+/* Under the master once a variant is edited: which text each account posts. */
+.st-drafting .st-compose-follow { margin: 12px 0 0; max-width: 640px; }
 .st-drafting .st-variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: calc(var(--stump-space) * 2); }
 .st-drafting .st-variant { border: 1px solid var(--stump-hairline); border-radius: var(--stump-radius); padding: calc(var(--stump-space) * 2); background: var(--stump-white); min-width: 0; }
 .st-drafting .st-variant:focus-within { border-color: var(--stump-emerald); }

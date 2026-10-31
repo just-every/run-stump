@@ -2,7 +2,8 @@ import { Link } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { HydrationUnit } from '../../../base/hydration/unit'
 import { me, runAction } from '../../ui/api.ts'
-import { Chip, Disc, Outcome, pageName, useLoaded } from '../../ui/kit.tsx'
+import { Chip, Disc, Outcome, pageName, proofText, useLoaded } from '../../ui/kit.tsx'
+import { extractUrls } from '../../lib/text/index.ts'
 import { Icon, type IconName } from '../../ui/icons.tsx'
 import { handoffStyles } from './styles.ts'
 import { briefTitle, dayOf, dueLine, LAPSE_AT, limitLine, ruleLines, say, STATE, type Handoff } from './words.ts'
@@ -87,7 +88,7 @@ export function BriefPage({ handoffId }: { handoffId: string }) {
 
 /** A fact's proof named by its page ("changelog"), or by its own words. */
 const proofWords = (proof: unknown): string | null => {
-  if (typeof proof === 'string') return /^https?:\/\//.test(proof) ? pageName(proof) : proof
+  if (typeof proof === 'string') { const { url, words } = proofText(proof); return words || (url ? pageName(url) : null) }
   if (proof && typeof proof === 'object') { const value = proof as { text?: string; document?: string; url?: string }; return value.text ?? value.document ?? (value.url ? pageName(value.url) : null) }
   return null
 }
@@ -120,6 +121,17 @@ function Notice({ handoff, mine, onChanged }: { handoff: Handoff; mine: boolean;
   return null
 }
 
+/**
+ * Whether a draft already carries this hand-off's tagged link: a link in it with the same utm_content. The brief then offers
+ * no second link beside it; a draft without one, or talking points, keep the link field to paste from.
+ */
+function carriesLink(text: string, link: string): boolean {
+  const tag = new URL(link).searchParams.get('utm_content')
+  return extractUrls(text, { bare: false }).some(match => {
+    try { return new URL(match.url).searchParams.get('utm_content') === tag } catch { return false }
+  })
+}
+
 /** The draft (or talking points and the person's own words), copy and open, then paste the link back. */
 /**
  * Whose words the draft is: "In Maya's voice" only when it was written through the AI provider with her voice guide; any other
@@ -142,6 +154,8 @@ function Work({ handoff, mine, viewer, editor, onChanged }: { handoff: Handoff; 
   const open = handoff.state === 'open', working = ['open', 'join_first', 'held'].includes(handoff.state) && (mine || editor)
   const thread = handoff.thread_url ?? handoff.venue.url
   const copyText = handoff.draft_text === null ? own : draft
+  // The tagged link shows on its own only when the text to copy does not already hold it.
+  const share = working && handoff.link && !(handoff.draft_text !== null && carriesLink(draft, handoff.link)) ? handoff.link : null
 
   async function save() {
     if (draft === (handoff.draft_text ?? '') || !draft.trim()) return
@@ -183,9 +197,9 @@ function Work({ handoff, mine, viewer, editor, onChanged }: { handoff: Handoff; 
         : handoff.own_words ? <div className="st-ho-words"><h3>{mine ? 'Your own words' : `${(handoff.person_name ?? '').split(/\s+/)[0] || 'Their'}'s own words`}</h3><p>{handoff.own_words}</p></div> : null}
     </>}
     {/* The product's link tagged for this hand-off: pasted into the post, the signups it brings join to it on the ledger. */}
-    {working && handoff.link ? <div className="st-ho-share">
-      <input readOnly aria-label="Your link" value={handoff.link} onFocus={event => event.currentTarget.select()} />
-      <button className="st-button" type="button" onClick={() => void copy(handoff.link!, 'Link copied')}>Copy link</button>
+    {share ? <div className="st-ho-share">
+      <input readOnly aria-label="Your link" value={share} onFocus={event => event.currentTarget.select()} />
+      <button className="st-button" type="button" onClick={() => void copy(share, 'Link copied')}>Copy link</button>
     </div> : null}
     {working ? <>
       <div className="st-ho-buttons">

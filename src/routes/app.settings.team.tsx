@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
 import { Icon } from '../stump/ui/icons.tsx'
-import { Chip, Initials, MoreMenu, Outcome, PanelTitle, useLoaded, useRun, when, words } from '../stump/ui/kit.tsx'
+import { Chip, Initials, MoreMenu, Outcome, PanelTitle, useLoaded, useRun, when, words, SelectField } from '../stump/ui/kit.tsx'
 import { rowTitle, shortWhen, type Handoff } from '../stump/handoffs/ui/words.ts'
 import type { RemovedPerson, RoleChange, Team, TeamPerson } from '../stump/ui/types.ts'
 
@@ -65,8 +65,8 @@ function Invite({ onDone, onCancel }: { onDone(person: TeamPerson): void; onCanc
     <div className="st-form">
       <label className="st-field">Name<input name="name" required maxLength={120} autoComplete="off" /></label>
       <label className="st-field">Email<input name="email" type="email" required maxLength={254} autoComplete="off" /></label>
-      <label className="st-field">Role<select name="role" defaultValue="contributor">{ROLES.map(role => <option key={role} value={role}>{words(role)}</option>)}</select></label>
-      <label className="st-field">Connection to the company<select name="connection" defaultValue="employee">{CONNECTIONS.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+      <SelectField label="Role" name="role" defaultValue="contributor">{ROLES.map(role => <option key={role} value={role}>{words(role)}</option>)}</SelectField>
+      <SelectField label="Connection to the company" name="connection" defaultValue="employee">{CONNECTIONS.map(item => <option key={item} value={item}>{item}</option>)}</SelectField>
       <label className="st-field">Disclosure line (optional)<input name="disclosure" maxLength={280} placeholder="I work on this product." /></label>
     </div>
     <Outcome message={message} />
@@ -103,7 +103,7 @@ function Person({ person, manage, owner, self, onChange, label }: { person: Team
     <td><div className="st-cell-person"><Initials name={person.display_name} /><div className="st-row-main">
       <div className="st-name">{person.display_name}{self ? ' (you)' : ''}</div><div className="st-meta">{person.email}</div>
       {mode === 'role' ? <div className="st-team-edit">
-        <label className="st-field">Role<select className="st-select" value={person.role} disabled={busy}
+        <SelectField label="Role" className="st-select" value={person.role} disabled={busy}
           onChange={event => void run(() => runAction<RoleChange>('stump.team.manage', { action: 'set_role', idempotency_key: key(), person_id: person.id, role: event.target.value }))
             .then(changed => {
               // A transfer moves sign-in ownership too, and both people sign in again.
@@ -111,7 +111,7 @@ function Person({ person, manage, owner, self, onChange, label }: { person: Team
               else if (changed) { setMode(null); onChange(`${changed.display_name} is now ${words(changed.role)}.`) }
             })}>
           {choices.map(role => <option key={role} value={role}>{role === 'owner' ? 'Owner (transfer)' : label(role)}</option>)}
-        </select></label>
+        </SelectField>
         <button className="st-button quiet small" type="button" onClick={() => setMode(null)}>Done</button>
       </div> : null}
       {mode === 'remove' ? <div className="st-team-edit" role="group" aria-label={`Remove ${person.display_name}`}>

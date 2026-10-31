@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { runAction } from '../../ui/api.ts'
-import { Outcome, useRun } from '../../ui/kit.tsx'
+import { Outcome, useRun, SelectField } from '../../ui/kit.tsx'
 import { DETAIL_LABELS, KIND_FIELDS, STATUS_LABELS, type KindId } from '../kinds.ts'
 import type { Venue } from './types.ts'
 
@@ -40,12 +40,12 @@ export function VenueForm({ venue, onDone, onCancel, onImport }: { venue?: Venue
     <h2>{venue ? 'Edit venue' : 'Add a venue'}</h2>
     <div className="st-form">
       <label className="st-field">Name<input name="name" required maxLength={200} defaultValue={venue?.name} autoComplete="off" /></label>
-      <label className="st-field">Kind<select value={kind} onChange={event => setKind(event.target.value as KindId)}>
-        {Object.entries(KIND_FIELDS).map(([id, item]) => <option key={id} value={id}>{item.label}</option>)}</select></label>
+      <SelectField label="Kind" value={kind} onChange={event => setKind(event.target.value as KindId)}>
+        {Object.entries(KIND_FIELDS).map(([id, item]) => <option key={id} value={id}>{item.label}</option>)}</SelectField>
       <label className="st-field">Address{fields.url ? '' : ' (optional)'}<input name="url" type="url" required={fields.url} maxLength={2048} defaultValue={venue?.url ?? ''} placeholder="https://" /></label>
-      {venue?.status === 'excluded' ? null : <label className="st-field">Status<select name="status" defaultValue={venue?.status ?? 'candidate'}>
-        {Object.entries(STATUS_LABELS).filter(([id]) => id !== 'excluded').map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>}
-      <label className="st-field">Priority<select name="priority" defaultValue={venue?.priority ?? ''}><option value="">None</option>{PRIORITIES.map(item => <option key={item} value={item}>{item[0]!.toUpperCase() + item.slice(1)}</option>)}</select></label>
+      {venue?.status === 'excluded' ? null : <SelectField label="Status" name="status" defaultValue={venue?.status ?? 'candidate'}>
+        {Object.entries(STATUS_LABELS).filter(([id]) => id !== 'excluded').map(([id, label]) => <option key={id} value={id}>{label}</option>)}</SelectField>}
+      <SelectField label="Priority" name="priority" defaultValue={venue?.priority ?? ''}><option value="">None</option>{PRIORITIES.map(item => <option key={item} value={item}>{item[0]!.toUpperCase() + item.slice(1)}</option>)}</SelectField>
       <label className="st-field">Platform<input name="platform" maxLength={80} defaultValue={venue?.platform ?? ''} placeholder="Reddit, Discourse, Substack…" /></label>
       {Object.entries(fields.details).map(([name, type]) => <label className="st-field" key={`${kind}.${name}`}>{DETAIL_LABELS[name] ?? name}{(fields.required as readonly string[]).includes(name) ? '' : ' (optional)'}
         <input name={`detail.${name}`} type={type === 'date' ? 'date' : type === 'url' ? 'url' : type === 'integer' || type === 'number' ? 'number' : 'text'} min={type === 'integer' || type === 'number' ? 0 : undefined}

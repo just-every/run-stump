@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { me, runAction } from '../stump/ui/api.ts'
-import { Outcome, useLoaded, useRun } from '../stump/ui/kit.tsx'
+import { Outcome, useLoaded, useRun, SelectField } from '../stump/ui/kit.tsx'
 import { shownHandle } from '../stump/accounts/handle.ts'
 import type { Team } from '../stump/ui/types.ts'
 import { Icon } from '../stump/ui/icons.tsx'
@@ -144,10 +144,10 @@ function Connect({ initial, admin, apps, onCancel }: { initial: string; admin: b
   if (password) return <AppPassword started={password} onCancel={() => setPassword(null)} />
   return <form className="st-panel" onSubmit={submit} aria-label="Connect an account">
     <div className="st-form">
-      <label className="st-field">Network<select name="network" value={network} onChange={event => setNetwork(event.target.value)}>
+      <SelectField label="Network" name="network" value={network} onChange={event => setNetwork(event.target.value)}>
         {Object.entries(NAMES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-      </select></label>
-      <label className="st-field">Whose account<select name="owner" defaultValue="me"><option value="me">Mine</option>{admin ? <option value="company">The company's</option> : null}</select></label>
+      </SelectField>
+      <SelectField label="Whose account" name="owner" defaultValue="me"><option value="me">Mine</option>{admin ? <option value="company">The company's</option> : null}</SelectField>
       {network === 'mastodon' ? <label className="st-field">Server<input name="instance" required maxLength={300} placeholder="mastodon.social" autoComplete="off" /></label> : null}
       {network === 'bluesky' ? <>
         <label className="st-field">Handle<input name="handle" required maxLength={300} placeholder="yourname.bsky.social" autoComplete="off" /></label>

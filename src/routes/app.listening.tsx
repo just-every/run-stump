@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { HydrationUnit } from '../base/hydration/unit'
 import { ActionError, explain, me, runAction } from '../stump/ui/api.ts'
 import { Icon } from '../stump/ui/icons.tsx'
-import { Empty, MoreMenu, Outcome, Parts, accountWord, useLoaded, useRun } from '../stump/ui/kit.tsx'
+import { Empty, MoreMenu, Outcome, Parts, accountWord, useLoaded, useRun, SelectField } from '../stump/ui/kit.tsx'
 import { flagLine, type Flag } from '../stump/drafting/view.ts'
 import { listeningStyles } from '../stump/watches/styles.ts'
 import type { BlockedAuthor, FindingList, FindingView, PollView, WatchList, WatchView } from '../stump/watches/ui-types.ts'
@@ -227,7 +227,7 @@ function ReplyForm({ finding, context, onClose }: { finding: FindingView; contex
   }
   if (posted) return <div className="st-finding-work"><p className="st-note" role="status">Replied. It is on the <a href="/app/ledger">ledger</a>.</p></div>
   return <form className="st-finding-work" onSubmit={send} aria-label="Draft a reply">
-    {accounts.length > 1 ? <label className="st-field">From<select value={account} onChange={event => setAccount(event.target.value)}>{accounts.map(item => <option key={item.id} value={item.id}>{accountWord(item)}</option>)}</select></label>
+    {accounts.length > 1 ? <SelectField label="From" value={account} onChange={event => setAccount(event.target.value)}>{accounts.map(item => <option key={item.id} value={item.id}>{accountWord(item)}</option>)}</SelectField>
       : <p className="st-meta">From {accountWord(accounts[0]!)}</p>}
     <label className="st-field"><span className="st-sr">Your reply</span><textarea value={text} required maxLength={4000} rows={4} placeholder="Write a reply…" onChange={event => setText(event.target.value)} /></label>
     {flags.length ? <ul className="st-finding-flags">{flags.map((flag, index) => <li key={`${flag.code}-${index}`}>{flagLine(flag)}</li>)}</ul> : null}
@@ -260,8 +260,8 @@ function HandOffForm({ finding, watch, context, onClose }: { finding: FindingVie
   if (members.data && !people.length) return <div className="st-finding-work"><p className="st-meta">No one on the team is a member of {venue.name} yet. <a href={`/app/venues/${venue.id}`}>Record a member</a></p></div>
   return <form className="st-finding-work" onSubmit={submit} aria-label="Hand off">
     <div className="st-form">
-      <label className="st-field">Who posts in {venue.name}<select name="person" required defaultValue={people.find(person => person.eligible)?.person_id ?? people[0]?.person_id}>
-        {people.map(person => <option key={person.person_id} value={person.person_id}>{person.display_name ?? 'Teammate'}{person.eligible ? '' : ' (not yet eligible)'}</option>)}</select></label>
+      <SelectField label={<>Who posts in {venue.name}</>} name="person" required defaultValue={people.find(person => person.eligible)?.person_id ?? people[0]?.person_id}>
+        {people.map(person => <option key={person.person_id} value={person.person_id}>{person.display_name ?? 'Teammate'}{person.eligible ? '' : ' (not yet eligible)'}</option>)}</SelectField>
       <label className="st-field">Due<input name="due" type="date" required defaultValue={tomorrow} min={new Date().toISOString().slice(0, 10)} /></label>
     </div>
     <Outcome message={message} />
@@ -339,9 +339,9 @@ function Editor({ watch, role, blocked = [], onDone, onCancel }: { watch?: Watch
       <legend>Where to look</legend>
       <div className="st-source-box">
         <label className="st-check"><input type="checkbox" checked={draft.hn} onChange={event => set('hn', event.target.checked)} />Hacker News</label>
-        {draft.hn ? <label className="st-field">Which items<select value={draft.hnTypes} onChange={event => set('hnTypes', event.target.value as HnTypes)}>
+        {draft.hn ? <SelectField label="Which items" value={draft.hnTypes} onChange={event => set('hnTypes', event.target.value as HnTypes)}>
           <option value="both">Stories and comments</option><option value="ask_show">Ask HN and Show HN stories only</option><option value="stories">Stories only</option>{draft.hnTypes === 'keep' ? <option value="keep">As set before</option> : null}
-        </select></label> : null}
+        </SelectField> : null}
       </div>
       <div className="st-source-box">
         <label className="st-field">Feeds, one address per line<textarea value={draft.feeds} onChange={event => set('feeds', event.target.value)} rows={3} autoComplete="off" spellCheck={false}
@@ -365,7 +365,7 @@ function Editor({ watch, role, blocked = [], onDone, onCancel }: { watch?: Watch
       <legend className="st-sr">Alerts</legend>
       <div className="st-form">
         <label className="st-field">Alert right away from relevance<input type="number" min={0} max={100} value={draft.minRelevance} onChange={event => set('minRelevance', Number(event.target.value))} /></label>
-        <label className="st-field">Check every<select value={draft.interval} onChange={event => set('interval', Number(event.target.value))}>{[5, 15, 30, 60, 240].map(minutes => <option key={minutes} value={minutes}>{minutes < 60 ? `${minutes} minutes` : `${minutes / 60} ${minutes === 60 ? 'hour' : 'hours'}`}</option>)}</select></label>
+        <SelectField label="Check every" value={draft.interval} onChange={event => set('interval', Number(event.target.value))}>{[5, 15, 30, 60, 240].map(minutes => <option key={minutes} value={minutes}>{minutes < 60 ? `${minutes} minutes` : `${minutes / 60} ${minutes === 60 ? 'hour' : 'hours'}`}</option>)}</SelectField>
       </div>
       {admin ? <>
         {watch?.alerts?.slack ? <div className="st-actions"><span>Slack alerts go to {watch.alerts.slack.host}.</span><button className="st-button" type="button" disabled={busy} onClick={() => void remove('slack')}>Remove Slack alerts</button></div> : null}
