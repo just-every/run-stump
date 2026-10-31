@@ -16,7 +16,9 @@ When a source fails, the watch shows the error and its time, and keeps what it f
 
 ## Ranking with reasons
 
-Findings rank by fit to your products, each with its reasons: the terms it matched, freshness, and whether the thread asks a question you can answer. A term in a thread's title (or in the post itself, for Bluesky and Mastodon) counts in full; a term found only deep in a long thread about something else counts little, and so does a question asked there. Each thread is listed once, at its best finding's rank, with how many more findings it holds ("2 more in this thread"). Each finding shows the terms it matched ("matches invoicing") and, when you open it, every reason. A finding's own text never changes its rank.
+Findings rank by fit to your products, each with its reasons: the terms it matched, freshness, and whether the thread asks a question you can answer. A term in a thread's title (or in the post itself, for Bluesky and Mastodon) counts in full; a term found only deep in a long thread about something else counts little, and so does a question asked there. Each thread is listed once, at its best finding's rank, with how many more findings it holds ("2 more in this thread"). Each finding shows the terms it matched ("matches invoicing"), with "+1 more reason" when it has more, and, when you open it, every reason. A finding's own text never changes its rank.
+
+**Check now**, in the watch's menu, reads its sources at once and says what it found. When nothing is new it says why: a source that failed or asked to wait, matches already listed, or no thread matching the terms at all. Each phrase is matched as written, so when a check finds nothing, fewer or shorter terms find more.
 
 ## Answering
 

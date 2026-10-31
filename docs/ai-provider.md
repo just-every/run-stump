@@ -45,7 +45,7 @@ Each request records its model and its cost in US dollars on the draft.
 
 ## When the provider fails
 
-With no provider set, Compose says so under **From a source**, with a link to **Settings › Connections**, before you press anything. When a request fails, the draft is not written, and Compose shows why: no provider set yet, a key the provider refused, a limit or an outage, with the provider's own message where it gave one. Stump never fills in generic copy instead. A draft that fails the claim check or the venue check stays a draft, with its flags.
+With no provider set, Compose says so as soon as you put a link under **From a source** with no text of your own, with a link to **Settings › Connections**, before you press anything. A post you write yourself needs no provider. When a request fails, the draft is not written, and Compose shows why: no provider set yet, a key the provider refused, a limit or an outage, with the provider's own message where it gave one. Stump never fills in generic copy instead. A draft that fails the claim check or the venue check stays a draft, with its flags.
 
 ## Where AI text is banned
 

@@ -20,8 +20,8 @@ Entries are never overwritten. A correction adds a version, and the original sta
 
 ## Search and history
 
-Search every entry by text, and filter by venue, network, person, product, campaign, route and state. Each venue and each person has a history, newest first. Any filtered view exports as CSV. In the CSV, a field that begins with = + - or @ carries a leading apostrophe, so a spreadsheet opens it as the words that were posted, never as a formula.
+Search every entry by text or by the `utm_content` its links carry, and filter by venue, network, person, product, campaign, route and state. Each venue and each person has a history, newest first. Any filtered view exports as CSV. In the CSV, a field that begins with = + - or @ carries a leading apostrophe, so a spreadsheet opens it as the words that were posted, never as a formula.
 
 ## Signups
 
-Every link to your own site in a post carries [UTM tags](/docs/links), and its `utm_content` is that post's own ledger id, so the visits and signups each post brought are counted by post, in Vane or in any analytics tool that reads UTM tags. With [Vane](/docs/stack) connected, each post is also marked on its day in Vane and linked to its entry here, so a rise in signups leads straight back to the post that brought it.
+Every link to your own site in a post carries [UTM tags](/docs/links). Its `utm_content` names the post: the post's own id for a post Stump published, the first 8 characters of the hand-off's id for a hand-off. Each entry shows it ("Links tagged utm_content=…"), and the CSV has it in its `utm_content` column, so the visits and signups each post brought, counted by post in Vane or in any analytics tool that reads UTM tags, join to the entry they came from. With [Vane](/docs/stack) connected, each post is also marked on its day in Vane and linked to its entry here, so a rise in signups leads straight back to the post that brought it.

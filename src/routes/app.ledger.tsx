@@ -152,7 +152,7 @@ function Detail({ entry, mayCorrect, admin, person, onChange, onVenue, onPerson 
     <div className="st-meta">
       {[entry.disclosure_line ? `Disclosure: ${entry.disclosure_line}` : null, entry.campaign ? `Campaign ${entry.campaign}` : null, entry.network_id ? `${networkName(entry.network) || 'Network'} id ${entry.network_id}` : null,
         entry.confirmation === 'network' ? 'Read back from the network' : entry.confirmation === 'person' ? `Link recorded by ${person(entry.person_id) ?? 'the member'}` : null,
-        entry.charge_usd ? `Charge $${Number(entry.charge_usd).toFixed(2)}` : null].filter(Boolean).join(' · ')}
+        entry.charge_usd ? `Charge $${Number(entry.charge_usd).toFixed(2)}` : null, entry.utm_content ? `Links tagged utm_content=${entry.utm_content}` : null].filter(Boolean).join(' · ')}
     </div>
     {removal ? <p className="st-error">Removed by the venue: {removal.reason}</p> : null}
     {hold ? <p className="st-note">Legal hold: {hold.reason}</p> : null}

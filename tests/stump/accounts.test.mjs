@@ -178,6 +178,14 @@ test('a key an agent hands over through an approval rests sealed while it waits,
   assert.equal((await app.action('owner', 'stump.stack.connect', { action: 'list' })).body.result.items.find(item => item.seed === 'vane')?.state, 'connected')
   const decided = JSON.parse(await stored())
   assert.ok(!JSON.stringify(decided).includes(secret) && decided.sealed === undefined, 'nothing of the key stays with the decided approval')
+  // The AI provider's key an agent sets waits sealed the same way.
+  const aiKey = randomBytes(24).toString('hex')
+  const provider = approvalOf(await app.mcp(agent.token, 'stump.setup.ai', { action: 'set', base_url: 'https://ai.synthetic-stump.example/v1', model: 'synthetic-stump-model', api_key: aiKey }))
+  const kept = async () => (await app.db.prepare('SELECT saved FROM agent_door_approvals WHERE id=?').bind(provider.id).first()).saved
+  assert.ok(provider?.id && !(await kept()).includes(aiKey), 'the waiting provider change keeps no key in clear')
+  assert.equal((await decide(provider.id, 'approve')).state, 'executed')
+  assert.ok(!(await kept()).includes(aiKey) && JSON.parse(await kept()).sealed === undefined, 'nothing of the provider key stays with the decided approval')
+  assert.equal((await app.action('owner', 'stump.setup.ai', { action: 'clear' })).status, 200)
 })
 
 test('X refusing the account\'s token marks it expired, holds its posts with the reconnect step, and only its owner\'s reconnect brings it back', async () => {

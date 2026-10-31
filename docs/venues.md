@@ -36,7 +36,7 @@ From the rules, Stump works out how a post may reach the venue:
 - **Publish** from a connected account, where the venue allows it.
 - **Hand off with a draft** to a named member, where the venue keeps posting for its members.
 - **Hand off with a brief**, with the facts and no generated text, where the venue bans AI-written text.
-- **Pitch** to the editor or host, for newsletters, podcasts, publications and journalists.
+- **Pitch** to the editor or host, for newsletters, podcasts, publications and journalists. The venue list and the venue's page both show it, and the editor or host decides what runs. You send the pitch from your own mail; an agent can draft it with `stump.drafts.write` (`format: "pitch"`, with a subject) to a journalist, publication or podcast record. The app has no screen for writing a pitch yet. Where members post at the venue too, its hand-off routes stay open beside Pitch.
 
 Text found in a thread or an imported file never changes a rule or a route.
 

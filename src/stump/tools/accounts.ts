@@ -52,7 +52,7 @@ async function connectionNetwork(ctx: ActionContext, args: Args): Promise<Networ
 export const accountTools: StumpTool[] = [{
   name: 'stump.accounts.connect', title: 'Connect network accounts',
   description: 'Connect a person\'s own or the company\'s Bluesky, Mastodon, X or LinkedIn account through the network\'s consent screen, list accounts, record X\'s Automated label, and disconnect or reconnect an account. Tokens never leave Stump.',
-  scope: 'stump:accounts', classes: ['security', 'gated', 'accounts'], clauses: ['STUMP-PUBLISH-001', 'STUMP-CONNECT-001'],
+  scope: 'stump:accounts', classes: ['security', 'gated', 'accounts', 'standard'], clauses: ['STUMP-PUBLISH-001', 'STUMP-CONNECT-001'],
   actions: {
     start: {
       roles: CONNECTORS,
@@ -86,7 +86,8 @@ export const accountTools: StumpTool[] = [{
     list: {
       roles: EVERYONE, read: true,
       properties: { include_unconnected: { type: 'boolean' }, connection_id: id },
-      classify: () => [security('network_connections', 0)],
+      // Listing accounts changes nothing, so it is standard work: a policy that blocks security changes still lets an agent find the account to draft for.
+      classify: () => [{ class: 'standard' as const, facts: { measure: 0 } }],
       async run(args, ctx) {
         // A poster sees only their own accounts (STUMP-TEAM-001.2); every other role sees the company's and each person's, with its owner.
         const where = [...args.include_unconnected === true ? [] : ["state<>'disconnected'"], ...ctx.person.role === 'poster' ? ["owner_kind='person' AND owner_person_id=?"] : []]
