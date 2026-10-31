@@ -6,7 +6,7 @@ Replies, mentions and quotes, each with its thread, author and link, rendered as
 
 ## Answering
 
-Reply to someone who engaged with your account first, in public or in a conversation they started. On X, Stump allows one reply per interaction, as X's developer guidelines ask, and an AI-drafted reply on X waits for X's prior approval, so on X write the reply yourself.
+Reply in public to someone who engaged with your account first. On X, Stump allows one reply per interaction, as X's developer guidelines ask, and an AI-drafted reply on X waits for X's prior approval, so on X write the reply yourself.
 
 Every reply passes the same checks as a post: [disclosure](/docs/disclosure), claims and near-duplicates.
 
