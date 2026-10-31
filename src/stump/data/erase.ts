@@ -15,7 +15,7 @@ import { readAccount } from '../accounts/store.ts'
 import { refuse } from '../actions/refusals.ts'
 import type { ActionContext, Args } from '../actions/types.ts'
 import type { D1Sql } from '../../modules/import-kit/src/d1/index.ts'
-import { publishers } from '../publish/publishers.ts'
+import { holdOnPost, networkDelete } from '../ledger/correct.ts'
 import { fullNameMatcher, nameMatcher, nameParts, pitchStatements } from './anonymise.ts'
 import { eraseWithImportCustody, holdsImports, importedVenues, rekeyVenue } from './import-custody.ts'
 import { recheckItems } from './recheck.ts'
@@ -24,7 +24,6 @@ import { handleWords, residueStatements, type Trace } from './residue.ts'
 import { JOURNALIST_SOURCE } from './erased-uploads.ts'
 import { TOMBSTONE_SOURCES, tombstoneStatements, type ErasedFinding } from './tombstones.ts'
 import { foldName } from '../lib/imports/index.ts'
-import type { PublishContext, Publisher } from '../publish/types.ts'
 
 const sql = (text: string, ...params: unknown[]): D1Sql => ({ sql: text, params })
 
@@ -43,12 +42,9 @@ interface Named { id: string; network: string | null; account_id: string | null;
 export interface DeletionRequest {
   ledger_id: string; network: string | null
   outcome: 'deleted' | 'not_found' | 'failed' | 'kept' | 'manual'
-  /** Why a request failed, why an entry was kept (its legal hold), or who removes a hand-posted one. */
-  error?: string; hold?: string; person_id?: string | null
+  /** Why a request failed, why an entry was kept (its legal hold, and the held entry when another entry for the same post holds it), or who removes it by hand. */
+  error?: string; hold?: string; held_entry_id?: string; person_id?: string | null
 }
-
-/** The delete a publisher offers for one of the account's posts (the publishing lane's Publisher.remove). */
-type Remove = (entry: { network: string; account_id: string; network_id: string }, ctx: PublishContext) => Promise<{ outcome: 'deleted' | 'not_found' | 'failed'; error?: string }>
 
 /**
  * Other records holding an engager's data, each found and removed by the
@@ -226,7 +222,11 @@ export async function scopeOf(ctx: ActionContext, subject: Subject): Promise<Sco
 export const removedCount = (scope: Scope) => (scope.contact ? 1 : 0) + scope.pitches.length + scope.venues.length + scope.findings.length + scope.offers.length
   + Object.values(scope.other).reduce((sum, count) => sum + count, 0)
 
-/** Asks the network to delete one of the company's posts naming the person, through its publisher. */
+/**
+ * Asks the network to delete one of the company's posts naming the person, through its publisher, by the rules
+ * the ledger's own removal keeps: only a post the publisher recorded on a company account is deleted, and a post
+ * any entry for the same account holds under legal hold stays.
+ */
 async function requestDeletion(ctx: ActionContext, entry: Named): Promise<DeletionRequest> {
   const answer = { ledger_id: entry.id, network: entry.network }
   if (entry.legal_hold) return { ...answer, outcome: 'kept', hold: (JSON.parse(entry.legal_hold) as { reason?: string }).reason ?? 'legal hold' }
@@ -235,10 +235,13 @@ async function requestDeletion(ctx: ActionContext, entry: Named): Promise<Deleti
   if (!entry.network || !entry.account_id || !entry.network_id) return { ...answer, outcome: 'failed', error: 'The entry has no network address to delete.' }
   const account = await readAccount(ctx.db, entry.account_id)
   if (!account) return { ...answer, outcome: 'failed', error: 'The account that posted it is no longer in Stump.' }
-  const remove = (publishers[entry.network] as (Publisher & { remove?: Remove }) | undefined)?.remove
-  if (!remove) return { ...answer, outcome: 'failed', error: `Stump has no delete for ${entry.network} posts.` }
-  const result = await remove({ network: entry.network, account_id: entry.account_id, network_id: entry.network_id },
-    { db: ctx.db, env: ctx.env, account, prices: await xPrices(ctx.db), now: ctx.now })
+  const target = await networkDelete(ctx, entry)
+  // A member's own account, or a network id a correction set: the post is removed at the network by hand.
+  if (!target) return { ...answer, outcome: 'manual', person_id: account.owner_kind === 'person' ? account.owner_person_id : null }
+  const held = await holdOnPost(ctx, entry, target)
+  if (held) return { ...answer, outcome: 'kept', hold: held.reason ?? 'legal hold', held_entry_id: held.id }
+  const result = await target.publisher.remove({ network: target.account.network, account_id: target.account.id, network_id: target.network_id },
+    { db: ctx.db, env: ctx.env, account: target.account, prices: await xPrices(ctx.db), now: ctx.now })
   return { ...answer, outcome: result.outcome, ...(result.error ? { error: result.error } : {}) }
 }
 

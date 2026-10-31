@@ -48,9 +48,14 @@ export async function send(deps: HttpDeps, req: RawRequest): Promise<Result<RawR
   let res: Response;
   let text: string;
   try {
-    const init: RequestInit = { method: req.method, headers: req.headers ?? {}, signal: controller.signal, redirect: 'follow' };
+    // The Mastodon API answers at the instance itself, so a redirect is never followed: it is answered as a refusal.
+    const init: RequestInit = { method: req.method, headers: req.headers ?? {}, signal: controller.signal, redirect: 'manual' };
     if (req.body !== undefined) init.body = req.body;
     res = await Promise.race([deps.fetch(req.url, init), aborted]);
+    if (res.status >= 300 && res.status < 400) {
+      await res.body?.cancel().catch(() => {});
+      return fail({ kind: 'invalid_response', code: 'redirected', status: res.status, message: 'The instance answered with a redirect to another address. Stump sends Mastodon requests only to the instance itself.', outcomeUnknown: false });
+    }
     text = await Promise.race([res.text(), aborted]);
   } catch (err) {
     return fail(classifyThrown(err, req.write));

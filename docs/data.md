@@ -26,7 +26,7 @@ Stump erases a person outside the company, such as a journalist or someone who e
 
 Name an engager by their handle on each network or source, such as their X handle and their Hacker News name. Each handle is matched only on its own network, so someone else with the same name elsewhere is left alone.
 
-Posts the company made that name the person are listed for deletion at each network, each with its outcome, because a post already read or copied cannot be recalled. A post under legal hold stays, and is named as kept.
+Posts the company made that name the person are listed for deletion at each network, each with its outcome, because a post already read or copied cannot be recalled. Stump deletes a post at its network only when its own publishing recorded that post on a company account. A post on a member's own account, a hand-off the member posted, or a post whose address a correction set is listed for removal by hand. A post stays, named as kept, when any ledger entry for that post is under legal hold.
 
 An erased engager stays erased: later polls, overlap windows and backfills do not collect their posts again, and nothing alerts with them. Stump keeps only a digest of each erased post's address and of the person's handle on each source, never the address or handle itself.
 
