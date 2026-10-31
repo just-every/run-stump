@@ -47,6 +47,20 @@ function goneWords(gone: Variant[]): string {
   const what = states.size === 1 && states.has('scheduled') ? 'scheduled' : states.size === 1 && states.has('posted') ? 'posted' : 'scheduled or posted'
   return gone.length === 1 ? `${networkName(gone[0]!.network)} already ${what}` : `${gone.length} already ${what}`
 }
+/** "a", "a and b", "a, b and c". */
+const joined = (items: string[]) => items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0] ?? ''
+/**
+ * Which text goes out once a variant is edited, said under the master: an edited variant posts its own text, the rest post the
+ * master's, and Checks read each variant ("Mastodon posts its edited variant below, not this text. Checks read the variant.").
+ */
+function followWords(variants: Variant[]): string | null {
+  const edited = variants.filter(variant => variant.differs_from_master), rest = variants.filter(variant => !variant.differs_from_master)
+  if (!edited.length) return null
+  const names = (list: Variant[]) => joined([...new Set(list.map(variant => networkName(variant.network)))])
+  const own = edited.length === 1 ? `${names(edited)} posts its edited variant below` : `${names(edited)} post their edited variants below`
+  return rest.length ? `${own}; ${names(rest)} ${rest.length === 1 ? 'posts' : 'post'} this text. Checks read each variant.`
+    : `${own}, not this text. Checks read ${edited.length === 1 ? 'the variant' : 'the variants'}.`
+}
 /** The title of a post every variant of which has left Compose: its one state ("Posted"), else "Scheduled and posted" or "Sent". */
 function goneTitle(gone: Variant[]): string {
   const states = new Set(gone.map(variant => variant.state))
@@ -311,6 +325,8 @@ function ComposePage() {
               {masterCount.toLocaleString()}{largest ? ` / ${largest.limit.toLocaleString()}` : ''}
             </div>
           </div>
+          {/* Once a variant is edited, the master is not every account's text: say which text each account posts and Checks reads. */}
+          {preview && followWords(variants) ? <p className="st-meta st-compose-follow" role="status">{followWords(variants)}</p> : null}
           {preview ? source ? <div className="st-source-chip"><Disc icon="pencil" /><span><span className="st-meta">From a source</span><br />{source.replace(/^https?:\/\//, '')}</span></div> : null
             : <div className="st-source">
               <label className="st-field">From a source
