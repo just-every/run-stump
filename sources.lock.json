@@ -3628,7 +3628,7 @@
       "executable": false
     },
     "src/stump/drafting/check.ts": {
-      "sha256": "b12d2a9b80b0ad8683de4cf2db238bb8f89fe0a3cd2a243b0323dae4ecd1add5",
+      "sha256": "932f100d1737532d52fda185d3549488181dc9a00b1467ef00fd641e07184a97",
       "executable": false
     },
     "src/stump/drafting/diff.ts": {
@@ -3700,7 +3700,7 @@
       "executable": false
     },
     "src/stump/handoffs/link.ts": {
-      "sha256": "a0a97a22c8d6f940ba200eb54dc64a3ee99938375df097a40077bef3275e2135",
+      "sha256": "23d59dd0350ad9dfc25779d86e80166f95865fed0c735e92b390593d5ce96a51",
       "executable": false
     },
     "src/stump/handoffs/manage.ts": {

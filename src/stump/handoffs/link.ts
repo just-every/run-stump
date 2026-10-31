@@ -40,6 +40,15 @@ export function discordServer(venue: Pick<VenueRow, 'url' | 'details'>): string 
   return venue.url ? fromUrl(venue.url) : null
 }
 
+/** Slack's own service hosts under slack.com (the app, join pages, the API, status, files): none of them is a workspace. */
+const SLACK_SERVICE = new Set(['app', 'join', 'api', 'hooks', 'status', 'files', 'files-edu', 'edgeapi', 'my', 'www', 'enterprise', 'wss-primary', 'wss-backup', 'downloads'])
+
+/** A workspace's own address: <name>.slack.com, or <name>.enterprise.slack.com on an Enterprise Grid, never a Slack service host. */
+const workspaceHost = (host: string) => {
+  const name = /^([a-z\d][a-z\d-]*)(?:\.enterprise)?\.slack\.com$/.exec(host)?.[1]
+  return !!name && !SLACK_SERVICE.has(name)
+}
+
 /**
  * A Slack venue's workspace address (rands-leadership.slack.com), from its recorded Workspace (the address, or a link
  * on it) or from its own address when that is on the workspace. A community recorded by its public join page names
@@ -51,7 +60,7 @@ export function slackWorkspace(venue: Pick<VenueRow, 'url' | 'details'>): string
     if (!text) return null
     let host: string
     try { host = new URL(/^[a-z][a-z\d+.-]*:\/\//.test(text) ? text : `https://${text}`).hostname.replace(/^www\./, '') } catch { return null }
-    return onDomain(host, 'slack.com') && host !== 'slack.com' && host !== 'app.slack.com' ? host : null
+    return workspaceHost(host) ? host : null
   }
   let recorded: unknown = null
   try { recorded = (JSON.parse(venue.details || '{}') as { workspace?: unknown }).workspace } catch { recorded = null }
