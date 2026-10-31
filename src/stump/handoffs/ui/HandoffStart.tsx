@@ -8,6 +8,7 @@ import { runAction } from '../../ui/api.ts'
 import { Outcome, useLoaded, useRun, SelectField } from '../../ui/kit.tsx'
 import type { Team } from '../../ui/types.ts'
 import type { Members, Venue } from '../../venues/ui/types.ts'
+import { US_ZONES, deviceZone, instantIn, storeZone, workingZone, zoneName } from '../../ui/zones.ts'
 
 const key = () => crypto.randomUUID()
 const LAPSE_WORDS: Record<string, string> = { expire: 'Let it expire', reassign: 'Hand it to the next member', next_slot: 'Move it to the next opening' }
@@ -34,11 +35,14 @@ function HandoffForm({ venue, routes, members, team, me, onClose }: { venue: Ven
   const draftable = routes.includes('handoff_draft')
   const listed = new Set(venue.products.map(product => product.product_id))
   const choices = [...(products.data?.items ?? [])].sort((a, b) => Number(listed.has(b.id)) - Number(listed.has(a.id)))
+  // Due at 5 PM on the day, in the zone the team schedules in (the person's last pick, as Compose remembers it), never only the computer's.
+  const [zone, setZone] = useState(workingZone)
+  const zones = [...new Set([zone, ...US_ZONES.map(([id]) => id), deviceZone()])]
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget), text = String(form.get('text') ?? '').trim(), thread = String(form.get('thread') ?? '').trim()
     const made = await run(() => runAction<{ id: string }>('stump.handoffs.prepare', { action: 'prepare', idempotency_key: key(), venue_id: venue.id, person_id: String(form.get('person')),
-      product_id: String(form.get('product')), due_at: new Date(`${String(form.get('due'))}T17:00:00`).toISOString(), lapse: String(form.get('lapse')),
+      product_id: String(form.get('product')), due_at: new Date(instantIn(`${String(form.get('due'))}T17:00`, zone)).toISOString(), lapse: String(form.get('lapse')),
       ...(thread ? { thread_url: thread } : {}), ...(draftable && text ? { text } : draftable && form.get('generate') ? { generate: true } : {}) }))
     if (made) await navigate({ to: '/app/handoffs/$handoffId', params: { handoffId: made.id } })
   }
@@ -49,7 +53,9 @@ function HandoffForm({ venue, routes, members, team, me, onClose }: { venue: Ven
         {people.map(person => <option key={person.id} value={person.id} disabled={person.status !== 'active'}>
           {person.display_name}{person.status !== 'active' ? ' (has not signed in yet)' : memberIds.has(person.id) ? '' : ' (joins first)'}</option>)}</SelectField>
       <SelectField label="Product" name="product" required>{choices.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</SelectField>
-      <label className="st-field">Due<input name="due" type="date" required defaultValue={inDays(2)} min={inDays(0)} /></label>
+      <label className="st-field">Due (5 PM)<input name="due" type="date" required defaultValue={inDays(2)} min={inDays(0)} /></label>
+      <SelectField label="Time zone" value={zone} onChange={event => { setZone(event.target.value); storeZone(event.target.value) }}>
+        {zones.map(id => <option key={id} value={id}>{zoneName(id)}</option>)}</SelectField>
       <SelectField label="If it is not posted by then" name="lapse" defaultValue="expire">{Object.entries(LAPSE_WORDS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</SelectField>
       <label className="st-field">Thread (optional)<input name="thread" type="url" maxLength={2048} placeholder="https://" autoComplete="off" /></label>
     </div>

@@ -101,7 +101,7 @@ function useDismiss(open: boolean, close: () => void) {
 }
 
 /**
- * The top bar's Pause pill (SPEC §4.1): "Pause publishing" pauses everything
+ * The top bar's Pause pill (SPEC §4.1): "Pause publishing" ("Pause" on a phone) pauses everything
  * in one press; while paused it reads "Resume publishing" ("Resume" on a phone)
  * and opens the resume popover, which shows what went out and what stayed held.
  */
@@ -122,7 +122,7 @@ export function PauseControl({ role, personId }: { role: string | undefined; per
     return <div className="st-pop-anchor" ref={ref}>
       <Tip label="Pause publishing" side="below">
         <button type="button" className="st-pause" disabled={busy} onClick={pause}>
-          <span className="st-pause-icon"><Icon name="pause" /></span><span className="st-pause-label">Pause publishing</span>
+          <span className="st-pause-icon"><Icon name="pause" /></span><span className="st-pause-label">Pause<span className="st-pause-more"> publishing</span></span>
         </button>
       </Tip>
       {open && message?.error ? <div className="st-popover" role="alert" aria-labelledby="st-pause-failed-title">
@@ -138,7 +138,7 @@ export function PauseControl({ role, personId }: { role: string | undefined; per
   const resumeAll = () => void run(() => resume('all')).then(result => { if (result) { setResumed(result); pauseChanged({ resumed: 'all' }) } })
   return <div className="st-pop-anchor" ref={ref}>
     <button type="button" className={all ? 'st-pause paused' : 'st-pause'} aria-expanded={open} aria-controls="st-resume" onClick={() => open ? close() : setOpen(true)}>
-      <span className="st-pause-icon"><Icon name={all ? 'play' : 'pause'} /></span><span className="st-pause-label">{all ? <>Resume<span className="st-pause-more"> publishing</span></> : 'Pause publishing'}</span>
+      <span className="st-pause-icon"><Icon name={all ? 'play' : 'pause'} /></span><span className="st-pause-label">{all ? <>Resume<span className="st-pause-more"> publishing</span></> : <>Pause<span className="st-pause-more"> publishing</span></>}</span>
     </button>
     {open ? <div className="st-sheet-scrim" aria-hidden="true" onClick={close} /> : null}
     {open ? <div className="st-popover" id="st-resume" role="dialog" aria-labelledby="st-resume-title">

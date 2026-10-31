@@ -5,7 +5,7 @@ Where a venue keeps posting for its members, Stump hands the post to the named m
 Open the venue under **Venues**. Where its rules keep posting for its members, its **Routes** card has **Hand off**. Choose:
 
 - **Who posts**: a member of the venue (anyone else gets the venue's join steps first). An invited teammate can receive a hand-off once they have accepted their invitation by signing in; until then the hand-off is refused with that reason.
-- **Product**, the **due** date, and what happens **if it is not posted by then**: let it expire, hand it to the next member, or move it to the venue's next opening.
+- **Product**, the **due** date (5 PM in the time zone you pick; due times show in that zone), and what happens **if it is not posted by then**: let it expire, hand it to the next member, or move it to the venue's next opening.
 - Optionally the **thread** it belongs in (a link on the venue), and a **draft**: write it, leave it empty for a brief with talking points, or let your [AI provider](/docs/ai-provider) draft it where the venue allows AI-written text.
 
 The brief opens next. Editors and admins hand off to anyone on the team; a contributor hands off only to themselves. From **Listening**, a finding on a venue you have recorded has **Hand off** too, with the thread filled in.

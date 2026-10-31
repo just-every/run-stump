@@ -85,7 +85,7 @@ Each action's required arguments are in parentheses; the rest are optional. An a
 | `stump.handoffs.manage` | `queue`, `get` (handoff_id), `edit` (handoff_id, draft_text), `skip` (handoff_id, reason), `hold` (handoff_id, reason, review_at), `release` (handoff_id) |
 | `stump.inbox.read` | `poll` (account_id), `list` (account_id), `check` (inbox_item_id, account_id, text) |
 | `stump.inbox.reply` | `reply` (inbox_item_id, account_id) |
-| `stump.items.schedule` | `schedule` (item_id, account_id, at), `publish` (item_id), `resume` (item_id), `resolve` (item_id, decision), `schedule_master` (master_id, at) |
+| `stump.items.schedule` | `schedule` (item_id, account_id, at), `publish` (item_id), `resume` (item_id), `resolve` (item_id, decision), `schedule_master` (master_id, at, optional time_zone) |
 | `stump.items.media` | `attach` (item_id, file), `set_alt` (media_id, alt) |
 | `stump.ledger.search` | `search`, `get` (entry_id), `history`, `export_csv` |
 | `stump.ledger.correct` | `correct` (entry_id, note), `mark_removed` (entry_id, reason), `corrections`, `legal_hold` (entry_id, reason) |

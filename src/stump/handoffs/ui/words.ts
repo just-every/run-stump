@@ -2,14 +2,15 @@
 import { ActionError, explain } from '../../ui/api.ts'
 import type { ChipTone } from '../../ui/kit.tsx'
 import type { HandoffRecord } from '../model.ts'
+import { dateIn, daysBetween, timeIn, workingZone } from '../../ui/zones.ts'
 
 export type Handoff = HandoffRecord
 type Rule = { value: unknown; source_url: string | null; read_at: string | null; sourced: boolean; detail?: string | null; thread_url?: string | null }
 
 /**
  * Where in the venue it goes, in the venue's own words: its thread or channel ("weekly thread", "launch post"); else its
- * self-promotion thread when the venue's rule keeps promotion to one; else the product's post ("Brightwell post"), so two
- * hand-offs at one venue never read the same.
+ * self-promotion thread when the venue's rule keeps promotion to one; else a post about the product ("post about Brightwell"),
+ * so two hand-offs at one venue never read the same and none reads as a slot the venue keeps.
  */
 export function placeOf(handoff: Handoff): { words: string; product: boolean } {
   const how = handoff.venue.how_to_post as Record<string, unknown>
@@ -17,41 +18,36 @@ export function placeOf(handoff: Handoff): { words: string; product: boolean } {
   const own = text(how.thread) ?? text(how.channel)
   if (own) return { words: own, product: false }
   if ((handoff.rules as Record<string, Rule | null>).self_promotion?.value === 'thread') return { words: 'self-promotion thread', product: false }
-  return handoff.product_name ? { words: `${handoff.product_name} post`, product: true } : { words: handoff.thread_url ? 'thread' : 'post', product: false }
+  return handoff.product_name ? { words: `post about ${handoff.product_name}`, product: true } : { words: handoff.thread_url ? 'thread' : 'post', product: false }
 }
 const cap = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 export const rowTitle = (handoff: Handoff) => `${handoff.venue.name} · ${cap(placeOf(handoff).words)}`
 export function briefTitle(handoff: Handoff): string {
   const place = placeOf(handoff)
-  return place.product ? `${place.words} on ${handoff.venue.name}` : `Post in: ${handoff.venue.name} ${place.words.toLowerCase()}`
+  return place.product ? `${cap(place.words)} on ${handoff.venue.name}` : `Post in: ${handoff.venue.name} ${place.words.toLowerCase()}`
 }
 
-/** Whole days from the viewer's today to the day of `at`: 0 today, 1 tomorrow, -1 yesterday. */
-function daysFrom(at: Date, now: Date): number {
-  const start = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
-  return Math.round((start(at) - start(now)) / 86_400_000)
-}
 /**
- * When a hand-off is due or was done, in the viewer's own days: "Due today · 4:00 PM", "Due tomorrow", "Due Thu" up to
- * six days out, else "Due Nov 12"; a posted one "Posted today" or "Posted Oct 27"; a skipped or expired one its date.
+ * When a hand-off is due or was done, in the days of the zone this person schedules in (zones.ts), never the computer's own:
+ * "Due today · 4:00 PM PT", "Due tomorrow", "Due Thu" up to six days out, else "Due Nov 12"; a posted one "Posted today" or
+ * "Posted Oct 27"; a skipped or expired one its date.
  */
-export function shortWhen(handoff: Handoff, now = Date.now()): string {
+export function shortWhen(handoff: Handoff, now = Date.now(), zone = workingZone()): string {
   const iso = handoff.state === 'posted' ? handoff.posted_at : handoff.state === 'skipped' || handoff.state === 'expired' ? handoff.updated_at : handoff.due_at
   if (!iso) return ''
-  const date = new Date(iso), days = daysFrom(date, new Date(now))
-  const dated = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)
+  const days = daysBetween(Date.parse(iso), now, zone)
+  const dated = dateIn(iso, zone, { month: 'short', day: 'numeric' })
   if (handoff.state === 'posted') return days === 0 ? 'Posted today' : `Posted ${dated}`
   if (!['open', 'join_first', 'held'].includes(handoff.state)) return dated
-  if (days === 0) return `Due today · ${new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date)}`
+  if (days === 0) return `Due today · ${timeIn(iso, zone)}`
   if (days === 1) return 'Due tomorrow'
-  if (days >= 2 && days <= 6) return `Due ${new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(date)}`
+  if (days >= 2 && days <= 6) return `Due ${dateIn(iso, zone, { weekday: 'short' })}`
   return days < 0 ? `Was due ${dated}` : `Due ${dated}`
 }
-/** "Due Thu, Nov 5 · 4:00 PM MT". */
-export function dueLine(iso: string | null): string {
+/** "Due Thu, Nov 5 · 4:00 PM PT", in the zone this person schedules in. */
+export function dueLine(iso: string | null, zone = workingZone()): string {
   if (!iso) return ''
-  const date = new Date(iso)
-  return `Due ${new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(date)} · ${new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZoneName: 'shortGeneric' }).format(date)}`
+  return `Due ${dateIn(iso, zone, { weekday: 'short', month: 'short', day: 'numeric' })} · ${timeIn(iso, zone)}`
 }
 export const dayOf = (iso: string | null) => iso ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(iso)) : ''
 
