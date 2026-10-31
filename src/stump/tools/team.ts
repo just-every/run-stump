@@ -4,6 +4,7 @@ import { ADMINS, CONNECTIONS, EVERYONE, ROLES, isRole, rank, type Role } from '.
 import { listPeople, readPerson, type StumpPerson } from '../people/store.ts'
 import { answerRemovedPerson } from '../handoffs/lapse.ts'
 import { outsideVoice } from '../handoffs/brief.ts'
+import { refuseClaimingLines } from '../drafting/check.ts'
 import { disconnectAccount } from '../accounts/connect.ts'
 import type { AccountRow } from '../accounts/store.ts'
 import { IMPORT_HOLD_SQL, moveItem, type ItemState } from '../items/state.ts'
@@ -86,6 +87,7 @@ export const teamTools: StumpTool[] = [{
         const address = normalEmail(args.email)
         // Owner authority moves only by transfer (set_role), never by invitation.
         if (args.role === 'owner') refuse('invalid_arguments', { field: 'role', reason: 'Invite as admin, then transfer ownership.' })
+        if (args.disclosure_lines !== undefined) await refuseClaimingLines(ctx.db, args.disclosure_lines as string[], 'disclosure_lines', ctx.now())
         const member = await ctx.db.prepare("SELECT id FROM stump_people WHERE email=? AND status='active'").bind(address).first<{ id: string }>()
         if (member) refuse('already_member', { person_id: member.id })
         // The person is Base's operator for this email, invited and holding nothing until they sign in (D-1).
@@ -166,8 +168,10 @@ export const teamTools: StumpTool[] = [{
       async classify(args, ctx) { return access((await updating(ctx, args)).widens ? 'widens' : 'narrows') },
       async summary(args, ctx) {
         const change = await updating(ctx, args)
-        return { target: { id: change.target.id, name: change.target.display_name },
-          ...(change.connectionChanged ? { connection: { from: change.target.connection, to: change.connection } } : {}), ...(change.linesChanged ? { disclosure_lines_changed: true } : {}) }
+        // An approver reads what changes for the person: their connection, and the disclosure lines they would hold.
+        const items = [...(change.connectionChanged ? [`Connection: ${change.target.connection ?? 'none'} to ${change.connection ?? 'none'}`] : []),
+          ...(change.linesChanged ? [change.lines.length ? `Disclosure lines: ${change.lines.map(line => `"${line}"`).join(', ')}` : 'Disclosure lines: none'] : [])]
+        return { target: { id: change.target.id, name: change.target.display_name }, ...(items.length ? { items } : {}) }
       },
       target: args => ({ kind: 'person', id: String(args.person_id) }),
       // Read before the role check, so a caller who would widen their own reach is told self_escalation.
@@ -180,6 +184,7 @@ export const teamTools: StumpTool[] = [{
       },
       async run(args, ctx) {
         const { target, connection, lines } = await updating(ctx, args)
+        if (args.disclosure_lines !== undefined) await refuseClaimingLines(ctx.db, lines, 'disclosure_lines', ctx.now())
         const display_name = (args.display_name as string | undefined) ?? target.display_name
         await ctx.db.batch([
           ctx.db.prepare('UPDATE stump_people SET display_name=?,connection=?,disclosure_lines=?,revision=revision+1 WHERE id=?').bind(display_name, connection, JSON.stringify(lines), target.id),

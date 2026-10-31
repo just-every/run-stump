@@ -476,7 +476,7 @@
       "executable": false
     },
     "docs/disclosure.md": {
-      "sha256": "5221b4a40b705d740b7c2fe5fda18bd10267a45a78fb35dec98955d76209fe53",
+      "sha256": "7c3457267cf21fbba488327e1c09ef7ef6f1536e2de3304b700b0f30a29a9ef1",
       "executable": false
     },
     "docs/handoffs.md": {
@@ -3628,7 +3628,7 @@
       "executable": false
     },
     "src/stump/drafting/check.ts": {
-      "sha256": "0c70f1849382a684439c8b7c71ff5f3c7349da2fbd32194ffb447212a11a47d9",
+      "sha256": "b12d2a9b80b0ad8683de4cf2db238bb8f89fe0a3cd2a243b0323dae4ecd1add5",
       "executable": false
     },
     "src/stump/drafting/diff.ts": {
@@ -4488,11 +4488,11 @@
       "executable": false
     },
     "src/stump/tools/team.ts": {
-      "sha256": "80074c9193944c0b436833cc691eae476f6e384314a2530547f68b301d378e97",
+      "sha256": "10c2b7ee124bc1bf65fdd21b177a860d780db07e3c3d98e5674043c257d928dc",
       "executable": false
     },
     "src/stump/tools/venues.ts": {
-      "sha256": "bfcd04190f2e293b13d454c7ca5d5421b3dbc1a7c9d880d0d43dfecf740fbb53",
+      "sha256": "b269dd309ed65e258c25fc1df73ab39b05a2070ee98ed840ed2971d1356432f5",
       "executable": false
     },
     "src/stump/tools/watches.ts": {

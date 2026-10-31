@@ -8,6 +8,7 @@ import type { StumpPerson } from '../people/store.ts'
 import { readVenue, rulesOf, type VenueRow } from '../venues/model.ts'
 import { holdFor, type VenueHold } from '../venues/rules.ts'
 import { otherServer } from '../venues/server.ts'
+import { refuse } from '../actions/refusals.ts'
 import { claimRecord, itemText, libClaim, parse, productProfile, productRecord, today, type ClaimRecord, type Flag, type ProductRecord, type Row } from './records.ts'
 
 /** The networks whose counting rule Stump knows (lib/text). */
@@ -65,24 +66,52 @@ export const venueDisclosureLine = (venue: Pick<VenueRow, 'rules'> | null) => {
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
-/**
- * The text with each disclosure line blanked to spaces of the same length, so the claim check reads every other word where it
- * stands and never takes a line such as "I work on Ferrous." for a claim about the product.
- */
-export function withoutLines(text: string, lines: ReadonlyArray<string | null | undefined>): string {
-  let out = text
-  for (const line of lines) {
-    const needle = line?.trim()
-    if (needle) out = out.replace(new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), match => ' '.repeat(match.length))
-  }
-  return out
+type ClaimInput = Omit<Parameters<typeof checkClaims>[0], 'text'>
+
+/** What the claim check finds in a disclosure line read on its own: a line that finds anything is never read past. */
+export function lineFindings(line: string, input: ClaimInput) {
+  const result = checkClaims({ ...input, text: line })
+  return [...result.claims.map(finding => finding.status), ...result.flags.map(flag => flag.code)]
 }
 
-/** The claim check of `text` read past its disclosure lines, each finding and flag quoting the text's own words at its place. */
-export function claimsPastLines(text: string, lines: ReadonlyArray<string | null | undefined>, input: Omit<Parameters<typeof checkClaims>[0], 'text'>) {
-  const result = checkClaims({ ...input, text: withoutLines(text, lines) })
-  const own = <T extends { start?: number; end?: number; text?: string }>(item: T): T => typeof item.start === 'number' && typeof item.end === 'number' && typeof item.text === 'string' ? { ...item, text: text.slice(item.start, item.end) } : item
-  return { ...result, claims: result.claims.map(own), flags: result.flags.map(own) }
+/** Where each disclosure line that on its own makes no claim and raises no flag stands in the text, as [start, end) spans. */
+function lineSpans(text: string, lines: ReadonlyArray<string | null | undefined>, input: ClaimInput): Array<[number, number]> {
+  const spans: Array<[number, number]> = []
+  for (const line of new Set(lines.map(line => line?.trim()).filter((line): line is string => !!line))) {
+    if (lineFindings(line, input).length) continue
+    for (const match of text.matchAll(new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'))) spans.push([match.index, match.index + match[0].length])
+  }
+  return spans
+}
+
+/**
+ * The claim check of the whole text, read past its disclosure lines: a finding or flag is left out only when it lies wholly
+ * inside a disclosure line that, read on its own, makes no claim and raises no flag, so a line such as "I work on Ferrous."
+ * is never taken for a claim about the product, and no line takes any other word of the text out of the check.
+ */
+export function claimsPastLines(text: string, lines: ReadonlyArray<string | null | undefined>, input: ClaimInput) {
+  const result = checkClaims({ ...input, text })
+  const spans = lineSpans(text, lines, input)
+  const kept = <T extends { start?: number; end?: number }>(item: T) => !(typeof item.start === 'number' && typeof item.end === 'number'
+    && spans.some(([start, end]) => start <= item.start! && item.end! <= end))
+  const claims = result.claims.filter(kept), flags = result.flags.filter(kept)
+  return { ...result, claims, flags, passed: claims.every(finding => finding.status === 'matched') && !flags.some(flag => flag.code === 'avoid_word') }
+}
+
+/**
+ * Refuses disclosure lines the claim check reads as a claim or flags, naming the first such line, so a line saved for a
+ * person or a venue is only ever a statement of connection. `field` names the argument the lines came in.
+ */
+export async function refuseClaimingLines(db: D1Database, lines: ReadonlyArray<string>, field: string, now: number) {
+  const brand = await loadBrand(db)
+  const base = { claims: brand.claims.map(libClaim), products: brand.products.map(productProfile), company_names: brand.company_names, today: today(now) }
+  for (const line of lines) {
+    const found = [base, ...brand.products.map(product => ({ ...base, product_id: product.id }))].flatMap(input => lineFindings(line, input))
+    if (!found.length) continue
+    const what = found.includes('avoid_word') && found.every(code => code === 'avoid_word' || code === 'matched') ? 'uses a word the brand avoids' : 'reads as a claim about the product'
+    refuse('invalid_arguments', { field, line, found: [...new Set(found)],
+      reason: `"${line}" ${what}. A disclosure line says only how you are connected, such as "I work on ${brand.products[0]?.name ?? 'the product'}."` })
+  }
 }
 
 /** The venue rule holding this draft where it is aimed, read the way the venue register reads its items. */
