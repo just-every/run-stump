@@ -20,7 +20,7 @@ Entries are never overwritten. A correction adds a version, and the original sta
 
 ## Search and history
 
-Search every entry by text or by the `utm_content` its links carry, and filter by venue, network, person, product, campaign, route and state. Each venue and each person has a history, newest first. Any filtered view exports as CSV. In the CSV, a field that begins with = + - or @ carries a leading apostrophe, so a spreadsheet opens it as the words that were posted, never as a formula.
+Search every entry by text or by the `utm_content` its links carry, and filter by venue, network, person, product, campaign, route and state. Each venue and each person has a history, newest first. Any filtered view exports as CSV, with each venue, account and product named beside its id. In the CSV, a field that begins with = + - or @ carries a leading apostrophe, so a spreadsheet opens it as the words that were posted, never as a formula.
 
 ## Signups
 

@@ -492,7 +492,7 @@
       "executable": false
     },
     "docs/ledger.md": {
-      "sha256": "712ccd7e6494f5c15e5f155a4741d089c5cf788bc0c08742e8fb8691e7a1925a",
+      "sha256": "8764c7b0ae5255b7848bfd376fae70eb34fb8914bf615d39fcee02910f1b85bf",
       "executable": false
     },
     "docs/links.md": {
@@ -3356,7 +3356,7 @@
       "executable": false
     },
     "src/routes/app.compose.tsx": {
-      "sha256": "6e0b7b211475041dd3fe774c3ee71300d1e189f40aad530a28ea9e65724c1d05",
+      "sha256": "4171d9c3bb19eec381f2715080237e48bd1c4eecab5b8db75786f6e51acc4748",
       "executable": false
     },
     "src/routes/app.connected.$network.tsx": {
@@ -3548,7 +3548,7 @@
       "executable": false
     },
     "src/stump/agent-door/overview.ts": {
-      "sha256": "7343839e1acf7902c042be3f980170e3a1d01eefa0406b5dba2d5baf69434917",
+      "sha256": "c0c78451481e75a2e1a02a57d0858bb15a09dc80aa9c8b75be28223c952653e7",
       "executable": false
     },
     "src/stump/agent-door/policy-answers.ts": {
@@ -3684,7 +3684,7 @@
       "executable": false
     },
     "src/stump/handoffs/model.ts": {
-      "sha256": "154feee79997cb8c0f35d75f2aed96e423bdc4bc27feb04055db6fc278235c17",
+      "sha256": "c45f7e7f64181ae367e1ed0f40d243bff01cd0fe6023cb9e9e1932676ad09401",
       "executable": false
     },
     "src/stump/handoffs/posted.ts": {
@@ -3700,7 +3700,7 @@
       "executable": false
     },
     "src/stump/handoffs/ui/BriefPage.tsx": {
-      "sha256": "7614a1e24e319a3fc3ff635e8fe56171aef328b0def9586e2d2602165400c147",
+      "sha256": "54354b33333f97605d23b14b3ad42eac213eb4f5c55f02b63952275980bd0042",
       "executable": false
     },
     "src/stump/handoffs/ui/HandoffStart.tsx": {
@@ -3716,7 +3716,7 @@
       "executable": false
     },
     "src/stump/handoffs/ui/words.ts": {
-      "sha256": "d60fd9ae905cc00df96c1e5709c07f8e11a4392e8afc8ba8e8210e3b554aaa31",
+      "sha256": "1d79a49adf8651c34f1b9c23d32e96660f60df4f6e469c48d95f1071852e7ec6",
       "executable": false
     },
     "src/stump/handoffs/view.ts": {
@@ -3788,7 +3788,7 @@
       "executable": false
     },
     "src/stump/ledger/csv.ts": {
-      "sha256": "df30bfdfa55a8e2a26aaa42cd269e3d7bfbf1af170797ec6890277fe9c5dabcd",
+      "sha256": "b6a3fead89d7d940fd721fa648f85a9fb4dbf4b4acb67a6ad1e246c012a7554a",
       "executable": false
     },
     "src/stump/ledger/entry.ts": {
@@ -3796,7 +3796,7 @@
       "executable": false
     },
     "src/stump/ledger/query.ts": {
-      "sha256": "0288fc3f173b3baf77b028c668cd85aae836236f405fa2ad9511e1ee84ecab34",
+      "sha256": "6d8c54bc4c79bb3bbfbcff818c71fd8df02a5212bff565f1121ed422a64ce3bd",
       "executable": false
     },
     "src/stump/ledger/record.ts": {
@@ -4484,7 +4484,7 @@
       "executable": false
     },
     "src/stump/ui/kit.tsx": {
-      "sha256": "83cb8f8eead22a9b05969f8df72130b22af2d24a135c0b93b79e8fc69e1061a3",
+      "sha256": "aaa3eedecd81aef51547d3f59e8999f0009266c608602a82e79f931cdb71be32",
       "executable": false
     },
     "src/stump/ui/nav.ts": {
@@ -4560,7 +4560,7 @@
       "executable": false
     },
     "src/stump/venues/ui/RulesCard.tsx": {
-      "sha256": "356b7ad5a20340cbc8ebcd8f9861fc967ed6d903d7186db808e4a4bf28e3a302",
+      "sha256": "42b11f8a1c0b67b31f33c8b496ae227db08eaead485902fdf1b2b628d298c031",
       "executable": false
     },
     "src/stump/venues/ui/types.ts": {

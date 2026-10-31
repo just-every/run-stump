@@ -45,6 +45,9 @@ export function select(args: Args, ctx: ActionContext, extra: Partial<Record<typ
 }
 
 const COLUMNS = '*,(SELECT name FROM stump_venues WHERE id=stump_ledger.venue_id) AS venue_name'
+/** The export also names the account and product each row's ids point at, so a spreadsheet reads without a lookup. */
+const EXPORT_COLUMNS = `${COLUMNS},(SELECT handle FROM stump_accounts WHERE id=stump_ledger.account_id) AS account_handle,
+  (SELECT name FROM stump_products WHERE id=stump_ledger.product_id) AS product_name`
 const ORDER = `ORDER BY ${WHEN} DESC,id`
 
 export async function versionsFor(ctx: ActionContext, selection: Selection, limit: number, offset: number): Promise<Map<string, LedgerVersion[]>> {
@@ -77,7 +80,7 @@ export async function count(args: Args, ctx: ActionContext, extra: Partial<Recor
 export async function everything(args: Args, ctx: ActionContext) {
   const selection = select(args, ctx)
   const [rows, total, lasts] = await Promise.all([
-    ctx.db.prepare(`SELECT * FROM stump_ledger ${selection.where} ${ORDER} LIMIT ?`).bind(...selection.args, MAX_EXPORT).all<LedgerRow>(),
+    ctx.db.prepare(`SELECT ${EXPORT_COLUMNS} FROM stump_ledger ${selection.where} ${ORDER} LIMIT ?`).bind(...selection.args, MAX_EXPORT).all<LedgerRow>(),
     ctx.db.prepare(`SELECT COUNT(*) AS n FROM stump_ledger ${selection.where}`).bind(...selection.args).first<{ n: number }>(),
     // Per entry, the stored version count and the last stored version, to count the current state when no row holds it.
     ctx.db.prepare(`SELECT * FROM (SELECT v.*, COUNT(*) OVER (PARTITION BY v.entry_id) AS stored,

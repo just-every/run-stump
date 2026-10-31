@@ -1,7 +1,8 @@
 import { toEntry, type LedgerRow } from './entry.ts'
 
-const COLUMNS = ['id', 'url', 'network', 'network_id', 'venue_id', 'account_id', 'person_id', 'agent_id', 'agent_name', 'by', 'text', 'disclosure_line', 'claims',
-  'product_id', 'campaign', 'utm_content', 'route', 'state', 'confirmation', 'revision', 'posted_at', 'charge_usd', 'approved_by', 'hold', 'removal', 'legal_hold', 'versions'] as const
+// Each id that points at a venue, account or product sits beside its name, so a spreadsheet joining signups reads "Indie Hackers", not an id.
+const COLUMNS = ['id', 'url', 'network', 'network_id', 'venue_id', 'venue_name', 'account_id', 'account_handle', 'person_id', 'agent_id', 'agent_name', 'by', 'text', 'disclosure_line', 'claims',
+  'product_id', 'product_name', 'campaign', 'utm_content', 'route', 'state', 'confirmation', 'revision', 'posted_at', 'charge_usd', 'approved_by', 'hold', 'removal', 'legal_hold', 'versions'] as const
 
 /**
  * One CSV field. Numbers stay numbers. Text a spreadsheet would read as a
@@ -24,7 +25,7 @@ export function toCsv(rows: LedgerRow[], versions: (row: LedgerRow) => number): 
   for (const row of rows) {
     const entry = toEntry(row, [])
     const values: Record<typeof COLUMNS[number], unknown> = {
-      ...entry, agent_id: entry.agent && (entry.agent as { id?: string }).id, agent_name: entry.agent && (entry.agent as { name?: string }).name, versions: versions(row),
+      ...entry, account_handle: row.account_handle, product_name: row.product_name, agent_id: entry.agent && (entry.agent as { id?: string }).id, agent_name: entry.agent && (entry.agent as { name?: string }).name, versions: versions(row),
     }
     lines.push(COLUMNS.map(column => cell(values[column])).join(','))
   }

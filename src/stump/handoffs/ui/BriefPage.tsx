@@ -5,7 +5,7 @@ import { me, runAction } from '../../ui/api.ts'
 import { Chip, Disc, Outcome, pageName, useLoaded } from '../../ui/kit.tsx'
 import { Icon, type IconName } from '../../ui/icons.tsx'
 import { handoffStyles } from './styles.ts'
-import { briefTitle, dayOf, dueLine, LAPSE_AT, ruleLines, say, STATE, type Handoff } from './words.ts'
+import { briefTitle, dayOf, dueLine, LAPSE_AT, limitLine, ruleLines, say, STATE, type Handoff } from './words.ts'
 
 const key = () => crypto.randomUUID()
 
@@ -69,6 +69,8 @@ export function BriefPage({ handoffId }: { handoffId: string }) {
                   ? <><a href={line.rule.source_url} target="_blank" rel="noreferrer noopener">source</a> · read {dayOf(`${line.rule.read_at}T12:00:00Z`)}</>
                   : <Chip tone="held">unsourced</Chip>}</span>
               </div>)}
+              {/* The company's own limit for the venue, shared by everyone who posts there. */}
+              {handoff.venue.shared_limit ? <div className="st-ho-rule"><span>{limitLine(handoff.venue.shared_limit)}</span></div> : null}
             </Side>
             {handoff.why ? <Side icon="check" title="Why it fits"><p>{handoff.why}</p></Side> : null}
             <Side icon="ledger" title="Facts">

@@ -141,6 +141,18 @@ export function pageName(url: string): string {
   return (named ?? parsed.hostname.replace(/^www\./, '')).replace(/-/g, ' ')
 }
 
+/**
+ * Where a venue's rule was read, named as a citation: its site ("indiehackers.com", "fosstodon.org"), or for a subreddit's own
+ * pages "r/healthIT rules". The link itself goes to the exact page.
+ */
+export function sourceName(url: string): string {
+  let parsed: URL
+  try { parsed = new URL(url) } catch { return url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*$/, '') }
+  const parts = parsed.pathname.split('/').filter(Boolean)
+  if (/(^|\.)reddit\.com$/.test(parsed.hostname) && parts[0] === 'r' && parts[1]) return `r/${parts[1]} rules`
+  return parsed.host.replace(/^www\./, '')
+}
+
 /** A quiet "✓ Saved" after a setting saves as you go (L15); it never takes the place of an error. */
 export function Saved({ shown }: { shown: boolean }) {
   return <span className="st-saved-mark" role="status" aria-live="polite">{shown ? <><span aria-hidden="true">✓ </span>Saved</> : ''}</span>

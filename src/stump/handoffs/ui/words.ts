@@ -73,10 +73,15 @@ export function ruleLines(rules: Record<string, Rule | null>): Array<{ key: stri
   add('self_promotion', !promo ? null : promo.value === 'thread' ? `Self-promotion only in ${promo.detail ?? 'its thread'}` : promo.value === 'day' ? `Self-promotion on ${promo.detail ?? 'one day'} only`
     : promo.value === 'ratio' ? `Self-promotion limited${promo.detail ? `: ${promo.detail}` : ''}` : promo.value === 'banned' ? 'No self-promotion' : 'Self-promotion allowed')
   add('links', links === 'banned' ? 'No links' : links === 'allowed' ? 'Links allowed' : null)
-  const gates = rules.gates?.value as { karma?: number; account_age_days?: number; approval?: boolean } | undefined
-  add('gates', gates ? [gates.karma !== undefined ? `${gates.karma} karma` : null, gates.account_age_days !== undefined ? `an account ${gates.account_age_days} days old` : null, gates.approval ? 'approval to join' : null].filter(Boolean).join(', ').replace(/^/, 'Needs ') : null)
+  const gates = rules.gates?.value as { karma?: number; account_age_days?: number; approval?: boolean; membership?: boolean } | undefined
+  const needs = gates ? [gates.membership ? 'membership' : null, gates.karma !== undefined ? `${gates.karma} karma` : null,
+    gates.account_age_days !== undefined ? `an account ${gates.account_age_days} days old` : null, gates.approval ? 'approval to join' : null].filter(Boolean) : []
+  add('gates', needs.length ? `Needs ${needs.join(', ')}` : null)
   return lines
 }
+
+/** The venue's shared limit as the poster reads it: "One post a week, for the whole company". */
+export const limitLine = (limit: { posts: number; per: string } | null) => limit ? `${limit.posts === 1 ? 'One post' : `${limit.posts}\u00a0posts`} a ${limit.per}, for the whole company` : null
 
 /** Plain words for the refusals a person meets on these screens, naming what the refusal names. */
 export function say(error: unknown): string {
