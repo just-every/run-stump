@@ -21,8 +21,8 @@ Nothing is deployed until everything below is in place, and `rer deploy --dry-ru
 Put these in your environment or an owned `--env-file`, never in a tracked file:
 
 - **`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`**, a token with Workers Scripts: Edit and D1: Edit.
-- **`MAIL_API_KEY`**, your mail provider's key. `MAIL_PROVIDER` in `deploy.json` names the provider, `resend` by default.
-- **`MAIL_FROM`**, the sender for sign-in links and invitations: a real address on your mail provider's verified domain, bare or with a display name (`Display Name <address>`). A real deploy refuses a placeholder address.
+- **`MAIL_PROVIDER=none`** for a Business without a mail provider. Leave `MAIL_FROM` and `MAIL_API_KEY` unset.
+- **For email sign-in and invitations**, use a supported provider (`resend` by default), supply its `MAIL_API_KEY`, and set `MAIL_FROM` to a verified sender. Use a bare address or `Display Name <address>`.
 - **Optionally `AI_ENABLED=true`, `AI_BASE_URL`, `AI_MODEL` and `AI_API_KEY`** for your [AI provider](/docs/ai-provider). You can instead set the provider after the deploy, in Settings › Connections.
 
 ### Before you deploy
@@ -33,8 +33,8 @@ Then `rer deploy --dry-run` builds and prints the Worker, its database and migra
 
 ## After the deploy
 
-- Sign in as the owner from the deployed address, and confirm the owner account.
-- [Invite your team](/docs/team), each with their role and their connection to the company.
+- With mail off, run `rer signin` from the deployment checkout using the Cloudflare credentials that deployed it. Open the one-time link and confirm the owner account. Keep the link private.
+- With mail configured, sign in by email and [invite your team](/docs/team). Email sign-in, email invitations, and email confirmation links require a provider.
 - [Set up each network's app](/docs/accounts) with your own keys, then connect accounts.
 
 ## Scheduled posts

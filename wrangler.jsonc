@@ -6,6 +6,10 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "vars": {
+    "MAIL_PROVIDER": "resend",
+    "MAIL_FROM": ""
+  },
   "triggers": {
     "crons": [
       "* * * * *"

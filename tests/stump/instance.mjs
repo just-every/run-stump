@@ -27,14 +27,15 @@ export async function stump({ bindings = {}, edge = null } = {}) {
   const cert = await readFile(join(directory, 'cert.pem'), 'utf8'), origin = `https://127.0.0.1:${port}`, mail = []
   const setupToken = secret()
   const server = join(root, 'dist/server')
+  const workerBindings = { AUTH_ORIGIN: origin, AUTH_LOCAL: 'false', OWNER_EMAIL: 'synthetic-stump-owner@example.com', SESSION_SECRET: secret(), INSTALLATION_KEY: secret(), SETUP_TOKEN: setupToken,
+    MAIL_PROVIDER: 'sendgrid', MAIL_API_KEY: 'synthetic-stump-1', MAIL_FROM: 'synthetic-stump-2@example.com', ...bindings }
   let db
   const worker = new Miniflare(convertV4MiniflareOptions({
     https: true, httpsKey: await readFile(join(directory, 'key.pem'), 'utf8'), httpsCert: cert, host: '127.0.0.1', port,
     modules: [{ type: 'ESModule', path: join(server, 'index.js') }, ...(await readdir(join(server, 'assets'))).filter(name => name.endsWith('.js')).map(name => ({ type: 'ESModule', path: join(server, 'assets', name) }))],
     modulesRoot: server, compatibilityDate: '2026-09-08', compatibilityFlags: ['nodejs_compat'], d1Databases: { DB: `stump-test-${randomUUID()}` },
     assets: { directory: join(root, 'dist/client'), binding: 'ASSETS', run_worker_first: true, routerConfig: { has_user_worker: true } },
-    bindings: { AUTH_ORIGIN: origin, AUTH_LOCAL: 'false', OWNER_EMAIL: 'synthetic-stump-owner@example.com', SESSION_SECRET: secret(), INSTALLATION_KEY: secret(), SETUP_TOKEN: setupToken,
-      MAIL_PROVIDER: 'sendgrid', MAIL_API_KEY: 'synthetic-stump-1', MAIL_FROM: 'synthetic-stump-2@example.com', ...bindings },
+    bindings: Object.fromEntries(Object.entries(workerBindings).filter(([, value]) => value !== undefined)),
     log: new Log(LogLevel.ERROR),
     async outboundService(request) {
       const faked = edge ? await edge(request) : null

@@ -5,7 +5,7 @@ import { firstRunResponse } from './base/setup'
 import { fontHead } from './base/font-head'
 import { fontDocumentResponse } from './base/font-response'
 import { themeFrame } from './base/theme-frame'
-import { createOperatorAuth, createAuthHandler, createSignInHandler, type AuthConfig } from './modules/operator-auth/index.mjs'
+import { createOperatorAuth, createAuthHandler, createSignInHandler, AuthError, type AuthConfig } from './modules/operator-auth/index.mjs'
 import { operatorMail } from './mail.server.mjs'
 import { createBusinessSettings } from './modules/business-settings/index.ts'
 import { stumpRolePolicy } from './stump/people/policy.ts'
@@ -39,7 +39,7 @@ export interface Bindings {
  INSTALLATION_KEY: string
  INSTALLATION_KEY_PREVIOUS?: string
  SETUP_TOKEN?: string
- MAIL_PROVIDER?: 'development' | 'resend' | 'sendgrid' | 'cloudflare'
+ MAIL_PROVIDER?: 'none' | 'development' | 'resend' | 'sendgrid' | 'cloudflare'
  MAIL_FROM?: string
  MAIL_API_KEY?: string
  MAIL_ACCOUNT_ID?: string
@@ -54,9 +54,37 @@ export interface Bindings {
 }
 
 export const runtimeBindings = (env: Bindings): Bindings => env.RER_DEV_ORIGIN && env.AUTH_LOCAL === 'true' ? { ...env, AUTH_ORIGIN: env.RER_DEV_ORIGIN } : env
-export const authConfig = (env: Bindings): AuthConfig => ({ dependencies: true, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true', OWNER_EMAIL: env.OWNER_EMAIL, SESSION_SECRET: env.SESSION_SECRET, INSTALLATION_KEY: env.INSTALLATION_KEY, INSTALLATION_KEY_PREVIOUS: env.INSTALLATION_KEY_PREVIOUS, SETUP_TOKEN: env.SETUP_TOKEN, MAIL_FROM: env.MAIL_FROM, branding: { productName: branding.name, accentColor: branding.primaryColor, signInPath: '/signin', theme: theme.href } })
+const mailIsOff = (env: Bindings) => env.MAIL_PROVIDER === 'none' && env.AUTH_LOCAL !== 'true' && env.RER_DEMO !== '1'
+export const authConfig = (env: Bindings): AuthConfig => ({ dependencies: true, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true', OWNER_EMAIL: env.OWNER_EMAIL, SESSION_SECRET: env.SESSION_SECRET, INSTALLATION_KEY: env.INSTALLATION_KEY, INSTALLATION_KEY_PREVIOUS: env.INSTALLATION_KEY_PREVIOUS, SETUP_TOKEN: env.SETUP_TOKEN, MAIL_FROM: mailIsOff(env) ? undefined : env.MAIL_FROM, branding: { productName: branding.name, accentColor: branding.primaryColor, signInPath: '/signin', theme: theme.href } })
 export function operatorAuth(env: Bindings) {
- return createOperatorAuth({ db: env.DB, config: authConfig(env), rolePolicy: stumpRolePolicy(env.DB), businessSettings: businessSettings(env), mailSender: operatorMail(env), clientIp: request => request.headers.get('CF-Connecting-IP') ?? '' })
+ const mailOff = mailIsOff(env)
+ const policy = stumpRolePolicy(env.DB)
+ const auth = createOperatorAuth({
+  db: env.DB, config: authConfig(env), businessSettings: businessSettings(env),
+  mailSender: operatorMail(env), clientIp: request => request.headers.get('CF-Connecting-IP') ?? '',
+  async rolePolicy(input) {
+   const allowed = await policy(input)
+   if (allowed && mailOff && input.action === 'operators:invite') throw mailOffError()
+   return allowed
+  },
+ })
+ if (!mailOff) return auth
+ return {
+  ...auth,
+  emailSignInAvailable: false,
+  requestMagicLink: (...args: Parameters<typeof auth.requestMagicLink>) => refuseDisabledMail(auth.requestMagicLink(...args)),
+  requestStepUp: (...args: Parameters<typeof auth.requestStepUp>) => refuseDisabledMail(auth.requestStepUp(...args)),
+ }
+}
+
+const mailOffError = () => new AuthError('mail_off', 409)
+
+async function refuseDisabledMail<T>(send: Promise<T>): Promise<T> {
+ try { return await send }
+ catch (error) {
+  if (error instanceof AuthError && error.code === 'mail_unavailable') throw mailOffError()
+  throw error
+ }
 }
 
 // Signed Business settings: the owner binding and team roster a paired installation receives.
@@ -84,7 +112,7 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
   const page = await createSignInHandler(operatorAuth(env), {
    defaultReturnTo: '/setup',
   })(request)
-  if (page) return fontDocumentResponse(await stumpSignIn(request, page))
+  if (page) return fontDocumentResponse(await stumpSignIn(request, page, mailIsOff(env)))
  }
  if (url.pathname.startsWith('/auth/')) {
   const email = await postedAddress(request)

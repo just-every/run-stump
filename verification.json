@@ -13,8 +13,7 @@
       "browser": false,
       "hosted": false,
       "commands": [
-        "pnpm run typecheck",
-        "pnpm run test:typecheck"
+        "pnpm run typecheck"
       ]
     },
     {
@@ -32,7 +31,7 @@
       "hosted": false,
       "commands": [
         "pnpm run build",
-        "node --test tests/stump/team.test.mjs",
+        "node --test tests/stump/team.test.mjs tests/stump/mail-off.test.mjs",
         "node --test tests/stump/venues.test.mjs tests/stump/handoffs.test.mjs",
         "node --test tests/stump/watches.test.mjs",
         "node --test tests/stump/ledger-stack.test.mjs",

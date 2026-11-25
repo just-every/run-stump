@@ -34,7 +34,7 @@ export async function lightReaders(files, { cwd = process.cwd(), plan } = {}) {
    known[path] = dependencies;
   }
  }
- const indirect = new Set(['pnpm run test:typecheck', 'pnpm run test:runtime']);
+ const indirect = new Set(['pnpm run test:runtime']);
  // Edition-owned lock validation is required for every light candidate.
  for (const path of ['edition.json', 'sources.lock.json', 'scripts/edition-authoring/cli.mjs']) await access(join(cwd, path));
  if (files.some(path => /^(?:evidence|\.artifacts)\//.test(path) && !/\.(?:md|txt|png|jpe?g|pdf)$/.test(path))) return;

@@ -22,6 +22,7 @@ export const adapter = lifecycle;
 export const { install } = lifecycle;
 export const commandAdapter = createCommandAdapter(lifecycle, {
  dev: developmentTarget, preview: previewTarget, verify: ['pnpm', ['run', 'verify:app']], deploy: ownerDeploy('deploy.json', lifecycle),
+ mailOffSignIn: 'rer signin',
  // rer export and rer import: every Stump record and no token or key (scripts/stump/archive-policy.mjs).
  portability: localPortability({ database: 'foundation', policyModule: 'scripts/stump/archive-policy.mjs', transient: ['local runtime caches and logs'] }),
  setup: { manifestFile: 'rer-setup.json' }, browserModule: 'scripts/installer/ui/seed.mjs',

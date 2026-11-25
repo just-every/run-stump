@@ -46,12 +46,14 @@ function sentAddress(request: Request): string | null {
 }
 
 /** Base's sign-in page in Stump's words; the sent state replaces the form with "Check your email". */
-export async function stumpSignIn(request: Request, page: Response): Promise<Response> {
+export async function stumpSignIn(request: Request, page: Response, mailOff: boolean): Promise<Response> {
   if (request.method !== 'GET' || !page.headers.get('content-type')?.startsWith('text/html')) return page
   let html = (await page.text()).replace('>Email a sign-in link</button>', '>Email me a sign-in link</button>')
   const headers = new Headers(page.headers)
   headers.delete('content-length')
-  if (new URL(request.url).searchParams.get('notice') === 'sent') {
+  if (mailOff) {
+    html = html.replace(/(<\/h1>)(?:<p class="notice" role="[^"]+">[\s\S]*?<\/p>)?/, '$1<p class="notice" role="status">Email sign-in is off. The installation owner can run <code>rer signin</code> from the deployment checkout to get a one-time link.</p>')
+  } else if (new URL(request.url).searchParams.get('notice') === 'sent') {
     const email = sentAddress(request)
     const line = email
       ? `<p class="sent">A sign-in link is on its way to <strong>${escape(email)}</strong> if it can sign in here. Open it on this device and press Confirm.</p>`
