@@ -2,6 +2,20 @@
   "schemaVersion": 1,
   "copies": [
     {
+      "path": ".github/workflows/run-demo.yml",
+      "originPath": "export/run-demo.yml",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        ".github/workflows/run-demo.yml": "8a9f011fa892b7adc7941f2ddd09cb08c8af4c77c05c584c89b70de2cc1ab9b7"
+      },
+      "modes": {
+        ".github/workflows/run-demo.yml": "100644"
+      },
+      "originFiles": [
+        "export/run-demo.yml"
+      ]
+    },
+    {
       "path": "migrations/core/0100_import_kit.sql",
       "originPath": "default-seed/migrations/core/0018_import_kit.sql",
       "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",

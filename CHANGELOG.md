@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.1.1 — 2026-11-26
+
+Stump 0.1.1 gives Stump its first hosted demo and moves the pinned `@runeditrun/rer` from 0.2.91 to 0.2.141. Upgrading from 0.1.0: back up, update, run `pnpm install --frozen-lockfile` and deploy; migrations 0736 and 0737 apply in order.
+
+- **The demo deploys.** `deploy.json` declared `MAIL_PROVIDER` and `MAIL_FROM` both as public settings and as secrets, and `rer deploy --demo` refused the pair. The two secret bindings are removed; the provider and sender stay public settings, and `MAIL_API_KEY` is the only private mail credential. The Run demo workflow now redeploys the demo at every published release, and a manual run can still deploy the separate test host.
+- **A Business can run Stump with mail off.** `MAIL_PROVIDER=none` turns email sign-in, invitations and confirmation links off with a plain refusal; the owner signs in with `rer signin` from the deployment checkout using the Cloudflare credentials that deployed it. `docs/deploy.md` says so.
+- **The agent door follows the 0.2.134 runtime.** Replay and erasure custody, the Business relay and value-free tombstones of erased people. Migration `0736_stump_agent_door_relay_upgrade.sql` adds replay aliases, relay tables and an expiry on agent calls; `0737_stump_business_retired.sql` adds the tombstone table. Existing calls and people are not rewritten.
+
 ## 0.1.0 — 31 October 2026
 
 Stump 0.1.0 is the first release of an earned-channels marketing desk for a small software company: find where your customers gather, show up in your own voice, and see what it brings in. It runs on your own computer with one command and deploys to your own Cloudflare account, with your own database, network apps and AI provider. A new installation applies its migrations in order; there is nothing earlier to upgrade from.
