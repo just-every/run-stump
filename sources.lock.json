@@ -410,7 +410,7 @@
       "executable": false
     },
     "CHANGELOG.md": {
-      "sha256": "0cd0a9655159aa860d114d99b2bfac278743ee61baf37eeedc028d0a3572d5f9",
+      "sha256": "6c3df30bd4d994a3744988c8409d31e19873ca5b51c534c86a357a7d6aaeb1c7",
       "executable": false
     },
     "CLAUDE.md": {
@@ -434,7 +434,7 @@
       "executable": false
     },
     "deploy.json": {
-      "sha256": "4add393c164196cfdd6ec4b1b1718308963d9e97aadd95a2bcbfe921923d34c7",
+      "sha256": "eebc500f64ad1f3bcd60e78cfb8366e350f6f21c470f0b1fd6af459ff3f48414",
       "executable": false
     },
     "docs/accounts.md": {
@@ -470,7 +470,7 @@
       "executable": false
     },
     "docs/deploy.md": {
-      "sha256": "1728796f10a05905355146f5ff412c38e69287dd10f62284f137affc047a1884",
+      "sha256": "950c1d52f24c35219ecd584c94fb0cdae7977d687f15cd7042ea5c4afb67c6f7",
       "executable": false
     },
     "docs/disclosure.md": {
@@ -942,7 +942,7 @@
       "executable": false
     },
     "RELEASE.json": {
-      "sha256": "5fbdbd9115d444827965f8032705a9bdeac09d3d1eb613c307aa4e5686d0f021",
+      "sha256": "01e83f57929a7dde86c17acd9a51c4c6821034f9850e571a36d1ca683ed0f1f6",
       "executable": false
     },
     "rer-setup.json": {
@@ -4830,7 +4830,7 @@
       "executable": false
     },
     "wrangler.jsonc": {
-      "sha256": "ca1d8fdf4c606bf5f28c63b3b88b2846a8ed8597b2ed225dddbf3640515b0177",
+      "sha256": "31d432f247a88147bbb101ff8d91b69cadafff44559454dfbd1b70c7c6e08136",
       "executable": false
     }
   }

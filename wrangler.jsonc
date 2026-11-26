@@ -7,7 +7,7 @@
     "nodejs_compat"
   ],
   "vars": {
-    "MAIL_PROVIDER": "resend",
+    "MAIL_PROVIDER": "",
     "MAIL_FROM": ""
   },
   "triggers": {

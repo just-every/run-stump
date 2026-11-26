@@ -22,7 +22,7 @@ Put these in your environment or an owned `--env-file`, never in a tracked file:
 
 - **`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`**, a token with Workers Scripts: Edit and D1: Edit.
 - **`MAIL_PROVIDER=none`** for a Business without a mail provider. Leave `MAIL_FROM` and `MAIL_API_KEY` unset.
-- **For email sign-in and invitations**, use a supported provider (`resend` by default), supply its `MAIL_API_KEY`, and set `MAIL_FROM` to a verified sender. Use a bare address or `Display Name <address>`.
+- **For email sign-in and invitations**, set `MAIL_PROVIDER` to a supported provider (`resend`, `sendgrid` or `cloudflare`), supply its `MAIL_API_KEY`, and set `MAIL_FROM` to a verified sender. Use a bare address or `Display Name <address>`.
 - **Optionally `AI_ENABLED=true`, `AI_BASE_URL`, `AI_MODEL` and `AI_API_KEY`** for your [AI provider](/docs/ai-provider). You can instead set the provider after the deploy, in Settings › Connections.
 
 ### Before you deploy
