@@ -128,6 +128,303 @@
       ]
     },
     {
+      "path": "scripts/delivery/base/artifact.mjs",
+      "originPath": "modules/delivery-producer/artifact.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/artifact.mjs": "129f210f1556e816ba94ffe74359ac553cd26466aaf8c6c299765e9cea29aa07"
+      },
+      "modes": {
+        "scripts/delivery/base/artifact.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/artifact.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/bindings.mjs",
+      "originPath": "modules/delivery-producer/bindings.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/bindings.mjs": "5548f71b7bb32c6e6c75442f0e6cf0af9da3226aebcaf964c7702ea549e48392"
+      },
+      "modes": {
+        "scripts/delivery/base/bindings.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/bindings.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/capabilities.mjs",
+      "originPath": "modules/delivery-producer/capabilities.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/capabilities.mjs": "5e4db1f4428f107c91b51be3c9c18e7757d7e23574dd977a872f6944abd32a1d"
+      },
+      "modes": {
+        "scripts/delivery/base/capabilities.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/capabilities.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/cli.mjs",
+      "originPath": "modules/delivery-producer/cli.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/cli.mjs": "85cd5d5fb7f9a002f5dd44ace279702834823794cbd4a24ed9f1bdb5d1ad0f23"
+      },
+      "modes": {
+        "scripts/delivery/base/cli.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/cli.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/declarations.mjs",
+      "originPath": "modules/delivery-producer/declarations.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/declarations.mjs": "2d44614db82aa0f7690269ced75c349a2321a4a9505920ea32c6589afe71b1fd"
+      },
+      "modes": {
+        "scripts/delivery/base/declarations.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/declarations.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/export.mjs",
+      "originPath": "modules/delivery-producer/export.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/export.mjs": "fbf9c22198f3fb07015f486cf80d0fbaefe087b60b628a50e6c6d74c687890b2"
+      },
+      "modes": {
+        "scripts/delivery/base/export.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/export.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/generators",
+      "originPath": "modules/delivery-producer/generators",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/generators/integration.mjs": "ec9689f03b339466ee20c4a77da5227ba39789cc3de52d33687127148d4889f3",
+        "scripts/delivery/base/generators/managed.mjs": "275131025f7b1810b7757053caa7439f9cd8119bfec94512c4fa4cf1ee1a5c60",
+        "scripts/delivery/base/generators/project.mjs": "29540e3e2d9ef0529a07c04ed70eb3e7fe0f73906fe826e53c55678ad8a364de",
+        "scripts/delivery/base/generators/validation.mjs": "ec5e0cdd38e4143530fd1366930b9e8e0e081a0729687926ed13a256834519a9"
+      },
+      "modes": {
+        "scripts/delivery/base/generators/integration.mjs": "100644",
+        "scripts/delivery/base/generators/managed.mjs": "100644",
+        "scripts/delivery/base/generators/project.mjs": "100644",
+        "scripts/delivery/base/generators/validation.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/generators/integration.mjs",
+        "modules/delivery-producer/generators/managed.mjs",
+        "modules/delivery-producer/generators/project.mjs",
+        "modules/delivery-producer/generators/validation.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/mail.mjs",
+      "originPath": "modules/delivery-producer/mail.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/mail.mjs": "e308b618ab9b702ad0025ad184e30607c2cb371d2661507468dfc294c797bf2e"
+      },
+      "modes": {
+        "scripts/delivery/base/mail.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/mail.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/migrations.mjs",
+      "originPath": "modules/delivery-producer/migrations.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/migrations.mjs": "41650d5f2c22c0dbf8c4d8640bc89d872907828b558df4af89c4f70059d4878f"
+      },
+      "modes": {
+        "scripts/delivery/base/migrations.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/migrations.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/native-export.mjs",
+      "originPath": "modules/delivery-producer/native-export.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/native-export.mjs": "5c0f90e688f5242dbc2f62416259cbb3074647298df8daa431a7022aa10d1a41"
+      },
+      "modes": {
+        "scripts/delivery/base/native-export.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/native-export.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/package.mjs",
+      "originPath": "modules/delivery-producer/package.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/package.mjs": "5a32dec3274b66474e12d5141e973542248ceeecf0f8464f6e9da87d60228cb4"
+      },
+      "modes": {
+        "scripts/delivery/base/package.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/package.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/paths.mjs",
+      "originPath": "modules/delivery-producer/paths.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/paths.mjs": "32af2ee0d6e8ce048d04978e2d70f476bdc2a690b1a270d580056641f87a1731"
+      },
+      "modes": {
+        "scripts/delivery/base/paths.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/paths.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/payloads.mjs",
+      "originPath": "modules/delivery-producer/payloads.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/payloads.mjs": "da3a9d09860c33bdd0b287bca9abc6210b12d13439e569d178a5b31fec563ee5"
+      },
+      "modes": {
+        "scripts/delivery/base/payloads.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/payloads.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/schema",
+      "originPath": "schema",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/schema/business-field-inputs.mjs": "b028b576bc85758c4ed400d059d4aae4fdda7a29eeb290fd1032ea15aaf957d1",
+        "scripts/delivery/base/schema/dependencies.mjs": "4bfc30fa75029db2727a9d1fb095d4969dc756c5317ac55ce768202bb869e2b7",
+        "scripts/delivery/base/schema/json-schema.mjs": "f964a1f8bab23bfad0c8b6552d8e717091619fa438e0d6e65a9801e1d97782bc",
+        "scripts/delivery/base/schema/setup-validation.mjs": "89327f524f2e7cfcaf9c750e9a5aa7249c91199a9afd0c14afe9efcf444ad14a",
+        "scripts/delivery/base/schema/SETUP.schema.json": "ac52bac39e7e7e4dace1c22dce370f76df52e7f5bb167730ecfd96b0b7961c86"
+      },
+      "modes": {
+        "scripts/delivery/base/schema/business-field-inputs.mjs": "100644",
+        "scripts/delivery/base/schema/dependencies.mjs": "100644",
+        "scripts/delivery/base/schema/json-schema.mjs": "100644",
+        "scripts/delivery/base/schema/setup-validation.mjs": "100644",
+        "scripts/delivery/base/schema/SETUP.schema.json": "100644"
+      },
+      "originFiles": [
+        "schema/COMPOSITION.example.json",
+        "schema/COMPOSITION.schema.json",
+        "schema/FAMILY.example.json",
+        "schema/FAMILY.schema.json",
+        "schema/RELEASE.example.json",
+        "schema/RELEASE.schema.json",
+        "schema/SEED.example.json",
+        "schema/SEED.schema.json",
+        "schema/SETUP.example.json",
+        "schema/SETUP.invalid.example.json",
+        "schema/SETUP.md",
+        "schema/SETUP.schema.json",
+        "schema/business-field-inputs.mjs",
+        "schema/dependencies.mjs",
+        "schema/generate-business-role.mjs",
+        "schema/json-schema.mjs",
+        "schema/setup-negative-corpus.json",
+        "schema/setup-review-negative-corpus.json",
+        "schema/setup-validation.mjs",
+        "schema/validate.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/setup-manifest.mjs",
+      "originPath": "modules/delivery-producer/setup-manifest.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/setup-manifest.mjs": "b2746ebde1a8b5e2da26766a289d7f88faa8b454c8baca6ca3a410cfd2d24f76"
+      },
+      "modes": {
+        "scripts/delivery/base/setup-manifest.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/setup-manifest.mjs"
+      ],
+      "adapted": {
+        "scripts/delivery/base/setup-manifest.mjs": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f"
+      },
+      "acknowledged": {
+        "scripts/delivery/base/setup-manifest.mjs": {
+          "sha256": "cb8a88fc712f5f102c2a00454a6d46b0ca0b9ec15bd79bf4370358375ad7a009",
+          "mode": "100644"
+        }
+      }
+    },
+    {
+      "path": "scripts/delivery/base/sign-in.mjs",
+      "originPath": "modules/delivery-producer/sign-in.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/sign-in.mjs": "951aada2c00131ab7c808974827654b0fda20bcaeed1f2f97194b25441c03aff"
+      },
+      "modes": {
+        "scripts/delivery/base/sign-in.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/sign-in.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/spec.mjs",
+      "originPath": "modules/delivery-producer/spec.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/spec.mjs": "8096a77005cfbed5c620ab52a5eb6fe77f579927c5e2a867387e9063553fbcd2"
+      },
+      "modes": {
+        "scripts/delivery/base/spec.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/spec.mjs"
+      ]
+    },
+    {
+      "path": "scripts/delivery/base/sql-statements.mjs",
+      "originPath": "modules/delivery-producer/sql-statements.mjs",
+      "revision": "fc087acfd6ba2561f52cec2bd85fbdbda66cde0f",
+      "files": {
+        "scripts/delivery/base/sql-statements.mjs": "8819f7f91b7781905796ea35b01dd1a55e08ed3893ff6d8aafaf03d2f35c1c9a"
+      },
+      "modes": {
+        "scripts/delivery/base/sql-statements.mjs": "100644"
+      },
+      "originFiles": [
+        "modules/delivery-producer/sql-statements.mjs"
+      ]
+    },
+    {
       "path": "src/base",
       "originPath": "foundation/runtime",
       "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",

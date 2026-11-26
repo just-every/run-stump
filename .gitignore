@@ -11,3 +11,5 @@ dist/
 
 .rer/local/
 .rer/docs-search/
+
+delivery-artifact/
