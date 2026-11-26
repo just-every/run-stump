@@ -16,7 +16,7 @@ function limitedResponse(response: Response, message: string, status: number): R
  * intended status through workerd's upload proxy without buffering input.
  * Oversized or stalled uploads receive explicit 413/408 responses instead.
  */
-export async function rejectedResponse(request: Request, response: Response): Promise<Response> {
+export async function rejectedResponse(request: Request, response: Response, maxDiscardBytes = maximumDiscardBytes): Promise<Response> {
   if (!request.body || request.bodyUsed || request.body.locked) return response
   const reader = request.body.getReader()
   let bytes = 0
@@ -33,7 +33,7 @@ export async function rejectedResponse(request: Request, response: Response): Pr
       }
       if (result.done) return response
       bytes += result.value.byteLength
-      if (bytes > maximumDiscardBytes) {
+      if (bytes > maxDiscardBytes) {
         void reader.cancel('Rejected upload exceeded size limit').catch(() => {})
         return limitedResponse(response, 'Request body too large', 413)
       }

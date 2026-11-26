@@ -64,7 +64,12 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
       const bounded = await agentDoorRequest(request, path)
       if (bounded instanceof Response) return bounded
       const agent = await stumpAgentDoor(env).handle(bounded)
-      if (agent) return rejectedResponse(bounded, path === '/mcp' ? await withProtocolHint(agent) : agent)
+      if (agent) {
+        const mcp = path === '/mcp'
+        // Let a just-over-limit upload finish within a bounded discard so its 413 reaches the client.
+        const discardLimit = mcp && agent.status === 413 ? AGENT_BODY_BYTES + 64 * 1024 : undefined
+        return rejectedResponse(bounded, mcp ? await withProtocolHint(agent) : agent, discardLimit)
+      }
     }
     // The owner's import door: venue lists today (src/stump/imports/door.ts).
     const imported = await importDoorResponse(request, env)

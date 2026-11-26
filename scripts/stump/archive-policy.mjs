@@ -49,8 +49,11 @@ const rows = {
 export default {
   product: 'runeditrun/foundation',
   includeTables: ['oa_operators', 'oa_bootstrap', 'oa_external_identities', 'oa_invitation_cancellations', 'oa_tokens', 'oa_auth_settings', 'oa_auth_audit', 'oa_domain_rules', 'oa_logout_events', 'oc_owner_claims', 'oc_idp_grants'],
-  // Consents in progress and each Mastodon instance's app registration are sealed to this installation.
-  excludeTables: ['rer_dependency_keys', 'rer_dependency_pending', 'rer_dependency_codes', 'stump_connections', 'stump_mastodon_apps'],
+  // Consents, Business relay bindings and each Mastodon app registration stay with this installation.
+  excludeTables: [
+    'rer_dependency_keys', 'rer_dependency_pending', 'rer_dependency_codes', 'stump_connections', 'stump_mastodon_apps',
+    'agent_door_relay', 'agent_door_replay_aliases', 'agent_door_retired_refs', 'bs_retired',
+  ],
   secretColumns: { stump_accounts: ['credentials'], stump_network_apps: ['client_id', 'client_secret'] },
   exportRow: (table, row) => Object.hasOwn(rows, table) ? rows[table](row) : row,
   requiredConfiguration: ['OWNER_EMAIL', 'SESSION_SECRET', 'SETUP_TOKEN', 'AUTH_ORIGIN', 'MAIL_PROVIDER', 'MAIL_FROM'],

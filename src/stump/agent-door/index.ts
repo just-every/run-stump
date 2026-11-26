@@ -40,6 +40,7 @@ export function stumpPeople(env: StumpEnv): PeopleAdapter {
     sponsor: async claims => overlay(await base.sponsor(claims)),
     session: async request => overlay(await base.session(request)),
     businessMember: base.businessMember,
+    businessStopped: base.businessStopped,
     businessRole: person => person.role === 'owner' ? 'owner' : person.role === 'admin' || person.role === 'editor' ? 'editor' : null,
   }
 }
@@ -74,7 +75,7 @@ export function stumpAgentDoor(original: StumpEnv) {
   })
 }
 
-const PROTOCOL_HINT = `Send the MCP-Protocol-Version header: 2026-07-28, or 2025-11-25 (an initialize that names 2025-11-25 in params.protocolVersion needs no header). With 2026-07-28 also send Mcp-Method (the JSON-RPC method), Mcp-Name (the tool name, for tools/call) and params._meta["io.modelcontextprotocol/protocolVersion"]. See ${docsUrl('agents')}.`
+const PROTOCOL_HINT = `Set MCP-Protocol-Version to 2026-07-28, 2025-11-25 or 2025-06-18. Initialize can name its version in params.protocolVersion. Other headerless requests use 2025-06-18. With 2026-07-28, send Mcp-Method and params._meta["io.modelcontextprotocol/protocolVersion"] after initialization, plus Mcp-Name for tools/call. See ${docsUrl('agents')}.`
 
 /**
  * The door refuses a request whose protocol headers are missing or disagree
@@ -90,7 +91,8 @@ export async function withProtocolHint(response: Response): Promise<Response> {
   return new Response(JSON.stringify(body), { status: response.status, statusText: response.statusText, headers })
 }
 
-export const AGENT_PATHS = (path: string) => path === '/mcp' || path === '/agents' || path.startsWith('/agents/') || path === '/api/rer/agent-policy' || path.startsWith('/.well-known/oauth-protected-resource')
+export const AGENT_PATHS = (path: string) => path === '/mcp' || path === '/agents' || path.startsWith('/agents/') ||
+  path === '/api/rer/agent-policy' || path === '/api/rer/agent-decisions' || path.startsWith('/.well-known/oauth-protected-resource')
 
 /** One path scheme (U17): Base's /agents dashboard is Settings · Agents in the app; its approval pages and doors stay at /agents/... */
 export function agentsPageRedirect(request: Request): Response | null {
