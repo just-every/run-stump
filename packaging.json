@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "project": {
+    "schema": 1,
+    "projectId": "just-every/stump",
+    "name": "Stump",
+    "sourceRepository": "https://github.com/just-every/run-stump",
+    "license": "MIT",
+    "deployment": {
+      "target": "cloudflare-workers",
+      "artifactFile": "rer-worker-artifact.json"
+    },
+    "operations": {
+      "setup": "pnpm install --frozen-lockfile && pnpm exec rer install",
+      "build": "pnpm run build",
+      "verify": "pnpm run verify",
+      "artifact": "node scripts/delivery/base/cli.mjs artifact --config packaging.json",
+      "recovery": "Follow OPERATIONS.md. Retain the exact source revision and a private Stump export. Restore into an empty installation at that revision and verify the restored records. Reconnect provider accounts, re-enter credentials and review paused scheduled items before scheduling them again. Preserve applied migration names and bytes."
+    },
+    "verification": {
+      "migrationDirectories": [
+        "migrations/core"
+      ]
+    }
+  },
+  "managed": {
+    "workflowRef": "runeditrun/delivery/.github/workflows/trusted-build.yml@ff70d729948753ffdcceeca94aad063af2dcd979",
+    "artifactFile": "rer-worker-artifact.json",
+    "buildProfile": "project",
+    "verificationProfiles": [
+      "full"
+    ],
+    "pnpmVersion": "10.12.4"
+  },
+  "artifact": {
+    "specInputs": {
+      "publicVariableNames": [
+        "AUTH_LOCAL",
+        "AUTH_ORIGIN",
+        "OWNER_EMAIL",
+        "IDENTITY_PROVIDER",
+        "MAIL_PROVIDER",
+        "MAIL_FROM",
+        "MAIL_ACCOUNT_ID"
+      ],
+      "secretNames": [
+        "SESSION_SECRET",
+        "INSTALLATION_KEY",
+        "SETUP_TOKEN"
+      ],
+      "optionalSecretNames": [
+        "INSTALLATION_KEY_PREVIOUS",
+        "MAIL_API_KEY",
+        "AI_ENABLED",
+        "AI_BASE_URL",
+        "AI_MODEL",
+        "AI_API_KEY"
+      ],
+      "healthPath": "/health",
+      "recovery": "Follow OPERATIONS.md. Retain the exact source revision and a private Stump export. Restore into an empty installation at that revision and verify the restored records. Reconnect provider accounts, re-enter credentials and review paused scheduled items before scheduling them again. Preserve applied migration names and bytes.",
+      "providerEffects": [
+        "outbound-mail",
+        "ai",
+        "outbound-webhooks"
+      ],
+      "mail": {
+        "providers": [
+          "resend",
+          "sendgrid",
+          "cloudflare"
+        ],
+        "credentialSecretNames": [
+          "MAIL_API_KEY"
+        ]
+      },
+      "surfaces": {
+        "app": {
+          "path": "/app",
+          "originVariable": "AUTH_ORIGIN",
+          "signIn": {
+            "path": "/signin",
+            "loginHint": true,
+            "ownerSignIn": "/auth/owner-signin"
+          }
+        }
+      }
+    }
+  },
+  "setup": {
+    "manifestFile": "rer-setup.json"
+  }
+}

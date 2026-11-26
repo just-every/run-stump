@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "projectId": "just-every/stump",
+  "name": "Stump",
+  "sourceRepository": "https://github.com/just-every/run-stump",
+  "license": "MIT",
+  "deployment": {
+    "target": "cloudflare-workers",
+    "artifactFile": "rer-worker-artifact.json"
+  },
+  "operations": {
+    "setup": "pnpm install --frozen-lockfile && pnpm exec rer install",
+    "build": "pnpm run build",
+    "verify": "pnpm run verify",
+    "artifact": "node scripts/delivery/base/cli.mjs artifact --config packaging.json",
+    "recovery": "Follow OPERATIONS.md. Retain the exact source revision and a private Stump export. Restore into an empty installation at that revision and verify the restored records. Reconnect provider accounts, re-enter credentials and review paused scheduled items before scheduling them again. Preserve applied migration names and bytes."
+  },
+  "verification": {
+    "migrationDirectories": [
+      "migrations/core"
+    ]
+  },
+  "setup": {
+    "path": "rer-setup.json",
+    "sha256": "964370b968691d68272947684aaed4e144e06f4ee55e56f3421bab7738a6ffd2"
+  }
+}
